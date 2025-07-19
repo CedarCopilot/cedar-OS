@@ -83,6 +83,7 @@ export const ChatInput: React.FC<{
 	const [isEditorEmpty, setIsEditorEmpty] = useState(true);
 
 	const editor = useEditor({
+		immediatelyRender: false,
 		extensions: [
 			StarterKit.configure({
 				// Exclude the default Document and HardBreak to enforce single line

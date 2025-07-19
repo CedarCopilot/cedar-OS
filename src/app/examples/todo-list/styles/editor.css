@@ -1,0 +1,105 @@
+/* Tiptap Editor Styles */
+.ProseMirror {
+	@apply outline-none text-gray-900;
+}
+
+/* Task List Styles */
+.ProseMirror ul[data-type='taskList'] {
+	@apply list-none p-0 m-0;
+}
+
+.ProseMirror li[data-type='taskItem'] {
+	@apply flex items-start gap-2 py-1 group relative;
+}
+
+.ProseMirror li[data-type='taskItem'] > label {
+	@apply flex items-start gap-2 flex-1 cursor-pointer;
+}
+
+.ProseMirror li[data-type='taskItem'] > label > input[type='checkbox'] {
+	@apply mt-0.5 cursor-pointer flex-shrink-0;
+}
+
+.ProseMirror li[data-type='taskItem'] > label > span {
+	@apply flex-1 text-gray-900;
+}
+
+/* Completed tasks */
+.ProseMirror li[data-type='taskItem'][data-checked='true'] > label > span {
+	@apply line-through text-gray-500;
+}
+
+/* Placeholder styles */
+.ProseMirror p.is-editor-empty:first-child::before {
+	@apply text-gray-400;
+	content: attr(data-placeholder);
+	float: left;
+	height: 0;
+	pointer-events: none;
+}
+
+/* Heading styles */
+.ProseMirror h1 {
+	@apply text-3xl font-bold mb-4 text-gray-900;
+}
+
+.ProseMirror h2 {
+	@apply text-2xl font-semibold mb-3 mt-6 text-gray-900;
+}
+
+.ProseMirror h3 {
+	@apply text-lg font-medium mb-2 mt-4 text-gray-900;
+}
+
+/* Paragraph styles */
+.ProseMirror p {
+	@apply mb-2 text-gray-900;
+}
+
+/* Focus styles */
+.ProseMirror:focus {
+	@apply outline-none;
+}
+
+/* Drag handle styles for Tiptap v3 */
+.drag-handle {
+	@apply absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded text-gray-400;
+}
+
+.drag-handle:hover {
+	@apply text-gray-600 bg-gray-100;
+}
+
+/* Dragging state */
+.ProseMirror .ProseMirror-selectednode {
+	@apply outline-2 outline-blue-400 outline-dashed;
+}
+
+/* Selection styles */
+.ProseMirror ::selection {
+	@apply bg-blue-100;
+}
+
+/* Empty task item */
+.ProseMirror li[data-type='taskItem'] > label > span:empty::before {
+	@apply text-gray-400;
+	content: 'Type to add a task...';
+}
+
+/* Fix task item text wrapping */
+.ProseMirror li[data-type='taskItem'] {
+	@apply block;
+}
+
+.ProseMirror li[data-type='taskItem'] > label {
+	@apply inline-flex w-full;
+}
+
+.ProseMirror li[data-type='taskItem'] > label > span {
+	@apply block min-h-[1.5rem];
+}
+
+/* Ensure proper spacing for drag handle */
+.ProseMirror ul[data-type='taskList'] {
+	@apply ml-8;
+}

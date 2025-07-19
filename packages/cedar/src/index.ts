@@ -1,4 +1,5 @@
 export { ChatInput } from '@/components/chat/ChatInput';
+export { default as TooltipMenu } from '@/components/inputs/TooltipMenu';
 
 export { useCedarStore } from '@/store/CedarStore';
 export { registerState } from '@/store/CedarStore';

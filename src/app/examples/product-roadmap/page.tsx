@@ -3,6 +3,8 @@
 import React from 'react';
 import ReactFlow, {
 	addEdge,
+	applyNodeChanges,
+	NodeChange,
 	Background,
 	Connection,
 	ConnectionLineType,
@@ -29,10 +31,12 @@ import {
 import {
 	getNodes,
 	saveNodes,
+	deleteNodes,
 } from '@/app/examples/product-roadmap/supabase/nodes';
 import { ChatInput, registerState } from 'cedar';
 import { CheckCircle, Loader } from 'lucide-react';
 import { motion } from 'motion/react';
+import { TooltipMenu } from 'cedar';
 
 // -----------------------------------------------------------------------------
 // Sample data – replace with your own roadmap later
@@ -119,8 +123,96 @@ const nodeTypes: NodeTypes = {
 
 function FlowCanvas() {
 	// Controlled state for nodes & edges
-	const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+	const [nodes, setNodes] = useNodesState(initialNodes);
+	const handleNodesChange = React.useCallback(
+		(changes: NodeChange[]) => {
+			setNodes((nds) => {
+				const updated = applyNodeChanges(changes, nds);
+				const removedIds = changes
+					.filter((c): c is NodeChange & { id: string } => c.type === 'remove')
+					.map((c) => c.id);
+				if (removedIds.length > 0) {
+					deleteNodes(removedIds);
+				}
+				return updated;
+			});
+		},
+		[setNodes]
+	);
 	const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+	// Edge context menu state
+	const [edgeMenu, setEdgeMenu] = React.useState<{
+		x: number;
+		y: number;
+		edge: Edge;
+	} | null>(null);
+
+	// Function to open edit label prompt
+	const openEditLabel = React.useCallback(
+		(edgeToEdit: Edge) => {
+			const newLabel = window.prompt(
+				'Enter edge label',
+				String(edgeToEdit.label ?? '')
+			);
+			if (newLabel !== null) {
+				setEdges((eds) =>
+					eds.map((e) =>
+						e.id === edgeToEdit.id ? { ...e, label: newLabel } : e
+					)
+				);
+			}
+			setEdgeMenu(null);
+		},
+		[setEdges]
+	);
+
+	// Handler for edge click to open context menu
+	const onEdgeClick = React.useCallback(
+		(event: React.MouseEvent, edge: Edge) => {
+			event.preventDefault();
+			setEdgeMenu({ x: event.clientX, y: event.clientY, edge });
+		},
+		[]
+	);
+
+	// Handler for edge double click to immediately open edit
+	const onEdgeDoubleClick = React.useCallback(
+		(event: React.MouseEvent, edge: Edge) => {
+			event.preventDefault();
+			openEditLabel(edge);
+		},
+		[openEditLabel]
+	);
+
+	// Function to delete selected edge
+	const onDeleteEdge = React.useCallback(() => {
+		if (edgeMenu) {
+			setEdges((eds) => eds.filter((e) => e.id !== edgeMenu.edge.id));
+			setEdgeMenu(null);
+		}
+	}, [edgeMenu, setEdges]);
+
+	// Function to reverse edge direction
+	const onDirectionChange = React.useCallback(() => {
+		if (edgeMenu) {
+			setEdges((eds) =>
+				eds.map((e) =>
+					e.id !== edgeMenu.edge.id
+						? e
+						: {
+								...e,
+								source: e.target,
+								target: e.source,
+								sourceHandle: e.targetHandle,
+								targetHandle: e.sourceHandle,
+						  }
+				)
+			);
+			setEdgeMenu(null);
+		}
+	}, [edgeMenu, setEdges]);
+
 	// Saving/loading state
 	const [isSaving, setIsSaving] = React.useState(false);
 	const [hasSaved, setHasSaved] = React.useState(false);
@@ -188,16 +280,26 @@ function FlowCanvas() {
 		[]
 	);
 
+	useOnSelectionChange({
+		onChange: ({ edges: selectedEdges }) => {
+			if (edgeMenu && !selectedEdges.some((e) => e.id === edgeMenu.edge.id)) {
+				setEdgeMenu(null);
+			}
+		},
+	});
+
 	return (
 		<div className='h-full w-full relative'>
 			<ReactFlow
 				nodes={nodes}
 				edges={edges}
 				nodeTypes={nodeTypes}
-				onNodesChange={onNodesChange}
+				onNodesChange={handleNodesChange}
 				onEdgesChange={onEdgesChange}
 				onConnect={onConnect}
 				onNodeClick={onNodeClick}
+				onEdgeClick={onEdgeClick}
+				onEdgeDoubleClick={onEdgeDoubleClick}
 				connectionLineType={ConnectionLineType.SmoothStep}
 				defaultEdgeOptions={{
 					type: 'simplebezier',
@@ -225,6 +327,15 @@ function FlowCanvas() {
 					<CheckCircle size={20} className='text-green-500' />
 				) : null}
 			</div>
+			{edgeMenu && (
+				<TooltipMenu
+					position={{ x: edgeMenu.x, y: edgeMenu.y }}
+					onDelete={onDeleteEdge}
+					onReverse={onDirectionChange}
+					onEdit={() => openEditLabel(edgeMenu.edge)}
+					onClose={() => setEdgeMenu(null)}
+				/>
+			)}
 		</div>
 	);
 }

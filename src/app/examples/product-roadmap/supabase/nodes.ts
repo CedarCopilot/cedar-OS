@@ -52,3 +52,9 @@ export async function saveNodes(nodes: Node<FeatureNodeData>[]) {
 	const { error } = await supabase.from('nodes').upsert(rows);
 	if (error) throw error;
 }
+
+// Add deleteNodes to support deleting nodes by their IDs
+export async function deleteNodes(ids: string[]) {
+	const { error } = await supabase.from('nodes').delete().in('id', ids);
+	if (error) throw error;
+}
