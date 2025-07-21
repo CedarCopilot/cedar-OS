@@ -408,28 +408,29 @@ function FeatureNodeComponent({
 			{/* Diff action buttons - positioned outside/above the node */}
 			{diff && (
 				<div
-					className='absolute flex gap-1'
+					className='absolute flex gap-1 text-sm'
 					style={{
 						top: '-40px',
-						right: '0',
+						left: '50%',
+						transform: 'translateX(-50%)',
 						zIndex: 10,
 					}}>
 					<Button
 						variant='ghost'
 						size='sm'
-						className='h-8 bg-white hover:bg-green-100 shadow-sm border border-green-200'
+						className='h-8  hover:bg-green-100 shadow-sm border bg-green-300'
 						onClick={handleAcceptDiff}
 						aria-label='Accept change'>
-						<Check className='h-4 w-4 text-green-600 mr-1' />
+						<Check className='h-4 w-4  mr-1' />
 						Accept
 					</Button>
 					<Button
 						variant='ghost'
 						size='sm'
-						className='h-8 bg-white hover:bg-red-100 shadow-sm border border-red-200'
+						className='h-8  hover:bg-red-100 shadow-sm border bg-red-300'
 						onClick={handleRejectDiff}
 						aria-label='Reject change'>
-						<X className='h-4 w-4 text-red-600 mr-1' />
+						<X className='h-4 w-4  mr-1' />
 						Reject
 					</Button>
 				</div>
@@ -437,9 +438,7 @@ function FeatureNodeComponent({
 
 			<div
 				className={`relative rounded-lg p-4 shadow-sm ${borderClass} ${
-					statusBackgroundColor[status]
-						? statusBackgroundColor[status]
-						: 'bg-white'
+					statusBackgroundColor[status] ? statusBackgroundColor[status] : ''
 				} ${isResizing ? 'select-none' : ''} flex flex-col`}
 				style={{
 					width: `${nodeSize.width}px`,

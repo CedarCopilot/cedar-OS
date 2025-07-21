@@ -5,7 +5,11 @@ import { productRoadmapAgent } from './agents/product-roadmap-agent';
 import { registerApiRoute } from '@mastra/core/server';
 import { z } from 'zod';
 import type { Context } from 'hono';
-import { handleVoiceMessage, handleVoiceToText } from './voice';
+import {
+	handleVoiceMessage,
+	handleVoiceToText,
+	handleVoiceExecute,
+} from './voice';
 import { Agent } from '@mastra/core';
 
 // Define the chat request schema for Cedar compatibility
@@ -583,6 +587,72 @@ const apiRoutes = [
 								},
 							},
 							required: ['prompt'],
+						},
+					},
+				},
+			},
+		},
+	}),
+	registerApiRoute('/chat/voice-execute', {
+		method: 'POST',
+		handler: handleVoiceExecute,
+		openapi: {
+			requestBody: {
+				content: {
+					'multipart/form-data': {
+						schema: {
+							type: 'object',
+							properties: {
+								audio: {
+									type: 'string',
+									format: 'binary',
+									description: 'Audio file (WebM, MP3, etc.)',
+								},
+								settings: {
+									type: 'string',
+									description: 'JSON string of voice settings',
+								},
+							},
+							required: ['audio'],
+						},
+					},
+				},
+			},
+			responses: {
+				'200': {
+					description:
+						'Voice execute response with transcription, text, structured object, and audio data',
+					content: {
+						'application/json': {
+							schema: {
+								type: 'object',
+								properties: {
+									transcription: {
+										type: 'string',
+										description: 'The transcribed text from the audio',
+									},
+									text: {
+										type: 'string',
+										description: 'The content from the structured response',
+									},
+									object: {
+										type: 'object',
+										description: 'The structured action or message object',
+									},
+									usage: {
+										type: 'object',
+										description: 'Token usage information',
+									},
+									audioData: {
+										type: 'string',
+										description: 'Base64 encoded audio response',
+									},
+									audioFormat: {
+										type: 'string',
+										description: 'MIME type of the audio data',
+									},
+								},
+							},
 						},
 					},
 				},
