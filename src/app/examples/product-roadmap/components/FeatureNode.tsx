@@ -312,6 +312,17 @@ function FeatureNodeComponent({
 		});
 	};
 
+	// Handle node type change
+	const handleNodeTypeChange = (newNodeType: NodeType) => {
+		setNodes((nds) => {
+			const updated = nds.map((n) =>
+				n.id === id ? { ...n, data: { ...n.data, nodeType: newNodeType } } : n
+			);
+			saveNodes(updated);
+			return updated;
+		});
+	};
+
 	const statusColor: Record<FeatureStatus, string> = {
 		done: 'bg-green-400/70',
 		planned: 'bg-yellow-400/70',
@@ -352,6 +363,16 @@ function FeatureNodeComponent({
 		'planned',
 		'backlog',
 		'in progress',
+	];
+
+	// All available node types
+	const allNodeTypes: NodeType[] = [
+		'feature',
+		'bug',
+		'improvement',
+		'component',
+		'utils',
+		'agent helper',
 	];
 
 	// Handle diff actions
@@ -506,12 +527,38 @@ function FeatureNodeComponent({
 							</Button>
 						</div>
 						<div className='flex items-center gap-1'>
-							<Badge className={nodeTypeColor[nodeType]} variant='secondary'>
-								<span className='flex items-center gap-1'>
-									{nodeTypeIcon[nodeType]}
-									{nodeType}
-								</span>
-							</Badge>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Badge
+										className={`${nodeTypeColor[nodeType]} cursor-pointer hover:opacity-80`}
+										variant='secondary'
+										tabIndex={0}
+										role='button'
+										aria-label='Change node type'>
+										<span className='flex items-center gap-1'>
+											{nodeTypeIcon[nodeType]}
+											{nodeType}
+										</span>
+									</Badge>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align='start'>
+									{allNodeTypes.map((nodeTypeOption) => (
+										<DropdownMenuItem
+											key={nodeTypeOption}
+											onClick={() => handleNodeTypeChange(nodeTypeOption)}
+											className='cursor-pointer'>
+											<Badge
+												className={`${nodeTypeColor[nodeTypeOption]} mr-2`}
+												variant='secondary'>
+												<span className='flex items-center gap-1'>
+													{nodeTypeIcon[nodeTypeOption]}
+													{nodeTypeOption}
+												</span>
+											</Badge>
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Badge
