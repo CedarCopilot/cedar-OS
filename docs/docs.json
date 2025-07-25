@@ -1,102 +1,127 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
-  "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
-  },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "tabs": [
-      {
-        "tab": "Guides",
-        "groups": [
-          {
-            "group": "Get Started",
-            "pages": [
-              "index",
-              "quickstart",
-              "development"
-            ]
-          },
-          {
-            "group": "Essentials",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/settings",
-              "essentials/navigation",
-              "essentials/reusable-snippets"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API Reference",
-        "groups": [
-          {
-            "group": "API Documentation",
-            "pages": [
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Endpoint Examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
-            ]
-          }
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Community",
-          "href": "https://mintlify.com/community",
-          "icon": "slack"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
-  }
+	"$schema": "https://mintlify.com/docs.json",
+	"theme": "mint",
+	"name": "Cedar-OS Documentation",
+	"colors": {
+		"primary": "#16A34A",
+		"light": "#07C983",
+		"dark": "#15803D"
+	},
+	"favicon": "/favicon.svg",
+	"navigation": {
+		"groups": [
+			{
+				"group": "Introduction to Cedar-OS",
+				"icon": "house",
+				"pages": [
+					"index",
+					"introduction/architecture",
+					"introduction/philosophy",
+					"introduction/getting-started"
+				]
+			},
+			{
+				"group": "Getting Started",
+				"icon": "play",
+				"pages": ["getting-started/overview"]
+			},
+			{
+				"group": "Connecting to an Agent",
+				"icon": "plug",
+				"pages": [
+					"getting-started/agent-backend-connection/overview",
+					"getting-started/agent-backend-connection/ai-sdk",
+					"getting-started/agent-backend-connection/anthropic",
+					"getting-started/agent-backend-connection/openai",
+					"getting-started/agent-backend-connection/mastra",
+					"getting-started/agent-backend-connection/custom"
+				]
+			},
+			{
+				"group": "Chat Input (Agent Input Context)",
+				"icon": "message",
+				"pages": [
+					"getting-started/chat-input/overview",
+					"getting-started/chat-input/chat-input-editor",
+					"getting-started/chat-input/use-cedar-editor",
+					"getting-started/chat-input/additional-context",
+					"getting-started/chat-input/mention-provider"
+				]
+			},
+			{
+				"group": "Messages",
+				"icon": "envelope",
+				"pages": [
+					"getting-started/messages/overview",
+					"getting-started/messages/streaming",
+					"getting-started/messages/custom-components"
+				]
+			},
+			{
+				"group": "State Access",
+				"icon": "database",
+				"pages": [
+					"getting-started/state-access/overview",
+					"getting-started/state-access/register-state",
+					"getting-started/state-access/readable",
+					"getting-started/state-access/tracking"
+				]
+			},
+			{
+				"group": "Spells",
+				"icon": "wand-magic-sparkles",
+				"pages": [
+					"getting-started/spells/overview",
+					"getting-started/spells/radial-menu"
+				]
+			},
+			{
+				"group": "Diff & History Manager (Beta)",
+				"icon": "clock-rotate-left",
+				"pages": ["getting-started/diff-history/overview"]
+			},
+			{
+				"group": "Voice (Beta)",
+				"icon": "microphone",
+				"pages": [
+					"getting-started/voice/overview",
+					"getting-started/voice/agentic-backend",
+					"getting-started/voice/streams",
+					"getting-started/voice/websockets"
+				]
+			},
+			{
+				"group": "External Integrations (Coming Soon)",
+				"icon": "puzzle-piece",
+				"pages": [
+					"getting-started/external-integrations/overview",
+					"getting-started/external-integrations/text",
+					"getting-started/external-integrations/email",
+					"getting-started/external-integrations/application-triggers"
+				]
+			},
+			{
+				"group": "Customising Cedar",
+				"icon": "palette",
+				"pages": ["getting-started/customising/overview"]
+			}
+		]
+	},
+	"logo": {
+		"light": "/logo/light.svg",
+		"dark": "/logo/dark.svg"
+	},
+	"navbar": {
+		"links": [
+			{
+				"label": "GitHub",
+				"href": "https://github.com/cedar-os"
+			}
+		]
+	},
+	"footer": {
+		"socials": {
+			"github": "https://github.com/cedar-os"
+		}
+	}
 }

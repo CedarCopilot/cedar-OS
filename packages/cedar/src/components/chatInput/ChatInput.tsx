@@ -1,4 +1,4 @@
-import { useCedarStore, useVoice } from 'cedar';
+import { useCedarStore, useVoice } from '@/store/CedarStore';
 import { EditorContent } from '@tiptap/react';
 import {
 	Bug,
