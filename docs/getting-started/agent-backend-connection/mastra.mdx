@@ -5,8 +5,256 @@ description: 'Connecting Cedar-OS with Mastra'
 
 # Mastra Integration
 
-This page will cover how to integrate Cedar-OS with Mastra.
+Mastra is a full-featured agent framework that provides memory, tool calls, knowledge base, and more. It's the recommended choice when building complex, capable agents.
 
-## Coming Soon
+## Initial Configuration
 
-Content for this section will be added in the next phase.
+First, set up your Mastra backend and then configure Cedar-OS to connect to it:
+
+```tsx
+import { useCedarStore } from '@cedar-os/cedar';
+
+const store = useCedarStore();
+
+// Configure Mastra provider
+store.setProviderConfig({
+	provider: 'mastra',
+	baseURL: 'http://localhost:3000/api', // Your Mastra backend URL
+	apiKey: process.env.MASTRA_API_KEY, // Optional: only if your backend requires auth
+});
+
+// Connect to the agent
+await store.connect();
+```
+
+## Basic Usage
+
+With Mastra, you specify routes instead of models:
+
+```tsx
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+const { callLLM, streamLLM } = useTypedAgentConnection('mastra');
+
+// Non-streaming call
+const response = await callLLM({
+	route: '/chat/execute-function',
+	prompt: 'Help me analyze this data',
+	systemPrompt: 'You are a helpful data analyst',
+	temperature: 0.7,
+	// Pass any additional data your Mastra backend expects
+	context: {
+		userId: 'user-123',
+		sessionId: 'session-456',
+	},
+});
+
+// Streaming call
+streamLLM(
+	{
+		route: '/chat/execute-function',
+		prompt: 'Generate a detailed report',
+		systemPrompt: 'You are a report generator',
+	},
+	(event) => {
+		if (event.type === 'chunk') {
+			console.log('Received:', event.content);
+		} else if (event.type === 'done') {
+			console.log('Stream complete');
+		}
+	}
+);
+```
+
+## Extending the Backend
+
+Mastra backends can be extended with custom routes and functionality. Here's how to create typed functions:
+
+### 1. Define Your Backend Routes
+
+In your Mastra backend:
+
+```typescript
+// backend/routes/agent.ts
+import { z } from 'zod';
+import { createRoute } from 'mastra';
+
+// Define input schema
+const analyzeDataSchema = z.object({
+	prompt: z.string(),
+	dataType: z.enum(['csv', 'json', 'text']),
+	analysisType: z.enum(['summary', 'insights', 'visualization']),
+});
+
+// Create a typed route
+export const analyzeDataRoute = createRoute({
+	path: '/analyze-data',
+	input: analyzeDataSchema,
+	handler: async ({ input, llm }) => {
+		// Your custom logic here
+		const result = await llm.generate({
+			prompt: `Analyze this ${input.dataType} data: ${input.prompt}`,
+			system: `You are a data analyst specializing in ${input.analysisType}`,
+		});
+
+		return {
+			analysis: result.text,
+			metadata: {
+				dataType: input.dataType,
+				analysisType: input.analysisType,
+			},
+		};
+	},
+});
+```
+
+### 2. Create Typed Functions in Cedar-OS
+
+Create a typed wrapper for your custom routes:
+
+```tsx
+// utils/mastra-functions.ts
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+import type { MastraParams } from '@cedar-os/cedar';
+
+interface AnalyzeDataParams extends Omit<MastraParams, 'route'> {
+	dataType: 'csv' | 'json' | 'text';
+	analysisType: 'summary' | 'insights' | 'visualization';
+}
+
+export function useMastraFunctions() {
+	const { callLLM, streamLLM } = useTypedAgentConnection('mastra');
+
+	return {
+		analyzeData: async (params: AnalyzeDataParams) => {
+			return callLLM({
+				...params,
+				route: '/analyze-data',
+			});
+		},
+
+		generateReport: async (params: Omit<MastraParams, 'route'>) => {
+			return callLLM({
+				...params,
+				route: '/generate-report',
+			});
+		},
+
+		// Add more typed functions as needed
+	};
+}
+```
+
+### 3. Use Your Typed Functions
+
+```tsx
+import { useMastraFunctions } from '@/utils/mastra-functions';
+
+function DataAnalyzer() {
+	const { analyzeData } = useMastraFunctions();
+
+	const handleAnalysis = async () => {
+		const result = await analyzeData({
+			prompt: 'Analyze sales data from Q4',
+			dataType: 'csv',
+			analysisType: 'insights',
+			temperature: 0.3, // Lower temperature for analytical tasks
+		});
+
+		console.log(result.content);
+		// Access structured data if your backend returns it
+		if (result.object) {
+			console.log(result.object.metadata);
+		}
+	};
+
+	return <button onClick={handleAnalysis}>Analyze Data</button>;
+}
+```
+
+## Advanced Features
+
+### Memory and Context
+
+Mastra supports conversation memory out of the box:
+
+```tsx
+const response = await callLLM({
+	route: '/chat/with-memory',
+	prompt: 'Continue our previous discussion',
+	conversationId: 'conv-123', // Mastra will maintain context
+	userId: 'user-456',
+});
+```
+
+### Tool Calls
+
+Enable your agent to use tools:
+
+```tsx
+const response = await callLLM({
+	route: '/chat/with-tools',
+	prompt: 'Search for the latest AI news and summarize it',
+	tools: ['web-search', 'summarizer'], // Tools configured in your Mastra backend
+	toolConfig: {
+		maxResults: 5,
+		summaryLength: 'brief',
+	},
+});
+```
+
+### Structured Output
+
+Mastra can return structured data using JSON Schema:
+
+```tsx
+const response = await callLLM({
+	route: '/extract-entities',
+	prompt: 'Extract key information from this text...',
+	outputSchema: {
+		type: 'object',
+		properties: {
+			entities: {
+				type: 'array',
+				items: {
+					type: 'object',
+					properties: {
+						name: { type: 'string' },
+						type: { type: 'string' },
+						confidence: { type: 'number' },
+					},
+				},
+			},
+		},
+	},
+});
+
+// Access structured data
+const entities = response.object?.entities || [];
+```
+
+## Best Practices
+
+1. **Route Organization**: Keep your routes organized by functionality (`/chat/*`, `/analyze/*`, `/generate/*`)
+
+2. **Error Handling**: Always handle errors gracefully:
+
+   ```tsx
+   try {
+   	const response = await callLLM({ route: '/chat', prompt: '...' });
+   } catch (error) {
+   	console.error('Mastra error:', error);
+   	// Handle appropriately
+   }
+   ```
+
+3. **Type Safety**: Create typed wrappers for all your custom routes to maintain type safety across your application
+
+4. **Performance**: Use streaming for long-running operations to provide better user feedback
+
+## Next Steps
+
+- Set up your [Mastra backend](https://mastra.dev/docs)
+- Explore [tool integrations](https://mastra.dev/docs/tools)
+- Learn about [memory systems](https://mastra.dev/docs/memory)
+- Configure [knowledge bases](https://mastra.dev/docs/knowledge)

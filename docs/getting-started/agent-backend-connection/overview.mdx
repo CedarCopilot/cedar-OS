@@ -5,8 +5,96 @@ description: 'Overview of connecting AI agents to Cedar-OS'
 
 # Agent Backend Connection
 
-This page will cover how to connect AI agents to Cedar-OS.
+Before we get to the juicy interactions like speaking to your AI for it to do work inside your applications, we have to connect to the agent!
 
-## Coming Soon
+Cedar-OS has working configurations with every major backend. We support:
 
-Content for this section will be added in the next phase.
+- **Mastra** - Full-featured agent framework with memory, tools, and knowledge base
+- **AI SDK** - Vercel's unified AI SDK supporting multiple providers
+- **OpenAI** - Direct OpenAI API integration
+- **Anthropic** - Direct Anthropic API integration
+- **Custom backends** - Build your own integration
+- **CedarRouter** (coming soon) - Our optimized routing solution
+
+## How to choose
+
+**Simplicity**: **AI SDK** - One interface, multiple providers. Perfect for getting started quickly.
+
+**You only have one API Key**: **Anthropic/OpenAI** - Direct integration with a single provider.
+
+**You want a full-featured agent**: **Mastra** - When you need memory (conversation history), tool calls, knowledge base, and more complex agent capabilities.
+
+**You already have a custom backend**: **Custom backend** - Integrate your existing AI infrastructure.
+
+## Quick Start
+
+First, install Cedar-OS:
+
+```bash
+npm install @cedar-os/cedar
+# or
+yarn add @cedar-os/cedar
+# or
+pnpm add @cedar-os/cedar
+```
+
+Then configure your provider in your app:
+
+```tsx
+import { useCedarStore } from '@cedar-os/cedar';
+
+// Configure your provider
+const store = useCedarStore();
+
+// Example: Configure AI SDK
+store.setProviderConfig({
+	provider: 'ai-sdk',
+	providers: {
+		openai: { apiKey: process.env.OPENAI_API_KEY },
+		anthropic: { apiKey: process.env.ANTHROPIC_API_KEY },
+	},
+});
+
+// Connect to the agent
+await store.connect();
+```
+
+## Provider-Specific Setup
+
+Each provider has its own configuration requirements and capabilities. Check the individual provider pages for detailed setup instructions:
+
+- [Mastra](/getting-started/agent-backend-connection/mastra) - Full agent framework
+- [AI SDK](/getting-started/agent-backend-connection/ai-sdk) - Multi-provider support
+- [OpenAI](/getting-started/agent-backend-connection/openai) - Direct OpenAI integration
+- [Anthropic](/getting-started/agent-backend-connection/anthropic) - Direct Anthropic integration
+- [Custom](/getting-started/agent-backend-connection/custom) - Build your own
+
+## Type Safety
+
+Cedar-OS provides full TypeScript support. When you configure a provider, all methods are properly typed:
+
+```tsx
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+// Get a typed connection for your provider
+const { callLLM, streamLLM } = useTypedAgentConnection('openai');
+
+// TypeScript knows the exact parameters needed
+const response = await callLLM({
+	prompt: 'Hello, AI!',
+	model: 'gpt-4o-mini', // Required for OpenAI
+	temperature: 0.7,
+});
+```
+
+## Next Steps
+
+1. Choose your provider based on your needs
+2. Follow the provider-specific setup guide
+3. Start building your AI-powered application with Cedar-OS
+
+For more advanced usage, see our guides on:
+
+- [Chat Input](/getting-started/chat-input/overview) - Building rich chat interfaces
+- [Messages](/getting-started/messages/overview) - Handling AI responses
+- [State Access](/getting-started/state-access/overview) - Managing application state
