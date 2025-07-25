@@ -1,4 +1,4 @@
-import { useCedarStore, useVoice } from '@/store/CedarStore';
+import { useCedarStore, useVoice } from 'cedar';
 import { EditorContent } from '@tiptap/react';
 import {
 	Bug,
@@ -19,7 +19,6 @@ import { v4 as uuidv4 } from 'uuid';
 import '@/components/chatInput/ChatInput.css';
 import Container3D from '@/components/containers/Container3D';
 import Container3DButton from '@/components/containers/Container3DButton';
-import { useChatInput } from '@/store/CedarStore';
 import { VoiceIndicator } from '../../store/voice/VoiceIndicator';
 import { ContextBadgeRow } from './ContextBadgeRow';
 import { useCedarEditor } from './useCedarEditor';
@@ -71,7 +70,6 @@ export const ChatInput: React.FC<{
 	isInputFocused: boolean;
 	onSubmit?: (input: string) => void;
 }> = ({ position, handleFocus, handleBlur, isInputFocused, onSubmit }) => {
-	const { setOverrideInputContent } = useChatInput();
 	const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
 		onSubmit,
 		onFocus: handleFocus,
@@ -89,17 +87,6 @@ export const ChatInput: React.FC<{
 
 	// Initialize voice functionality
 	const voice = useVoice();
-
-	// Set up voice endpoint on mount
-	useEffect(() => {
-		// Configure the voice endpoint - adjust this to your agent's endpoint
-		voice.setVoiceEndpoint('http://localhost:4111/chat/voice-execute');
-
-		// Cleanup on unmount
-		return () => {
-			voice.resetVoiceState();
-		};
-	}, []);
 
 	// Handle voice toggle
 	const handleVoiceToggle = useCallback(async () => {
@@ -202,15 +189,15 @@ export const ChatInput: React.FC<{
 		executeCustomSetter('nodes', 'addNode', newIssue);
 	};
 
-	const handleAcceptAllDiffs = () => {
+	const handleAcceptAllDiffs = useCallback(() => {
 		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
 		executeCustomSetter('nodes', 'acceptAllDiffs');
-	};
+	}, []);
 
-	const handleRejectAllDiffs = () => {
+	const handleRejectAllDiffs = useCallback(() => {
 		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
 		executeCustomSetter('nodes', 'rejectAllDiffs');
-	};
+	}, []);
 
 	// Handle global keyboard shortcuts
 	useEffect(() => {
@@ -278,62 +265,6 @@ export const ChatInput: React.FC<{
 		};
 	}, [handleVoiceToggle, handleAcceptAllDiffs, handleRejectAllDiffs, hasDiffs]);
 
-	const handleTestOverride = () => {
-		// Get selected nodes from additional context
-		const state = useCedarStore.getState();
-		const selectedNodesContext = state.additionalContext.selectedNodes || [];
-
-		if (selectedNodesContext.length === 0) {
-			setOverrideInputContent(
-				'No nodes selected. Please select some nodes first!'
-			);
-			return;
-		}
-
-		// Create TipTap JSON content with mentions
-		const content = {
-			type: 'doc',
-			content: [
-				{
-					type: 'paragraph',
-					content: [
-						{
-							type: 'text',
-							text: 'Selected nodes: ',
-						},
-						...selectedNodesContext.flatMap((entry, index) => {
-							// Get the node title from the entry data
-							const nodeTitle =
-								entry.data?.data?.title || entry.metadata?.label || entry.id;
-
-							const mentionNode = {
-								type: 'mention',
-								attrs: {
-									id: entry.data?.id || entry.id,
-									label: nodeTitle,
-									providerId: 'selectedNodes',
-									contextKey: 'selectedNodes',
-									contextEntryId: entry.id,
-								},
-							};
-
-							// Add space after each mention except the last one
-							if (index < selectedNodesContext.length - 1) {
-								return [mentionNode, { type: 'text', text: ' ' }];
-							}
-							return [mentionNode];
-						}),
-					],
-				},
-			],
-		};
-
-		// Set the editor content using JSON format
-		if (editor) {
-			editor.commands.setContent(content);
-		}
-	};
-
 	return (
 		<ChatInputContainer position={position} className='text-sm'>
 			{/* Action buttons row */}
@@ -384,15 +315,6 @@ export const ChatInput: React.FC<{
 							</Container3DButton>
 						</>
 					)}
-					{/* <Container3DButton
-						id='test-override-btn'
-						childClassName='p-1.5'
-						onClick={handleTestOverride}>
-						<span className='flex items-center gap-1'>
-							<Code className='w-4 h-4' />
-							Test Override
-						</span>
-					</Container3DButton> */}
 				</div>
 				<div className='flex space-x-2'>
 					<Container3DButton id='history-btn' childClassName='p-1.5'>
