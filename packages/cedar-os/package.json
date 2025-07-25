@@ -1,0 +1,79 @@
+{
+	"name": "cedar-os",
+	"version": "0.0.1",
+	"description": "",
+	"sideEffects": false,
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"clean": "rm -rf dist && mkdir -p dist",
+		"build": "npm run clean && tsup ./src",
+		"p": "npm i && pnpm install && NODE_OPTIONS='--max-old-space-size=8192' pnpm run build && npm publish",
+		"dev": "npm run clean && tsup --watch",
+		"watch": "tsup ./src --watch",
+		"dev:yalc": "nodemon --watch 'src/**/*' -e ts,tsx --exec 'NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build && yalc publish --push'"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"peerDependencies": {
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0"
+	},
+	"dependencies": {
+		"@mastra/client-js": "^0.1.16",
+		"@radix-ui/react-label": "^2.1.4",
+		"@radix-ui/react-popover": "^1.1.11",
+		"@radix-ui/react-slider": "^1.2.3",
+		"@radix-ui/react-tabs": "^1.1.9",
+		"@supabase/supabase-js": "^2.38.4",
+		"@tiptap/core": "^2.11.7",
+		"@tiptap/extension-document": "^2.11.7",
+		"@tiptap/extension-mention": "^2.11.7",
+		"@tiptap/extension-placeholder": "^2.11.7",
+		"@tiptap/pm": "^2.11.7",
+		"@tiptap/react": "^2.11.7",
+		"@tiptap/starter-kit": "^2.11.7",
+		"@tiptap/suggestion": "^2.11.7",
+		"@types/crypto-js": "^4.2.2",
+		"class-variance-authority": "^0.7.1",
+		"crypto-js": "^4.2.0",
+		"framer-motion": "12.17.0",
+		"gsap": "^3.12.7",
+		"lucide-react": "^0.363.0",
+		"motion-plus-react": "^1.2.0",
+		"react-markdown": "^10.1.0",
+		"uuid": "^11.1.0",
+		"zustand": "^5.0.3"
+	},
+	"devDependencies": {
+		"@types/lodash": "^4.17.16",
+		"@types/node": "^20.17.19",
+		"@types/react": "^18.3.18",
+		"@types/react-dom": "^18.3.5",
+		"@types/uuid": "^10.0.0",
+		"autoprefixer": "^10.4.20",
+		"clsx": "^2.1.1",
+		"nodemon": "^3.1.9",
+		"pnpm": "^10.5.2",
+		"postcss": "^8.5.3",
+		"tailwind-merge": "^3.0.1",
+		"tailwindcss": "^3.4.17",
+		"tailwindcss-animate": "^1.0.7",
+		"tsup": "^8.3.6",
+		"typescript": "^5.7.3"
+	},
+	"files": [
+		"dist",
+		"package.json"
+	],
+	"exports": {
+		".": {
+			"require": "./dist/index.js",
+			"import": "./dist/index.mjs",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"main": "./dist/index.js",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.ts"
+}
