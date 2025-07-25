@@ -36,6 +36,7 @@ export interface AgentInputContextSlice {
 	// New stringify functions
 	stringifyEditor: () => string;
 	stringifyInputContext: () => string;
+	stringifyAdditionalContext: () => string;
 }
 
 // Create the agent input context slice
@@ -195,12 +196,8 @@ export const createAgentInputContextSlice: StateCreator<
 		return extractText(content).trim();
 	},
 
-	stringifyInputContext: () => {
-		const state = get();
-		const editorContent = state.stringifyEditor();
-		const context = state.additionalContext;
-
-		let result = `User Text: ${editorContent}\n\n`;
+	stringifyAdditionalContext: () => {
+		const context = get().additionalContext;
 
 		// Helper function to sanitize context data for JSON serialization
 		const sanitizeForJSON = (obj: any): any => {
@@ -244,13 +241,16 @@ export const createAgentInputContextSlice: StateCreator<
 
 		// Sanitize context before stringifying
 		const sanitizedContext = sanitizeForJSON(context);
+		return JSON.stringify(sanitizedContext, null, 2);
+	},
 
-		// Add additional context as simple JSON
-		result += `Additional Context: ${JSON.stringify(
-			sanitizedContext,
-			null,
-			2
-		)}`;
+	stringifyInputContext: () => {
+		const state = get();
+		const editorContent = state.stringifyEditor();
+		const contextString = state.stringifyAdditionalContext();
+
+		let result = `User Text: ${editorContent}\n\n`;
+		result += `Additional Context: ${contextString}`;
 
 		return result;
 	},

@@ -54,7 +54,7 @@ const initialVoiceState: VoiceState = {
 	isVoiceEnabled: false,
 	isListening: false,
 	isSpeaking: false,
-	voiceEndpoint: 'http://localhost:4111/chat/voice', // Default endpoint
+	voiceEndpoint: 'http://localhost:4111/chat/voice-execute', // Default endpoint
 	voicePermissionStatus: 'prompt',
 	audioStream: null,
 	audioContext: null,
@@ -191,9 +191,14 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 		try {
 			set({ isSpeaking: false });
 
+			// Get the stringified additional context from the store
+			const contextString = get().stringifyAdditionalContext();
+
 			const formData = new FormData();
 			formData.append('audio', audioData, 'recording.webm');
 			formData.append('settings', JSON.stringify(voiceSettings));
+			// Add the additional context to the form data
+			formData.append('context', contextString);
 
 			const response = await fetch(voiceEndpoint, {
 				method: 'POST',
@@ -248,6 +253,35 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 								timestamp: new Date().toISOString(),
 							},
 						});
+					}
+				}
+
+				// Handle structured object response (similar to handleLLMResult)
+				if (data.object && typeof data.object === 'object') {
+					const structuredResponse = data.object;
+
+					// Handle based on the type field in the structured response
+					if (structuredResponse.type) {
+						switch (structuredResponse.type) {
+							case 'action': {
+								// Execute the custom setter with the provided parameters
+								if (
+									structuredResponse.stateKey &&
+									structuredResponse.setterKey
+								) {
+									const args = structuredResponse.args || [];
+									// Access executeCustomSetter from the state slice
+									const { executeCustomSetter } = get();
+									executeCustomSetter(
+										structuredResponse.stateKey,
+										structuredResponse.setterKey,
+										...args
+									);
+								}
+								break;
+							}
+							// Message type is already handled above in the messages section
+						}
 					}
 				}
 
