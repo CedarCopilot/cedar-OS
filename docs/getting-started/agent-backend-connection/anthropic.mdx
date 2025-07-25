@@ -1,0 +1,282 @@
+---
+title: 'Anthropic'
+description: 'Connecting Cedar-OS with Anthropic'
+---
+
+# Anthropic Integration
+
+Direct integration with Anthropic's Claude models. Cedar-OS uses OpenAI-compatible endpoints, making it easy to switch between providers.
+
+## Initial Configuration
+
+```tsx
+import { useCedarStore } from '@cedar-os/cedar';
+
+const store = useCedarStore();
+
+// Configure Anthropic provider
+store.setProviderConfig({
+	provider: 'anthropic',
+	apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+// Connect to the agent
+await store.connect();
+```
+
+## Basic Usage
+
+```tsx
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+const { callLLM, streamLLM } = useTypedAgentConnection('anthropic');
+
+// Non-streaming call
+const response = await callLLM({
+	model: 'claude-3-sonnet-20240229',
+	prompt: 'Explain quantum entanglement',
+	systemPrompt: 'You are a quantum physics expert',
+	temperature: 0.7,
+	maxTokens: 2000,
+});
+
+console.log(response.content);
+```
+
+## Streaming Responses
+
+Stream Claude's responses for better UX:
+
+```tsx
+const { streamLLM } = useTypedAgentConnection('anthropic');
+
+streamLLM(
+	{
+		model: 'claude-3-opus-20240229',
+		prompt: 'Write a detailed analysis of climate change',
+		systemPrompt: 'You are a climate scientist',
+		temperature: 0.5,
+	},
+	(event) => {
+		if (event.type === 'chunk') {
+			// Update UI with streaming content
+			process.stdout.write(event.content);
+		} else if (event.type === 'done') {
+			console.log('\nAnalysis complete');
+		}
+	}
+);
+```
+
+## Available Models
+
+### Claude 3 Family
+
+- `claude-3-opus-20240229` - Most capable, best for complex tasks
+- `claude-3-sonnet-20240229` - Balanced performance and speed
+- `claude-3-haiku-20240307` - Fastest, most cost-effective
+
+### Model Selection Guide
+
+```tsx
+// Choose model based on task complexity
+function selectClaudeModel(taskComplexity: 'simple' | 'medium' | 'complex') {
+	const modelMap = {
+		simple: 'claude-3-haiku-20240307',
+		medium: 'claude-3-sonnet-20240229',
+		complex: 'claude-3-opus-20240229',
+	};
+
+	return modelMap[taskComplexity];
+}
+
+// Usage
+const response = await callLLM({
+	model: selectClaudeModel('medium'),
+	prompt: 'Analyze this business strategy',
+	temperature: 0.6,
+});
+```
+
+## Advanced Features
+
+### Long Context Window
+
+Claude models support up to 200K tokens of context:
+
+```tsx
+const analyzeLongDocument = async (document: string) => {
+	const response = await callLLM({
+		model: 'claude-3-opus-20240229',
+		prompt: `Analyze this document and provide key insights:\n\n${document}`,
+		systemPrompt: 'You are an expert analyst. Provide comprehensive insights.',
+		maxTokens: 4000, // Claude can generate longer responses
+	});
+
+	return response.content;
+};
+```
+
+### Constitutional AI
+
+Leverage Claude's safety features:
+
+```tsx
+const safeResponse = await callLLM({
+	model: 'claude-3-sonnet-20240229',
+	prompt: userInput,
+	systemPrompt: `You are a helpful, harmless, and honest assistant. 
+                 Always prioritize user safety and provide accurate information.`,
+	temperature: 0.7,
+});
+```
+
+### Code Generation
+
+Claude excels at code generation tasks:
+
+```tsx
+const generateCode = async (requirements: string) => {
+	const response = await callLLM({
+		model: 'claude-3-sonnet-20240229',
+		prompt: `Generate TypeScript code for: ${requirements}`,
+		systemPrompt: `You are an expert TypeScript developer. 
+                   Generate clean, well-commented, type-safe code.
+                   Include error handling and follow best practices.`,
+		temperature: 0.3, // Lower temperature for code generation
+	});
+
+	return response.content;
+};
+```
+
+## Best Practices
+
+### 1. Prompt Engineering
+
+Claude responds well to structured prompts:
+
+```tsx
+const structuredPrompt = `
+Task: Analyze customer feedback
+Context: E-commerce platform selling electronics
+Requirements:
+1. Identify main themes
+2. Sentiment analysis
+3. Actionable recommendations
+
+Feedback data:
+${feedbackData}
+
+Please provide your analysis in a structured format.
+`;
+
+const response = await callLLM({
+	model: 'claude-3-sonnet-20240229',
+	prompt: structuredPrompt,
+	temperature: 0.5,
+});
+```
+
+### 2. Temperature Settings
+
+Adjust temperature based on task:
+
+```tsx
+const temperatures = {
+	creative: 0.8, // Story writing, brainstorming
+	balanced: 0.5, // General tasks
+	analytical: 0.3, // Data analysis, summaries
+	deterministic: 0.1, // Code, factual responses
+};
+```
+
+### 3. Error Handling
+
+Handle Anthropic-specific errors:
+
+```tsx
+try {
+	const response = await callLLM({
+		model: 'claude-3-opus-20240229',
+		prompt: 'Your prompt here',
+	});
+} catch (error) {
+	if (error.status === 429) {
+		// Rate limit exceeded
+		console.log('Rate limited, please wait...');
+	} else if (error.status === 401) {
+		// Invalid API key
+		console.error('Invalid Anthropic API key');
+	} else if (error.status === 400) {
+		// Bad request (e.g., token limit exceeded)
+		console.error('Request error:', error.message);
+	}
+}
+```
+
+## Comparison with OpenAI
+
+Key differences when migrating from OpenAI:
+
+```tsx
+// OpenAI style
+const openAIResponse = await callLLM({
+	model: 'gpt-4',
+	prompt: 'Explain AI',
+	maxTokens: 1000,
+});
+
+// Anthropic style (similar API, different models)
+const anthropicResponse = await callLLM({
+	model: 'claude-3-sonnet-20240229',
+	prompt: 'Explain AI',
+	maxTokens: 1000,
+});
+```
+
+## Cost Optimization
+
+Optimize costs with model selection:
+
+```tsx
+const costOptimizedCall = async (
+	prompt: string,
+	priority: 'speed' | 'quality' | 'balanced'
+) => {
+	const modelConfig = {
+		speed: {
+			model: 'claude-3-haiku-20240307',
+			maxTokens: 1000,
+		},
+		quality: {
+			model: 'claude-3-opus-20240229',
+			maxTokens: 4000,
+		},
+		balanced: {
+			model: 'claude-3-sonnet-20240229',
+			maxTokens: 2000,
+		},
+	};
+
+	const config = modelConfig[priority];
+
+	return callLLM({
+		...config,
+		prompt,
+		temperature: 0.6,
+	});
+};
+```
+
+## Limitations
+
+1. **No function calling** - Unlike OpenAI, Anthropic doesn't support native function calling
+2. **No image generation** - Claude is text-only (though it can analyze images)
+3. **Different token limits** - Be aware of model-specific limits
+
+## Next Steps
+
+- Explore [AI SDK](/getting-started/agent-backend-connection/ai-sdk) for unified multi-provider access
+- Consider [Mastra](/getting-started/agent-backend-connection/mastra) for advanced features
+- Learn about [message handling](/getting-started/messages/overview)

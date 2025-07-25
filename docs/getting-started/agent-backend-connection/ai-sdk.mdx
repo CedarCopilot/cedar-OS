@@ -1,0 +1,290 @@
+---
+title: 'AI SDK'
+description: 'Connecting Cedar-OS with AI SDK'
+---
+
+# AI SDK Integration
+
+The AI SDK provider offers a unified interface to work with multiple AI providers (OpenAI, Anthropic, Google, Mistral, Groq) through Vercel's AI SDK. This is the simplest way to get started with Cedar-OS.
+
+## Initial Configuration
+
+Configure one or more providers with their API keys:
+
+```tsx
+import { useCedarStore } from '@cedar-os/cedar';
+
+const store = useCedarStore();
+
+// Configure AI SDK with multiple providers
+store.setProviderConfig({
+	provider: 'ai-sdk',
+	providers: {
+		openai: {
+			apiKey: process.env.OPENAI_API_KEY,
+		},
+		anthropic: {
+			apiKey: process.env.ANTHROPIC_API_KEY,
+		},
+		google: {
+			apiKey: process.env.GOOGLE_API_KEY,
+		},
+		mistral: {
+			apiKey: process.env.MISTRAL_API_KEY,
+		},
+		groq: {
+			apiKey: process.env.GROQ_API_KEY,
+		},
+	},
+});
+
+// Connect to the agent
+await store.connect();
+```
+
+## Basic Usage
+
+With AI SDK, you specify models in the format `provider/model`:
+
+```tsx
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+const { callLLM, streamLLM } = useTypedAgentConnection('ai-sdk');
+
+// Use OpenAI
+const openaiResponse = await callLLM({
+	model: 'openai/gpt-4o-mini',
+	prompt: 'Explain quantum computing',
+	systemPrompt: 'You are a physics teacher',
+	temperature: 0.7,
+	maxTokens: 1000,
+});
+
+// Use Anthropic
+const anthropicResponse = await callLLM({
+	model: 'anthropic/claude-3-sonnet-20240229',
+	prompt: 'Write a haiku about coding',
+	temperature: 0.9,
+});
+
+// Use Google Gemini
+const googleResponse = await callLLM({
+	model: 'google/gemini-1.5-pro',
+	prompt: 'Analyze this image: [image data]',
+	temperature: 0.5,
+});
+```
+
+## Streaming Responses
+
+Stream responses for better user experience:
+
+```tsx
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+const { streamLLM } = useTypedAgentConnection('ai-sdk');
+
+// Stream from any provider
+const streamResponse = streamLLM(
+	{
+		model: 'openai/gpt-4o',
+		prompt: 'Write a detailed essay about AI ethics',
+		systemPrompt: 'You are an AI ethics researcher',
+		temperature: 0.7,
+	},
+	(event) => {
+		if (event.type === 'chunk') {
+			// Update UI with streaming content
+			console.log(event.content);
+		} else if (event.type === 'done') {
+			console.log('Streaming complete');
+		} else if (event.type === 'error') {
+			console.error('Stream error:', event.error);
+		}
+	}
+);
+
+// Cancel streaming if needed
+// streamResponse.abort();
+```
+
+## Available Models
+
+### OpenAI Models
+
+- `openai/gpt-4o` - Most capable model
+- `openai/gpt-4o-mini` - Faster, more affordable
+- `openai/gpt-4-turbo` - Previous generation
+- `openai/gpt-3.5-turbo` - Fast, cost-effective
+
+### Anthropic Models
+
+- `anthropic/claude-3-opus-20240229` - Most capable
+- `anthropic/claude-3-sonnet-20240229` - Balanced performance
+- `anthropic/claude-3-haiku-20240307` - Fast and efficient
+
+### Google Models
+
+- `google/gemini-1.5-pro` - Most capable
+- `google/gemini-1.5-flash` - Faster variant
+- `google/gemini-pro` - Previous generation
+
+### Mistral Models
+
+- `mistral/mistral-large-latest` - Most capable
+- `mistral/mistral-medium-latest` - Balanced
+- `mistral/mistral-small-latest` - Fast and efficient
+
+### Groq Models
+
+- `groq/llama-3.1-70b-versatile` - Open source, versatile
+- `groq/llama-3.1-8b-instant` - Fast inference
+- `groq/mixtral-8x7b-32768` - MoE architecture
+
+## Advanced Features
+
+### Model Switching
+
+Dynamically switch between models based on task requirements:
+
+```tsx
+function SmartAssistant() {
+  const { callLLM } = useTypedAgentConnection('ai-sdk');
+
+  const analyzeComplexity = async (prompt: string) => {
+    // Use a fast model to analyze complexity
+    const analysis = await callLLM({
+      model: 'openai/gpt-3.5-turbo',
+      prompt: `Rate the complexity of this task (1-10): ${prompt}`,
+      temperature: 0.3,
+      maxTokens: 50
+    });
+
+    const complexity = parseInt(analysis.content);
+
+    // Choose model based on complexity
+    const model = complexity > 7
+      ? 'openai/gpt-4o'
+      : 'openai/gpt-4o-mini';
+
+    // Execute with appropriate model
+    return callLLM({
+      model,
+      prompt,
+      temperature: 0.7
+    });
+  };
+
+  return (
+    // Your UI here
+  );
+}
+```
+
+### Provider Fallbacks
+
+Implement fallback logic for reliability:
+
+```tsx
+async function callWithFallback(params: AISDKParams) {
+	const { callLLM } = useTypedAgentConnection('ai-sdk');
+
+	const providers = [
+		'openai/gpt-4o-mini',
+		'anthropic/claude-3-haiku-20240307',
+		'google/gemini-1.5-flash',
+	];
+
+	for (const model of providers) {
+		try {
+			return await callLLM({
+				...params,
+				model,
+			});
+		} catch (error) {
+			console.warn(`Provider ${model} failed, trying next...`);
+			continue;
+		}
+	}
+
+	throw new Error('All providers failed');
+}
+```
+
+### Cost Optimization
+
+Choose models based on cost/performance trade-offs:
+
+```tsx
+const costOptimizedCall = async (params: Omit<AISDKParams, 'model'>) => {
+	const { prompt } = params;
+	const promptLength = prompt.length;
+
+	// Use cheaper models for shorter prompts
+	const model =
+		promptLength < 500
+			? 'openai/gpt-3.5-turbo' // Cheapest
+			: promptLength < 2000
+			? 'openai/gpt-4o-mini' // Balanced
+			: 'openai/gpt-4o'; // Most capable
+
+	return callLLM({
+		...params,
+		model,
+	});
+};
+```
+
+## Best Practices
+
+1. **API Key Security**: Never expose API keys in client-side code. Use environment variables and server-side proxies.
+
+2. **Model Selection**: Choose models based on your specific needs:
+
+   - **Speed**: Groq models, GPT-3.5-turbo, Claude Haiku
+   - **Quality**: GPT-4o, Claude Opus, Gemini 1.5 Pro
+   - **Cost**: GPT-3.5-turbo, Claude Haiku, Mistral Small
+
+3. **Error Handling**: Always handle provider-specific errors:
+
+   ```tsx
+   try {
+   	const response = await callLLM({ model: 'openai/gpt-4o', prompt: '...' });
+   } catch (error) {
+   	if (error.message.includes('rate limit')) {
+   		// Handle rate limiting
+   	} else if (error.message.includes('invalid key')) {
+   		// Handle auth errors
+   	}
+   }
+   ```
+
+4. **Streaming**: Use streaming for long responses to improve perceived performance
+
+## Migration from Direct Providers
+
+If you're migrating from direct OpenAI/Anthropic integration:
+
+```tsx
+// Before (OpenAI direct)
+store.setProviderConfig({
+	provider: 'openai',
+	apiKey: 'sk-...',
+});
+callLLM({ model: 'gpt-4o', prompt: '...' });
+
+// After (AI SDK)
+store.setProviderConfig({
+	provider: 'ai-sdk',
+	providers: {
+		openai: { apiKey: 'sk-...' },
+	},
+});
+callLLM({ model: 'openai/gpt-4o', prompt: '...' });
+```
+
+## Next Steps
+
+- Explore [streaming patterns](/getting-started/messages/streaming)
+- Learn about [custom components](/getting-started/messages/custom-components)
+- Set up [state management](/getting-started/state-access/overview)

@@ -1,0 +1,450 @@
+---
+title: 'Custom'
+description: 'Creating custom agent backend connections'
+---
+
+# Custom Backend Integration
+
+Cedar-OS allows you to integrate your own custom AI backend. This is useful when you have existing infrastructure or need specific functionality not provided by standard providers.
+
+## Basic Custom Provider
+
+The simplest custom provider uses the OpenAI-compatible format:
+
+```tsx
+import { useCedarStore } from '@cedar-os/cedar';
+
+const store = useCedarStore();
+
+// Configure custom provider
+store.setProviderConfig({
+	provider: 'custom',
+	config: {
+		baseURL: 'https://your-api.com',
+		apiKey: 'your-api-key',
+		// Any additional config your backend needs
+		organizationId: 'org-123',
+		projectId: 'project-456',
+	},
+});
+```
+
+## Custom Provider Implementation
+
+For more control, implement your own provider:
+
+```tsx
+// providers/myCustomProvider.ts
+import type {
+	ProviderImplementation,
+	CustomParams,
+	LLMResponse,
+	StreamHandler,
+	StreamResponse,
+} from '@cedar-os/cedar';
+
+interface MyCustomConfig {
+	baseURL: string;
+	apiKey: string;
+	organizationId: string;
+}
+
+export const myCustomProvider: ProviderImplementation<
+	CustomParams,
+	{ provider: 'custom'; config: MyCustomConfig }
+> = {
+	// Non-streaming implementation
+	callLLM: async (params, config) => {
+		const response = await fetch(`${config.config.baseURL}/generate`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${config.config.apiKey}`,
+				'X-Organization-ID': config.config.organizationId,
+			},
+			body: JSON.stringify({
+				prompt: params.prompt,
+				system: params.systemPrompt,
+				temperature: params.temperature,
+				max_tokens: params.maxTokens,
+				// Map any custom parameters
+				...params,
+			}),
+		});
+
+		return myCustomProvider.handleResponse(response);
+	},
+
+	// Streaming implementation
+	streamLLM: (params, config, handler) => {
+		const abortController = new AbortController();
+
+		const completion = (async () => {
+			try {
+				const response = await fetch(`${config.config.baseURL}/stream`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${config.config.apiKey}`,
+						'X-Organization-ID': config.config.organizationId,
+					},
+					body: JSON.stringify({
+						prompt: params.prompt,
+						system: params.systemPrompt,
+						temperature: params.temperature,
+						stream: true,
+					}),
+					signal: abortController.signal,
+				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
+				// Handle your streaming format
+				const reader = response.body!.getReader();
+				const decoder = new TextDecoder();
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+
+					const chunk = decoder.decode(value);
+					// Parse your streaming format
+					const lines = chunk.split('\n');
+
+					for (const line of lines) {
+						if (line.startsWith('data: ')) {
+							const data = JSON.parse(line.slice(6));
+							if (data.content) {
+								handler({ type: 'chunk', content: data.content });
+							}
+						}
+					}
+				}
+
+				handler({ type: 'done' });
+			} catch (error) {
+				if (error instanceof Error && error.name !== 'AbortError') {
+					handler({ type: 'error', error });
+				}
+			}
+		})();
+
+		return {
+			abort: () => abortController.abort(),
+			completion,
+		};
+	},
+
+	// Response handler
+	handleResponse: async (response) => {
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`API error: ${error}`);
+		}
+
+		const data = await response.json();
+
+		return {
+			content: data.text || data.content || data.response,
+			usage: data.usage
+				? {
+						promptTokens: data.usage.prompt_tokens,
+						completionTokens: data.usage.completion_tokens,
+						totalTokens: data.usage.total_tokens,
+				  }
+				: undefined,
+			metadata: {
+				model: data.model,
+				id: data.id,
+				...data.metadata,
+			},
+		};
+	},
+
+	// Stream response handler
+	handleStreamResponse: (chunk) => {
+		return { type: 'chunk', content: chunk };
+	},
+};
+```
+
+## Registering Your Custom Provider
+
+Register your provider with Cedar-OS:
+
+```tsx
+// In your app initialization
+import { providerRegistry } from '@cedar-os/cedar';
+import { myCustomProvider } from './providers/myCustomProvider';
+
+// Extend the provider registry
+providerRegistry.custom = myCustomProvider;
+
+// Now you can use it
+store.setProviderConfig({
+	provider: 'custom',
+	config: {
+		baseURL: 'https://your-api.com',
+		apiKey: 'your-api-key',
+		organizationId: 'org-123',
+	},
+});
+```
+
+## Advanced Custom Backends
+
+### WebSocket-Based Backend
+
+For real-time communication:
+
+```tsx
+class WebSocketProvider {
+	private ws: WebSocket | null = null;
+	private handlers: Map<string, StreamHandler> = new Map();
+
+	connect(config: MyCustomConfig) {
+		this.ws = new WebSocket(`${config.baseURL}/ws`);
+
+		this.ws.onmessage = (event) => {
+			const data = JSON.parse(event.data);
+			const handler = this.handlers.get(data.requestId);
+
+			if (handler) {
+				if (data.type === 'chunk') {
+					handler({ type: 'chunk', content: data.content });
+				} else if (data.type === 'complete') {
+					handler({ type: 'done' });
+					this.handlers.delete(data.requestId);
+				}
+			}
+		};
+	}
+
+	streamLLM(params: CustomParams, handler: StreamHandler): StreamResponse {
+		const requestId = crypto.randomUUID();
+		this.handlers.set(requestId, handler);
+
+		this.ws?.send(
+			JSON.stringify({
+				type: 'generate',
+				requestId,
+				...params,
+			})
+		);
+
+		return {
+			abort: () => {
+				this.ws?.send(
+					JSON.stringify({
+						type: 'abort',
+						requestId,
+					})
+				);
+				this.handlers.delete(requestId);
+			},
+			completion: new Promise((resolve) => {
+				// Resolve when done
+				const originalHandler = handler;
+				this.handlers.set(requestId, (event) => {
+					originalHandler(event);
+					if (event.type === 'done') {
+						resolve();
+					}
+				});
+			}),
+		};
+	}
+}
+```
+
+### GraphQL Backend
+
+For GraphQL-based APIs:
+
+```tsx
+const graphQLProvider: ProviderImplementation<CustomParams, any> = {
+	callLLM: async (params, config) => {
+		const query = `
+      mutation GenerateText($input: GenerateInput!) {
+        generate(input: $input) {
+          text
+          usage {
+            promptTokens
+            completionTokens
+          }
+          metadata
+        }
+      }
+    `;
+
+		const response = await fetch(`${config.config.baseURL}/graphql`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${config.config.apiKey}`,
+			},
+			body: JSON.stringify({
+				query,
+				variables: {
+					input: {
+						prompt: params.prompt,
+						systemPrompt: params.systemPrompt,
+						temperature: params.temperature,
+					},
+				},
+			}),
+		});
+
+		const data = await response.json();
+
+		return {
+			content: data.data.generate.text,
+			usage: data.data.generate.usage,
+			metadata: data.data.generate.metadata,
+		};
+	},
+	// ... implement other methods
+};
+```
+
+## Type-Safe Custom Providers
+
+Create fully typed custom providers:
+
+```tsx
+// types/customProvider.ts
+interface MyBackendParams extends BaseParams {
+	model: 'fast' | 'accurate' | 'creative';
+	language?: string;
+	format?: 'text' | 'markdown' | 'json';
+	customField?: string;
+}
+
+interface MyBackendConfig {
+	provider: 'my-backend';
+	apiKey: string;
+	region: 'us' | 'eu' | 'asia';
+	version?: string;
+}
+
+// Extend Cedar types
+declare module '@cedar-os/cedar' {
+	interface ProviderConfigMap {
+		'my-backend': MyBackendConfig;
+	}
+
+	interface ProviderParamsMap {
+		'my-backend': MyBackendParams;
+	}
+}
+
+// Now you get full type safety
+const { callLLM } = useTypedAgentConnection('my-backend');
+
+const response = await callLLM({
+	model: 'accurate', // TypeScript knows the valid options
+	prompt: 'Hello',
+	language: 'en',
+	format: 'markdown',
+});
+```
+
+## Best Practices
+
+1. **Error Handling**: Implement comprehensive error handling
+
+   ```tsx
+   handleResponse: async (response) => {
+   	if (!response.ok) {
+   		const errorData = await response.json().catch(() => ({}));
+   		throw new Error(
+   			errorData.message || `HTTP ${response.status}: ${response.statusText}`
+   		);
+   	}
+   	// ... handle success
+   };
+   ```
+
+2. **Retry Logic**: Add automatic retries for reliability
+
+   ```tsx
+   const retryableCall = async (fn: () => Promise<any>, retries = 3) => {
+   	for (let i = 0; i < retries; i++) {
+   		try {
+   			return await fn();
+   		} catch (error) {
+   			if (i === retries - 1) throw error;
+   			await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, i)));
+   		}
+   	}
+   };
+   ```
+
+3. **Request/Response Logging**: Add debugging capabilities
+
+   ```tsx
+   if (process.env.NODE_ENV === 'development') {
+   	console.log('Request:', { params, config });
+   	console.log('Response:', response);
+   }
+   ```
+
+4. **Authentication Flexibility**: Support multiple auth methods
+   ```tsx
+   const getAuthHeaders = (config: MyCustomConfig) => {
+   	if (config.authType === 'bearer') {
+   		return { Authorization: `Bearer ${config.apiKey}` };
+   	} else if (config.authType === 'apikey') {
+   		return { 'X-API-Key': config.apiKey };
+   	}
+   	return {};
+   };
+   ```
+
+## Testing Custom Providers
+
+Create tests for your custom provider:
+
+```tsx
+// __tests__/customProvider.test.ts
+import { myCustomProvider } from '../providers/myCustomProvider';
+
+describe('Custom Provider', () => {
+	it('should handle successful responses', async () => {
+		const mockFetch = jest.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({
+				text: 'Hello world',
+				usage: { prompt_tokens: 10, completion_tokens: 20 },
+			}),
+		});
+
+		global.fetch = mockFetch;
+
+		const response = await myCustomProvider.callLLM(
+			{ prompt: 'Hello', temperature: 0.7 },
+			{ provider: 'custom', config: { baseURL: 'http://test', apiKey: 'test' } }
+		);
+
+		expect(response.content).toBe('Hello world');
+		expect(mockFetch).toHaveBeenCalledWith(
+			'http://test/generate',
+			expect.objectContaining({
+				method: 'POST',
+				headers: expect.objectContaining({
+					Authorization: 'Bearer test',
+				}),
+			})
+		);
+	});
+});
+```
+
+## Next Steps
+
+- Implement streaming for better UX
+- Add authentication and security
+- Create typed wrappers for your custom API
+- Explore [state management](/getting-started/state-access/overview) integration
