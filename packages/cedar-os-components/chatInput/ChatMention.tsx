@@ -1,8 +1,28 @@
-import { useMentionProvidersByTrigger } from '@/store/agentInputContext/mentionProviders';
-import { withClassName } from '@/styles/stylingUtils';
 import { NodeViewWrapper } from '@tiptap/react';
+import React, { ReactNode } from 'react';
+import { useMentionProvidersByTrigger, withClassName } from 'cedar-os';
 
-export const MentionNodeView = ({ node }: { node: any }) => {
+interface MentionNodeAttributes {
+	id: string;
+	label: string;
+	providerId?: string;
+	contextKey?: string;
+	contextEntryId?: string;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	data?: any;
+	metadata?: {
+		icon?: ReactNode;
+		color?: string;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		[key: string]: any;
+	};
+}
+
+interface NodeWithAttrs {
+	attrs: MentionNodeAttributes;
+}
+
+export const MentionNodeView = ({ node }: { node: NodeWithAttrs }) => {
 	const providers = useMentionProvidersByTrigger('@');
 
 	// Find the provider that created this mention
