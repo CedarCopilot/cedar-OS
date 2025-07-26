@@ -6,9 +6,10 @@ import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import { ReactNodeViewRenderer } from '@tiptap/react';
-import { MentionNodeView } from './ChatMention';
-import mentionSuggestion from '@/components/chatInput/suggestions';
+import { MentionNodeView } from '@/components/chatInput/ChatMention';
+
 import { useEffect, useState } from 'react';
+import mentionSuggestion from '@/components/chatInput/suggestions';
 
 interface UseCedarEditorOptions {
 	placeholder?: string;
@@ -135,7 +136,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 					>();
 					const { doc } = this.editor.state;
 
-					doc.descendants((node: any, pos: number) => {
+					doc.descendants((node) => {
 						if (node.type.name === 'mention' && node.attrs.contextEntryId) {
 							currentMentions.set(node.attrs.contextEntryId, {
 								contextKey: node.attrs.contextKey,

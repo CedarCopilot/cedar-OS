@@ -3,7 +3,7 @@ export { CedarCopilot } from '../../cedar-os-components/CedarCopilot';
 
 // Export components
 export { ChatInput } from '../../cedar-os-components/chatInput/ChatInput';
-export { default as TooltipMenu } from '@/components/inputs/TooltipMenu';
+export { default as TooltipMenu } from '../../cedar-os-components/inputs/TooltipMenu';
 
 // Export chat components
 export { CedarCaptionChat } from '../../cedar-os-components/chatComponents/CedarCaptionChat';
@@ -19,7 +19,7 @@ export type {
 	FloatingDimensions,
 	FloatingPosition,
 	SidePanelDimensions,
-} from '@/components/structural';
+} from '../../cedar-os-components/structural';
 
 // Export UI components
 export { default as Container3D } from '../../cedar-os-components/containers/Container3D';
@@ -27,7 +27,7 @@ export { default as Container3DButton } from '../../cedar-os-components/containe
 export { default as Flat3dContainer } from '../../cedar-os-components/containers/Flat3dContainer';
 export { default as Flat3dButton } from '../../cedar-os-components/containers/Flat3dButton';
 export { default as GlassyPaneContainer } from '../../cedar-os-components/containers/GlassyPaneContainer';
-export { KeyboardShortcut } from '@/components/ui/KeyboardShortcut';
+export { KeyboardShortcut } from '../../cedar-os-components/ui/KeyboardShortcut';
 export { default as Slider } from '../../cedar-os-components/ui/Slider';
 export { Button } from '../../cedar-os-components/ui/button';
 
@@ -36,8 +36,8 @@ export { ShimmerText } from '../../cedar-os-components/text/ShimmerText';
 export { TypewriterText } from '../../cedar-os-components/text/TypewriterText';
 
 // Export ornament components
-export { default as GlowingMesh } from '@/components/ornaments/GlowingMesh';
-export { default as GlowingMeshGradient } from '@/components/ornaments/GlowingMeshGradient';
+export { default as GlowingMesh } from '../../cedar-os-components/ornaments/GlowingMesh';
+export { default as GlowingMeshGradient } from '../../cedar-os-components/ornaments/GlowingMeshGradient';
 export { default as GradientMesh } from '../../cedar-os-components/ornaments/GradientMesh';
 
 // Export chat message components
@@ -47,16 +47,17 @@ export { default as CaptionMessages } from '../../cedar-os-components/chatMessag
 export { default as DialogueOptions } from '../../cedar-os-components/chatMessages/DialogueOptions';
 export { default as MultipleChoice } from '../../cedar-os-components/chatMessages/MultipleChoice';
 export { default as Storyline } from '../../cedar-os-components/chatMessages/Storyline';
-export { default as StorylineEdge } from '@/components/chatMessages/StorylineEdge';
-export { default as StreamingText } from '@/components/chatMessages/StreamingText';
+export { default as StorylineEdge } from '../../cedar-os-components/chatMessages/StorylineEdge';
+export { default as StreamingText } from '../../cedar-os-components/chatMessages/StreamingText';
 export { default as TodoList } from '../../cedar-os-components/chatMessages/TodoList';
 export { CollapsedButton } from '../../cedar-os-components/chatMessages/structural/CollapsedChatButton';
 
-// Export chat input components
-export { MentionNodeView } from '../../cedar-os-components/chatInput/ChatMention';
-export { ContextBadgeRow } from '../../cedar-os-components/chatInput/ContextBadgeRow';
-export { default as MentionList } from '../../cedar-os-components/chatInput/MentionList';
 export { useCedarEditor } from '@/components/chatInput/useCedarEditor';
+
+// Export chat input components
+export { MentionNodeView } from '@/components/chatInput/ChatMention';
+export { ContextBadgeRow } from '../../cedar-os-components/chatInput/ContextBadgeRow';
+export { default as MentionList } from '@/components/chatInput/MentionList';
 
 // Export styling utilities
 export {
