@@ -28,7 +28,7 @@ export { default as Flat3dContainer } from '../../cedar-os-components/containers
 export { default as Flat3dButton } from '../../cedar-os-components/containers/Flat3dButton';
 export { default as GlassyPaneContainer } from '../../cedar-os-components/containers/GlassyPaneContainer';
 export { KeyboardShortcut } from '../../cedar-os-components/ui/KeyboardShortcut';
-export { default as Slider } from '../../cedar-os-components/ui/Slider';
+export { default as Slider3D } from '../../cedar-os-components/ui/Slider3D';
 export { Button } from '../../cedar-os-components/ui/button';
 
 // Export text components
