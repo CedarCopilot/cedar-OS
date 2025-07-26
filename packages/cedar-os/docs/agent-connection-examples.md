@@ -5,8 +5,8 @@
 ### OpenAI Provider
 
 ```typescript
-import { CedarCopilot } from 'cedar';
-import type { ProviderConfig } from 'cedar';
+import { CedarCopilot } from 'cedar-os';
+import type { ProviderConfig } from 'cedar-os';
 
 function App() {
 	const openAIConfig: ProviderConfig = {
@@ -23,8 +23,8 @@ function App() {
 ### Mastra Provider
 
 ```typescript
-import { CedarCopilot, useCedarStore } from 'cedar';
-import type { ProviderConfig } from 'cedar';
+import { CedarCopilot, useCedarStore } from 'cedar-os';
+import type { ProviderConfig } from 'cedar-os';
 
 function App() {
 	const mastraConfig: ProviderConfig = {
@@ -60,8 +60,8 @@ function MyComponent() {
 ### AI SDK Provider with Multiple Models
 
 ```typescript
-import { CedarCopilot } from 'cedar';
-import type { ProviderConfig } from 'cedar';
+import { CedarCopilot } from 'cedar-os';
+import type { ProviderConfig } from 'cedar-os';
 
 function App() {
 	const aiSDKConfig: ProviderConfig = {
@@ -95,7 +95,7 @@ function App() {
 Here's an example of creating a custom `debugFlow` function that demonstrates the flexibility of the system:
 
 ```typescript
-import { useCedarStore } from 'cedar';
+import { useCedarStore } from 'cedar-os';
 
 function useDebugFlow() {
 	const store = useCedarStore();
@@ -294,7 +294,7 @@ Cedar provides typed hooks that give you compile-time type safety based on your 
 When you know which provider you're using, use the typed hook:
 
 ```typescript
-import { useTypedAgentConnection } from 'cedar';
+import { useTypedAgentConnection } from 'cedar-os';
 
 function MyOpenAIComponent() {
 	const { callLLM, streamLLM } = useTypedAgentConnection('openai');
@@ -341,7 +341,7 @@ function MyMastraComponent() {
 When you need to handle multiple providers dynamically:
 
 ```typescript
-import { useAgentConnection } from 'cedar';
+import { useAgentConnection } from 'cedar-os';
 
 function DynamicComponent() {
 	const connection = useAgentConnection();
@@ -370,7 +370,7 @@ function DynamicComponent() {
 The typed hooks work perfectly with custom application flows:
 
 ```typescript
-import { useTypedAgentConnection } from 'cedar';
+import { useTypedAgentConnection } from 'cedar-os';
 
 function useOpenAIDebugFlow() {
 	const { streamLLM } = useTypedAgentConnection('openai');

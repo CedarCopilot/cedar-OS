@@ -22,8 +22,8 @@ const mainPackage = JSON.parse(fs.readFileSync(mainPackagePath, 'utf8'));
 let changed = false;
 
 // Set specific version
-if (mainPackage.dependencies['cedar'] !== version) {
-  mainPackage.dependencies['cedar'] = version;
+if (mainPackage.dependencies['cedar-os'] !== version) {
+  mainPackage.dependencies['cedar-os'] = version;
   changed = true;
   console.log(`✅ Set cedar to ${version} for manual testing`);
 } else {

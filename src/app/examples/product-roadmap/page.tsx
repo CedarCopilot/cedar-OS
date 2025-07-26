@@ -39,7 +39,7 @@ import {
 	TooltipMenu,
 	useRegisterState,
 	useStateBasedMentionProvider,
-} from 'cedar';
+} from 'cedar-os';
 import { ArrowRight, Box, CheckCircle, Loader } from 'lucide-react';
 import { motion } from 'motion/react';
 

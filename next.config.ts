@@ -6,9 +6,9 @@ const isDev = process.env.USE_LOCAL_SRC === 'true';
 const nextConfig: NextConfig = {
 	webpack: (config) => {
 		// Alias cedar to either source or built files
-		config.resolve.alias['cedar'] = isDev
-			? path.resolve(__dirname, './packages/cedar/src')
-			: path.resolve(__dirname, './packages/cedar/dist');
+		config.resolve.alias['cedar-os'] = isDev
+			? path.resolve(__dirname, './packages/cedar-os/src')
+			: path.resolve(__dirname, './packages/cedar-os/dist');
 
 		// When using source files, handle cedar's internal @/ imports
 		if (isDev) {
@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
 			// This handles imports like @/components, @/store, @/utils etc.
 			config.resolve.alias['@'] = path.resolve(
 				__dirname,
-				'./packages/cedar/src'
+				'./packages/cedar-os/src'
 			);
 		}
 

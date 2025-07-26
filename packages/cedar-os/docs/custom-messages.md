@@ -238,4 +238,4 @@ import { useAppStore } from './store'; // Your custom store
 
 ## Example: Complete Chat Application
 
-See `packages/cedar/examples/custom-messages.tsx` for a complete example implementing custom image, code, and chart message types.
+See `packages/cedar-os/examples/custom-messages.tsx` for a complete example implementing custom image, code, and chart message types.

@@ -1,7 +1,7 @@
 'use client';
 
-import { CedarCopilot } from 'cedar';
-import type { ProviderConfig } from 'cedar';
+import { CedarCopilot } from 'cedar-os';
+import type { ProviderConfig } from 'cedar-os';
 import { ReactNode } from 'react';
 
 export default function ProductRoadmapLayout({

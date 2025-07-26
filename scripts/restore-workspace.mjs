@@ -14,8 +14,8 @@ const mainPackage = JSON.parse(fs.readFileSync(mainPackagePath, 'utf8'));
 let changed = false;
 
 // Restore workspace:* for local development
-if (mainPackage.dependencies['cedar'] !== 'workspace:*') {
-  mainPackage.dependencies['cedar'] = 'workspace:*';
+if (mainPackage.dependencies['cedar-os'] !== 'workspace:*') {
+  mainPackage.dependencies['cedar-os'] = 'workspace:*';
   changed = true;
   console.log(`🔄 Restored cedar to workspace:* for local development`);
 } else {

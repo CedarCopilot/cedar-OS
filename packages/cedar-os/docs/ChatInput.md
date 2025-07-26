@@ -5,7 +5,7 @@ The `ChatInput` component is a powerful chat input with mention support that aut
 ## Basic Usage
 
 ```tsx
-import { ChatInput } from '@cedar/cedar';
+import { ChatInput } from 'cedar-os';
 
 function MyComponent() {
 	const [isInputFocused, setIsInputFocused] = useState(false);
@@ -29,7 +29,7 @@ The key feature is that context badges are automatically rendered based on regis
 ### Using State-Based Mention Providers
 
 ```tsx
-import { useStateBasedMentionProvider, useCedarState } from '@cedar/cedar';
+import { useStateBasedMentionProvider, useCedarState } from 'cedar-os';
 import { FileText } from 'lucide-react';
 
 function MyComponent() {
@@ -95,7 +95,7 @@ useStateBasedMentionProvider({
 For advanced use cases, you can create fully custom providers:
 
 ```tsx
-import { useMentionProvider } from '@cedar/cedar';
+import { useMentionProvider } from 'cedar-os';
 
 const customProvider = {
 	id: 'custom-provider',
