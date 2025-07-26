@@ -1,5 +1,5 @@
 import Container3DButton from '@/components/containers/Container3DButton';
-import { useStyling } from '@/store/CedarStore';
+import { useCedarStore, useStyling } from '@/store/CedarStore';
 import { GripVertical } from 'lucide-react';
 import React, {
 	forwardRef,
@@ -23,13 +23,12 @@ interface CollapsedChatButtonProps {
 	/** Text (question suggestion) to display */
 	label: string;
 	/** Callback when the button is clicked */
-	onClick: () => void;
+	onClick?: () => void;
 	/** Layout id forwarded to the underlying motion component for shared-layout animations */
 	layoutId?: string;
 	/** Whether the button is placed via CSS `position: fixed` or `absolute`. Default is `fixed` so it works out-of-box */
 	position?: 'fixed' | 'absolute';
 	/** Show the keyboard shortcut helper */
-	showKeyboardShortcut?: boolean;
 }
 
 const INTERACTIVE_SELECTORS = ['button', '[role="button"]', 'a[href]'];
@@ -44,348 +43,335 @@ const isInteractive = (el: Element | null, self: HTMLElement) => {
 export const CollapsedButton = forwardRef<
 	HTMLDivElement,
 	CollapsedChatButtonProps
->(
-	(
-		{
-			side = 'right',
-			label,
-			onClick,
-			layoutId,
-			position = 'fixed',
-			showKeyboardShortcut = true,
-		},
-		ref
-	) => {
-		const wrapperRef = useRef<HTMLDivElement>(null);
-		const { styling } = useStyling();
-		const isDarkMode = styling.darkMode;
+>(({ side = 'right', label, onClick, layoutId, position = 'fixed' }, ref) => {
+	const wrapperRef = useRef<HTMLDivElement>(null);
+	const { styling } = useStyling();
+	const isDarkMode = styling.darkMode;
 
-		// Starting offset = 8px (bottom-2) for a tighter fit
-		const BASE_OFFSET = 8;
+	const setShowChat = useCedarStore((state) => state.setShowChat);
 
-		// Retrieve persisted offset (if any)
-		const getInitialOffset = () => {
-			if (typeof window === 'undefined') return BASE_OFFSET;
-			const saved = window.localStorage.getItem('cedarCollapsedBottomOffset');
-			if (saved) {
-				const parsed = parseInt(saved, 10);
-				if (!isNaN(parsed)) return parsed;
-			}
-			return BASE_OFFSET;
-		};
+	// Starting offset = 8px (bottom-2) for a tighter fit
+	const BASE_OFFSET = 8;
 
-		// Track if offsets were previously persisted (ref so we can update dynamically)
-		const hasPersistedOffsetsRef = useRef<boolean>(
-			typeof window !== 'undefined' &&
-				window.localStorage.getItem('cedarCollapsedBottomOffset') !== null
-		);
+	// Retrieve persisted offset (if any)
+	const getInitialOffset = () => {
+		if (typeof window === 'undefined') return BASE_OFFSET;
+		const saved = window.localStorage.getItem('cedarCollapsedBottomOffset');
+		if (saved) {
+			const parsed = parseInt(saved, 10);
+			if (!isNaN(parsed)) return parsed;
+		}
+		return BASE_OFFSET;
+	};
 
-		const [bottomOffset, setBottomOffset] = useState<number>(() =>
-			getInitialOffset()
-		);
+	// Track if offsets were previously persisted (ref so we can update dynamically)
+	const hasPersistedOffsetsRef = useRef<boolean>(
+		typeof window !== 'undefined' &&
+			window.localStorage.getItem('cedarCollapsedBottomOffset') !== null
+	);
 
-		// Track if the user has manually repositioned the button
-		const userRepositionedRef = useRef(false);
+	const [bottomOffset, setBottomOffset] = useState<number>(() =>
+		getInitialOffset()
+	);
 
-		// Drag handling refs/state
-		const [isDragging, setIsDragging] = useState(false);
+	// Track if the user has manually repositioned the button
+	const userRepositionedRef = useRef(false);
 
-		// Drag start positions
-		const dragStartY = useRef(0);
-		const dragStartX = useRef(0);
+	// Drag handling refs/state
+	const [isDragging, setIsDragging] = useState(false);
 
-		// Offsets at drag start
-		const dragStartBottomOffset = useRef(0);
-		const dragStartSideOffset = useRef(0);
+	// Drag start positions
+	const dragStartY = useRef(0);
+	const dragStartX = useRef(0);
 
-		// Horizontal offset (distance from corresponding side)
-		const getInitialSideOffset = () => {
-			if (typeof window === 'undefined') return 0;
-			const key =
-				side === 'left'
-					? 'cedarCollapsedLeftOffset'
-					: 'cedarCollapsedRightOffset';
-			const saved = window.localStorage.getItem(key);
-			if (saved) {
-				const parsed = parseInt(saved, 10);
-				if (!isNaN(parsed)) return parsed;
-			}
-			return 0;
-		};
+	// Offsets at drag start
+	const dragStartBottomOffset = useRef(0);
+	const dragStartSideOffset = useRef(0);
 
-		const [sideOffset, setSideOffset] = useState<number>(() =>
-			getInitialSideOffset()
-		);
+	// Horizontal offset (distance from corresponding side)
+	const getInitialSideOffset = () => {
+		if (typeof window === 'undefined') return 0;
+		const key =
+			side === 'left'
+				? 'cedarCollapsedLeftOffset'
+				: 'cedarCollapsedRightOffset';
+		const saved = window.localStorage.getItem(key);
+		if (saved) {
+			const parsed = parseInt(saved, 10);
+			if (!isNaN(parsed)) return parsed;
+		}
+		return 0;
+	};
 
-		// Memoise without dynamic dependencies to avoid unnecessary re-creations
+	const [sideOffset, setSideOffset] = useState<number>(() =>
+		getInitialSideOffset()
+	);
 
-		const adjustPosition = useCallback(
-			() => {
-				// Skip auto-adjustment if the user has manually repositioned or if bottom offset is persisted
-				if (userRepositionedRef.current || hasPersistedOffsetsRef.current)
-					return;
+	// Memoise without dynamic dependencies to avoid unnecessary re-creations
 
-				const wrapper = wrapperRef.current;
-				if (
-					!wrapper ||
-					typeof window === 'undefined' ||
-					typeof document === 'undefined'
-				)
-					return;
+	const adjustPosition = useCallback(
+		() => {
+			// Skip auto-adjustment if the user has manually repositioned or if bottom offset is persisted
+			if (userRepositionedRef.current || hasPersistedOffsetsRef.current) return;
 
-				// Reset first so we get an accurate rect for the default position
-				wrapper.style.bottom = `${BASE_OFFSET}px`;
-				const step = wrapper.getBoundingClientRect().height + 4; // move one button height + 8px gap each iteration
-				let currentOffset = BASE_OFFSET;
-				let attempt = 0;
-				const maxAttempts = Math.ceil(
-					(window.innerHeight - BASE_OFFSET * 2) / step
-				);
-
-				while (attempt < maxAttempts) {
-					// Place temporarily
-					wrapper.style.bottom = `${currentOffset}px`;
-					const rect = wrapper.getBoundingClientRect();
-					const samplePoints: Array<[number, number]> = [
-						// centre
-						[rect.left + rect.width / 2, rect.top + rect.height / 2],
-						// corners (slightly inset to stay within viewport)
-						[rect.left + 4, rect.top + 4],
-						[rect.right - 4, rect.top + 4],
-						[rect.left + 4, rect.bottom - 4],
-						[rect.right - 4, rect.bottom - 4],
-					];
-
-					const blocking = samplePoints.some(([x, y]) => {
-						const els = document.elementsFromPoint(x, y);
-						return els.some((el) => isInteractive(el, wrapper));
-					});
-
-					if (!blocking) {
-						setBottomOffset(currentOffset);
-						return;
-					}
-
-					currentOffset += step;
-					attempt += 1;
-				}
-
-				// Fallback – stick to last computed offset
-				setBottomOffset(currentOffset);
-			},
-			[
-				/* no dynamic deps */
-			]
-		);
-
-		// Re-calculate on mount and when window resizes or scrolls (scroll inside nested containers is captured with true)
-		useLayoutEffect(() => {
-			adjustPosition();
-			window.addEventListener('resize', adjustPosition);
-			window.addEventListener('scroll', adjustPosition, true);
-			return () => {
-				window.removeEventListener('resize', adjustPosition);
-				window.removeEventListener('scroll', adjustPosition, true);
-			};
-			// deliberately excluding adjustPosition from deps – it's memoised
-		}, []);
-
-		/* ===== Auto-adjust when new interactive elements appear (MutationObserver) ===== */
-		useEffect(() => {
+			const wrapper = wrapperRef.current;
 			if (
-				typeof MutationObserver === 'undefined' ||
+				!wrapper ||
+				typeof window === 'undefined' ||
 				typeof document === 'undefined'
 			)
 				return;
 
-			// Attributes that affect clickability
-			const watchedAttrs = ['class', 'role', 'href'];
-			let rafId: number | null = null;
+			// Reset first so we get an accurate rect for the default position
+			wrapper.style.bottom = `${BASE_OFFSET}px`;
+			const step = wrapper.getBoundingClientRect().height + 4; // move one button height + 8px gap each iteration
+			let currentOffset = BASE_OFFSET;
+			let attempt = 0;
+			const maxAttempts = Math.ceil(
+				(window.innerHeight - BASE_OFFSET * 2) / step
+			);
 
-			const schedule = () => {
-				if (rafId === null) {
-					rafId = window.requestAnimationFrame(() => {
-						rafId = null;
-						adjustPosition();
-					});
+			while (attempt < maxAttempts) {
+				// Place temporarily
+				wrapper.style.bottom = `${currentOffset}px`;
+				const rect = wrapper.getBoundingClientRect();
+				const samplePoints: Array<[number, number]> = [
+					// centre
+					[rect.left + rect.width / 2, rect.top + rect.height / 2],
+					// corners (slightly inset to stay within viewport)
+					[rect.left + 4, rect.top + 4],
+					[rect.right - 4, rect.top + 4],
+					[rect.left + 4, rect.bottom - 4],
+					[rect.right - 4, rect.bottom - 4],
+				];
+
+				const blocking = samplePoints.some(([x, y]) => {
+					const els = document.elementsFromPoint(x, y);
+					return els.some((el) => isInteractive(el, wrapper));
+				});
+
+				if (!blocking) {
+					setBottomOffset(currentOffset);
+					return;
 				}
-			};
 
-			const observer = new MutationObserver((mutations: MutationRecord[]) => {
-				for (const m of mutations) {
-					if (
-						(m.type === 'childList' &&
-							(m.addedNodes.length > 0 || m.removedNodes.length > 0)) ||
-						(m.type === 'attributes' &&
-							watchedAttrs.includes(m.attributeName as string))
-					) {
-						schedule();
-						break;
-					}
-				}
-			});
+				currentOffset += step;
+				attempt += 1;
+			}
 
-			observer.observe(document.body, {
-				subtree: true,
-				childList: true,
-				attributes: true,
-				attributeFilter: watchedAttrs,
-			});
+			// Fallback – stick to last computed offset
+			setBottomOffset(currentOffset);
+		},
+		[
+			/* no dynamic deps */
+		]
+	);
 
-			return () => {
-				observer.disconnect();
-				if (rafId !== null) cancelAnimationFrame(rafId);
-			};
-		}, [adjustPosition]);
+	// Re-calculate on mount and when window resizes or scrolls (scroll inside nested containers is captured with true)
+	useLayoutEffect(() => {
+		adjustPosition();
+		window.addEventListener('resize', adjustPosition);
+		window.addEventListener('scroll', adjustPosition, true);
+		return () => {
+			window.removeEventListener('resize', adjustPosition);
+			window.removeEventListener('scroll', adjustPosition, true);
+		};
+		// deliberately excluding adjustPosition from deps – it's memoised
+	}, []);
 
-		const positionClasses = `${position} bottom-0 ${
-			side === 'left' ? 'left-0' : 'right-0'
-		}`;
+	/* ===== Auto-adjust when new interactive elements appear (MutationObserver) ===== */
+	useEffect(() => {
+		if (
+			typeof MutationObserver === 'undefined' ||
+			typeof document === 'undefined'
+		)
+			return;
 
-		/* ===== Drag to reposition (vertical) ===== */
-		const startDrag = useCallback(
-			(e: React.MouseEvent<HTMLDivElement>) => {
-				e.preventDefault();
-				setIsDragging(true);
-				dragStartY.current = e.clientY;
-				dragStartX.current = e.clientX;
-				dragStartBottomOffset.current = bottomOffset;
-				dragStartSideOffset.current = sideOffset;
+		// Attributes that affect clickability
+		const watchedAttrs = ['class', 'role', 'href'];
+		let rafId: number | null = null;
 
-				if (typeof document !== 'undefined') {
-					document.body.style.cursor = 'move';
-					document.body.style.userSelect = 'none';
-					document.body.style.setProperty('-webkit-user-select', 'none');
-				}
-			},
-			[bottomOffset, sideOffset, side]
-		);
+		const schedule = () => {
+			if (rafId === null) {
+				rafId = window.requestAnimationFrame(() => {
+					rafId = null;
+					adjustPosition();
+				});
+			}
+		};
 
-		const handleMouseMove = useCallback(
-			(e: MouseEvent) => {
-				if (!isDragging) return;
-				const deltaY = dragStartY.current - e.clientY; // positive when dragging up
-				const newBottomOffset = Math.max(
-					0,
-					dragStartBottomOffset.current + deltaY
-				);
-				setBottomOffset(newBottomOffset);
-
-				// Horizontal movement
-				const deltaX = e.clientX - dragStartX.current;
-				if (side === 'left') {
-					const newLeftOffset = Math.max(
-						0,
-						dragStartSideOffset.current + deltaX
-					);
-					setSideOffset(newLeftOffset);
-				} else {
-					const newRightOffset = Math.max(
-						0,
-						dragStartSideOffset.current - deltaX
-					);
-					setSideOffset(newRightOffset);
-				}
-			},
-			[isDragging, bottomOffset, sideOffset, side]
-		);
-
-		const handleMouseUp = useCallback(() => {
-			if (!isDragging) return;
-			setIsDragging(false);
-			const SNAP_THRESHOLD = 20; // px tolerance to snap back to default
-			const nearDefault =
-				Math.abs(bottomOffset - BASE_OFFSET) <= SNAP_THRESHOLD &&
-				sideOffset <= SNAP_THRESHOLD;
-
-			if (nearDefault) {
-				// Snap back to default and treat as not repositioned
-				setBottomOffset(BASE_OFFSET);
-				setSideOffset(0);
-				userRepositionedRef.current = false;
-				hasPersistedOffsetsRef.current = false;
-
-				// Clear persisted offsets
-				if (typeof window !== 'undefined') {
-					window.localStorage.removeItem('cedarCollapsedBottomOffset');
-					window.localStorage.removeItem('cedarCollapsedLeftOffset');
-					window.localStorage.removeItem('cedarCollapsedRightOffset');
-				}
-			} else {
-				userRepositionedRef.current = true;
-				hasPersistedOffsetsRef.current = true;
-				// Persist the new offsets
-				if (typeof window !== 'undefined') {
-					window.localStorage.setItem(
-						'cedarCollapsedBottomOffset',
-						bottomOffset.toString()
-					);
-					const key =
-						side === 'left'
-							? 'cedarCollapsedLeftOffset'
-							: 'cedarCollapsedRightOffset';
-					window.localStorage.setItem(key, sideOffset.toString());
+		const observer = new MutationObserver((mutations: MutationRecord[]) => {
+			for (const m of mutations) {
+				if (
+					(m.type === 'childList' &&
+						(m.addedNodes.length > 0 || m.removedNodes.length > 0)) ||
+					(m.type === 'attributes' &&
+						watchedAttrs.includes(m.attributeName as string))
+				) {
+					schedule();
+					break;
 				}
 			}
+		});
+
+		observer.observe(document.body, {
+			subtree: true,
+			childList: true,
+			attributes: true,
+			attributeFilter: watchedAttrs,
+		});
+
+		return () => {
+			observer.disconnect();
+			if (rafId !== null) cancelAnimationFrame(rafId);
+		};
+	}, [adjustPosition]);
+
+	const positionClasses = `${position} bottom-0 ${
+		side === 'left' ? 'left-0' : 'right-0'
+	}`;
+
+	/* ===== Drag to reposition (vertical) ===== */
+	const startDrag = useCallback(
+		(e: React.MouseEvent<HTMLDivElement>) => {
+			e.preventDefault();
+			setIsDragging(true);
+			dragStartY.current = e.clientY;
+			dragStartX.current = e.clientX;
+			dragStartBottomOffset.current = bottomOffset;
+			dragStartSideOffset.current = sideOffset;
 
 			if (typeof document !== 'undefined') {
-				document.body.style.cursor = '';
-				document.body.style.userSelect = '';
-				document.body.style.setProperty('-webkit-user-select', '');
+				document.body.style.cursor = 'move';
+				document.body.style.userSelect = 'none';
+				document.body.style.setProperty('-webkit-user-select', 'none');
 			}
-		}, [isDragging, bottomOffset, sideOffset, side, BASE_OFFSET]);
+		},
+		[bottomOffset, sideOffset, side]
+	);
 
-		// Bind/unbind document listeners while dragging
-		useEffect(() => {
-			if (isDragging) {
-				if (typeof document !== 'undefined') {
-					document.addEventListener('mousemove', handleMouseMove);
-					document.addEventListener('mouseup', handleMouseUp);
-				}
+	const handleMouseMove = useCallback(
+		(e: MouseEvent) => {
+			if (!isDragging) return;
+			const deltaY = dragStartY.current - e.clientY; // positive when dragging up
+			const newBottomOffset = Math.max(
+				0,
+				dragStartBottomOffset.current + deltaY
+			);
+			setBottomOffset(newBottomOffset);
+
+			// Horizontal movement
+			const deltaX = e.clientX - dragStartX.current;
+			if (side === 'left') {
+				const newLeftOffset = Math.max(0, dragStartSideOffset.current + deltaX);
+				setSideOffset(newLeftOffset);
+			} else {
+				const newRightOffset = Math.max(
+					0,
+					dragStartSideOffset.current - deltaX
+				);
+				setSideOffset(newRightOffset);
 			}
-			return () => {
-				if (typeof document !== 'undefined') {
-					document.removeEventListener('mousemove', handleMouseMove);
-					document.removeEventListener('mouseup', handleMouseUp);
-				}
-			};
-		}, [isDragging, handleMouseMove, handleMouseUp]);
+		},
+		[isDragging, bottomOffset, sideOffset, side]
+	);
 
-		// Expose the DOM node to parent via forwarded ref
-		useImperativeHandle(ref, () => wrapperRef.current as HTMLDivElement, []);
+	const handleMouseUp = useCallback(() => {
+		if (!isDragging) return;
+		setIsDragging(false);
+		const SNAP_THRESHOLD = 20; // px tolerance to snap back to default
+		const nearDefault =
+			Math.abs(bottomOffset - BASE_OFFSET) <= SNAP_THRESHOLD &&
+			sideOffset <= SNAP_THRESHOLD;
 
-		return (
+		if (nearDefault) {
+			// Snap back to default and treat as not repositioned
+			setBottomOffset(BASE_OFFSET);
+			setSideOffset(0);
+			userRepositionedRef.current = false;
+			hasPersistedOffsetsRef.current = false;
+
+			// Clear persisted offsets
+			if (typeof window !== 'undefined') {
+				window.localStorage.removeItem('cedarCollapsedBottomOffset');
+				window.localStorage.removeItem('cedarCollapsedLeftOffset');
+				window.localStorage.removeItem('cedarCollapsedRightOffset');
+			}
+		} else {
+			userRepositionedRef.current = true;
+			hasPersistedOffsetsRef.current = true;
+			// Persist the new offsets
+			if (typeof window !== 'undefined') {
+				window.localStorage.setItem(
+					'cedarCollapsedBottomOffset',
+					bottomOffset.toString()
+				);
+				const key =
+					side === 'left'
+						? 'cedarCollapsedLeftOffset'
+						: 'cedarCollapsedRightOffset';
+				window.localStorage.setItem(key, sideOffset.toString());
+			}
+		}
+
+		if (typeof document !== 'undefined') {
+			document.body.style.cursor = '';
+			document.body.style.userSelect = '';
+			document.body.style.setProperty('-webkit-user-select', '');
+		}
+	}, [isDragging, bottomOffset, sideOffset, side, BASE_OFFSET]);
+
+	// Bind/unbind document listeners while dragging
+	useEffect(() => {
+		if (isDragging) {
+			if (typeof document !== 'undefined') {
+				document.addEventListener('mousemove', handleMouseMove);
+				document.addEventListener('mouseup', handleMouseUp);
+			}
+		}
+		return () => {
+			if (typeof document !== 'undefined') {
+				document.removeEventListener('mousemove', handleMouseMove);
+				document.removeEventListener('mouseup', handleMouseUp);
+			}
+		};
+	}, [isDragging, handleMouseMove, handleMouseUp]);
+
+	// Expose the DOM node to parent via forwarded ref
+	useImperativeHandle(ref, () => wrapperRef.current as HTMLDivElement, []);
+
+	return (
+		<div
+			ref={wrapperRef}
+			className={`${positionClasses} group`}
+			style={{
+				bottom: bottomOffset,
+				zIndex: 9999,
+				[side === 'left' ? 'left' : 'right']: sideOffset,
+			}}
+			aria-label='Open Cedar chat (collapsed)'>
+			{/* Drag handle – appears on hover */}
 			<div
-				ref={wrapperRef}
-				className={`${positionClasses} group`}
-				style={{
-					bottom: bottomOffset,
-					zIndex: 9999,
-					[side === 'left' ? 'left' : 'right']: sideOffset,
-				}}
-				aria-label='Open Cedar chat (collapsed)'>
-				{/* Drag handle – appears on hover */}
-				<div
-					className={`absolute top-1/2 -translate-y-1/2 ${
-						side === 'left' ? 'left-full ml-1' : 'right-full mr-2'
-					} opacity-0 group-hover:opacity-100 transition-opacity cursor-move select-none`}
-					onMouseDown={startDrag}
-					aria-label='Drag to reposition chat trigger'>
-					<GripVertical className='w-4 h-4' />
-				</div>
-				<Container3DButton
-					withMotion={true}
-					motionProps={{ layoutId }}
-					id='cedar-copilot-collapsed-button'
-					onClick={onClick}
-					className={`${isDarkMode ? 'bg-[#475569]' : ''} overflow-hidden`}>
-					<span className='truncate flex-1 text-left font-semibold'>
-						{label}
-					</span>
-				</Container3DButton>
+				className={`absolute top-1/2 -translate-y-1/2 ${
+					side === 'left' ? 'left-full ml-1' : 'right-full mr-2'
+				} opacity-0 group-hover:opacity-100 transition-opacity cursor-move select-none`}
+				onMouseDown={startDrag}
+				aria-label='Drag to reposition chat trigger'>
+				<GripVertical className='w-4 h-4' />
 			</div>
-		);
-	}
-);
+			<Container3DButton
+				withMotion={true}
+				motionProps={{ layoutId }}
+				id='cedar-copilot-collapsed-button'
+				onClick={() => {
+					setShowChat(true);
+					onClick?.();
+				}}
+				className={`${isDarkMode ? 'bg-[#475569]' : ''} overflow-hidden`}>
+				<span className='truncate flex-1 text-left font-semibold'>{label}</span>
+			</Container3DButton>
+		</div>
+	);
+});
 
 CollapsedButton.displayName = 'CollapsedButton';
