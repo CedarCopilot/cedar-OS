@@ -1,12 +1,12 @@
+import { useMentionProvidersByTrigger } from '@/store/agentInputContext/mentionProviders';
+import { MentionItem } from '@/store/agentInputContext/types';
+import { cn, withClassName } from '@/styles/stylingUtils';
 import React, {
 	forwardRef,
-	useState,
 	useEffect,
 	useImperativeHandle,
+	useState,
 } from 'react';
-import type { MentionItem } from '@/store/agentInputContext/types';
-import { useMentionProvidersByTrigger } from '@/store/agentInputContext/mentionProviders';
-import { cn, withClassName } from '@/styles/stylingUtils';
 
 interface MentionListProps {
 	items: MentionItem[];
