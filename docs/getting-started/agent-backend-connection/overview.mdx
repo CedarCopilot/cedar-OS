@@ -137,23 +137,438 @@ For more advanced configuration and usage patterns:
 - [Extending Mastra](/getting-started/agent-backend-connection/mastra) - Full agent framework with backend extension guides
 - [Custom Backend](/getting-started/agent-backend-connection/custom) - Build your own integration through API
 
+## Configuring Custom Functions
+
+The best practice for working with Cedar-OS is to create typed functions with hardcoded system prompts in a single file. This approach ensures consistency, type safety, and reusability across your application.
+
+### Creating Typed Functions
+
+Here are examples of specific typed functions using `callLLM` for each provider type:
+
+<CodeGroup>
+
+```tsx AI SDK
+// lib/ai-functions.ts
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+export const useAIFunctions = () => {
+	const { callLLM, streamLLM } = useTypedAgentConnection('ai-sdk');
+
+	const generateProductDescription = async (
+		productName: string,
+		features: string[]
+	) => {
+		return await callLLM({
+			messages: [
+				{
+					role: 'system',
+					content:
+						'You are a professional product copywriter. Create compelling, SEO-optimized product descriptions that highlight key features and benefits.',
+				},
+				{
+					role: 'user',
+					content: `Create a product description for ${productName} with these features: ${features.join(
+						', '
+					)}`,
+				},
+			],
+			model: 'gpt-4o-mini',
+			temperature: 0.7,
+		});
+	};
+
+	const analyzeUserFeedback = async (feedback: string) => {
+		return await callLLM({
+			messages: [
+				{
+					role: 'system',
+					content:
+						'You are a customer feedback analyst. Categorize feedback as positive, negative, or neutral, and extract key themes.',
+				},
+				{
+					role: 'user',
+					content: feedback,
+				},
+			],
+			model: 'claude-3-haiku-20240307',
+			temperature: 0.3,
+		});
+	};
+
+	return { generateProductDescription, analyzeUserFeedback };
+};
+```
+
+```tsx OpenAI
+// lib/ai-functions.ts
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+export const useAIFunctions = () => {
+	const { callLLM, streamLLM } = useTypedAgentConnection('openai');
+
+	const generateCodeReview = async (codeSnippet: string, language: string) => {
+		return await callLLM({
+			prompt: `You are a senior software engineer conducting code reviews. Analyze the following ${language} code for best practices, potential bugs, and improvements:\n\n${codeSnippet}`,
+			model: 'gpt-4o',
+			temperature: 0.2,
+			max_tokens: 1000,
+		});
+	};
+
+	const createEmailTemplate = async (
+		purpose: string,
+		tone: 'formal' | 'casual' | 'friendly'
+	) => {
+		return await callLLM({
+			prompt: `Create a ${tone} email template for ${purpose}. Include placeholders for personalization.`,
+			model: 'gpt-4o-mini',
+			temperature: 0.8,
+		});
+	};
+
+	return { generateCodeReview, createEmailTemplate };
+};
+```
+
+```tsx Anthropic
+// lib/ai-functions.ts
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+export const useAIFunctions = () => {
+	const { callLLM, streamLLM } = useTypedAgentConnection('anthropic');
+
+	const analyzeDocument = async (
+		documentText: string,
+		analysisType: 'summary' | 'sentiment' | 'key-points'
+	) => {
+		const systemPrompts = {
+			summary:
+				'You are a document summarizer. Create concise, accurate summaries that capture the main points.',
+			sentiment:
+				'You are a sentiment analyst. Analyze the emotional tone and sentiment of the given text.',
+			'key-points':
+				'You are a content analyst. Extract the most important key points and insights from the text.',
+		};
+
+		return await callLLM({
+			prompt: documentText,
+			system: systemPrompts[analysisType],
+			model: 'claude-3-sonnet-20240229',
+			temperature: 0.3,
+			max_tokens: 2000,
+		});
+	};
+
+	const generateCreativeContent = async (
+		topic: string,
+		contentType: 'blog' | 'social' | 'marketing'
+	) => {
+		const systemPrompts = {
+			blog: 'You are a professional blog writer. Create engaging, informative blog content with proper structure.',
+			social:
+				'You are a social media content creator. Write engaging, shareable content optimized for social platforms.',
+			marketing:
+				'You are a marketing copywriter. Create persuasive, conversion-focused marketing content.',
+		};
+
+		return await callLLM({
+			prompt: `Create ${contentType} content about: ${topic}`,
+			system: systemPrompts[contentType],
+			model: 'claude-3-opus-20240229',
+			temperature: 0.9,
+		});
+	};
+
+	return { analyzeDocument, generateCreativeContent };
+};
+```
+
+```tsx Mastra
+// lib/ai-functions.ts
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+export const useAIFunctions = () => {
+	const { callLLM, streamLLM } = useTypedAgentConnection('mastra');
+
+	const processWithMemory = async (userInput: string, sessionId: string) => {
+		return await callLLM({
+			messages: [
+				{
+					role: 'system',
+					content:
+						'You are a helpful assistant with memory. Reference previous conversations when relevant.',
+				},
+				{
+					role: 'user',
+					content: userInput,
+				},
+			],
+			sessionId,
+			tools: ['web_search', 'calculator'],
+			temperature: 0.7,
+		});
+	};
+
+	const queryKnowledgeBase = async (query: string, knowledgeBaseId: string) => {
+		return await callLLM({
+			messages: [
+				{
+					role: 'system',
+					content:
+						'You are a knowledgeable assistant. Use the knowledge base to provide accurate, contextual answers.',
+				},
+				{
+					role: 'user',
+					content: query,
+				},
+			],
+			knowledgeBaseId,
+			temperature: 0.2,
+		});
+	};
+
+	return { processWithMemory, queryKnowledgeBase };
+};
+```
+
+```tsx Custom Backend
+// lib/ai-functions.ts
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+export const useAIFunctions = () => {
+	const { callLLM, streamLLM, handleLLMResponse, handleLLMStream } =
+		useTypedAgentConnection('custom');
+
+	// Non-streaming example with handleLLMResponse
+	const generateSummary = async (content: string, maxLength: number = 200) => {
+		const response = await callLLM({
+			messages: [
+				{
+					role: 'system',
+					content: `You are a professional summarizer. Create concise summaries that are no longer than ${maxLength} words.`,
+				},
+				{
+					role: 'user',
+					content: `Summarize the following content: ${content}`,
+				},
+			],
+			temperature: 0.3,
+			// Custom backend specific parameters
+			organizationId: 'org-123',
+			projectId: 'project-456',
+		});
+
+		// Use handleLLMResponse to process the response
+		return handleLLMResponse(response);
+	};
+
+	// Streaming example with handleLLMStream
+	const generateStory = async (
+		prompt: string,
+		onChunk?: (chunk: string) => void
+	) => {
+		const stream = await streamLLM({
+			messages: [
+				{
+					role: 'system',
+					content:
+						'You are a creative storyteller. Write engaging and imaginative stories.',
+				},
+				{
+					role: 'user',
+					content: prompt,
+				},
+			],
+			temperature: 0.9,
+			// Custom backend specific parameters
+			organizationId: 'org-123',
+			projectId: 'project-456',
+			streamOptions: {
+				bufferSize: 1024,
+			},
+		});
+
+		// Use handleLLMStream to process the streaming response
+		return handleLLMStream(stream, {
+			onChunk,
+			onComplete: (fullText) => {
+				console.log('Story generation complete:', fullText);
+			},
+			onError: (error) => {
+				console.error('Story generation error:', error);
+			},
+		});
+	};
+
+	return { generateSummary, generateStory };
+};
+```
+
+</CodeGroup>
+
+### Automatic Function Configuration
+
+When you configure a provider with Cedar-OS, the system automatically provides four core functions that are correctly typed and seamlessly integrate with other components like chat interfaces and message handling:
+
+- **`callLLM`** - Makes a single request to your configured LLM provider and returns the complete response
+- **`streamLLM`** - Initiates a streaming request that returns real-time token updates for live chat experiences
+- **`handleLLMResponse`** - Processes and formats responses from `callLLM` for display in Cedar-OS components
+- **`handleLLMStream`** - Manages streaming responses from `streamLLM`, handling token buffering and UI updates
+
+These functions are automatically configured based on your provider choice and handle all the underlying complexity of API communication, error handling, and response formatting. They work seamlessly with Cedar-OS components for sending and receiving messages, ensuring a consistent experience regardless of which LLM provider you choose.
+
 ## Type Safety
 
 Cedar-OS provides full TypeScript support. When you configure a provider, all methods are properly typed:
 
-```tsx
+<CodeGroup>
+
+```tsx AI SDK
 import { useTypedAgentConnection } from '@cedar-os/cedar';
 
-// Get a typed connection for your provider
+// Get a typed connection for AI SDK
+const { callLLM, streamLLM } = useTypedAgentConnection('ai-sdk');
+
+// TypeScript knows the exact parameters needed for different models
+const openaiResponse = await callLLM({
+	messages: [
+		{ role: 'system', content: 'You are a helpful assistant.' },
+		{ role: 'user', content: 'Hello, AI!' },
+	],
+	model: 'gpt-4o-mini', // OpenAI model
+	temperature: 0.7,
+});
+
+const anthropicResponse = await callLLM({
+	messages: [
+		{ role: 'system', content: 'You are a helpful assistant.' },
+		{ role: 'user', content: 'Hello, AI!' },
+	],
+	model: 'claude-3-haiku-20240307', // Anthropic model
+	temperature: 0.7,
+});
+```
+
+```tsx OpenAI
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+// Get a typed connection for OpenAI
 const { callLLM, streamLLM } = useTypedAgentConnection('openai');
 
-// TypeScript knows the exact parameters needed
+// TypeScript enforces OpenAI-specific parameters
 const response = await callLLM({
 	prompt: 'Hello, AI!',
 	model: 'gpt-4o-mini', // Required for OpenAI
 	temperature: 0.7,
+	max_tokens: 1000,
+	top_p: 1,
+	frequency_penalty: 0,
+	presence_penalty: 0,
+});
+
+// Streaming is also fully typed
+const stream = await streamLLM({
+	prompt: 'Tell me a story',
+	model: 'gpt-4o',
+	temperature: 0.8,
 });
 ```
+
+```tsx Anthropic
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+// Get a typed connection for Anthropic
+const { callLLM, streamLLM } = useTypedAgentConnection('anthropic');
+
+// TypeScript enforces Anthropic-specific parameters
+const response = await callLLM({
+	prompt: 'Hello, AI!',
+	system: 'You are a helpful assistant.',
+	model: 'claude-3-sonnet-20240229', // Required for Anthropic
+	temperature: 0.7,
+	max_tokens: 2000,
+	top_p: 1,
+	top_k: 40,
+});
+
+// System prompts are properly typed
+const analysisResponse = await callLLM({
+	prompt: 'Analyze this data...',
+	system: 'You are a data analyst with expertise in statistical analysis.',
+	model: 'claude-3-opus-20240229',
+	temperature: 0.3,
+});
+```
+
+```tsx Mastra
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+// Get a typed connection for Mastra
+const { callLLM, streamLLM } = useTypedAgentConnection('mastra');
+
+// TypeScript knows about Mastra-specific features
+const response = await callLLM({
+	messages: [
+		{ role: 'system', content: 'You are a helpful assistant.' },
+		{ role: 'user', content: 'Hello, AI!' },
+	],
+	sessionId: 'user-123', // Memory support
+	tools: ['web_search', 'calculator'], // Tool integration
+	knowledgeBaseId: 'kb-456', // Knowledge base access
+	temperature: 0.7,
+});
+
+// Memory and tools are fully typed
+const memoryResponse = await callLLM({
+	messages: [{ role: 'user', content: 'Remember my name is John' }],
+	sessionId: 'user-123',
+	temperature: 0.5,
+});
+```
+
+```tsx Custom Backend
+import { useTypedAgentConnection } from '@cedar-os/cedar';
+
+// Get a typed connection for Custom Backend
+const { callLLM, streamLLM } = useTypedAgentConnection('custom');
+
+// TypeScript enforces your custom backend's parameters
+const response = await callLLM({
+	messages: [
+		{ role: 'system', content: 'You are a helpful assistant.' },
+		{ role: 'user', content: 'Hello, AI!' },
+	],
+	// Custom backend specific parameters
+	organizationId: 'org-123',
+	projectId: 'project-456',
+	customParameter: 'custom-value',
+	temperature: 0.7,
+});
+
+// Your custom backend's streaming parameters are also typed
+const stream = await streamLLM({
+	prompt: 'Generate a report',
+	organizationId: 'org-123',
+	projectId: 'project-456',
+	streamOptions: {
+		bufferSize: 1024,
+		timeout: 30000,
+	},
+	temperature: 0.6,
+});
+
+// Custom authentication and headers are properly typed
+const authenticatedResponse = await callLLM({
+	messages: [{ role: 'user', content: 'Secure request' }],
+	headers: {
+		'X-Custom-Auth': 'bearer-token',
+		'X-Request-ID': 'req-789',
+	},
+	organizationId: 'org-123',
+});
+```
+
+</CodeGroup>
 
 ## Next Steps
 
@@ -166,3 +581,10 @@ For more advanced usage, see our guides on:
 - [Chat Input](/getting-started/chat-input/overview) - Building rich chat interfaces
 - [Messages](/getting-started/messages/overview) - Handling AI responses
 - [State Access](/getting-started/state-access/overview) - Managing application state
+
+## Detailed Provider Guides
+
+For more advanced configuration and usage patterns:
+
+- [Extending Mastra](/getting-started/agent-backend-connection/mastra) - Full agent framework with backend extension guides
+- [Custom Backend](/getting-started/agent-backend-connection/custom) - Build your own integration through API

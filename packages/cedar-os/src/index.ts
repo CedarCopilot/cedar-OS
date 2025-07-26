@@ -2,11 +2,21 @@
 export { CedarCopilot } from '@/components/CedarCopilot';
 
 // Export components
-export {
-	ChatInput,
-	ChatInputContainer,
-} from '@/components/chatInput/ChatInput';
+export { ChatInput } from '@/components/chatInput/ChatInput';
 export { default as TooltipMenu } from '@/components/inputs/TooltipMenu';
+
+// Export chat components
+export { FloatingCedarChat } from '@/components/chatComponents/FloatingCedarChat';
+export { CedarCaptionChat } from '@/components/chatComponents/CedarCaptionChat';
+export { SidePanelCedarChat } from '@/components/chatComponents/SidePanelCedarChat';
+
+// Export structural components
+export { FloatingContainer, SidePanelContainer } from '@/components/structural';
+export type {
+	FloatingDimensions,
+	FloatingPosition,
+	SidePanelDimensions,
+} from '@/components/structural';
 
 // Store
 export { useCedarStore } from '@/store/CedarStore';

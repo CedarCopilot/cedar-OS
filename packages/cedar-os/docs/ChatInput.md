@@ -16,7 +16,6 @@ function MyComponent() {
 			handleFocus={() => setIsInputFocused(true)}
 			handleBlur={() => setIsInputFocused(false)}
 			isInputFocused={isInputFocused}
-			onSubmit={(message) => console.log(message)}
 		/>
 	);
 }
@@ -137,7 +136,6 @@ useMentionProvider(customProvider);
 | `handleFocus`    | `() => void`                                | Callback when input is focused         |
 | `handleBlur`     | `() => void`                                | Callback when input loses focus        |
 | `isInputFocused` | `boolean`                                   | Whether the input is currently focused |
-| `onSubmit`       | `(message: string) => void`                 | Callback when message is submitted     |
 
 ### StateBasedMentionProviderConfig
 
