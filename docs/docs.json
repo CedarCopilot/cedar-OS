@@ -87,7 +87,8 @@
 					"getting-started/voice/overview",
 					"getting-started/voice/agentic-backend",
 					"getting-started/voice/streams",
-					"getting-started/voice/websockets"
+					"getting-started/voice/websockets",
+					"getting-started/voice/components"
 				]
 			},
 			{
