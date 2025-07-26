@@ -1,6 +1,6 @@
-import { useMentionProvidersByTrigger } from '@/store/agentInputContext/mentionProviders';
-import { withClassName } from '@/styles/stylingUtils';
 import { NodeViewWrapper } from '@tiptap/react';
+import React from 'react';
+import { useMentionProvidersByTrigger, withClassName } from 'cedar-os';
 
 export const MentionNodeView = ({ node }: { node: any }) => {
 	const providers = useMentionProvidersByTrigger('@');
@@ -29,7 +29,7 @@ export const MentionNodeView = ({ node }: { node: any }) => {
 	// Get the provider configuration which includes icon and color
 	// The provider itself has icon and color properties
 	const providerWithConfig = node.attrs.providerId
-		? providers.find((p) => p.id === node.attrs.providerId)
+		? (providers.find((p) => p.id === node.attrs.providerId) as any)
 		: null;
 
 	// Always get icon and color from the provider, not from node.attrs

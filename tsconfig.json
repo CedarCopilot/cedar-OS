@@ -19,11 +19,19 @@
 			}
 		],
 		"paths": {
-			"@/*": ["./src/*", "./packages/cedar-os/src/*"],
+			"@/*": [
+				"./src/*",
+				"./packages/cedar-os/src/*",
+				"./packages/cedar-os-components/*"
+			],
 			"cedar-os": ["./packages/cedar-os/src"],
 			"react": ["./node_modules/@types/react"]
 		}
 	},
 	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-	"exclude": ["node_modules", "packages/cedar-os"]
+	"exclude": [
+		"node_modules",
+		"packages/cedar-os",
+		"packages/cedar-os-components"
+	]
 }
