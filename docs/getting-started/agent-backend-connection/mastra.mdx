@@ -1,9 +1,9 @@
 ---
-title: 'Mastra'
+title: 'Extending Mastra'
 description: 'Connecting Cedar-OS with Mastra'
 ---
 
-# Mastra Integration
+# Extending Mastra
 
 Mastra is a full-featured agent framework that provides memory, tool calls, knowledge base, and more. It's the recommended choice when building complex, capable agents.
 
@@ -11,7 +11,24 @@ Mastra is a full-featured agent framework that provides memory, tool calls, know
 
 First, set up your Mastra backend and then configure Cedar-OS to connect to it:
 
-```tsx
+```tsx CedarCopilot
+import { CedarCopilot } from '@cedar-os/cedar';
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'mastra',
+				baseURL: 'http://localhost:3000/api', // Your Mastra backend URL
+				apiKey: process.env.MASTRA_API_KEY, // Optional: only if your backend requires auth
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
+
+```tsx Store Configuration
 import { useCedarStore } from '@cedar-os/cedar';
 
 const store = useCedarStore();

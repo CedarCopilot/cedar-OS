@@ -13,61 +13,129 @@ Cedar-OS has working configurations with every major backend. We support:
 - **AI SDK** - Vercel's unified AI SDK supporting multiple providers
 - **OpenAI** - Direct OpenAI API integration
 - **Anthropic** - Direct Anthropic API integration
-- **Custom backends** - Build your own integration
+- **Custom Backend** - Build your own integration
 - **CedarRouter** (coming soon) - Our optimized routing solution
 
-## How to choose
+## How to choose your provider
 
-**Simplicity**: **AI SDK** - One interface, multiple providers. Perfect for getting started quickly.
+- **You want a full-featured agent**: **Mastra** - When you need memory across sessions (conversation history), tool calls, knowledge base, and more complex agent capabilities.
+- **Simplicity**: **AI SDK** - One interface, multiple providers. Perfect for getting started quickly.
+- **You only have one API Key**: **Anthropic/OpenAI** - Direct integration with a single provider.
+- **You already have a custom backend**: **Custom Backend** - (glad I could help)
 
-**You only have one API Key**: **Anthropic/OpenAI** - Direct integration with a single provider.
+## Initial Configuration
 
-**You want a full-featured agent**: **Mastra** - When you need memory (conversation history), tool calls, knowledge base, and more complex agent capabilities.
+Choose your provider and configure it with the CedarCopilot component:
 
-**You already have a custom backend**: **Custom backend** - Integrate your existing AI infrastructure.
+<CodeGroup>
 
-## Quick Start
+```tsx AI SDK
+import { CedarCopilot } from '@cedar-os/cedar';
 
-First, install Cedar-OS:
-
-```bash
-npm install @cedar-os/cedar
-# or
-yarn add @cedar-os/cedar
-# or
-pnpm add @cedar-os/cedar
+function App() {
+	return (
+		// You don't need to put every model,
+		// but if you try to use a model without a key it will fail
+		<CedarCopilot
+			llmProvider={{
+				provider: 'ai-sdk',
+				providers: {
+					openai: {
+						apiKey: process.env.OPENAI_API_KEY,
+					},
+					anthropic: {
+						apiKey: process.env.ANTHROPIC_API_KEY,
+					},
+					google: {
+						apiKey: process.env.GOOGLE_API_KEY,
+					},
+				},
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
 ```
 
-Then configure your provider in your app:
+```tsx OpenAI
+import { CedarCopilot } from '@cedar-os/cedar';
 
-```tsx
-import { useCedarStore } from '@cedar-os/cedar';
-
-// Configure your provider
-const store = useCedarStore();
-
-// Example: Configure AI SDK
-store.setProviderConfig({
-	provider: 'ai-sdk',
-	providers: {
-		openai: { apiKey: process.env.OPENAI_API_KEY },
-		anthropic: { apiKey: process.env.ANTHROPIC_API_KEY },
-	},
-});
-
-// Connect to the agent
-await store.connect();
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'openai',
+				apiKey: process.env.OPENAI_API_KEY,
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
 ```
 
-## Provider-Specific Setup
+```tsx Anthropic
+import { CedarCopilot } from '@cedar-os/cedar';
 
-Each provider has its own configuration requirements and capabilities. Check the individual provider pages for detailed setup instructions:
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'anthropic',
+				apiKey: process.env.ANTHROPIC_API_KEY,
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
 
-- [Mastra](/getting-started/agent-backend-connection/mastra) - Full agent framework
-- [AI SDK](/getting-started/agent-backend-connection/ai-sdk) - Multi-provider support
-- [OpenAI](/getting-started/agent-backend-connection/openai) - Direct OpenAI integration
-- [Anthropic](/getting-started/agent-backend-connection/anthropic) - Direct Anthropic integration
-- [Custom](/getting-started/agent-backend-connection/custom) - Build your own
+```tsx Mastra
+import { CedarCopilot } from '@cedar-os/cedar';
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'mastra',
+				baseURL: 'http://localhost:3000/api', // Your Mastra backend URL
+				apiKey: process.env.MASTRA_API_KEY, // Optional: only if your backend requires auth
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
+
+```tsx Custom Backend
+import { CedarCopilot } from '@cedar-os/cedar';
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'custom',
+				config: {
+					baseURL: 'https://your-api.com',
+					apiKey: 'your-api-key',
+					// Any additional config your backend needs
+					organizationId: 'org-123',
+					projectId: 'project-456',
+				},
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
+
+</CodeGroup>
+
+## Detailed Provider Guides
+
+For more advanced configuration and usage patterns:
+
+- [Extending Mastra](/getting-started/agent-backend-connection/mastra) - Full agent framework with backend extension guides
+- [Custom Backend](/getting-started/agent-backend-connection/custom) - Build your own integration through API
 
 ## Type Safety
 
@@ -90,7 +158,7 @@ const response = await callLLM({
 ## Next Steps
 
 1. Choose your provider based on your needs
-2. Follow the provider-specific setup guide
+2. Follow the initialization code above
 3. Start building your AI-powered application with Cedar-OS
 
 For more advanced usage, see our guides on:
