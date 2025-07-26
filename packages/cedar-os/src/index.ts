@@ -54,7 +54,6 @@ export { CollapsedButton } from '../../cedar-os-components/chatMessages/structur
 
 // Export chat input components
 export { MentionNodeView } from '../../cedar-os-components/chatInput/ChatMention';
-export { ChoiceNodeView } from '../../cedar-os-components/chatInput/ChoiceNodeView';
 export { ContextBadgeRow } from '../../cedar-os-components/chatInput/ContextBadgeRow';
 export { default as MentionList } from '../../cedar-os-components/chatInput/MentionList';
 export { useCedarEditor } from '@/components/chatInput/useCedarEditor';
