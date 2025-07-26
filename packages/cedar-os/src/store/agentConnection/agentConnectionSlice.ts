@@ -3,6 +3,7 @@ import type { CedarStore } from '../types';
 import { getProviderImplementation } from './providers/index';
 import type {
 	AISDKParams,
+	AISDKStructuredParams,
 	AnthropicParams,
 	BaseParams,
 	CustomParams,
@@ -12,6 +13,7 @@ import type {
 	ProviderConfig,
 	StreamHandler,
 	StreamResponse,
+	StructuredParams,
 } from './types';
 import { useCedarStore } from '@/store/CedarStore';
 
@@ -54,6 +56,14 @@ export interface AgentConnectionSlice {
 			: never
 	) => Promise<LLMResponse>;
 
+	callLLMStructured: <T extends ProviderConfig = ProviderConfig>(
+		params: T extends ProviderConfig
+			? GetParamsForConfig<T> & StructuredParams
+			: ProviderConfig extends infer U
+			? GetParamsForConfig<U> & StructuredParams
+			: never
+	) => Promise<LLMResponse>;
+
 	streamLLM: <T extends ProviderConfig = ProviderConfig>(
 		params: T extends ProviderConfig
 			? GetParamsForConfig<T>
@@ -81,9 +91,12 @@ export interface AgentConnectionSlice {
 // Create a typed version of the slice that knows about the provider
 export type TypedAgentConnectionSlice<T extends ProviderConfig> = Omit<
 	AgentConnectionSlice,
-	'callLLM' | 'streamLLM'
+	'callLLM' | 'streamLLM' | 'callLLMStructured'
 > & {
 	callLLM: (params: GetParamsForConfig<T>) => Promise<LLMResponse>;
+	callLLMStructured: (
+		params: GetParamsForConfig<T> & StructuredParams
+	) => Promise<LLMResponse>;
 	streamLLM: (
 		params: GetParamsForConfig<T>,
 		handler: StreamHandler
@@ -212,6 +225,73 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 	},
 
+	callLLMStructured: async (
+		params:
+			| (OpenAIParams & StructuredParams)
+			| (AnthropicParams & StructuredParams)
+			| (MastraParams & StructuredParams)
+			| (AISDKParams & AISDKStructuredParams)
+			| (CustomParams & StructuredParams)
+	) => {
+		const config = get().providerConfig;
+		if (!config) {
+			throw new Error('No LLM provider configured');
+		}
+
+		// Runtime validation based on provider type
+		switch (config.provider) {
+			case 'openai':
+			case 'anthropic':
+				if (!('model' in params)) {
+					throw new Error(
+						`${config.provider} provider requires 'model' parameter`
+					);
+				}
+				break;
+			case 'mastra':
+				if (!('route' in params)) {
+					throw new Error("Mastra provider requires 'route' parameter");
+				}
+				break;
+			case 'ai-sdk':
+				if (!('model' in params)) {
+					throw new Error("AI SDK provider requires 'model' parameter");
+				}
+				// For AI SDK, validate that schema is a Zod schema at runtime
+				if (
+					params.schema &&
+					typeof params.schema === 'object' &&
+					!('_def' in params.schema)
+				) {
+					throw new Error(
+						'AI SDK requires a Zod schema for structured output. Please provide a valid Zod schema.'
+					);
+				}
+				break;
+		}
+
+		// Log the request
+		const requestId = get().logAgentRequest(params, config.provider);
+
+		try {
+			const provider = getProviderImplementation(config);
+			// Type assertion is safe after runtime validation
+			const response = await provider.callLLMStructured(
+				params as unknown as never,
+				config as never
+			);
+
+			// Log the successful response
+			get().logAgentResponse(requestId, response);
+
+			return response;
+		} catch (error) {
+			// Log the error
+			get().logAgentError(requestId, error as Error);
+			throw error;
+		}
+	},
+
 	streamLLM: (
 		params:
 			| OpenAIParams
@@ -297,15 +377,27 @@ export const createAgentConnectionSlice: StateCreator<
 
 		// Check if there's an object field with structured output
 		if (response.object && typeof response.object === 'object') {
-			const structuredResponse = response.object;
+			const structuredResponse = response.object as Record<string, unknown>;
 
 			// Handle based on the type field in the structured response
-			if (structuredResponse.type) {
+			if (
+				'type' in structuredResponse &&
+				typeof structuredResponse.type === 'string'
+			) {
 				switch (structuredResponse.type) {
 					case 'action': {
 						// Execute the custom setter with the provided parameters
-						if (structuredResponse.stateKey && structuredResponse.setterKey) {
-							const args = structuredResponse.args || [];
+						if (
+							'stateKey' in structuredResponse &&
+							'setterKey' in structuredResponse &&
+							typeof structuredResponse.stateKey === 'string' &&
+							typeof structuredResponse.setterKey === 'string'
+						) {
+							const args =
+								'args' in structuredResponse &&
+								Array.isArray(structuredResponse.args)
+									? structuredResponse.args
+									: [];
 							state.executeCustomSetter(
 								structuredResponse.stateKey,
 								structuredResponse.setterKey,
@@ -316,10 +408,22 @@ export const createAgentConnectionSlice: StateCreator<
 					}
 					case 'message': {
 						// Add as a message with specific role/content
+						const role =
+							'role' in structuredResponse &&
+							typeof structuredResponse.role === 'string'
+								? structuredResponse.role
+								: 'assistant';
+						const content =
+							'content' in structuredResponse &&
+							typeof structuredResponse.content === 'string'
+								? structuredResponse.content
+								: response.content;
+						// Map system role to assistant if needed
+						const messageRole = role === 'system' ? 'assistant' : role;
 						state.addMessage({
-							role: structuredResponse.role || 'assistant',
+							role: messageRole as 'user' | 'assistant' | 'bot',
 							type: 'text',
-							content: structuredResponse.content || response.content,
+							content,
 						});
 						return; // Don't add the default message
 					}

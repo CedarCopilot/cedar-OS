@@ -1,29 +1,16 @@
 'use client';
 
-import React from 'react';
-import { useCedarStore } from 'cedar-os';
 import {
 	AgentBackendConnectionSection,
 	ChatInputSection,
-	MessagesSection,
-	StateAccessSection,
-	SpellsSection,
-	VoiceSection,
 	DiffHistorySection,
+	MessagesSection,
+	SpellsSection,
+	StateAccessSection,
+	VoiceSection,
 } from './sections';
-import { ExternalLink } from 'lucide-react';
 
 export default function CedarPlaygroundPage() {
-	const { addMessage } = useCedarStore();
-
-	const handleChatSubmit = (input: string) => {
-		addMessage({
-			type: 'text',
-			role: 'user',
-			content: input,
-		});
-	};
-
 	return (
 		<div className='bg-gray-50 px-8 space-y-8'>
 			{/* Header Section */}
@@ -54,7 +41,7 @@ export default function CedarPlaygroundPage() {
 
 			<AgentBackendConnectionSection />
 
-			<ChatInputSection onSubmit={handleChatSubmit} />
+			<ChatInputSection />
 
 			<MessagesSection />
 

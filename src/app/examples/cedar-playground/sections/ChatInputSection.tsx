@@ -4,11 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '../components/Card';
 import { MessageSquare } from 'lucide-react';
 
-interface ChatInputSectionProps {
-	onSubmit?: (input: string) => void;
-}
-
-export function ChatInputSection({ onSubmit }: ChatInputSectionProps) {
+export function ChatInputSection() {
 	const [chatVisible, setChatVisible] = useState(false);
 
 	return (
@@ -39,7 +35,6 @@ export function ChatInputSection({ onSubmit }: ChatInputSectionProps) {
 								handleFocus={() => {}}
 								handleBlur={() => {}}
 								isInputFocused={false}
-								onSubmit={onSubmit}
 							/>
 						</div>
 					</Card>
