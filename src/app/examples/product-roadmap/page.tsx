@@ -34,7 +34,7 @@ import {
 	saveNodes,
 } from '@/app/examples/product-roadmap/supabase/nodes';
 import {
-	ChatInput,
+	CedarCaptionChat,
 	subscribeInputContext,
 	TooltipMenu,
 	useRegisterState,
@@ -492,12 +492,7 @@ function FlowCanvas() {
 				fitView>
 				<Background gap={16} size={1} />
 				<Controls />
-				<ChatInput
-					position='bottom-center'
-					handleFocus={() => {}}
-					handleBlur={() => {}}
-					isInputFocused={false}
-				/>
+				<CedarCaptionChat />
 			</ReactFlow>
 			{edgeMenu && (
 				<TooltipMenu

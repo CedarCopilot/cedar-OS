@@ -1,6 +1,6 @@
 import { ReactRenderer } from '@tiptap/react';
 import tippy from 'tippy.js';
-import MentionList from './MentionList';
+import MentionList from '@/components/chatInput/MentionList';
 import type { MentionItem } from '@/store/agentInputContext/types';
 import { useCedarStore } from '@/store/CedarStore';
 
