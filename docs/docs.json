@@ -16,8 +16,7 @@
 				"pages": [
 					"index",
 					"introduction/architecture",
-					"introduction/philosophy",
-					"introduction/getting-started"
+					"introduction/philosophy"
 				]
 			},
 			{

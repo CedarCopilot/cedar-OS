@@ -1,12 +1,618 @@
 ---
 title: 'Getting Started Overview'
-description: 'Overview of getting started with Cedar-OS'
+description: 'Complete guide to getting started with Cedar-OS'
 ---
 
-# Getting Started Overview
+# Getting Started with Cedar-OS
 
-This page will provide an overview of the getting started process.
+Cedar-OS is an open-source framework for building AI-native applications. This guide will walk you through setting up your first Cedar-OS application with chat functionality, AI backend integration, and state management.
 
-## Coming Soon
+## 1. Installing Cedar-OS
 
-Content for this section will be added in the next phase.
+### Prerequisites
+
+Cedar-OS requires:
+
+- React 18.2.0 or higher
+- React DOM 18.2.0 or higher
+- Node.js 18+ (for development)
+
+### Install using the `create-cedar` CLI
+
+Our CLI is the fastest way to get started with Cedar-OS. Run the following command to start the interactive setup:
+
+<CodeGroup>
+
+```bash npm
+npx create-cedar@latest
+```
+
+```bash yarn
+yarn create cedar@latest
+```
+
+```bash pnpm
+pnpm create cedar@latest
+```
+
+```bash bun
+bun create cedar@latest
+```
+
+</CodeGroup>
+
+**Install using CLI flags**
+
+You can also run the Cedar CLI in non-interactive mode by passing all required flags, for example:
+
+```bash
+npx create-cedar@latest --project-name my-cedar-app --provider ai-sdk --template chat
+```
+
+> See the create-cedar documentation for a full list of available CLI options.
+
+### Add your API key
+
+Add your API key to the `.env.local` file:
+
+```bash
+# Choose one or more providers
+NEXT_PUBLIC_OPENAI_API_KEY=your-openai-api-key
+NEXT_PUBLIC_ANTHROPIC_API_KEY=your-anthropic-api-key
+NEXT_PUBLIC_GOOGLE_API_KEY=your-google-api-key
+```
+
+> This example uses multiple providers. Each LLM provider uses a unique environment variable name. See our [AI SDK Integration guide](/getting-started/agent-backend-connection/ai-sdk) for more information.
+
+You can now launch your Cedar-OS application and start building AI-native experiences.
+
+### Install manually
+
+If you want to add Cedar-OS to an existing React project:
+
+<CodeGroup>
+
+```bash npm
+npm install cedar-os
+```
+
+```bash yarn
+yarn add cedar-os
+```
+
+```bash pnpm
+pnpm add cedar-os
+```
+
+</CodeGroup>
+
+### Add to an existing project
+
+Cedar-OS can be installed and integrated into a wide range of projects. Below are links to integration guides to help you get started:
+
+- [Next.js](/getting-started/frameworks/nextjs)
+- [Vite + React](/getting-started/frameworks/vite)
+- [Create React App](/getting-started/frameworks/cra)
+
+#### Create a new project from scratch
+
+If you're starting completely from scratch, here's how to create a new project with Cedar-OS manually:
+
+<CodeGroup>
+
+```bash npm
+# Create new React project
+npx create-react-app my-cedar-app --template typescript
+cd my-cedar-app
+
+# Install Cedar-OS
+npm install cedar-os
+```
+
+```bash yarn
+# Create new React project
+yarn create react-app my-cedar-app --template typescript
+cd my-cedar-app
+
+# Install Cedar-OS
+yarn add cedar-os
+```
+
+```bash pnpm
+# Create new React project
+pnpm create react-app my-cedar-app --template typescript
+cd my-cedar-app
+
+# Install Cedar-OS
+pnpm add cedar-os
+```
+
+</CodeGroup>
+
+#### Set up your API key
+
+Create a `.env.local` file in your project root:
+
+```bash
+# Choose one or more providers
+NEXT_PUBLIC_OPENAI_API_KEY=your-openai-api-key
+NEXT_PUBLIC_ANTHROPIC_API_KEY=your-anthropic-api-key
+NEXT_PUBLIC_GOOGLE_API_KEY=your-google-api-key
+```
+
+> This example uses multiple providers. Each LLM provider uses a unique environment variable name. See our [AI SDK Integration guide](/getting-started/agent-backend-connection/ai-sdk) for more information.
+
+## 2. Initialize CedarCopilot with Provider
+
+The `CedarCopilot` component is the main wrapper that provides AI functionality to your entire application. You must wrap your app with this component and configure an AI provider.
+
+### Basic CedarCopilot Setup
+
+```tsx
+'use client';
+
+import React from 'react';
+import { CedarCopilot } from 'cedar-os';
+import type { ProviderConfig } from 'cedar-os';
+
+function App() {
+	// Configure AI SDK with multiple providers
+	const llmProvider: ProviderConfig = {
+		provider: 'ai-sdk',
+		providers: {
+			openai: {
+				apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || '',
+			},
+			anthropic: {
+				apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || '',
+			},
+		},
+	};
+
+	return (
+		<CedarCopilot llmProvider={llmProvider}>
+			<div className='p-4'>
+				<h1>My Cedar-OS App</h1>
+				{/* Your app components go here */}
+			</div>
+		</CedarCopilot>
+	);
+}
+
+export default App;
+```
+
+### Alternative Provider Configurations
+
+<CodeGroup>
+
+```tsx AI SDK (Recommended)
+const llmProvider: ProviderConfig = {
+	provider: 'ai-sdk',
+	providers: {
+		openai: {
+			apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || '',
+		},
+		anthropic: {
+			apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || '',
+		},
+		google: {
+			apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '',
+		},
+	},
+};
+```
+
+```tsx OpenAI Direct
+const llmProvider: ProviderConfig = {
+	provider: 'openai',
+	apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || '',
+};
+```
+
+```tsx Anthropic Direct
+const llmProvider: ProviderConfig = {
+	provider: 'anthropic',
+	apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || '',
+};
+```
+
+```tsx Mastra Agent
+const llmProvider: ProviderConfig = {
+	provider: 'mastra',
+	apiKey: 'not-needed-for-local',
+	baseURL: 'http://localhost:4111',
+};
+```
+
+</CodeGroup>
+
+## 3. Using Core Components
+
+Cedar-OS provides essential components that work together seamlessly. The two core components are `ChatInput` and `ChatBubbles`.
+
+### ChatInput Component
+
+The `ChatInput` component provides a rich text editor with mention support, voice input, and context awareness.
+
+### ChatBubbles Component
+
+The `ChatBubbles` component displays messages with automatic scrolling, animations, and support for multiple message types.
+
+### Basic Implementation
+
+Here's a complete example using both core components:
+
+```tsx
+'use client';
+
+import React, { useState } from 'react';
+import { ChatInput, ChatBubbles, CedarCopilot } from 'cedar-os';
+import type { ProviderConfig } from 'cedar-os';
+
+function App() {
+	const [isInputFocused, setIsInputFocused] = useState(false);
+
+	// Configure AI provider
+	const llmProvider: ProviderConfig = {
+		provider: 'ai-sdk',
+		providers: {
+			openai: {
+				apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || '',
+			},
+		},
+	};
+
+	return (
+		<CedarCopilot llmProvider={llmProvider}>
+			<div className='flex flex-col h-screen max-w-4xl mx-auto p-4'>
+				{/* Messages Display */}
+				<div className='flex-1 overflow-hidden'>
+					<ChatBubbles />
+				</div>
+
+				{/* Chat Input */}
+				<div className='mt-4'>
+					<ChatInput
+						position='embedded'
+						handleFocus={() => setIsInputFocused(true)}
+						handleBlur={() => setIsInputFocused(false)}
+						isInputFocused={isInputFocused}
+						onSubmit={(message) => console.log('Message sent:', message)}
+					/>
+				</div>
+			</div>
+		</CedarCopilot>
+	);
+}
+
+export default App;
+```
+
+### Making AI Calls
+
+Once your components are set up, you can interact with the AI from anywhere in your app:
+
+```tsx
+import { useCedarStore } from 'cedar-os';
+
+function MyComponent() {
+	const { callLLM, addMessage } = useCedarStore();
+
+	const handleAICall = async () => {
+		try {
+			// Add user message
+			addMessage({
+				type: 'text',
+				role: 'user',
+				content: 'Hello, AI!',
+			});
+
+			// Call AI with specific model
+			const response = await callLLM({
+				model: 'openai/gpt-4o-mini', // Format: provider/model
+				prompt: 'Hello, AI!',
+				systemPrompt: 'You are a helpful assistant.',
+				temperature: 0.7,
+			});
+
+			// Add AI response
+			addMessage({
+				type: 'text',
+				role: 'assistant',
+				content: response.content,
+			});
+		} catch (error) {
+			console.error('AI call failed:', error);
+		}
+	};
+
+	return <button onClick={handleAICall}>Send AI Message</button>;
+}
+```
+
+## 4. Configuring State
+
+Cedar-OS includes a powerful state management system that allows AI agents to read and modify your application state.
+
+### Basic State Registration
+
+Use the `useCedarState` hook to register state that AI can access:
+
+```tsx
+import { useCedarState } from 'cedar-os';
+
+function TodoApp() {
+	// Register state with Cedar-OS
+	const [todos, setTodos] = useCedarState(
+		'todos', // State key for AI reference
+		[
+			{ id: 1, text: 'Learn Cedar-OS', completed: false },
+			{ id: 2, text: 'Build AI app', completed: false },
+		],
+		'List of todo items that users can manage' // Description for AI
+	);
+
+	const addTodo = (text: string) => {
+		const newTodo = {
+			id: Date.now(),
+			text,
+			completed: false,
+		};
+		setTodos([...todos, newTodo]);
+	};
+
+	return (
+		<div>
+			<h2>Todos ({todos.length})</h2>
+			{todos.map((todo) => (
+				<div key={todo.id}>
+					<input
+						type='checkbox'
+						checked={todo.completed}
+						onChange={(e) => {
+							const updated = todos.map((t) =>
+								t.id === todo.id ? { ...t, completed: e.target.checked } : t
+							);
+							setTodos(updated);
+						}}
+					/>
+					{todo.text}
+				</div>
+			))}
+
+			<button onClick={() => addTodo('New todo')}>Add Todo</button>
+		</div>
+	);
+}
+```
+
+### Advanced State with Custom Setters
+
+For more complex state interactions, you can define custom setters that AI can call:
+
+```tsx
+import { useCedarState } from 'cedar-os';
+
+function AdvancedTodoApp() {
+	const [todos, setTodos] = useCedarState(
+		'todos',
+		[],
+		'Todo list with advanced operations',
+		{
+			// Custom setters that AI can call
+			addTodo: (todos, text: string) => [
+				...todos,
+				{ id: Date.now(), text, completed: false, priority: 'medium' },
+			],
+
+			completeTodo: (todos, id: number) =>
+				todos.map((todo) =>
+					todo.id === id ? { ...todo, completed: true } : todo
+				),
+
+			setPriority: (todos, id: number, priority: 'low' | 'medium' | 'high') =>
+				todos.map((todo) => (todo.id === id ? { ...todo, priority } : todo)),
+
+			clearCompleted: (todos) => todos.filter((todo) => !todo.completed),
+		}
+	);
+
+	return (
+		<div>
+			<h2>Advanced Todos</h2>
+			{todos.map((todo) => (
+				<div key={todo.id} className={`todo-item priority-${todo.priority}`}>
+					<span>{todo.text}</span>
+					<span className='priority'>({todo.priority})</span>
+					{todo.completed && <span>✓</span>}
+				</div>
+			))}
+		</div>
+	);
+}
+```
+
+### State-Based Mention Providers
+
+Cedar-OS can automatically create mention providers from your state, allowing users to reference state items in chat:
+
+```tsx
+import { useCedarState, useStateBasedMentionProvider } from 'cedar-os';
+import { FileText } from 'lucide-react';
+
+function DocumentApp() {
+	// Register documents state
+	const [documents] = useCedarState('documents', [
+		{ id: 1, title: 'Project Proposal', type: 'pdf' },
+		{ id: 2, title: 'Meeting Notes', type: 'doc' },
+	]);
+
+	// Create mention provider for documents
+	useStateBasedMentionProvider({
+		stateKey: 'documents',
+		trigger: '@',
+		labelField: 'title',
+		searchFields: ['title', 'type'],
+		description: 'Project documents',
+		icon: <FileText />,
+		color: '#8b5cf6',
+	});
+
+	return (
+		<div>
+			<h2>Documents</h2>
+			{documents.map((doc) => (
+				<div key={doc.id}>
+					{doc.title} ({doc.type})
+				</div>
+			))}
+
+			{/* Users can now type @Project to mention documents in chat */}
+		</div>
+	);
+}
+```
+
+## Complete Example
+
+Here's a complete example combining all the concepts:
+
+```tsx
+'use client';
+
+import React, { useState } from 'react';
+import {
+	ChatInput,
+	ChatBubbles,
+	CedarCopilot,
+	useCedarState,
+	useStateBasedMentionProvider,
+} from 'cedar-os';
+import type { ProviderConfig } from 'cedar-os';
+import { CheckSquare } from 'lucide-react';
+
+function App() {
+	const [isInputFocused, setIsInputFocused] = useState(false);
+
+	// Configure AI provider
+	const llmProvider: ProviderConfig = {
+		provider: 'ai-sdk',
+		providers: {
+			openai: {
+				apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || '',
+			},
+		},
+	};
+
+	return (
+		<CedarCopilot llmProvider={llmProvider}>
+			<div className='flex h-screen'>
+				{/* Sidebar with app state */}
+				<div className='w-1/3 p-4 border-r'>
+					<TodoSidebar />
+				</div>
+
+				{/* Chat interface */}
+				<div className='flex-1 flex flex-col p-4'>
+					<div className='flex-1 overflow-hidden'>
+						<ChatBubbles />
+					</div>
+
+					<div className='mt-4'>
+						<ChatInput
+							position='embedded'
+							handleFocus={() => setIsInputFocused(true)}
+							handleBlur={() => setIsInputFocused(false)}
+							isInputFocused={isInputFocused}
+						/>
+					</div>
+				</div>
+			</div>
+		</CedarCopilot>
+	);
+}
+
+function TodoSidebar() {
+	const [todos, setTodos] = useCedarState(
+		'todos',
+		[
+			{ id: 1, text: 'Learn Cedar-OS', completed: false },
+			{ id: 2, text: 'Build AI app', completed: false },
+		],
+		'User todo list that can be managed through chat',
+		{
+			addTodo: (todos, text: string) => [
+				...todos,
+				{ id: Date.now(), text, completed: false },
+			],
+			toggleTodo: (todos, id: number) =>
+				todos.map((todo) =>
+					todo.id === id ? { ...todo, completed: !todo.completed } : todo
+				),
+		}
+	);
+
+	// Enable @todo mentions in chat
+	useStateBasedMentionProvider({
+		stateKey: 'todos',
+		trigger: '@',
+		labelField: 'text',
+		searchFields: ['text'],
+		description: 'Todo items',
+		icon: <CheckSquare />,
+		color: '#10b981',
+	});
+
+	return (
+		<div>
+			<h2 className='text-xl font-bold mb-4'>Todos</h2>
+			{todos.map((todo) => (
+				<div key={todo.id} className='flex items-center gap-2 mb-2'>
+					<input
+						type='checkbox'
+						checked={todo.completed}
+						onChange={() => {
+							const updated = todos.map((t) =>
+								t.id === todo.id ? { ...t, completed: !t.completed } : t
+							);
+							setTodos(updated);
+						}}
+					/>
+					<span className={todo.completed ? 'line-through' : ''}>
+						{todo.text}
+					</span>
+				</div>
+			))}
+		</div>
+	);
+}
+
+export default App;
+```
+
+## Next Steps
+
+Now that you have Cedar-OS set up with basic functionality:
+
+1. **Explore Advanced Features**: Check out [Voice Integration](/getting-started/voice), [Custom Message Types](/getting-started/messages), and [Advanced State Management](/getting-started/state-access).
+
+2. **Try Different Providers**: Experiment with [Mastra](/getting-started/agent-backend-connection/mastra) for full-featured agents or [Direct Provider Integration](/getting-started/agent-backend-connection/openai).
+
+3. **Customize the UI**: Learn about [Styling and Theming](/getting-started/customising) to match your brand.
+
+4. **Build Complex Workflows**: Explore our [Examples](/examples) to see Cedar-OS in action with real applications.
+
+## Troubleshooting
+
+### Common Issues
+
+**Components not rendering**: Make sure you've wrapped your app with `CedarCopilot`.
+
+**AI calls failing**: Check that your API keys are correctly set in environment variables and accessible in your client code.
+
+**State not updating**: Ensure you're using `useCedarState` and calling the returned setter function.
+
+**TypeScript errors**: Cedar-OS is fully typed - check that you're importing types correctly and using the right component props.
+
+Need help? Check our [Community Discord](https://discord.gg/cedar-os) or [GitHub Issues](https://github.com/cedar-os/cedar/issues).
