@@ -1,0 +1,126 @@
+{
+	"$schema": "https://mintlify.com/docs.json",
+	"theme": "mint",
+	"name": "Cedar-OS Documentation",
+	"colors": {
+		"primary": "#16A34A",
+		"light": "#07C983",
+		"dark": "#15803D"
+	},
+	"favicon": "/favicon.svg",
+	"navigation": {
+		"groups": [
+			{
+				"group": "Introduction to Cedar-OS",
+				"icon": "house",
+				"pages": [
+					"index",
+					"introduction/architecture",
+					"introduction/philosophy"
+				]
+			},
+			{
+				"group": "Getting Started",
+				"icon": "play",
+				"pages": ["getting-started/overview"]
+			},
+			{
+				"group": "Connecting to an Agent",
+				"icon": "plug",
+				"pages": [
+					"getting-started/agent-backend-connection/overview",
+					"getting-started/agent-backend-connection/ai-sdk",
+					"getting-started/agent-backend-connection/anthropic",
+					"getting-started/agent-backend-connection/openai",
+					"getting-started/agent-backend-connection/mastra",
+					"getting-started/agent-backend-connection/custom"
+				]
+			},
+			{
+				"group": "Chat Input (Agent Input Context)",
+				"icon": "message",
+				"pages": [
+					"getting-started/chat-input/overview",
+					"getting-started/chat-input/chat-input-editor",
+					"getting-started/chat-input/use-cedar-editor",
+					"getting-started/chat-input/additional-context",
+					"getting-started/chat-input/mention-provider"
+				]
+			},
+			{
+				"group": "Messages",
+				"icon": "envelope",
+				"pages": [
+					"getting-started/messages/overview",
+					"getting-started/messages/streaming",
+					"getting-started/messages/custom-components"
+				]
+			},
+			{
+				"group": "State Access",
+				"icon": "database",
+				"pages": [
+					"getting-started/state-access/overview",
+					"getting-started/state-access/register-state",
+					"getting-started/state-access/readable",
+					"getting-started/state-access/tracking"
+				]
+			},
+			{
+				"group": "Spells",
+				"icon": "wand-magic-sparkles",
+				"pages": [
+					"getting-started/spells/overview",
+					"getting-started/spells/radial-menu"
+				]
+			},
+			{
+				"group": "Diff & History Manager (Beta)",
+				"icon": "clock-rotate-left",
+				"pages": ["getting-started/diff-history/overview"]
+			},
+			{
+				"group": "Voice (Beta)",
+				"icon": "microphone",
+				"pages": [
+					"getting-started/voice/overview",
+					"getting-started/voice/agentic-backend",
+					"getting-started/voice/streams",
+					"getting-started/voice/websockets"
+				]
+			},
+			{
+				"group": "External Integrations (Coming Soon)",
+				"icon": "puzzle-piece",
+				"pages": [
+					"getting-started/external-integrations/overview",
+					"getting-started/external-integrations/text",
+					"getting-started/external-integrations/email",
+					"getting-started/external-integrations/application-triggers"
+				]
+			},
+			{
+				"group": "Customising Cedar",
+				"icon": "palette",
+				"pages": ["getting-started/customising/overview"]
+			}
+		]
+	},
+	"logo": {
+		"light": "/logo/light.svg",
+		"dark": "/logo/dark.svg"
+	},
+	"navbar": {
+		"links": [
+			{
+				"label": "GitHub",
+				"href": "https://github.com/cedar-os"
+			}
+		]
+	},
+	"footer": {
+		"socials": {
+			"github": "https://github.com/cedar-os"
+		}
+	}
+}

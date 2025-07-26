@@ -19,10 +19,10 @@ import { v4 as uuidv4 } from 'uuid';
 import '@/components/chatInput/ChatInput.css';
 import Container3D from '@/components/containers/Container3D';
 import Container3DButton from '@/components/containers/Container3DButton';
-import { useChatInput } from '@/store/CedarStore';
 import { VoiceIndicator } from '../../store/voice/VoiceIndicator';
 import { ContextBadgeRow } from './ContextBadgeRow';
 import { useCedarEditor } from './useCedarEditor';
+import { KeyboardShortcut } from '@/components/ui/KeyboardShortcut';
 
 // Create a voice-enabled store instance
 import CaptionMessages from '@/components/chatMessages/CaptionMessages';
@@ -70,7 +70,6 @@ export const ChatInput: React.FC<{
 	isInputFocused: boolean;
 	onSubmit?: (input: string) => void;
 }> = ({ position, handleFocus, handleBlur, isInputFocused, onSubmit }) => {
-	const { setOverrideInputContent } = useChatInput();
 	const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
 		onSubmit,
 		onFocus: handleFocus,
@@ -88,17 +87,6 @@ export const ChatInput: React.FC<{
 
 	// Initialize voice functionality
 	const voice = useVoice();
-
-	// Set up voice endpoint on mount
-	useEffect(() => {
-		// Configure the voice endpoint - adjust this to your agent's endpoint
-		voice.setVoiceEndpoint('http://localhost:4111/chat/voice');
-
-		// Cleanup on unmount
-		return () => {
-			voice.resetVoiceState();
-		};
-	}, []);
 
 	// Handle voice toggle
 	const handleVoiceToggle = useCallback(async () => {
@@ -201,71 +189,81 @@ export const ChatInput: React.FC<{
 		executeCustomSetter('nodes', 'addNode', newIssue);
 	};
 
-	const handleAcceptAllDiffs = () => {
+	const handleAcceptAllDiffs = useCallback(() => {
 		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
 		executeCustomSetter('nodes', 'acceptAllDiffs');
-	};
+	}, []);
 
-	const handleRejectAllDiffs = () => {
+	const handleRejectAllDiffs = useCallback(() => {
 		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
 		executeCustomSetter('nodes', 'rejectAllDiffs');
-	};
+	}, []);
 
-	const handleTestOverride = () => {
-		// Get selected nodes from additional context
-		const state = useCedarStore.getState();
-		const selectedNodesContext = state.additionalContext.selectedNodes || [];
+	// Handle global keyboard shortcuts
+	useEffect(() => {
+		const handleGlobalKeyDown = (e: KeyboardEvent) => {
+			// Check if user is currently typing in an input, textarea, or contenteditable element
+			const target = e.target as HTMLElement;
+			const isTypingInInput =
+				target.tagName === 'INPUT' ||
+				target.tagName === 'TEXTAREA' ||
+				target.getAttribute('contenteditable') === 'true' ||
+				target.closest('[contenteditable="true"]') !== null;
 
-		if (selectedNodesContext.length === 0) {
-			setOverrideInputContent(
-				'No nodes selected. Please select some nodes first!'
-			);
-			return;
-		}
+			// Handle M key for microphone (only when not typing)
+			if (e.key === 'm' || e.key === 'M') {
+				if (
+					!isTypingInInput &&
+					!e.shiftKey &&
+					!e.ctrlKey &&
+					!e.altKey &&
+					!e.metaKey
+				) {
+					e.preventDefault();
+					handleVoiceToggle();
+					return;
+				}
+			}
 
-		// Create TipTap JSON content with mentions
-		const content = {
-			type: 'doc',
-			content: [
-				{
-					type: 'paragraph',
-					content: [
-						{
-							type: 'text',
-							text: 'Selected nodes: ',
-						},
-						...selectedNodesContext.flatMap((entry, index) => {
-							// Get the node title from the entry data
-							const nodeTitle =
-								entry.data?.data?.title || entry.metadata?.label || entry.id;
+			// Handle Shift+Enter for accept all diffs
+			if (
+				e.key === 'Enter' &&
+				e.shiftKey &&
+				!e.ctrlKey &&
+				!e.altKey &&
+				!e.metaKey
+			) {
+				if (hasDiffs) {
+					e.preventDefault();
+					handleAcceptAllDiffs();
+					return;
+				}
+			}
 
-							const mentionNode = {
-								type: 'mention',
-								attrs: {
-									id: entry.data?.id || entry.id,
-									label: nodeTitle,
-									providerId: 'selectedNodes',
-									contextKey: 'selectedNodes',
-									contextEntryId: entry.id,
-								},
-							};
-
-							// Add space after each mention except the last one
-							if (index < selectedNodesContext.length - 1) {
-								return [mentionNode, { type: 'text', text: ' ' }];
-							}
-							return [mentionNode];
-						}),
-					],
-				},
-			],
+			// Handle Shift+Delete for reject all diffs
+			if (
+				(e.key === 'Delete' || e.key === 'Backspace') &&
+				e.shiftKey &&
+				!e.ctrlKey &&
+				!e.altKey &&
+				!e.metaKey
+			) {
+				if (hasDiffs) {
+					e.preventDefault();
+					handleRejectAllDiffs();
+					return;
+				}
+			}
 		};
 
-		// Set the editor content using JSON format
-		if (editor) {
-			editor.commands.setContent(content);
-		}
-	};
+		// Add the event listener
+		window.addEventListener('keydown', handleGlobalKeyDown);
+
+		// Clean up
+		return () => {
+			window.removeEventListener('keydown', handleGlobalKeyDown);
+		};
+	}, [handleVoiceToggle, handleAcceptAllDiffs, handleRejectAllDiffs, hasDiffs]);
 
 	return (
 		<ChatInputContainer position={position} className='text-sm'>
@@ -297,6 +295,10 @@ export const ChatInput: React.FC<{
 								childClassName='p-1.5'
 								onClick={handleAcceptAllDiffs}>
 								<span className='flex items-center gap-1'>
+									<KeyboardShortcut
+										shortcut='⇧ Enter'
+										className='ml-1 text-xs'
+									/>
 									<CheckCircle className='w-4 h-4 text-green-600' />
 									Accept All
 								</span>
@@ -306,21 +308,13 @@ export const ChatInput: React.FC<{
 								childClassName='p-1.5'
 								onClick={handleRejectAllDiffs}>
 								<span className='flex items-center gap-1'>
+									<KeyboardShortcut shortcut='⇧ Del' className='ml-1 text-xs' />
 									<XCircle className='w-4 h-4 text-red-600' />
 									Reject All
 								</span>
 							</Container3DButton>
 						</>
 					)}
-					<Container3DButton
-						id='test-override-btn'
-						childClassName='p-1.5'
-						onClick={handleTestOverride}>
-						<span className='flex items-center gap-1'>
-							<Code className='w-4 h-4' />
-							Test Override
-						</span>
-					</Container3DButton>
 				</div>
 				<div className='flex space-x-2'>
 					<Container3DButton id='history-btn' childClassName='p-1.5'>
@@ -391,7 +385,9 @@ export const ChatInput: React.FC<{
 									? 'Speaking...'
 									: voice.voicePermissionStatus === 'denied'
 									? 'Microphone access denied'
-									: 'Start voice chat'
+									: voice.voicePermissionStatus === 'not-supported'
+									? 'Voice not supported'
+									: 'Start voice chat (M)'
 							}>
 							<Mic className='w-4 h-4' />
 						</button>

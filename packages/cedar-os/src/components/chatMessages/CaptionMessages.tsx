@@ -1,19 +1,19 @@
-import React from 'react';
-import { Ticker } from 'motion-plus-react';
 import { CornerDownLeft as EnterIcon } from 'lucide-react';
+import { Ticker } from 'motion-plus-react';
+import React from 'react';
 
-import { useMessages, useCedarStore, useStyling } from '@/store/CedarStore';
+import { useCedarStore, useMessages } from '@/store/CedarStore';
 import type {
 	DialogueOptionsMessage,
 	MultipleChoiceMessage,
-	TickerMessage,
 	SliderMessage,
+	TickerMessage,
 } from '@/store/messages/types';
 
 import Flat3dButton from '@/components/containers/Flat3dButton';
 import Flat3dContainer from '@/components/containers/Flat3dContainer';
-import { TypewriterText } from '@/components/text/TypewriterText';
 import { ShimmerText } from '@/components/text/ShimmerText';
+import { TypewriterText } from '@/components/text/TypewriterText';
 import KeyboardShortcut from '@/components/ui/KeyboardShortcut';
 import Slider from '@/components/ui/Slider';
 
