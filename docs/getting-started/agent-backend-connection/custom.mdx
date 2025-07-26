@@ -1,5 +1,5 @@
 ---
-title: 'Custom'
+title: 'Custom Backend'
 description: 'Creating custom agent backend connections'
 ---
 
@@ -11,7 +11,31 @@ Cedar-OS allows you to integrate your own custom AI backend. This is useful when
 
 The simplest custom provider uses the OpenAI-compatible format:
 
-```tsx
+<CodeGroup>
+
+```tsx CedarCopilot
+import { CedarCopilot } from '@cedar-os/cedar';
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'custom',
+				config: {
+					baseURL: 'https://your-api.com',
+					apiKey: 'your-api-key',
+					// Any additional config your backend needs
+					organizationId: 'org-123',
+					projectId: 'project-456',
+				},
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
+
+```tsx Store Configuration
 import { useCedarStore } from '@cedar-os/cedar';
 
 const store = useCedarStore();
@@ -28,6 +52,8 @@ store.setProviderConfig({
 	},
 });
 ```
+
+</CodeGroup>
 
 ## Custom Provider Implementation
 

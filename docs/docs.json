@@ -29,9 +29,6 @@
 				"icon": "plug",
 				"pages": [
 					"getting-started/agent-backend-connection/overview",
-					"getting-started/agent-backend-connection/ai-sdk",
-					"getting-started/agent-backend-connection/anthropic",
-					"getting-started/agent-backend-connection/openai",
 					"getting-started/agent-backend-connection/mastra",
 					"getting-started/agent-backend-connection/custom"
 				]
@@ -86,7 +83,8 @@
 					"getting-started/voice/overview",
 					"getting-started/voice/agentic-backend",
 					"getting-started/voice/streams",
-					"getting-started/voice/websockets"
+					"getting-started/voice/websockets",
+					"getting-started/voice/components"
 				]
 			},
 			{

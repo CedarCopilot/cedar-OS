@@ -1,12 +1,277 @@
 ---
 title: 'Voice (Beta)'
-description: 'Overview of Voice integration'
+description: 'Voice-powered AI interactions with real-time audio streaming and automatic message integration'
 ---
 
-# Voice (Beta)
+# Voice Integration (Beta)
 
-This page will cover the Voice integration system in Cedar-OS.
+Cedar-OS provides a complete voice integration system that enables natural voice conversations with AI agents. The voice system handles audio capture, streaming to backend services, and automatic playback of responses, with seamless integration into the messaging system.
 
-## Coming Soon
+## Features
 
-Content for this section will be added in the next phase.
+- 🎤 **Voice Capture**: Browser-based audio recording with permission management
+- 🔊 **Audio Playback**: Automatic playback of audio responses from agents
+- 🌐 **Streaming Support**: Real-time audio streaming to configurable endpoints
+- 🔧 **Flexible Configuration**: Customizable voice settings (language, pitch, rate, volume)
+- 🎯 **State Management**: Full integration with Cedar's Zustand-based store
+- 💬 **Message Integration**: Automatic addition of voice interactions to chat history
+- 🛡️ **Error Handling**: Comprehensive error states and recovery
+- 🎨 **Visual Indicators**: Animated voice status indicators
+
+## Quick Start
+
+### 1. Basic Setup
+
+```typescript
+import { useCedarStore } from '@cedar/core';
+
+function VoiceChat() {
+	const voice = useCedarStore((state) => state.voice);
+
+	useEffect(() => {
+		// Configure the voice endpoint
+		voice.setVoiceEndpoint('http://localhost:3456/api/chat/voice');
+
+		// Cleanup on unmount
+		return () => {
+			voice.resetVoiceState();
+		};
+	}, []);
+
+	return (
+		<div>
+			<button
+				onClick={() => voice.toggleVoice()}
+				disabled={voice.voicePermissionStatus !== 'granted'}>
+				{voice.isListening ? 'Stop Listening' : 'Start Listening'}
+			</button>
+
+			{voice.voiceError && <div className='error'>{voice.voiceError}</div>}
+		</div>
+	);
+}
+```
+
+### 2. Request Microphone Permission
+
+```typescript
+const handleEnableVoice = async () => {
+	if (!voice.checkVoiceSupport()) {
+		alert('Voice features are not supported in your browser');
+		return;
+	}
+
+	await voice.requestVoicePermission();
+
+	if (voice.voicePermissionStatus === 'granted') {
+		console.log('Voice enabled!');
+	}
+};
+```
+
+### 3. Using the Voice Indicator
+
+```typescript
+import { VoiceIndicator } from '@cedar/voice';
+
+function App() {
+	const voice = useCedarStore((state) => state.voice);
+
+	return (
+		<div>
+			<VoiceIndicator voiceState={voice} />
+			{/* Rest of your app */}
+		</div>
+	);
+}
+```
+
+## Voice State
+
+The voice slice manages comprehensive state for voice interactions:
+
+```typescript
+interface VoiceState {
+	// Core state
+	isVoiceEnabled: boolean;
+	isListening: boolean;
+	isSpeaking: boolean;
+	voiceEndpoint: string;
+	voicePermissionStatus: 'granted' | 'denied' | 'prompt' | 'not-supported';
+	voiceError: string | null;
+
+	// Audio resources
+	audioStream: MediaStream | null;
+	audioContext: AudioContext | null;
+	mediaRecorder: MediaRecorder | null;
+
+	// Voice settings
+	voiceSettings: {
+		language: string; // e.g., 'en-US'
+		voiceId?: string; // Optional voice ID for TTS
+		pitch?: number; // 0.5 to 2.0
+		rate?: number; // 0.5 to 2.0
+		volume?: number; // 0.0 to 1.0
+		useBrowserTTS?: boolean; // Use browser TTS instead of backend
+		autoAddToMessages?: boolean; // Automatically add voice interactions to messages
+	};
+}
+```
+
+## Available Actions
+
+### Permission Management
+
+- `checkVoiceSupport()` - Check if browser supports voice features
+- `requestVoicePermission()` - Request microphone access
+
+### Voice Control
+
+- `startListening()` - Start recording audio
+- `stopListening()` - Stop recording and send to endpoint
+- `toggleVoice()` - Toggle between listening and idle states
+
+### Audio Processing
+
+- `streamAudioToEndpoint(audioData)` - Send audio to backend
+- `playAudioResponse(audioUrl)` - Play audio response
+
+### Configuration
+
+- `setVoiceEndpoint(endpoint)` - Set the backend endpoint URL
+- `updateVoiceSettings(settings)` - Update voice configuration
+- `setVoiceError(error)` - Set error message
+- `resetVoiceState()` - Clean up and reset all voice state
+
+## Message Integration
+
+By default, voice interactions are automatically added to the Cedar messages store, creating a seamless conversation history:
+
+```typescript
+// User speech is transcribed and added as a user message
+{
+  type: 'text',
+  role: 'user',
+  content: 'Show me the latest reports',
+  metadata: {
+    source: 'voice',
+    timestamp: '2024-01-01T12:00:00Z'
+  }
+}
+
+// Agent response is added as an assistant message
+{
+  type: 'text',
+  role: 'assistant',
+  content: 'Here are your latest reports...',
+  metadata: {
+    source: 'voice',
+    usage: { /* token usage data */ },
+    timestamp: '2024-01-01T12:00:01Z'
+  }
+}
+```
+
+### Disabling Message Integration
+
+```typescript
+voice.updateVoiceSettings({
+	autoAddToMessages: false,
+});
+```
+
+## Browser Compatibility
+
+The voice system requires modern browser APIs:
+
+- `navigator.mediaDevices.getUserMedia` - Audio capture
+- `MediaRecorder` API - Audio recording
+- `AudioContext` API - Audio processing
+
+**Supported browsers:**
+
+- Chrome/Edge 47+
+- Firefox 25+
+- Safari 11+
+- Opera 34+
+
+<Warning>
+	HTTPS is required for microphone access in production environments (localhost
+	is exempt).
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+	<Card
+		title='Backend Integration'
+		icon='server'
+		href='/getting-started/voice/agentic-backend'>
+		Learn how to set up your backend to handle voice requests
+	</Card>
+	<Card
+		title='Streaming Implementation'
+		icon='wave-square'
+		href='/getting-started/voice/streams'>
+		Implement real-time audio streaming
+	</Card>
+</CardGroup>
+
+## Examples
+
+### Complete Voice Chat Component
+
+```typescript
+import { useCedarStore } from '@cedar/core';
+import { VoiceIndicator } from '@cedar/voice';
+import { useEffect } from 'react';
+
+export function VoiceChat() {
+	const voice = useCedarStore((state) => state.voice);
+
+	useEffect(() => {
+		voice.setVoiceEndpoint('http://localhost:3456/api/chat/voice');
+		return () => voice.resetVoiceState();
+	}, []);
+
+	const handleVoiceToggle = async () => {
+		if (voice.voicePermissionStatus === 'prompt') {
+			await voice.requestVoicePermission();
+		}
+
+		if (voice.voicePermissionStatus === 'granted') {
+			voice.toggleVoice();
+		}
+	};
+
+	return (
+		<div className='voice-chat'>
+			<VoiceIndicator voiceState={voice} />
+
+			<button
+				onClick={handleVoiceToggle}
+				className={`voice-button ${voice.isListening ? 'listening' : ''}`}
+				disabled={voice.voicePermissionStatus === 'denied'}>
+				{voice.isListening ? 'Stop' : 'Talk'}
+			</button>
+
+			{voice.voiceError && (
+				<div className='error-message'>{voice.voiceError}</div>
+			)}
+
+			<div className='voice-settings'>
+				<select
+					value={voice.voiceSettings.language}
+					onChange={(e) =>
+						voice.updateVoiceSettings({ language: e.target.value })
+					}>
+					<option value='en-US'>English (US)</option>
+					<option value='en-GB'>English (UK)</option>
+					<option value='es-ES'>Spanish</option>
+					<option value='fr-FR'>French</option>
+				</select>
+			</div>
+		</div>
+	);
+}
+```
