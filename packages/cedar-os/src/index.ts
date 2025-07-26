@@ -9,6 +9,7 @@ export { default as TooltipMenu } from '@/components/inputs/TooltipMenu';
 export { CedarCaptionChat } from '@/components/chatComponents/CedarCaptionChat';
 export { FloatingCedarChat } from '@/components/chatComponents/FloatingCedarChat';
 export { SidePanelCedarChat } from '@/components/chatComponents/SidePanelCedarChat';
+export { default as ChatBubbles } from '@/components/chatMessages/ChatBubbles';
 
 // Export structural components
 export { FloatingContainer, SidePanelContainer } from '@/components/structural';
