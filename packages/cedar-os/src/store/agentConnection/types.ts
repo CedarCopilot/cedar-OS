@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+
 // Base types for LLM responses and events
 export interface LLMResponse {
 	content: string;
@@ -8,7 +10,7 @@ export interface LLMResponse {
 	};
 	metadata?: Record<string, unknown>;
 	// The object field contains structured output when using JSON Schema or Zod
-	object?: any;
+	object?: unknown;
 }
 
 export type StreamEvent =
@@ -52,6 +54,21 @@ export interface AISDKParams extends BaseParams {
 
 export interface CustomParams extends BaseParams {
 	[key: string]: unknown;
+}
+
+// Structured output params extend base params with schema
+export interface StructuredParams<T = unknown> extends BaseParams {
+	schema?: T; // JSON Schema or Zod schema
+	schemaName?: string;
+	schemaDescription?: string;
+}
+
+// AI SDK specific structured params that require Zod schemas
+export interface AISDKStructuredParams extends BaseParams {
+	model: string;
+	schema: z.ZodType<unknown>; // Required Zod schema for AI SDK - must be a Zod type, not JSON schema
+	schemaName?: string;
+	schemaDescription?: string;
 }
 
 // Model to API key mapping for AI SDK
@@ -106,6 +123,10 @@ export interface ProviderImplementation<
 	TConfig extends ProviderConfig
 > {
 	callLLM: (params: TParams, config: TConfig) => Promise<LLMResponse>;
+	callLLMStructured: (
+		params: TParams & StructuredParams,
+		config: TConfig
+	) => Promise<LLMResponse>;
 	streamLLM: (
 		params: TParams,
 		config: TConfig,

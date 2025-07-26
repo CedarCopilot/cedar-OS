@@ -21,3 +21,6 @@ export function getProviderImplementation<T extends ProviderConfig>(
 ): ProviderRegistry[T['provider']] {
 	return providerRegistry[config.provider] as ProviderRegistry[T['provider']];
 }
+
+// Re-export Mastra-specific utilities
+export { initialiseChat } from './mastra';

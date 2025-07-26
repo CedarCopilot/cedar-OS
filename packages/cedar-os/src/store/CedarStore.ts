@@ -7,6 +7,7 @@ import { createStateSlice } from '@/store/stateSlice/stateSlice';
 import { createMessagesSlice } from '@/store/messages/messagesSlice';
 import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
 import { createVoiceSlice } from '@/store/voice/voiceSlice';
+import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
 
 // Create the combined store (default for backwards compatibility)
 export const useCedarStore = create<CedarStore>()(
@@ -18,6 +19,7 @@ export const useCedarStore = create<CedarStore>()(
 			...createMessagesSlice(...a),
 			...createAgentConnectionSlice(...a),
 			...createVoiceSlice(...a),
+			...createDebuggerSlice(...a),
 		}),
 		{
 			name: 'cedar-store',
@@ -119,4 +121,21 @@ export const useVoice = () => ({
 	updateVoiceSettings: useCedarStore((state) => state.updateVoiceSettings),
 	setVoiceError: useCedarStore((state) => state.setVoiceError),
 	resetVoiceState: useCedarStore((state) => state.resetVoiceState),
+});
+
+// Export a hook for debugger functionality
+export const useDebugger = () => ({
+	agentConnectionLogs: useCedarStore((state) => state.agentConnectionLogs),
+	maxLogs: useCedarStore((state) => state.maxLogs),
+	isDebugEnabled: useCedarStore((state) => state.isDebugEnabled),
+
+	logAgentRequest: useCedarStore((state) => state.logAgentRequest),
+	logAgentResponse: useCedarStore((state) => state.logAgentResponse),
+	logAgentError: useCedarStore((state) => state.logAgentError),
+	logStreamStart: useCedarStore((state) => state.logStreamStart),
+	logStreamChunk: useCedarStore((state) => state.logStreamChunk),
+	logStreamEnd: useCedarStore((state) => state.logStreamEnd),
+	clearDebugLogs: useCedarStore((state) => state.clearDebugLogs),
+	setDebugEnabled: useCedarStore((state) => state.setDebugEnabled),
+	setMaxLogs: useCedarStore((state) => state.setMaxLogs),
 });

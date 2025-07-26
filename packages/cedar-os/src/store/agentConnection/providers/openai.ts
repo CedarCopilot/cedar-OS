@@ -2,6 +2,7 @@ import type {
 	OpenAIParams,
 	ProviderImplementation,
 	InferProviderConfig,
+	StructuredParams,
 } from '../types';
 import { handleEventStream } from '../agentUtils';
 
@@ -135,5 +136,67 @@ export const openAIProvider: ProviderImplementation<
 		} catch (error) {
 			return { type: 'error', error: error as Error };
 		}
+	},
+
+	callLLMStructured: async (params, config) => {
+		const {
+			prompt,
+			model,
+			systemPrompt,
+			temperature,
+			maxTokens,
+			schema,
+			schemaName,
+			schemaDescription,
+			...rest
+		} = params as OpenAIParams & StructuredParams;
+
+		const messages = [
+			...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+			{ role: 'user', content: prompt },
+		];
+
+		const body: Record<string, unknown> = {
+			model,
+			messages,
+			temperature,
+			max_tokens: maxTokens,
+			...rest,
+		};
+
+		// Add response_format for structured output if schema is provided
+		if (schema) {
+			body.response_format = {
+				type: 'json_schema',
+				json_schema: {
+					name: schemaName || 'response',
+					description: schemaDescription,
+					schema: schema,
+					strict: true,
+				},
+			};
+		}
+
+		const response = await fetch('https://api.openai.com/v1/chat/completions', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${config.apiKey}`,
+			},
+			body: JSON.stringify(body),
+		});
+
+		const result = await openAIProvider.handleResponse(response);
+
+		// If we have structured output, parse it and add to object field
+		if (schema && result.content) {
+			try {
+				result.object = JSON.parse(result.content);
+			} catch {
+				// If parsing fails, leave object undefined
+			}
+		}
+
+		return result;
 	},
 };
