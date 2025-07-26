@@ -3,10 +3,134 @@ title: 'Getting Started Overview'
 description: 'Overview of getting started with Cedar-OS'
 ---
 
-# Getting Started Overview
+# Getting Started with Cedar-OS
 
-This page will provide an overview of the getting started process.
+Cedar-OS is a powerful framework for building AI-powered applications with rich chat interfaces, state management, and agent backend connections.
 
-## Coming Soon
+## Quick Start
 
-Content for this section will be added in the next phase.
+First, install Cedar-OS:
+
+```bash
+npm install @cedar-os/cedar
+# or
+yarn add @cedar-os/cedar
+# or
+pnpm add @cedar-os/cedar
+```
+
+Then wrap your app with the CedarCopilot provider and configure your AI provider:
+
+```tsx
+import { CedarCopilot } from '@cedar-os/cedar';
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'ai-sdk',
+				providers: {
+					openai: { apiKey: process.env.OPENAI_API_KEY },
+					anthropic: { apiKey: process.env.ANTHROPIC_API_KEY },
+				},
+			}}>
+			{/* Your app components */}
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
+
+## Core Concepts
+
+Cedar-OS is built around several key concepts:
+
+### 1. Agent Backend Connection
+
+Connect to any AI provider (OpenAI, Anthropic, Mastra, AI SDK, or custom backends) with a unified interface.
+
+### 2. Chat Input & Context
+
+Rich chat input with support for mentions, additional context, and custom editors.
+
+### 3. Message Handling
+
+Stream AI responses, render custom components, and manage conversation history.
+
+### 4. State Access
+
+Register and track application state, making it available to your AI agents.
+
+### 5. Spells & Actions
+
+Quick actions and radial menus for enhanced user interactions.
+
+## Next Steps
+
+Choose your path based on your needs:
+
+1. **[Connect an Agent](/getting-started/agent-backend-connection/overview)** - Set up your AI backend
+2. **[Build Chat Input](/getting-started/chat-input/overview)** - Create rich chat interfaces
+3. **[Handle Messages](/getting-started/messages/overview)** - Process AI responses
+4. **[Manage State](/getting-started/state-access/overview)** - Connect your application state
+
+## Architecture Overview
+
+Cedar-OS follows a modular architecture:
+
+- **CedarCopilot**: Main provider component that wraps your app
+- **Store**: Centralized Zustand store managing all state
+- **Providers**: Pluggable AI backend connections
+- **Components**: Pre-built UI components for chat, input, and more
+- **Hooks**: React hooks for accessing Cedar functionality
+
+## Examples
+
+### Basic Chat Interface
+
+```tsx
+import { useCedarStore } from '@cedar-os/cedar';
+
+function ChatInterface() {
+	const { sendMessage, messages, isProcessing } = useCedarStore();
+
+	return (
+		<div>
+			{messages.map((message) => (
+				<div key={message.id}>
+					<strong>{message.role}:</strong> {message.content}
+				</div>
+			))}
+			<button
+				onClick={() => sendMessage({ model: 'gpt-4o-mini' })}
+				disabled={isProcessing}>
+				Send Message
+			</button>
+		</div>
+	);
+}
+```
+
+### State Integration
+
+```tsx
+import { useCedarStore } from '@cedar-os/cedar';
+
+function MyComponent() {
+	const registerState = useCedarStore((state) => state.registerState);
+
+	// Register your component state with Cedar
+	useEffect(() => {
+		registerState('userProfile', {
+			getter: () => userProfile,
+			setters: {
+				updateProfile: (newProfile) => setUserProfile(newProfile),
+			},
+		});
+	}, [registerState]);
+
+	return <div>Your component</div>;
+}
+```
+
+Ready to dive deeper? Start with [connecting your first agent](/getting-started/agent-backend-connection/overview)!
