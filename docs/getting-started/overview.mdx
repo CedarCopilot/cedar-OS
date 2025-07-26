@@ -387,6 +387,32 @@ function TodoApp() {
 }
 ```
 
+<<<<<<< HEAD
+
+### State Integration
+
+```tsx
+import { useCedarStore } from '@cedar-os/cedar';
+
+function MyComponent() {
+	const registerState = useCedarStore((state) => state.registerState);
+
+	// Register your component state with Cedar
+	useEffect(() => {
+		registerState('userProfile', {
+			getter: () => userProfile,
+			setters: {
+				updateProfile: (newProfile) => setUserProfile(newProfile),
+			},
+		});
+	}, [registerState]);
+
+	return <div>Your component</div>;
+}
+```
+
+# Ready to dive deeper? Start with [connecting your first agent](/getting-started/agent-backend-connection/overview)!
+
 ### Advanced State with Custom Setters
 
 For more complex state interactions, you can define custom setters that AI can call:
@@ -616,3 +642,5 @@ Now that you have Cedar-OS set up with basic functionality:
 **TypeScript errors**: Cedar-OS is fully typed - check that you're importing types correctly and using the right component props.
 
 Need help? Check our [Community Discord](https://discord.gg/cedar-os) or [GitHub Issues](https://github.com/cedar-os/cedar/issues).
+
+> > > > > > > origin/docs
