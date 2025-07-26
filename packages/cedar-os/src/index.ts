@@ -8,9 +8,7 @@ export {
 } from '@/components/chatInput/ChatInput';
 export { default as TooltipMenu } from '@/components/inputs/TooltipMenu';
 
-// Store
-export { useCedarStore } from '@/store/CedarStore';
-export { registerState } from '@/store/CedarStore';
+// Store slices
 export { createStylingSlice } from '@/store/stylingSlice';
 export { createMessagesSlice } from '@/store/messages/messagesSlice';
 export { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
@@ -72,3 +70,17 @@ export type {
 
 // Export SendMessageParams from the slice
 export type { SendMessageParams } from './store/agentConnection/agentConnectionSlice';
+
+// Export all hooks and utilities from CedarStore
+export {
+	useCedarStore,
+	useMessages,
+	useStyling,
+	useChatInput,
+	useVoice,
+	useDebugger,
+	registerState,
+	getCedarState,
+	setCedarState,
+	setCedarStore,
+} from './store/CedarStore';

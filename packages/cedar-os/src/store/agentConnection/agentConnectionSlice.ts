@@ -189,10 +189,27 @@ export const createAgentConnectionSlice: StateCreator<
 				break;
 		}
 
-		const provider = getProviderImplementation(config);
-		// Type assertion is safe after runtime validation
-		// We need to use unknown here as an intermediate type for the complex union types
-		return provider.callLLM(params as unknown as never, config as never);
+		// Log the request
+		const requestId = get().logAgentRequest(params, config.provider);
+
+		try {
+			const provider = getProviderImplementation(config);
+			// Type assertion is safe after runtime validation
+			// We need to use unknown here as an intermediate type for the complex union types
+			const response = await provider.callLLM(
+				params as unknown as never,
+				config as never
+			);
+
+			// Log the successful response
+			get().logAgentResponse(requestId, response);
+
+			return response;
+		} catch (error) {
+			// Log the error
+			get().logAgentError(requestId, error as Error);
+			throw error;
+		}
 	},
 
 	streamLLM: (
@@ -231,10 +248,25 @@ export const createAgentConnectionSlice: StateCreator<
 				break;
 		}
 
+		// Log the stream start
+		const streamId = get().logStreamStart(params, config.provider);
+
 		const provider = getProviderImplementation(config);
 		const abortController = new AbortController();
 
 		set({ currentAbortController: abortController, isStreaming: true });
+
+		// Wrap the handler to log chunks
+		const wrappedHandler: StreamHandler = (event) => {
+			if (event.type === 'chunk') {
+				get().logStreamChunk(streamId, event.content);
+			} else if (event.type === 'done') {
+				get().logStreamEnd(streamId);
+			} else if (event.type === 'error') {
+				get().logAgentError(streamId, event.error);
+			}
+			handler(event);
+		};
 
 		// Wrap the provider's streamLLM to handle state updates
 		// Type assertion is safe after runtime validation
@@ -242,7 +274,7 @@ export const createAgentConnectionSlice: StateCreator<
 		const originalResponse = provider.streamLLM(
 			params as unknown as never,
 			config as never,
-			handler
+			wrappedHandler
 		);
 
 		// Wrap the completion to update state when done
