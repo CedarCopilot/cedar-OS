@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
 	Select,
 	SelectContent,
@@ -10,18 +8,20 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import {
-	Plug,
-	ExternalLink,
-	Save,
-	Check,
-	Loader2,
-	AlertCircle,
-	CheckCircle,
-	XCircle,
-} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GlassyPaneContainer from '@/containers/GlassyPaneContainer';
 import { useCedarStore } from '@/store/CedarStore';
+import {
+	AlertCircle,
+	Check,
+	CheckCircle,
+	ExternalLink,
+	Loader2,
+	Plug,
+	Save,
+	XCircle,
+} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 
 // Define types locally to avoid import issues
 type ProviderConfig =
