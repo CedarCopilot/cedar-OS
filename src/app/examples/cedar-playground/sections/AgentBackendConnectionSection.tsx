@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '../components/Card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,7 +20,7 @@ import {
 	CheckCircle,
 	XCircle,
 } from 'lucide-react';
-import { useCedarStore } from 'cedar-os';
+import { useCedarStore, GlassyPaneContainer } from 'cedar-os';
 
 // Define types locally to avoid import issues
 type ProviderConfig =
@@ -463,7 +462,10 @@ export function AgentBackendConnectionSection() {
 	};
 
 	return (
-		<Card title='Agent Backend Connection'>
+		<GlassyPaneContainer className='p-6'>
+			<h3 className='text-lg font-semibold mb-4 transition-colors duration-300 text-gray-900 dark:text-white'>
+				Agent Backend Connection
+			</h3>
 			<div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
 				{/* Left Column - Configuration */}
 				<div>
@@ -906,6 +908,6 @@ export function AgentBackendConnectionSection() {
 					</div>
 				</div>
 			</div>
-		</Card>
+		</GlassyPaneContainer>
 	);
 }

@@ -43,7 +43,7 @@ const GlassyPaneContainer: React.FC<GlassyPaneContainerProps> = ({
 				WebkitBackdropFilter: 'blur(12px)', // Safari
 		  }
 		: {
-				background: 'rgba(255, 255, 255, 0.35)',
+				background: 'rgba(255, 255, 255, 0.65)',
 				backdropFilter: 'blur(8px)',
 				WebkitBackdropFilter: 'blur(8px)',
 		  };
