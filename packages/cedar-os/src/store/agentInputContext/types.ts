@@ -45,6 +45,8 @@ export interface MentionProvider {
 	trigger: string;
 	label?: string;
 	description?: string;
+	color?: string;
+	icon?: ReactNode;
 	getItems: (query: string) => MentionItem[] | Promise<MentionItem[]>;
 	toContextEntry: (item: MentionItem) => ContextEntry;
 	renderMenuItem?: (item: MentionItem) => ReactNode;
