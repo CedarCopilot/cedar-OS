@@ -1,6 +1,6 @@
 'use client';
 
-import { SidePanelCedarChat } from 'cedar-os';
+import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import { useState } from 'react';
 import {
 	AgentBackendConnectionSection,

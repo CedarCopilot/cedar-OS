@@ -5,15 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-	CedarCaptionChat,
-	ChatBubbles,
-	ChatInput,
-	FloatingCedarChat,
-	GlassyPaneContainer,
-	useCedarStore,
-} from 'cedar-os';
+import GlassyPaneContainer from '@/containers/GlassyPaneContainer';
+import { useCedarStore } from '@/store/CedarStore';
 import { useEffect, useState } from 'react';
+import ChatBubbles from '@/chatMessages/ChatBubbles';
+import { ChatInput } from '@/chatInput/ChatInput';
+import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
+import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 
 interface SliderControlProps {
 	label: string;
