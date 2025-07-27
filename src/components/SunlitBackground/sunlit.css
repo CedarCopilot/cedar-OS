@@ -1,0 +1,414 @@
+article {
+	margin: 0 auto;
+	max-width: 800px;
+	padding: 40vh 0;
+
+	color: var(--dark);
+	isolation: isolate;
+}
+
+article a {
+	color: var(--dark);
+}
+
+body {
+	--day: #fffdfa;
+	--evening: #fccc83;
+	--dusk: #db7a2a;
+	--night: #0f131c;
+	--dawn: #16132b;
+	--morning: #9fb3bf;
+
+	--light: var(--day);
+	--dark: var(--night);
+	--shadow: #151412;
+	--bounce-light: #f5d7a6;
+	--timing-fn: cubic-bezier(0.455, 0.19, 0, 0.985);
+
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	width: 100%;
+	background-color: var(--light);
+
+	animation-duration: 0s;
+	animation-fill-mode: forwards;
+	animation-timing-function: linear;
+}
+
+body.animation-ready {
+	animation-play-state: running;
+	animation-duration: 1.7s;
+	animation-name: sunrise;
+}
+
+body.animation-ready.night {
+	animation-duration: 1.7s;
+	animation-name: sunset;
+}
+
+body.night {
+	--light: var(--night);
+	--dark: var(--day);
+	--shadow: #020205;
+	--bounce-light: #1b293f;
+}
+
+@keyframes sunrise {
+	0% {
+		background-color: var(--night);
+	}
+
+	10% {
+		background-color: var(--dawn);
+	}
+
+	35% {
+		background-color: var(--morning);
+	}
+
+	100% {
+		background-color: var(--day);
+	}
+}
+
+@keyframes sunset {
+	0% {
+		background-color: var(--day);
+	}
+
+	30% {
+		background-color: var(--evening);
+	}
+
+	60% {
+		background-color: var(--dusk);
+	}
+
+	90% {
+		background-color: var(--dawn);
+	}
+
+	100% {
+		background-color: var(--night);
+	}
+}
+
+#dappled-light {
+	pointer-events: none;
+	position: fixed;
+	height: 100vh;
+	width: 100vw;
+}
+
+#progressive-blur {
+	position: absolute;
+	height: 100%;
+	width: 100%;
+}
+
+#progressive-blur > div {
+	position: absolute;
+	height: 100%;
+	width: 100%;
+	inset: 0;
+	backdrop-filter: blur(var(--blur-amount));
+	mask-image: linear-gradient(
+		252deg,
+		transparent,
+		transparent var(--stop1),
+		black var(--stop2),
+		black
+	);
+}
+
+#progressive-blur > div:nth-child(1) {
+	--blur-amount: 6px;
+	--stop1: 0%;
+	--stop2: 0%;
+}
+
+#progressive-blur > div:nth-child(2) {
+	--blur-amount: 12px;
+	--stop1: 40%;
+	--stop2: 80%;
+}
+
+#progressive-blur > div:nth-child(3) {
+	--blur-amount: 48px;
+	--stop1: 40%;
+	--stop2: 70%;
+}
+
+#progressive-blur > div:nth-child(4) {
+	--blur-amount: 96px;
+	--stop1: 70%;
+	--stop2: 80%;
+}
+
+#glow {
+	position: absolute;
+	background: linear-gradient(
+		309deg,
+		var(--bounce-light),
+		var(--bounce-light) 20%,
+		transparent
+	);
+	transition: background 1s var(--timing-fn);
+	height: 100%;
+	width: 100%;
+	opacity: 0.65;
+}
+
+#glow-bounce {
+	content: '';
+	position: absolute;
+	background: linear-gradient(
+		355deg,
+		var(--bounce-light) 0%,
+		transparent 30%,
+		transparent 100%
+	);
+	transition: background 1s var(--timing-fn);
+	opacity: 0.65;
+	height: 100%;
+	width: 100%;
+	bottom: 0;
+}
+
+.perspective {
+	position: absolute;
+	transition:
+		transform 1.7s var(--timing-fn),
+		opacity 4s ease;
+	top: -30vh;
+	right: 0;
+	width: 80vw;
+	height: 130vh;
+	opacity: 0.12;
+	background-blend-mode: darken;
+	transform-origin: top right;
+	transform-style: preserve-3d;
+	/* transform: matrix3d(0.75, -0.0625, 0, 0.0008, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1); */
+	transform: matrix3d(
+		0.8333,
+		0.0833,
+		0,
+		0.0003,
+		0,
+		1,
+		0,
+		0,
+		0,
+		0,
+		1,
+		0,
+		0,
+		0,
+		0,
+		1
+	);
+}
+
+.night .perspective {
+	opacity: 0.4;
+	transform: matrix3d(
+		0.8333,
+		0.0833,
+		0,
+		0.0003,
+		0,
+		1,
+		0,
+		0,
+		0,
+		0,
+		1,
+		0,
+		0,
+		0,
+		0,
+		1
+	);
+}
+
+#leaves {
+	position: absolute;
+	background-size: cover;
+	background-repeat: no-repeat;
+	bottom: -20px;
+	right: -700px;
+	width: 1600px;
+	height: 1400px;
+	background-image: url('./leaves.png');
+	filter: url(#wind);
+	animation: billow 8s ease-in-out infinite;
+	margin-left: 80px;
+}
+
+#blinds {
+	position: relative;
+	width: 100%;
+}
+
+#blinds .shutter,
+#blinds .bar {
+	background-color: var(--shadow);
+}
+
+#blinds > .shutters {
+	display: flex;
+	flex-direction: column;
+	align-items: end;
+	gap: 60px;
+	transition: gap 1s var(--timing-fn);
+}
+
+.night #blinds > .shutters {
+	gap: 40px;
+}
+
+.shutter {
+	width: 100%;
+	height: 40px;
+	transition: height 1s var(--timing-fn);
+}
+
+.night .shutter {
+	height: 40px;
+}
+
+#blinds > .vertical {
+	top: 0;
+	position: absolute;
+	height: 100%;
+	width: 100%;
+	display: flex;
+	justify-content: space-around;
+}
+
+.vertical-shutter {
+	position: absolute;
+	right: 48%;
+	height: 100%;
+	width: 20px;
+	background-color: var(--shadow);
+	transition: width 1s var(--timing-fn);
+}
+
+.night .vertical-shutter {
+	width: 20px;
+}
+
+.vertical > .bar {
+	width: 5;
+	height: 100%;
+}
+
+@keyframes billow {
+	0% {
+		transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1);
+	}
+
+	25% {
+		transform: perspective(400px) rotateX(1deg) rotateY(2deg) scale(1.02);
+	}
+
+	50% {
+		transform: perspective(400px) rotateX(-4deg) rotateY(-2deg) scale(0.97);
+	}
+
+	75% {
+		transform: perspective(400px) rotateX(1deg) rotateY(-1deg) scale(1.04);
+	}
+
+	100% {
+		transform: perspective(4000px) rotateX(0deg) rotateY(0deg) scale(1);
+	}
+}
+
+/* grain */
+.grain {
+	filter: brightness(120%) sepia(50%);
+	height: 100%;
+	left: 0;
+	position: fixed;
+	top: 0;
+	width: 100%;
+	z-index: 10;
+}
+
+.grain:before {
+	animation: noise 1s steps(2) infinite;
+	background-image: url(https://upload.wikimedia.org/wikipedia/commons/5/5c/Image_gaussian_noise_example.png);
+	content: '';
+	height: calc(100% + 20rem);
+	left: -10rem;
+	opacity: 0.08;
+	pointer-events: none;
+	position: fixed;
+	top: -10rem;
+	width: calc(100% + 20rem);
+}
+
+@keyframes noise {
+	0% {
+		transform: translate3d(0, 2rem, 0);
+	}
+
+	10% {
+		transform: translate3d(-1rem, -2rem, 0);
+	}
+
+	20% {
+		transform: translate3d(-4rem, 1rem, 0);
+	}
+
+	30% {
+		transform: translate3d(4.5rem, -4.5rem, 0);
+	}
+
+	40% {
+		transform: translate3d(-1rem, 3.5rem, 0);
+	}
+
+	50% {
+		transform: translate3d(-4.5rem, -2rem, 0);
+	}
+
+	60% {
+		transform: translate3d(1rem, 3rem, 0);
+	}
+
+	70% {
+		transform: translate3d(3.5rem, -4rem, 0);
+	}
+
+	80% {
+		transform: translate3d(-4.5rem, 0.5rem, 0);
+	}
+
+	90% {
+		transform: translate3d(3rem, -2.5rem, 0);
+	}
+
+	to {
+		transform: translate3d(-3.5rem, 0, 0);
+	}
+}
+
+.sunset #blinds > .shutters {
+	gap: 50px;
+}
+
+.sunset .shutter {
+	height: 30px;
+}
+
+.sunset .vertical-shutter {
+	width: 12px;
+}
+
+.sunset .perspective {
+	opacity: 0.2;
+}

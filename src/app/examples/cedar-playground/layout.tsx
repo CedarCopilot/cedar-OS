@@ -1,8 +1,38 @@
 'use client';
 
-import { CedarCopilot } from 'cedar-os';
+import { CedarCopilot, useStyling } from 'cedar-os';
 import type { ProviderConfig } from 'cedar-os';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
+import { Navbar } from './components/Navbar';
+import { SunlitBackground } from '@/components/SunlitBackground/SunlitBackground';
+
+function LayoutContent({ children }: { children: ReactNode }) {
+	const { styling, setStyling } = useStyling();
+
+	// Update the document class when dark mode changes
+	useEffect(() => {
+		if (styling.darkMode) {
+			document.documentElement.classList.add('dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+		}
+	}, [styling.darkMode]);
+
+	const handleModeChange = (mode: 'light' | 'dark') => {
+		setStyling({ darkMode: mode === 'dark' });
+	};
+
+	return (
+		<>
+			<SunlitBackground
+				mode={styling.darkMode ? 'dark' : 'light'}
+				onModeChange={handleModeChange}
+			/>
+			<Navbar />
+			<div className='pt-16 relative z-10'>{children}</div>
+		</>
+	);
+}
 
 export default function CedarPlaygroundLayout({
 	children,
@@ -21,5 +51,9 @@ export default function CedarPlaygroundLayout({
 		},
 	};
 
-	return <CedarCopilot llmProvider={llmProvider}>{children}</CedarCopilot>;
+	return (
+		<CedarCopilot llmProvider={llmProvider}>
+			<LayoutContent>{children}</LayoutContent>
+		</CedarCopilot>
+	);
 }

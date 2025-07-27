@@ -19,15 +19,15 @@ export default function CedarPlaygroundPage() {
 			{/* Header Section */}
 			<div className='py-16 px-8'>
 				<div className='text-center max-w-4xl mx-auto'>
-					<h1 className='text-5xl font-bold text-gray-900 mb-6'>
+					<h1 className='text-5xl font-bold mb-6 text-gray-900 dark:text-white'>
 						Cedar-OS Playground
 					</h1>
-					<p className='text-xl text-gray-600 mb-8 leading-relaxed'>
+					<p className='text-xl mb-8 leading-relaxed text-gray-600 dark:text-gray-300'>
 						Explore and test all the core features of Cedar-OS in one
 						interactive playground. Each section demonstrates a key capability
 						with simple configuration buttons.
 					</p>
-					<p className='text-xl text-gray-600 mb-8 leading-relaxed'>
+					<p className='text-xl mb-8 leading-relaxed text-gray-600 dark:text-gray-300'>
 						This page is open source. You can find the code in the{' '}
 						<a
 							href='https://github.com/CedarCopilot/cedar'
@@ -55,14 +55,16 @@ export default function CedarPlaygroundPage() {
 			<DiffHistorySection />
 
 			{/* Footer Section */}
-			<div className='py-16 px-8 bg-gray-900 text-white'>
+			<div className='py-16 px-8'>
 				<div className='text-center max-w-4xl mx-auto'>
-					<h2 className='text-3xl font-bold mb-6'>That&apos;s Cedar-OS!</h2>
-					<p className='text-lg text-gray-300 mb-6 leading-relaxed'>
+					<h2 className='text-3xl font-bold mb-6 text-gray-900 dark:text-white'>
+						That&apos;s Cedar-OS!
+					</h2>
+					<p className='text-lg mb-6 leading-relaxed text-gray-600 dark:text-gray-300'>
 						This playground demonstrated the core features of Cedar-OS. Each
 						section can be configured and extended based on your needs.
 					</p>
-					<p className='text-base text-gray-400'>
+					<p className='text-base text-gray-500 dark:text-gray-400'>
 						Ready to build something amazing? 🚀
 					</p>
 				</div>

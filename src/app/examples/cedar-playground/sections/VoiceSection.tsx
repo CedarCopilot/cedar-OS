@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { GlassyPaneContainer } from 'cedar-os';
 import { Button } from '@/components/ui/button';
-import { Card } from '../components/Card';
 import { Mic } from 'lucide-react';
 
 export function VoiceSection() {
@@ -38,7 +38,7 @@ export function VoiceSection() {
 			case 'ready':
 				return 'text-blue-500';
 			default:
-				return 'text-gray-400';
+				return 'text-gray-400 dark:text-gray-500';
 		}
 	};
 
@@ -56,20 +56,27 @@ export function VoiceSection() {
 	};
 
 	return (
-		<Card title='Voice'>
-			<div className='flex items-center gap-2 mb-3'>
-				<Mic className={`w-5 h-5 ${getVoiceStatusColor()}`} />
-				<span className='text-sm font-medium'>{getVoiceStatusText()}</span>
+		<GlassyPaneContainer className='p-6'>
+			<h3 className='text-lg font-semibold mb-4 transition-colors duration-300 text-gray-900 dark:text-white'>
+				Voice
+			</h3>
+			<div className='space-y-3'>
+				<div className='flex items-center gap-2 mb-3'>
+					<Mic className={`w-5 h-5 ${getVoiceStatusColor()}`} />
+					<span className='text-sm font-medium dark:text-gray-200'>
+						{getVoiceStatusText()}
+					</span>
+				</div>
+				<Button
+					onClick={handleVoiceToggle}
+					disabled={voiceStatus === 'speaking'}
+					className='w-full'>
+					{voiceStatus === 'listening' ? 'Stop Listening' : 'Start Voice'}
+				</Button>
+				<p className='text-xs text-gray-500 dark:text-gray-400'>
+					Voice-powered AI interactions with real-time audio streaming
+				</p>
 			</div>
-			<Button
-				onClick={handleVoiceToggle}
-				disabled={voiceStatus === 'speaking'}
-				className='w-full'>
-				{voiceStatus === 'listening' ? 'Stop Listening' : 'Start Voice'}
-			</Button>
-			<p className='text-xs text-gray-500'>
-				Voice-powered AI interactions with real-time audio streaming
-			</p>
-		</Card>
+		</GlassyPaneContainer>
 	);
 }

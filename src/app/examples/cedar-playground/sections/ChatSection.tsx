@@ -10,10 +10,10 @@ import {
 	ChatBubbles,
 	ChatInput,
 	FloatingCedarChat,
+	GlassyPaneContainer,
 	useCedarStore,
 } from 'cedar-os';
-import { useState, useEffect } from 'react';
-import { Card } from '../components/Card';
+import { useEffect, useState } from 'react';
 
 interface SliderControlProps {
 	label: string;
@@ -181,7 +181,10 @@ export function ChatSection({
 
 	return (
 		<>
-			<Card title='Chat'>
+			<GlassyPaneContainer className='p-6'>
+				<h3 className='text-lg font-semibold mb-4 transition-colors duration-300 text-gray-900 dark:text-white'>
+					Chat
+				</h3>
 				<Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
 					<TabsList className='grid w-full grid-cols-4'>
 						<TabsTrigger value='caption'>Caption</TabsTrigger>
@@ -191,19 +194,19 @@ export function ChatSection({
 					</TabsList>
 
 					<TabsContent value='embedded' className='space-y-4'>
-						<div className='p-4 bg-gray-50 rounded-lg'>
+						<div className='p-4 rounded-lg dark:bg-gray-700'>
 							<div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
 								{/* Description Column */}
 								<div className='space-y-4'>
 									<h3 className='font-semibold mb-2'>Embedded Mode</h3>
-									<p className='text-sm text-gray-600 mb-3'>
+									<p className='text-sm mb-3 text-gray-600 dark:text-gray-300'>
 										Chat interface embedded directly into your page layout.
 									</p>
 									<div className='space-y-2 text-sm'>
 										<div>
 											<strong>Features:</strong>
 										</div>
-										<ul className='list-disc list-inside space-y-1 text-gray-600'>
+										<ul className='list-disc list-inside space-y-1 text-gray-600 dark:text-gray-300'>
 											<li>Direct integration with page content</li>
 											<li>Customizable container styling</li>
 											<li>Full control over layout and positioning</li>
@@ -215,7 +218,7 @@ export function ChatSection({
 								{/* Chat Column */}
 								<div className='space-y-4'>
 									<h4 className='font-semibold text-sm'>Live Chat Interface</h4>
-									<div className='h-96 border border-gray-200 rounded-lg bg-white relative flex flex-col'>
+									<div className='h-96 border rounded-lg relative flex flex-col '>
 										{/* Messages Display */}
 										<div className='flex-1 overflow-hidden'>
 											<ChatBubbles maxHeight='100%' />
@@ -232,7 +235,7 @@ export function ChatSection({
 					</TabsContent>
 
 					<TabsContent value='floating' className='space-y-4'>
-						<div className='p-4 bg-gray-50 rounded-lg'>
+						<div className='p-4 rounded-lg'>
 							<h3 className='font-semibold mb-2'>
 								Floating Mode Configuration
 							</h3>
@@ -484,7 +487,7 @@ export function ChatSection({
 					</TabsContent>
 
 					<TabsContent value='sidepanel' className='space-y-4'>
-						<div className='p-4 bg-gray-50 rounded-lg'>
+						<div className='p-4 rounded-lg'>
 							<h3 className='font-semibold mb-2'>
 								Side Panel Mode Configuration
 							</h3>
@@ -654,7 +657,7 @@ export function ChatSection({
 					</TabsContent>
 
 					<TabsContent value='caption' className='space-y-4'>
-						<div className='p-4 bg-gray-50 rounded-lg'>
+						<div className='p-4 rounded-lg'>
 							<h3 className='font-semibold mb-2'>Caption Mode Configuration</h3>
 							<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 								{/* Basic Props */}
@@ -743,7 +746,7 @@ export function ChatSection({
 						</div>
 					</TabsContent>
 				</Tabs>
-			</Card>
+			</GlassyPaneContainer>
 
 			{/* Floating Chat */}
 			{activeTab === 'floating' && (
