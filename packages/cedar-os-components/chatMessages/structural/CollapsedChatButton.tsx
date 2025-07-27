@@ -9,6 +9,7 @@ import React, {
 import { useCedarStore, useStyling } from 'cedar-os';
 import Container3DButton from '@/containers/Container3DButton';
 import { GripVertical } from 'lucide-react';
+import InsetGlow from '@/ornaments/InsetGlow';
 
 /**
  * Shared collapsed trigger button for Cedar chat UIs.
@@ -225,6 +226,7 @@ export const CollapsedButton = forwardRef<
 					onClick?.();
 				}}
 				className={`${isDarkMode ? 'bg-[#475569]' : ''} overflow-hidden`}>
+				<InsetGlow className='mr-2' />
 				<span className='truncate flex-1 text-left font-semibold'>{label}</span>
 			</Container3DButton>
 		</div>
