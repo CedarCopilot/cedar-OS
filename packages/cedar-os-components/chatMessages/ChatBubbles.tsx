@@ -1,4 +1,4 @@
-import { useCedarStore, desaturateColor } from 'cedar-os';
+import { useCedarStore, desaturateColor, cn } from 'cedar-os';
 import ChatRenderer from './ChatRenderer';
 import { AnimatePresence, motion } from 'motion/react';
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
@@ -40,10 +40,10 @@ export const ChatBubbles: React.FC<ChatBubblesProps> = ({
 		return messages[index].role === messages[index - 1].role;
 	};
 
-	// Determine container classes based on maxHeight
+	// Determine container classes based on maxHeight with proper className merging
 	const containerClasses = maxHeight
-		? `overflow-x-hidden overflow-y-auto ${className}`
-		: `flex-1 overflow-x-hidden overflow-y-auto min-h-0 ${className}`;
+		? cn('overflow-x-hidden overflow-y-auto px-4', className)
+		: cn('flex-1 overflow-x-hidden overflow-y-auto min-h-0 px-4', className);
 
 	const containerStyle = maxHeight
 		? { height: maxHeight, contain: 'paint layout' }
@@ -52,7 +52,10 @@ export const ChatBubbles: React.FC<ChatBubblesProps> = ({
 	return (
 		<div
 			ref={containerRef}
-			className={`w-full h-full mb-0 flex flex-col space-y-1 pb-3 relative scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent ${containerClasses}`}
+			className={cn(
+				'w-full h-full mb-0 flex flex-col space-y-1 pb-3 relative scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent',
+				containerClasses
+			)}
 			style={containerStyle}>
 			{/* Messages container */}
 			<div className='relative z-20 px-1 py-1'>

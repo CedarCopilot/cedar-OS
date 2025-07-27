@@ -1,4 +1,4 @@
-import { useVoice, Container3DButton, VoiceIndicator } from 'cedar-os';
+import { useVoice, Container3DButton, VoiceIndicator, cn } from 'cedar-os';
 import { EditorContent } from '@tiptap/react';
 import { Code, Image, Mic, SendHorizontal } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -18,7 +18,14 @@ export const ChatInput: React.FC<{
 	handleBlur?: () => void;
 	isInputFocused?: boolean;
 	onSubmit?: (input: string) => void; //It
-}> = ({ handleFocus, handleBlur, isInputFocused, onSubmit }) => {
+	className?: string; // Additional classes for the container
+}> = ({
+	handleFocus,
+	handleBlur,
+	isInputFocused,
+	onSubmit,
+	className = '',
+}) => {
 	const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
 		onSubmit,
 		onFocus: handleFocus,
@@ -128,7 +135,11 @@ export const ChatInput: React.FC<{
 	}, [handleVoiceToggle]);
 
 	return (
-		<>
+		<div
+			className={cn(
+				'bg-gray-800/10 dark:bg-gray-400/80 rounded-lg p-3 text-sm',
+				className
+			)}>
 			{/* Input context row showing selected context nodes */}
 			<ContextBadgeRow editor={editor} />
 
@@ -218,6 +229,6 @@ export const ChatInput: React.FC<{
 					</motion.div>
 				</Container3DButton>
 			</div>
-		</>
+		</div>
 	);
 };
