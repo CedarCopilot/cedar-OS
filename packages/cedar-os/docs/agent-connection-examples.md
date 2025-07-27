@@ -195,27 +195,24 @@ function useCodeReviewFlow() {
 	const reviewCode = async (code: string) => {
 		// Step 1: Analyze code structure
 		const structureAnalysis = await store.callLLM({
-			prompt: `Analyze the structure of this code: ${code}`,
 			model: 'gpt-3.5-turbo',
-			temperature: 0.3,
+			prompt: `Analyze the structure of this code: ${code}`,
 		});
 
 		// Step 2: Check for security issues (using a different model)
 		const securityCheck = await store.callLLM({
-			prompt: `Check for security vulnerabilities: ${code}`,
 			model: 'gpt-4', // Use GPT-4 for security analysis
-			temperature: 0.1,
+			prompt: `Check for security vulnerabilities: ${code}`,
 			systemPrompt: 'You are a security expert. Be thorough.',
 		});
 
 		// Step 3: Generate improvement suggestions
 		const improvements = await store.callLLM({
+			model: 'gpt-4',
 			prompt: `Suggest improvements based on:
         Structure: ${structureAnalysis.content}
         Security: ${securityCheck.content}
         Code: ${code}`,
-			model: 'gpt-4',
-			temperature: 0.5,
 		});
 
 		return {
@@ -238,23 +235,22 @@ function useMastraWorkflow() {
 
 	const chatCompletion = async (message: string) => {
 		return await callLLM({
-			prompt: message,
 			route: '/chat/completions',
+			prompt: message,
 		});
 	};
 
 	const codeGeneration = async (spec: string) => {
 		return await callLLM({
-			prompt: spec,
 			route: '/code/generate',
-			temperature: 0.8,
+			prompt: spec,
 		});
 	};
 
 	const dataAnalysis = async (data: any) => {
 		return await callLLM({
-			prompt: JSON.stringify(data),
 			route: '/analyze/data',
+			prompt: JSON.stringify(data),
 			systemPrompt: 'Analyze this data and provide insights',
 		});
 	};
@@ -270,15 +266,15 @@ The beauty of this architecture is that TypeScript will enforce the correct para
 ```typescript
 // With OpenAI provider
 const response = await callLLM({
-	prompt: 'Hello',
 	model: 'gpt-4', // ✅ Required
+	prompt: 'Hello',
 	// route: '/chat', // ❌ TypeScript error: 'route' doesn't exist on OpenAIParams
 });
 
 // With Mastra provider
 const response = await callLLM({
-	prompt: 'Hello',
 	route: '/chat/completions', // ✅ Required
+	prompt: 'Hello',
 	// model: 'gpt-4', // ❌ TypeScript error: 'model' doesn't exist on MastraParams
 });
 ```
@@ -302,16 +298,15 @@ function MyOpenAIComponent() {
 	const handleClick = async () => {
 		// TypeScript knows this needs model, not route
 		const response = await callLLM({
-			prompt: 'Hello, world!',
 			model: 'gpt-4', // ✅ Required and type-checked
-			temperature: 0.7,
+			prompt: 'Hello, world!',
 		});
 
 		// streamLLM is also properly typed
 		const stream = streamLLM(
 			{
-				prompt: 'Tell me a story',
 				model: 'gpt-4', // ✅ Required
+				prompt: 'Tell me a story',
 			},
 			(event) => {
 				if (event.type === 'chunk') {
@@ -328,9 +323,8 @@ function MyMastraComponent() {
 	const handleClick = async () => {
 		// TypeScript knows this needs route, not model
 		const response = await callLLM({
-			prompt: 'Hello, world!',
 			route: '/chat/completions', // ✅ Required and type-checked
-			temperature: 0.7,
+			prompt: 'Hello, world!',
 		});
 	};
 }
