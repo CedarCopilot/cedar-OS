@@ -14,7 +14,7 @@ import Flat3dContainer from '@/containers/Flat3dContainer';
 import { ShimmerText } from '@/text/ShimmerText';
 import { TypewriterText } from '@/text/TypewriterText';
 import KeyboardShortcut from '@/ui/KeyboardShortcut';
-import Slider from '@/ui/Slider';
+import Slider from '@/ui/Slider3D';
 
 interface CaptionMessagesProps {
 	showThinking?: boolean;

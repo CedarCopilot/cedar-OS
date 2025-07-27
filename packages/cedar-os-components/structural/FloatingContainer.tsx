@@ -259,7 +259,7 @@ export const FloatingContainer: React.FC<FloatingContainerProps> = ({
 
 	return (
 		<div
-			className={`${positionClasses} z-[9999] ${
+			className={`${positionClasses} z-[9999] !m-0 ${
 				effectivePosition === 'bottom-center' ? 'w-full max-w-3xl' : ''
 			} ${className}`}
 			style={containerStyle}>

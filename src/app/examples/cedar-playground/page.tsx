@@ -2,9 +2,8 @@
 
 import {
 	AgentBackendConnectionSection,
-	ChatInputSection,
+	ChatSection,
 	DiffHistorySection,
-	MessagesSection,
 	SpellsSection,
 	StateAccessSection,
 	VoiceSection,
@@ -41,9 +40,7 @@ export default function CedarPlaygroundPage() {
 
 			<AgentBackendConnectionSection />
 
-			<ChatInputSection />
-
-			<MessagesSection />
+			<ChatSection />
 
 			<StateAccessSection />
 
