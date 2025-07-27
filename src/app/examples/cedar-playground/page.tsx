@@ -1,5 +1,7 @@
 'use client';
 
+import { SidePanelCedarChat } from 'cedar-os';
+import { useState } from 'react';
 import {
 	AgentBackendConnectionSection,
 	ChatSection,
@@ -10,8 +12,10 @@ import {
 } from './sections';
 
 export default function CedarPlaygroundPage() {
-	return (
-		<div className='px-8 space-y-8'>
+	const [activeChatTab, setActiveChatTab] = useState('caption');
+
+	const pageContent = (
+		<div className='bg-gray-50 px-8 space-y-8'>
 			{/* Header Section */}
 			<div className='py-16 px-8'>
 				<div className='text-center max-w-4xl mx-auto'>
@@ -40,7 +44,7 @@ export default function CedarPlaygroundPage() {
 
 			<AgentBackendConnectionSection />
 
-			<ChatSection />
+			<ChatSection activeTab={activeChatTab} onTabChange={setActiveChatTab} />
 
 			<StateAccessSection />
 
@@ -67,4 +71,25 @@ export default function CedarPlaygroundPage() {
 			</div>
 		</div>
 	);
+
+	// Only wrap with SidePanelCedarChat when sidepanel tab is active
+	if (activeChatTab === 'sidepanel') {
+		return (
+			<SidePanelCedarChat
+				side='right'
+				title='Cedar Assistant'
+				collapsedLabel='Open Cedar Copilot'
+				dimensions={{
+					width: 400,
+					minWidth: 300,
+					maxWidth: 600,
+				}}
+				resizable={true}>
+				{pageContent}
+			</SidePanelCedarChat>
+		);
+	}
+
+	// Otherwise, just render the page content directly
+	return pageContent;
 }

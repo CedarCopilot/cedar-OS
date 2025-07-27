@@ -11,9 +11,9 @@ import {
 	ChatInput,
 	FloatingCedarChat,
 	GlassyPaneContainer,
-	SidePanelCedarChat,
+	useCedarStore,
 } from 'cedar-os';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface SliderControlProps {
 	label: string;
@@ -67,14 +67,35 @@ function CheckboxControl({ label, checked, onChange }: CheckboxControlProps) {
 	);
 }
 
-export function ChatSection() {
-	const [activeTab, setActiveTab] = useState('caption');
+interface ChatSectionProps {
+	activeTab?: string;
+	onTabChange?: (tab: string) => void;
+}
+
+export function ChatSection({
+	activeTab: externalActiveTab,
+	onTabChange,
+}: ChatSectionProps = {}) {
+	// Use internal state if no external control is provided
+	const [internalActiveTab, setInternalActiveTab] = useState('caption');
+	const activeTab = externalActiveTab ?? internalActiveTab;
+	const setActiveTab = onTabChange ?? setInternalActiveTab;
+
+	const setShowChat = useCedarStore((state) => state.setShowChat);
+
+	// Effect to sync showChat state with sidepanel tab
+	useEffect(() => {
+		if (externalActiveTab !== undefined) {
+			// When controlled externally, sync the showChat state
+			setShowChat(externalActiveTab === 'sidepanel');
+		}
+	}, [externalActiveTab, setShowChat]);
 
 	// Floating Chat Props
 	const [floatingProps, setFloatingProps] = useState({
 		side: 'right' as 'left' | 'right',
 		title: 'Cedar Assistant',
-		collapsedLabel: 'Need help?',
+		collapsedLabel: 'Open the Cedar Copilot',
 		resizable: true,
 		dimensions: {
 			useWidth: false,
@@ -96,7 +117,7 @@ export function ChatSection() {
 	const [sidePanelProps, setSidePanelProps] = useState({
 		side: 'left' as 'left' | 'right',
 		title: 'Cedar Support',
-		collapsedLabel: 'Chat with us',
+		collapsedLabel: 'Open Cedar Copilot',
 		resizable: true,
 		dimensions: {
 			useWidth: false,
@@ -137,6 +158,7 @@ export function ChatSection() {
 		return Object.keys(dims).length > 0 ? dims : undefined;
 	};
 
+	// Helper function used in sidepanel tab content for dimension configuration display
 	const getSidePanelDimensions = () => {
 		const dims: Record<string, number> = {};
 		if (sidePanelProps.dimensions.useWidth)
@@ -469,6 +491,17 @@ export function ChatSection() {
 							<h3 className='font-semibold mb-2'>
 								Side Panel Mode Configuration
 							</h3>
+							<div className='mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+								<p className='text-sm text-blue-800'>
+									<strong>Note:</strong> The side panel wraps around the entire
+									page content and squishes it when opened. The panel is now
+									active and controlled by this tab.
+								</p>
+								<p className='text-xs text-blue-600 mt-2'>
+									Current dimensions:{' '}
+									{JSON.stringify(getSidePanelDimensions() || 'default')}
+								</p>
+							</div>
 							<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 								{/* Basic Props */}
 								<div className='space-y-3'>
@@ -723,17 +756,6 @@ export function ChatSection() {
 					collapsedLabel={floatingProps.collapsedLabel}
 					dimensions={getFloatingDimensions()}
 					resizable={floatingProps.resizable}
-				/>
-			)}
-
-			{/* Side Panel Chat */}
-			{activeTab === 'sidepanel' && (
-				<SidePanelCedarChat
-					side={sidePanelProps.side}
-					title={sidePanelProps.title}
-					collapsedLabel={sidePanelProps.collapsedLabel}
-					dimensions={getSidePanelDimensions()}
-					resizable={sidePanelProps.resizable}
 				/>
 			)}
 

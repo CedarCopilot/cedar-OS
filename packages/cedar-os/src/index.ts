@@ -1,5 +1,5 @@
 // Components
-export { CedarCopilot } from '../../cedar-os-components/CedarCopilot';
+export { CedarCopilot } from '@/components/CedarCopilot';
 
 // Export components
 export { ChatInput } from '../../cedar-os-components/chatInput/ChatInput';

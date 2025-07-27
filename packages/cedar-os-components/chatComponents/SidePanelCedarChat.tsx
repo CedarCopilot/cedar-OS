@@ -9,9 +9,11 @@ import ChatBubbles from '@/chatMessages/ChatBubbles';
 import Container3D from '@/containers/Container3D';
 
 interface SidePanelCedarChatProps {
+	children?: React.ReactNode; // Page content to wrap
 	side?: 'left' | 'right';
 	title?: string;
 	collapsedLabel?: string;
+	showCollapsedButton?: boolean; // Control whether to show the collapsed button
 	companyLogo?: React.ReactNode;
 	dimensions?: {
 		width?: number;
@@ -19,13 +21,14 @@ interface SidePanelCedarChatProps {
 		maxWidth?: number;
 	};
 	resizable?: boolean;
-	onResize?: (width: number) => void;
 }
 
 export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
+	children, // Page content
 	side = 'right',
 	title = 'Cedar Chat',
 	collapsedLabel = 'How can I help you today?',
+	showCollapsedButton = true,
 	companyLogo,
 	dimensions = {
 		width: 600,
@@ -33,7 +36,6 @@ export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
 		maxWidth: 800,
 	},
 	resizable = true,
-	onResize,
 }) => {
 	// Get showChat state and setShowChat from store
 	const showChat = useCedarStore((state) => state.showChat);
@@ -41,24 +43,25 @@ export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
 
 	return (
 		<>
-			<AnimatePresence mode='wait'>
-				{!showChat && (
-					<CollapsedButton
-						side={side}
-						label={collapsedLabel}
-						onClick={() => setShowChat(true)}
-						layoutId='cedar-sidepanel-chat'
-						position='fixed'
-					/>
-				)}
-			</AnimatePresence>
+			{showCollapsedButton && (
+				<AnimatePresence mode='wait'>
+					{!showChat && (
+						<CollapsedButton
+							side={side}
+							label={collapsedLabel}
+							onClick={() => setShowChat(true)}
+							layoutId='cedar-sidepanel-chat'
+							position='fixed'
+						/>
+					)}
+				</AnimatePresence>
+			)}
 
 			<SidePanelContainer
 				isActive={showChat}
 				side={side}
 				dimensions={dimensions}
 				resizable={resizable}
-				onResize={onResize}
 				panelClassName='bg-white dark:bg-gray-900'
 				panelContent={
 					<Container3D className='flex flex-col h-full'>
@@ -88,7 +91,7 @@ export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
 						</div>
 
 						{/* Chat input - fixed at bottom */}
-						<div className='flex-shrink-0 border-t border-gray-200 dark:border-gray-700'>
+						<div className='flex-shrink-0 p-3'>
 							<ChatInput
 								handleFocus={() => {}}
 								handleBlur={() => {}}
@@ -97,7 +100,8 @@ export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
 						</div>
 					</Container3D>
 				}>
-				{/* Main content area - this is where your app content goes */}
+				{/* Page content that gets squished when panel opens */}
+				{children}
 			</SidePanelContainer>
 		</>
 	);
