@@ -7,6 +7,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { MentionNodeView } from '@/components/chatInput/ChatMention';
+import type { Node as ProseMirrorNode } from 'prosemirror-model';
 
 import { useEffect, useState } from 'react';
 import mentionSuggestion from '@/components/chatInput/suggestions';
@@ -132,7 +133,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 				onUpdate() {
 					const currentMentions = new Map<
 						string,
-						{ contextKey: string; node: any }
+						{ contextKey: string; node: ProseMirrorNode }
 					>();
 					const { doc } = this.editor.state;
 

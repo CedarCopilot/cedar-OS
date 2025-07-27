@@ -1,8 +1,9 @@
 import { useMentionProvidersByTrigger } from '@/store/agentInputContext/mentionProviders';
 import { withClassName } from '@/styles/stylingUtils';
 import { NodeViewWrapper } from '@tiptap/react';
+import type { Node as ProseMirrorNode } from 'prosemirror-model';
 
-export const MentionNodeView = ({ node }: { node: any }) => {
+export const MentionNodeView = ({ node }: { node: ProseMirrorNode }) => {
 	const providers = useMentionProvidersByTrigger('@');
 
 	// Find the provider that created this mention
