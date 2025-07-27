@@ -41,10 +41,16 @@
 					"getting-started/chat/chat-overview",
 					"getting-started/chat/streaming",
 					"getting-started/chat/configuring-cedar-editor",
-					"getting-started/chat/custom-message-rendering",
+					"getting-started/chat/custom-message-rendering"
+				]
+			},
+			{
+				"group": "Agent Input Context",
+				"icon": "at",
+				"pages": [
 					"getting-started/chat/agent-input-context",
-					"getting-started/chat/subscribing-state",
-					"getting-started/chat/mentions"
+					"getting-started/chat/mentions",
+					"getting-started/chat/subscribing-state"
 				]
 			},
 			{
