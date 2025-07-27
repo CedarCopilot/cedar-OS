@@ -1,0 +1,146 @@
+---
+title: 'Chat Overview'
+description: 'Get started with Cedar chat components and understand how they work'
+---
+
+# Chat Overview
+
+With one command, you can download a fully working chat. You also get all of the individual components of it, so you can customise styling, rendering, and functionality.
+
+## Quick Start
+
+To get started, choose one of the 3 types of chat. See [cedarcopilot.com/examples/cedar-playground](https://cedarcopilot.com/examples/cedar-playground) to see them in action.
+
+<CodeGroup>
+
+```tsx Floating Chat
+import { FloatingCedarChat } from 'cedar-os-components';
+
+function App() {
+	return (
+		<div>
+			{/* Your main content */}
+			<FloatingCedarChat
+				side='right'
+				title='Assistant'
+				collapsedLabel='How can I help you today?'
+				dimensions={{
+					width: 400,
+					height: 600,
+					minWidth: 350,
+					minHeight: 400,
+				}}
+				resizable={true}
+			/>
+		</div>
+	);
+}
+```
+
+```tsx Side Panel Chat
+import { SidePanelCedarChat } from 'cedar-os-components';
+
+function App() {
+	return (
+		<SidePanelCedarChat
+			side='right'
+			title='Chat Assistant'
+			dimensions={{
+				width: 600,
+				minWidth: 300,
+				maxWidth: 800,
+			}}
+			resizable={true}>
+			{/* Your main page content goes here */}
+			<div className='p-8'>
+				<h1>Your App Content</h1>
+				<p>This content will be pushed to the side when chat opens.</p>
+			</div>
+		</SidePanelCedarChat>
+	);
+}
+```
+
+```tsx Bottom Center Chat
+import { CedarCaptionChat } from 'cedar-os-components';
+
+function App() {
+	return (
+		<div>
+			{/* Your main content */}
+			<CedarCaptionChat
+				dimensions={{
+					width: 600,
+					maxWidth: 800,
+				}}
+			/>
+		</div>
+	);
+}
+```
+
+</CodeGroup>
+
+### Chat Types
+
+**Floating Chat**
+A floating chat window that can be positioned on the left or right side of the screen with expand/collapse functionality. Perfect for customer support or assistance that doesn't interfere with the main application.
+
+**Side Panel Chat**  
+A side panel chat that pushes your main content to make room for the chat interface. Ideal for collaborative applications where chat is a primary feature alongside your main content.
+
+**Bottom Center Chat**
+A caption-style chat interface that appears at the bottom center of the screen, perfect for overlay-style interactions. Great for AI assistants that provide contextual help without taking up dedicated screen space.
+
+## Understanding & Customising Chat
+
+Chat works through 2 main modules working together: **AgentInputContext** and **MessagesSlice**.
+
+### 1. AgentInputContext
+
+**AgentInputContext** manages everything that we pass into the agent. This includes not only the user message, but also:
+
+- **State** that the agent is subscribed to ([learn more about state access](/getting-started/chat/subscribing-state))
+- **User @mentions** of specific items in your application ([learn more about mentions](/getting-started/chat/mentions))
+- **Conversation history** and contextual information
+- **Custom context** you provide programmatically
+
+This ensures your AI agent has full context about your application's current state and what the user is specifically referring to.
+
+### 2. MessagesSlice
+
+**MessagesSlice** takes care of the saving and rendering of messages. It handles:
+
+- **Message storage** and conversation history
+- **Message rendering** with support for different message types
+- **Streaming responses** from AI providers
+- **Custom message components** for rich interactions
+
+## Understanding Sections
+
+To fully customize and understand Cedar's chat system, explore these key areas:
+
+### [MentionProvider](/getting-started/chat/mentions)
+
+Learn how to allow users to @ mention items that are part of your application - whether that's users, tasks, files, or any other data in your system.
+
+### [State Access](/getting-started/chat/subscribing-state)
+
+Understand how to allow your agent to see and edit your local application states, making your AI assistant truly context-aware of your app's current state.
+
+### [Agent Context](/getting-started/chat/agent-input-context)
+
+Get an in-depth explanation of how agent context works, including advanced patterns for providing contextual information to your AI agents.
+
+### Additional Customization
+
+- **[Streaming](/getting-started/chat/streaming)** - Enable real-time response streaming
+- **[Configuring the Cedar Editor](/getting-started/chat/configuring-cedar-editor)** - Customize the chat input experience
+- **[Custom Message Rendering](/getting-started/chat/custom-message-rendering)** - Create custom message types and interactions
+
+## Next Steps
+
+1. **Try it out**: Visit the [Cedar Playground](https://cedarcopilot.com/examples/cedar-playground) to see all chat types in action
+2. **Choose your style**: Pick the chat type that best fits your application
+3. **Add context**: Set up state access and mentions to make your agent context-aware
+4. **Customize**: Tailor the appearance and behavior to match your application's needs

@@ -38,7 +38,7 @@
 				"group": "Chat",
 				"icon": "message",
 				"pages": [
-					"getting-started/chat/chat-components",
+					"getting-started/chat/chat-overview",
 					"getting-started/chat/streaming",
 					"getting-started/chat/configuring-cedar-editor",
 					"getting-started/chat/custom-message-rendering",
