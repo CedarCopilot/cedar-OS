@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { GlassyPaneContainer } from 'cedar-os';
 import { Button } from '@/components/ui/button';
 import { Database } from 'lucide-react';
+import GlassyPaneContainer from '@/containers/GlassyPaneContainer';
 
 export function StateAccessSection() {
 	const [demoCounter, setDemoCounter] = useState(0);

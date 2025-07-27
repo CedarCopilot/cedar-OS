@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GlassyPaneContainer } from 'cedar-os';
+import GlassyPaneContainer from '@/containers/GlassyPaneContainer';
 import { Button } from '@/components/ui/button';
 import { Mic } from 'lucide-react';
 

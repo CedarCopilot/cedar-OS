@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { GlassyPaneContainer } from 'cedar-os';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
+import GlassyPaneContainer from '@/containers/GlassyPaneContainer';
 
 export function SpellsSection() {
 	const [spellActive, setSpellActive] = useState(false);

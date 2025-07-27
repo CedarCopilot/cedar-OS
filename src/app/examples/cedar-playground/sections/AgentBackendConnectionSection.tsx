@@ -20,7 +20,8 @@ import {
 	CheckCircle,
 	XCircle,
 } from 'lucide-react';
-import { useCedarStore, GlassyPaneContainer } from 'cedar-os';
+import GlassyPaneContainer from '@/containers/GlassyPaneContainer';
+import { useCedarStore } from '@/store/CedarStore';
 
 // Define types locally to avoid import issues
 type ProviderConfig =

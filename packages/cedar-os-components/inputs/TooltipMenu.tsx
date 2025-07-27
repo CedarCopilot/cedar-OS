@@ -9,7 +9,7 @@ interface TooltipMenuProps {
 	onClose: () => void;
 }
 
-const TooltipMenu: React.FC<TooltipMenuProps> = ({
+export const TooltipMenu: React.FC<TooltipMenuProps> = ({
 	position,
 	onDelete,
 	onReverse,
@@ -52,5 +52,3 @@ const TooltipMenu: React.FC<TooltipMenuProps> = ({
 		</div>
 	);
 };
-
-export default TooltipMenu;

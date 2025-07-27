@@ -34,14 +34,14 @@ import {
 	saveNodes,
 } from '@/app/examples/product-roadmap/supabase/nodes';
 import {
-	CedarCaptionChat,
 	subscribeInputContext,
-	TooltipMenu,
 	useRegisterState,
 	useStateBasedMentionProvider,
 } from 'cedar-os';
 import { ArrowRight, Box, CheckCircle, Loader } from 'lucide-react';
 import { motion } from 'motion/react';
+import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
+import { TooltipMenu } from '@/inputs/TooltipMenu';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)
