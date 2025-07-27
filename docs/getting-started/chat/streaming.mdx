@@ -1,0 +1,118 @@
+---
+title: 'Streaming'
+description: 'Enable real-time streaming responses in chat components'
+---
+
+# Streaming
+
+Cedar makes it incredibly easy to enable streaming responses in your chat interface. Simply add the `streaming` prop to any chat component or ChatInput, and responses will appear in real-time as they're generated.
+
+## Quick Start
+
+### With Pre-built Components
+
+Add streaming to any of the pre-built chat components:
+
+```tsx
+import { FloatingCedarChat } from 'cedar-os-components';
+
+function App() {
+	return (
+		<FloatingCedarChat
+			streaming={true} // Enable streaming
+			side='right'
+			title='Streaming Assistant'
+		/>
+	);
+}
+```
+
+### With Individual Components
+
+Enable streaming on the ChatInput component directly:
+
+```tsx
+import { ChatInput, ChatBubbles } from 'cedar-os';
+
+function CustomChat() {
+	return (
+		<div className='flex flex-col h-full'>
+			<div className='flex-1'>
+				<ChatBubbles />
+			</div>
+			<ChatInput
+				streaming={true} // Enable streaming
+				position='embedded'
+			/>
+		</div>
+	);
+}
+```
+
+## How It Works
+
+When streaming is enabled:
+
+1. **Immediate Response**: The AI response appears immediately as an empty message
+2. **Real-time Updates**: Text streams in character by character as it's generated
+3. **Smooth Animation**: Built-in typewriter effect for natural reading experience
+4. **Error Handling**: Graceful fallbacks if streaming fails
+
+## Configuration Options
+
+You can customize the streaming behavior:
+
+```tsx
+<ChatInput
+	streaming={true}
+	streamingOptions={{
+		showCursor: true, // Show blinking cursor while streaming
+		animationSpeed: 50, // Milliseconds between characters
+		enableSound: false, // Audio feedback (coming soon)
+	}}
+/>
+```
+
+## Backend Requirements
+
+Your AI provider must support streaming responses. Cedar works with:
+
+- **OpenAI**: Streaming supported out of the box
+- **Anthropic**: Streaming supported out of the box
+- **AI SDK**: Streaming supported for all providers
+- **Mastra**: Streaming support depends on your configuration
+- **Custom**: Implement Server-Sent Events (SSE) endpoint
+
+## Advanced Usage
+
+For custom implementations, you can control streaming programmatically:
+
+```tsx
+import { useCedarStore } from 'cedar-os';
+
+function CustomComponent() {
+	const { callLLM } = useCedarStore();
+
+	const handleStreamingCall = async () => {
+		await callLLM({
+			prompt: 'Tell me a story',
+			streaming: true,
+			onChunk: (chunk) => {
+				console.log('Received chunk:', chunk);
+			},
+			onComplete: (fullResponse) => {
+				console.log('Streaming complete:', fullResponse);
+			},
+		});
+	};
+
+	return (
+		<button onClick={handleStreamingCall}>Start Streaming Response</button>
+	);
+}
+```
+
+## Next Steps
+
+- Learn about [configuring the Cedar editor](/getting-started/chat/configuring-cedar-editor)
+- Explore [custom message rendering](/getting-started/chat/custom-message-rendering)

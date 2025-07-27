@@ -35,23 +35,16 @@
 				]
 			},
 			{
-				"group": "Chat Input (Agent Input Context)",
+				"group": "Chat",
 				"icon": "message",
 				"pages": [
-					"getting-started/chat-input/chat-input",
-					"getting-started/chat-input/chat-input-editor",
-					"getting-started/chat-input/use-cedar-editor",
-					"getting-started/chat-input/additional-context",
-					"getting-started/chat-input/mention-provider"
-				]
-			},
-			{
-				"group": "Messages",
-				"icon": "envelope",
-				"pages": [
-					"getting-started/messages/messages",
-					"getting-started/messages/streaming",
-					"getting-started/messages/custom-components"
+					"getting-started/chat/chat-components",
+					"getting-started/chat/streaming",
+					"getting-started/chat/configuring-cedar-editor",
+					"getting-started/chat/custom-message-rendering",
+					"getting-started/chat/agent-input-context",
+					"getting-started/chat/subscribing-state",
+					"getting-started/chat/mentions"
 				]
 			},
 			{

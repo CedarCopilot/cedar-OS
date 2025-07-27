@@ -1,0 +1,243 @@
+---
+title: 'Custom Message Rendering'
+description: 'Create custom message components and renderers'
+---
+
+# Custom Message Rendering
+
+Cedar allows you to completely customize how messages are displayed in your chat interface. You can create custom message components, override default renderers, and add interactive elements to messages.
+
+## Custom Message Components
+
+Create custom components for specific message types:
+
+```tsx
+import { useMessageRenderer } from 'cedar-os';
+
+// Custom component for code execution results
+function CodeResultMessage({ message }) {
+	return (
+		<div className='bg-gray-900 text-green-400 p-4 rounded-lg font-mono'>
+			<div className='text-xs text-gray-500 mb-2'>Execution Result</div>
+			<pre>{message.content}</pre>
+			<button
+				className='mt-2 text-blue-400 hover:text-blue-300'
+				onClick={() => navigator.clipboard.writeText(message.content)}>
+				Copy Result
+			</button>
+		</div>
+	);
+}
+
+// Custom component for interactive surveys
+function SurveyMessage({ message, onResponse }) {
+	const [selectedOption, setSelectedOption] = useState(null);
+
+	return (
+		<div className='border rounded-lg p-4'>
+			<h3 className='font-semibold mb-3'>{message.content.question}</h3>
+			<div className='space-y-2'>
+				{message.content.options.map((option, index) => (
+					<button
+						key={index}
+						className={`block w-full text-left p-2 rounded ${
+							selectedOption === index ? 'bg-blue-100' : 'hover:bg-gray-50'
+						}`}
+						onClick={() => {
+							setSelectedOption(index);
+							onResponse(option);
+						}}>
+						{option}
+					</button>
+				))}
+			</div>
+		</div>
+	);
+}
+```
+
+## Registering Custom Renderers
+
+Register your custom components with the message renderer:
+
+```tsx
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	const customRenderers = {
+		'code-result': CodeResultMessage,
+		survey: SurveyMessage,
+		'file-upload': FileUploadMessage,
+		chart: ChartMessage,
+	};
+
+	return (
+		<CedarCopilot llmProvider={llmProvider} messageRenderers={customRenderers}>
+			{/* Your app content */}
+		</CedarCopilot>
+	);
+}
+```
+
+## Message Renderer Hook
+
+Use the `useMessageRenderer` hook for advanced customization:
+
+```tsx
+import { useMessageRenderer } from 'cedar-os';
+
+function CustomChatBubbles() {
+	const { renderMessage, registerRenderer } = useMessageRenderer();
+
+	// Register a new renderer
+	useEffect(() => {
+		registerRenderer('todo-list', ({ message }) => (
+			<TodoListMessage
+				items={message.content.items}
+				onToggle={(index) => {
+					// Handle todo toggle
+				}}
+			/>
+		));
+	}, [registerRenderer]);
+
+	return (
+		<div className='messages-container'>
+			{messages.map((message) => (
+				<div key={message.id} className='message-wrapper'>
+					{renderMessage(message)}
+				</div>
+			))}
+		</div>
+	);
+}
+```
+
+## Message Types and Structure
+
+Messages in Cedar follow this structure:
+
+```tsx
+interface Message {
+	id: string;
+	type: string; // 'text', 'image', 'file', or custom type
+	role: 'user' | 'assistant' | 'system';
+	content: any; // Content varies by type
+	timestamp: Date;
+	metadata?: {
+		streaming?: boolean;
+		error?: string;
+		[key: string]: any;
+	};
+}
+```
+
+## Built-in Message Types
+
+Cedar provides several built-in message renderers:
+
+### Text Messages
+
+```tsx
+{
+  type: 'text',
+  content: 'Hello, how can I help you?'
+}
+```
+
+### Image Messages
+
+```tsx
+{
+  type: 'image',
+  content: {
+    url: 'https://example.com/image.jpg',
+    alt: 'Description',
+    caption: 'Optional caption'
+  }
+}
+```
+
+### File Messages
+
+```tsx
+{
+  type: 'file',
+  content: {
+    filename: 'document.pdf',
+    size: 1024000,
+    url: 'https://example.com/document.pdf',
+    type: 'application/pdf'
+  }
+}
+```
+
+## Conditional Rendering
+
+Render different components based on message properties:
+
+```tsx
+function ConditionalRenderer({ message }) {
+	const { renderMessage } = useMessageRenderer();
+
+	// Custom logic for rendering based on user role
+	if (message.role === 'system') {
+		return <SystemNotification message={message} />;
+	}
+
+	// Custom rendering for messages with attachments
+	if (message.metadata?.hasAttachments) {
+		return <MessageWithAttachments message={message} />;
+	}
+
+	// Fall back to default renderer
+	return renderMessage(message);
+}
+```
+
+## Interactive Message Actions
+
+Add interactive elements to messages:
+
+```tsx
+function InteractiveMessage({ message }) {
+	const { addMessage, callLLM } = useCedarStore();
+
+	const handleFollowUp = async (question) => {
+		addMessage({
+			type: 'text',
+			role: 'user',
+			content: question,
+		});
+
+		await callLLM({
+			prompt: question,
+			context: message.content, // Use original message as context
+		});
+	};
+
+	return (
+		<div className='message-content'>
+			<p>{message.content}</p>
+
+			<div className='message-actions mt-2 space-x-2'>
+				<button
+					onClick={() => handleFollowUp('Can you explain this further?')}
+					className='text-blue-600 hover:text-blue-800 text-sm'>
+					Explain Further
+				</button>
+				<button
+					onClick={() => handleFollowUp('Give me an example')}
+					className='text-blue-600 hover:text-blue-800 text-sm'>
+					Show Example
+				</button>
+			</div>
+		</div>
+	);
+}
+```
+
+## Next Steps
+
+- Learn about [agent input context](/getting-started/chat/agent-input-context)
+- Explore [subscribing to state](/getting-started/chat/subscribing-state)
