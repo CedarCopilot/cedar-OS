@@ -3,31 +3,88 @@ title: 'Architecture'
 description: 'Understanding how Cedar-OS enables AI-native experiences'
 ---
 
-## What are AI-native experiences?
-
-Traditionally, applications combine _functionality_ (e.g. the ability to send an email), with _user interfaces_ (the windows, text areas and buttons) that allow users to control and access the functionality.
-
-Now AI can do stuff. But it can really communicate only in one way.
-
-> If I want to tell you there is a spot on your shirt, I'm not going to do it linguistically: "There's a spot on your shirt 14 centimeters down from the collar and three centimeters to the left of your button." If you have a spot—"There!" [He points]—I'll point to it. Pointing is a metaphor we all know. We've done a lot of studies and tests on that, and it's much faster to do all kinds of functions, such as cutting and pasting, with a mouse, so it's not only easier to use but more efficient.
-
-We help the AI understand the pointing and selecting you do.
-
-> Graphic design, which has evolved over centuries, influences how we see, interpret, and use information. Typeface choices, layout, colors—all these details matter. They aren't just aesthetics; they shape understanding and productivity.
-
-## The Evolution of Computing Mediums
-
-> _And it takes a long time for a medium to really fulfill its potential. Television itself wasn't just another form of radio. For years, it was just radio with pictures, but it took decades until television came into its own as a unique medium with storytelling, entertainment, and information that couldn't just be done on radio._
->
-> _The same is true of computers. We're still in the early days. We're just figuring out what a computer medium really means to us socially, creatively, and educationally. But I believe we're at the start of a revolution, the computer generation replacing the television generation. And in time, it will change everything about how people communicate, learn, and work._
-
-## Cedar-OS: Building Blocks for AI Interfaces
-
-AI applications require new interfaces. Cedar-OS is the building blocks for those interfaces.
-
-- For example, we can allow your user to control your app by talking to it.
-- We allow the agent to know what's going on the application, and control it to do the work.
-
 ## Our Core Architecture
 
 Cedar-OS bridges the gap between AI agents and React applications, providing a comprehensive framework for AI agents to read, write, and interact with your application state, just like users can.
+
+<img
+	className='block dark:hidden'
+	src='/images/architecture.png'
+	alt='Cedar-OS Architecture Diagram'
+/>
+<img
+	className='hidden dark:block'
+	src='/images/architecture.png'
+	alt='Cedar-OS Architecture Diagram'
+/>
+
+## Zustand State Management
+
+Let's say you want an AI to be able to read and write different parts of your react app. For example, you're making an AI-native email, and you want it to be able to help with drafts, categorise emails, and
+
+1. **Component-scoped State**: A traditional react app typically has state inside of the component that uses it. This totally makes sense, and makes for a really great developer experience where you can combine logic and rendering together!
+
+   But this also means that floating up and collecting different states across the application to the AI involves a lot of scoping problems, prop drilling, and messy re-render optimisation.
+
+2. **Lack of Predefined Interactions**: The AI needs much more predefined ways of working with state! How does it interpret what this state means? How does it know how it can and should change it?
+
+3. **State Lifecycle Issues**: State disappears when the component is unmounted, or might have never loaded in!
+
+Cedar fixes this by:
+
+1. **State Portals**: Each "RegisterCedarState" acts like a portal the agent can reach the specific state. You don't need to worry about contexts, their scopes, and most importantly the fact that if one context field changes, everything that subscribes to it changes.
+2. **States for agents**: Our types support agent understanding and allow you to create custom setters that allow the agent to interact in predefined, safe ways.
+3. **Persistent State Registration**: State can be registered so the agent can see the contents even if the user doesn't have the component rendered in that moment, and backend loading behaviour can be configured.
+
+### Cedar's Zustand Implementation
+
+- **Centralized Data Store**: It stores all the data the agent needs in one centralised place
+- **State Persistence**: It persists state across component lifecycles
+- **Override Capability**: It allows you to override any internal function simply by registering a slice with the same field key
+- **Optimized Hooks**: We provide optimised hooks (and every internal zustand slice)
+- **Pre-built Components**: We create components that use these hooks and internal state
+- **Complete Solutions**: We put together these components into completed functionality, so you can get a working chat in one line
+
+### Hooks Layer - The Foundation
+
+At the base, we provide optimized hooks that connect directly to our Zustand store:
+
+- **`useCedarState`**: Access and modify registered state with type safety
+- **`useTypedAgentConnection`**: Manage AI agent connections with full typing
+- **`useCedarEditor`**: Rich text editing with AI-aware features
+- **`useMessageRenderer`**: Handle streaming messages and custom components
+
+These hooks abstract away the complexity of state management, agent communication, and real-time updates while maintaining full type safety and performance optimization. You can of course create your own hooks that plug into the Zustand store.
+
+### Components Layer - Shadcn-Style Customization
+
+Our component layer adopts the shadcn/ui philosophy of **copy-and-own** rather than traditional npm packages.
+
+**Why Copy-and-Own Works Better for AI Components:**
+
+- **Full Customization**: You own the component code, so you can modify styling, behavior, and logic without fighting against package constraints
+- **No Version Lock-in**: Updates are opt-in. You choose when and what to update, preventing breaking changes from disrupting your AI experiences
+- **Transparent Implementation**: You can see exactly how components work with AI state, making debugging and customization straightforward
+
+**Component Examples:**
+
+- `ChatInput` - AI-aware input with mentions and context
+- `StreamingText` - Real-time text rendering with typewriter effects
+- `MessageRenderer` - Renders different messages with unique styling or interactivity.
+- `VoiceIndicator` - Visual feedback for voice interactions
+
+Each component is designed to be sophisticated out-of-the-box while remaining completely customizable to your design system and requirements.
+
+### Complete Solutions - One-Line AI Experiences
+
+At the top layer, we provide complete, production-ready AI experiences. We can provide sophisticated solutions like this because you own the code, and so you can customise it however you want.
+
+- **`<FloatingCedarChat />`**: Floating chat interface that can be summoned anywhere. This combines `<ChatInput />`, `<ContextBadge />`, `<ChatMessages />`, and positional Containers like `<FloatingContainer />`
+- **`SidePanelCedarChat`**: Sidebar AI assistant for complex applications
+
+**The Power of This Architecture:**
+
+1. **Start Simple**: Drop in a complete solution like `CedarCopilot` and `FloatingCedarChat` and have AI working in minutes
+2. **Customize Gradually**: Replace individual components as your needs evolve
+3. **Go Deep**: Use hooks directly for completely custom AI experiences
+4. **Never Hit Walls**: Since you own all the code, there are no limitations on what you can build
