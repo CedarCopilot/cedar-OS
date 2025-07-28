@@ -1,16 +1,20 @@
 {
 	"name": "cedar-os",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "",
 	"sideEffects": false,
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"clean": "rm -rf dist && mkdir -p dist",
 		"build": "npm run clean && tsup ./src",
-		"p": "npm i && pnpm install && NODE_OPTIONS='--max-old-space-size=8192' pnpm run build && npm publish",
+		"p": "pnpm install && NODE_OPTIONS='--max-old-space-size=8192' pnpm run build && npm publish",
 		"dev": "npm run clean && tsup --watch",
 		"watch": "tsup ./src --watch",
 		"dev:yalc": "nodemon --watch 'src/**/*' -e ts,tsx --exec 'NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build && yalc publish --push'"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/CedarCopilot/cedar-OS.git"
 	},
 	"keywords": [],
 	"author": "",
