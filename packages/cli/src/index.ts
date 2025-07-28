@@ -18,13 +18,12 @@ program
 	.option('-y, --yes', 'Skip confirmation prompts')
 	.action(initCommand);
 
-// program
-// 	.command('create')
-// 	.description('Scaffold a new Cedar-OS Next.js project or add to existing')
-// 	.option('-p, --project-name <name>', 'Project directory name')
-// 	.option('-t, --template <template>', 'Template name', 'simple-chat')
-// 	.option('-y, --yes', 'Skip all prompts')
-// 	.action(createCommandTemp);
+program
+	.command('create')
+	.description('Scaffold a new Cedar-OS Next.js project or add to existing')
+	.option('-p, --project-name <name>', 'Project directory name')
+	.option('-y, --yes', 'Skip all prompts')
+	.action(createCommand);
 
 // If user runs without subcommand default to create
 if (!process.argv.slice(2).length) {
