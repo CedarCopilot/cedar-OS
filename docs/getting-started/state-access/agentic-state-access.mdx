@@ -1,12 +1,268 @@
 ---
-title: 'Agentic State Access'
-description: 'Cedar-OS allows your agent to do everything your user can do, and more'
+title: 'Agentic State'
+description: 'Cedar allows your agent to understand what is happening in your application, and the ability to change it'
 ---
 
-# Agentic State Access
+# Agentic State
 
-Cedar-OS allows your agent to do everything your user can do, and more. This section covers how agents can access and manipulate application state.
+Cedar allows your agent to understand what's happening in your application, and the ability to change it.
 
-## Coming Soon
+In other words, it allows your agent to read and write to the local react state.
 
-Content for this section will be added in the next phase.
+## How it works
+
+It's really troublesome for an AI to go in and make changes for three reasons.
+
+1. **State scoping issues**: A traditional react app typically has state inside of the component that uses it. This totally makes sense, and makes for a really great developer experience where you can combine logic and rendering together!
+
+   But this also means that floating up and collecting different states across the application to the AI involves a lot of traditional scoping problems, prop drilling, and messy re-renders.
+
+2. **Lack of predefined interactions**: The AI needs much more predefined ways of working with state! How does it interpret what this state means? How does it know how it can and should change it?
+
+3. **State lifecycle issues**: State disappears when the component is unmounted, or might have never loaded in!
+
+Cedar fixes this by:
+
+1. Each "RegisterCedarState" acts like a portal the agent can reach the specific state
+2. We take in a description, and allow you to create custom setters that allow the agent to interact in predefined ways.
+3. State can be registered, and backend loading behaviour configured.
+
+## Using Cedar State
+
+Already have a state? RegisterState
+
+<CodeGroup>
+
+```tsx Example
+import { registerCedarState } from 'cedar-os';
+
+const [todos, setTodos] = useState([
+	{ id: 1, text: 'Learn Cedar-OS', completed: false },
+	{ id: 2, text: 'Build amazing AI apps', completed: false },
+]);
+
+registerCedarState({
+	key: 'todos',
+	description: 'A list of todo items that users can check off',
+	state: todos,
+	actions: {
+		addTodo: (text: string) => {
+			const newTodo = {
+				id: Date.now(),
+				text,
+				completed: false,
+			};
+			setTodos((prev) => [...prev, newTodo]);
+		},
+		toggleTodo: (id: number) => {
+			setTodos((prev) =>
+				prev.map((todo) =>
+					todo.id === id ? { ...todo, completed: !todo.completed } : todo
+				)
+			);
+		},
+		removeTodo: (id: number) => {
+			setTodos((prev) => prev.filter((todo) => todo.id !== id));
+		},
+	},
+});
+```
+
+```tsx Types
+interface RegisterCedarStateOptions<T, A> {
+	key: string;
+	description: string;
+	state: T;
+	actions?: A;
+	loadingBehavior?: {
+		onMount?: () => Promise<void>;
+		onUnmount?: () => void;
+	};
+}
+
+interface Todo {
+	id: number;
+	text: string;
+	completed: boolean;
+}
+
+interface TodoActions {
+	addTodo: (text: string) => void;
+	toggleTodo: (id: number) => void;
+	removeTodo: (id: number) => void;
+}
+```
+
+</CodeGroup>
+
+This allows your agent to:
+
+- Read the current state of your todos
+- Add new todos by calling the `addTodo` action
+- Toggle completion status with `toggleTodo`
+- Remove todos with `removeTodo`
+
+The agent understands what each action does through the descriptive function names and the overall description you provide.
+
+## useCedarState
+
+Access registered Cedar state from within your React components.
+
+<CodeGroup>
+
+```tsx Example
+import { useCedarState } from 'cedar-os';
+
+function TodoComponent() {
+	const { state: todos, actions } = useCedarState('todos');
+
+	return (
+		<div>
+			<h2>My Todos</h2>
+			{todos.map((todo) => (
+				<div key={todo.id}>
+					<input
+						type='checkbox'
+						checked={todo.completed}
+						onChange={() => actions.toggleTodo(todo.id)}
+					/>
+					<span>{todo.text}</span>
+					<button onClick={() => actions.removeTodo(todo.id)}>Delete</button>
+				</div>
+			))}
+			<button onClick={() => actions.addTodo('New todo')}>Add Todo</button>
+		</div>
+	);
+}
+```
+
+```tsx Types
+function useCedarState<T, A>(
+	key: string
+): {
+	state: T;
+	actions: A;
+	isLoading: boolean;
+	error: Error | null;
+};
+```
+
+</CodeGroup>
+
+## executeCustomSetters
+
+Execute custom setter functions programmatically from anywhere in your application.
+
+<CodeGroup>
+
+```tsx Example
+import { executeCustomSetters } from 'cedar-os';
+
+// Execute a single action
+await executeCustomSetters('todos', 'addTodo', 'Learn about Cedar State');
+
+// Execute multiple actions in sequence
+await executeCustomSetters('todos', [
+	{ action: 'addTodo', args: ['First task'] },
+	{ action: 'addTodo', args: ['Second task'] },
+	{ action: 'toggleTodo', args: [1] },
+]);
+
+// In an async function
+async function handleBulkUpdate() {
+	try {
+		await executeCustomSetters('todos', 'addTodo', 'Bulk added todo');
+		console.log('Todo added successfully');
+	} catch (error) {
+		console.error('Failed to add todo:', error);
+	}
+}
+```
+
+```tsx Types
+function executeCustomSetters<A>(
+	key: string,
+	action: keyof A,
+	...args: any[]
+): Promise<void>;
+
+function executeCustomSetters<A>(
+	key: string,
+	actions: Array<{
+		action: keyof A;
+		args: any[];
+	}>
+): Promise<void>;
+```
+
+</CodeGroup>
+
+## getCedarState
+
+Retrieve the current state value for a registered Cedar state key.
+
+<CodeGroup>
+
+```tsx Example
+import { getCedarState } from 'cedar-os';
+
+// Get current todos state
+const currentTodos = getCedarState('todos');
+console.log('Current todos:', currentTodos);
+
+// Use in a function
+function logTodoCount() {
+	const todos = getCedarState('todos');
+	console.log(`You have ${todos.length} todos`);
+}
+
+// Check if state exists
+function checkTodosExist() {
+	const todos = getCedarState('todos');
+	if (todos) {
+		console.log('Todos state is available');
+	} else {
+		console.log('Todos state not found');
+	}
+}
+```
+
+```tsx Types
+function getCedarState<T>(key: string): T | null;
+```
+
+</CodeGroup>
+
+## setCedarState
+
+Directly update the state value for a registered Cedar state key.
+
+<CodeGroup>
+
+```tsx Example
+import { setCedarState } from 'cedar-os';
+
+// Set new todos state
+const newTodos = [
+	{ id: 1, text: 'Updated todo', completed: true },
+	{ id: 2, text: 'Another todo', completed: false },
+];
+setCedarState('todos', newTodos);
+
+// Update based on current state
+const currentTodos = getCedarState('todos');
+const updatedTodos = currentTodos.map((todo) => ({
+	...todo,
+	completed: true,
+}));
+setCedarState('todos', updatedTodos);
+
+// Reset state
+setCedarState('todos', []);
+```
+
+```tsx Types
+function setCedarState<T>(key: string, newState: T): void;
+```
+
+</CodeGroup>
