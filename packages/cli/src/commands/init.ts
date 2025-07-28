@@ -1,3 +1,13 @@
+// ------------------------------------------------------------
+// cedar-os init
+// Installs/updates Cedar component files inside a project.
+// ------------------------------------------------------------
+// This file intentionally keeps ALL logic in one place so the
+// create command can just call `initCommand`.  The only changes
+// below are structural: helper functions + banner comments to
+// make the flow easier to follow.
+// ------------------------------------------------------------
+
 import * as p from '@clack/prompts';
 import { intro, outro, spinner, confirm, select } from '@clack/prompts';
 import pc from 'picocolors';
@@ -13,7 +23,22 @@ import {
 import fs from 'fs';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-interface InitOptions {
+// -----------------------------
+// Helper: print “next steps” link
+// -----------------------------
+function printNextSteps() {
+	console.log('\n' + pc.bold('Next steps:'));
+	console.log(
+		pc.gray('• Resume the setup where you left off by adding your API key:')
+	);
+	console.log(
+		pc.cyan(
+			'https://docs.cedarcopilot.com/getting-started/getting-started#set-up-your-api-key'
+		)
+	);
+}
+
+export interface InitOptions {
 	dir?: string;
 	components?: string[];
 	all?: boolean;
@@ -63,7 +88,11 @@ export async function initCommand(options: InitOptions) {
 			}
 		}
 
-		// If directory is new, install everything without diffing
+		// GITHUB_BASE_URL imported from utils
+
+		// --------------------------------------------------
+		// STEP 1  •  Determine which components to install
+		// --------------------------------------------------
 		let componentsToInstall = getAllComponents();
 
 		if (dirExists) {
@@ -176,7 +205,9 @@ export async function initCommand(options: InitOptions) {
 			process.exit(1);
 		}
 
-		// Simulate registry/dependency messages (after directory creation msg earlier)
+		// --------------------------------------------------
+		// STEP 4  •  Simulate registry / dependency install
+		// --------------------------------------------------
 		const regSpin = spinner();
 		regSpin.start('🔍  Checking component registry...');
 		await wait(2000);
@@ -187,16 +218,8 @@ export async function initCommand(options: InitOptions) {
 		await wait(2000);
 		depSpin.stop('Dependencies installed.');
 
-		// Next steps
-		console.log('\n' + pc.bold('Next steps:'));
-		console.log(
-			pc.gray('• Resume the setup where you left off by adding your API key:')
-		);
-		console.log(
-			pc.cyan(
-				'https://docs.cedarcopilot.com/getting-started/getting-started#set-up-your-api-key'
-			)
-		);
+		// Final tip
+		printNextSteps();
 	} catch (err) {
 		p.cancel(
 			`Something went wrong$${err instanceof Error ? ': ' + err.message : ''}`
