@@ -1,0 +1,307 @@
+---
+title: 'Subscribing State to Input'
+description: 'Automatically add state to the agent input context'
+---
+
+Cedar's `subscribeInputContext` function allows you to automatically make any part of your application state available to AI agents as context. This enables agents to understand your app's current state and provide more relevant, contextual responses.
+
+## subscribeInputContext Overview
+
+The `subscribeInputContext` function subscribes to local state changes and automatically updates the agent's input context whenever the state changes. This means your AI agent always has access to the most up-to-date information from your application.
+
+### Function Signature
+
+```typescript
+function subscribeInputContext<T>(
+	localState: T,
+	mapFn: (state: T) => Record<string, any>,
+	options?: {
+		icon?: ReactNode;
+		color?: string;
+	}
+): void;
+```
+
+### Parameters
+
+- **`localState: T`** - The local state to subscribe to (any type)
+- **`mapFn: (state: T) => Record<string, any>`** - Function that maps your state to context entries
+- **`options`** (optional) - Configuration for visual representation:
+  - `icon?: ReactNode` - Icon to display for this context
+  - `color?: string` - Hex color for visual styling
+
+## Basic Usage Example
+
+Here's a simple example with a todo list:
+
+```tsx
+import React, { useState } from 'react';
+import { subscribeInputContext } from 'cedar-os';
+import { CheckCircle } from 'lucide-react';
+
+function TodoApp() {
+	const [todos, setTodos] = useState([
+		{ id: 1, text: 'Buy groceries', completed: false },
+		{ id: 2, text: 'Walk the dog', completed: true },
+	]);
+
+	// Subscribe todos to input context
+	subscribeInputContext(
+		todos,
+		(todoList) => ({
+			todos: todoList, // Key 'todos' will be available to the agent
+		}),
+		{
+			icon: <CheckCircle />,
+			color: '#10B981', // Green color
+		}
+	);
+
+	return (
+		<div>
+			<TodoList todos={todos} onToggle={setTodos} />
+			<ChatInput /> {/* Agent can now see todos in context */}
+		</div>
+	);
+}
+```
+
+## Complex State Example
+
+Here's a more advanced example from the Product Roadmap demo:
+
+```tsx
+import { subscribeInputContext } from 'cedar-os';
+import { Box } from 'lucide-react';
+import { Node } from 'reactflow';
+
+interface FeatureNodeData {
+	title: string;
+	status: 'planned' | 'in-progress' | 'completed';
+	priority: 'low' | 'medium' | 'high';
+	description?: string;
+}
+
+function SelectedNodesPanel() {
+	const [selected, setSelected] = useState<Node<FeatureNodeData>[]>([]);
+
+	// Subscribe selected nodes to input context
+	subscribeInputContext(
+		selected,
+		(nodes: Node<FeatureNodeData>[]) => ({
+			selectedNodes: nodes.map((node) => ({
+				id: node.id,
+				title: node.data.title,
+				status: node.data.status,
+				priority: node.data.priority,
+				description: node.data.description,
+			})),
+		}),
+		{
+			icon: <Box />,
+			color: '#8B5CF6', // Purple color for selected nodes
+		}
+	);
+
+	// Update selection when user selects nodes
+	useOnSelectionChange({
+		onChange: ({ nodes }) => setSelected(nodes),
+	});
+
+	return (
+		<div>
+			<h4>Selected Nodes</h4>
+			{selected.map((node) => (
+				<div key={node.id}>{node.data.title}</div>
+			))}
+		</div>
+	);
+}
+```
+
+## How It Works Automatically
+
+When you use `subscribeInputContext`, here's what happens automatically:
+
+1. **State Monitoring**: The function uses React's `useEffect` to monitor changes to your `localState`
+2. **Context Mapping**: When state changes, your `mapFn` transforms the state into context entries
+3. **Store Update**: The mapped context is automatically added to Cedar's internal store
+4. **Agent Access**: When the user sends a message, the agent receives this context along with the message
+
+### Context Structure
+
+The context entries follow this structure:
+
+```typescript
+interface ContextEntry {
+	id: string;
+	source: 'mention' | 'subscription' | 'manual';
+	data: any;
+	metadata?: {
+		label?: string;
+		icon?: ReactNode;
+		color?: string;
+		[key: string]: any;
+	};
+}
+```
+
+When using `subscribeInputContext`, entries are automatically marked with `source: 'subscription'`.
+
+## Multiple State Subscriptions
+
+You can subscribe multiple pieces of state:
+
+```tsx
+function MyApp() {
+	const [user, setUser] = useState(null);
+	const [preferences, setPreferences] = useState({});
+	const [currentPage, setCurrentPage] = useState('/dashboard');
+
+	// Subscribe user data
+	subscribeInputContext(
+		user,
+		(userData) => ({
+			currentUser: userData
+				? {
+						id: userData.id,
+						name: userData.name,
+						role: userData.role,
+				  }
+				: null,
+		}),
+		{
+			icon: <User />,
+			color: '#3B82F6',
+		}
+	);
+
+	// Subscribe preferences
+	subscribeInputContext(
+		preferences,
+		(prefs) => ({
+			userPreferences: prefs,
+		}),
+		{
+			icon: <Settings />,
+			color: '#6B7280',
+		}
+	);
+
+	// Subscribe navigation state
+	subscribeInputContext(
+		currentPage,
+		(page) => ({
+			currentPage: {
+				path: page,
+				timestamp: new Date().toISOString(),
+			},
+		}),
+		{
+			icon: <Navigation />,
+			color: '#F59E0B',
+		}
+	);
+
+	return <YourAppContent />;
+}
+```
+
+## Best Practices
+
+### 1. Transform Sensitive Data
+
+Don't expose sensitive information to the agent:
+
+```tsx
+subscribeInputContext(userProfile, (profile) => ({
+	user: {
+		name: profile.name,
+		tier: profile.subscriptionTier,
+		preferences: profile.preferences,
+		// Don't include: email, password, tokens, etc.
+	},
+}));
+```
+
+### 2. Use Meaningful Keys
+
+Choose descriptive keys for your context:
+
+```tsx
+subscribeInputContext(shoppingCart, (cart) => ({
+	shoppingCart: cart.items, // Clear and descriptive
+	cartTotal: cart.total,
+	cartItemCount: cart.items.length,
+}));
+```
+
+### 3. Optimize Large Data Sets
+
+For large data sets, consider filtering or summarizing:
+
+```tsx
+subscribeInputContext(allTransactions, (transactions) => ({
+	recentTransactions: transactions
+		.slice(0, 10) // Only last 10 transactions
+		.map((t) => ({
+			id: t.id,
+			amount: t.amount,
+			date: t.date,
+			// Exclude detailed metadata
+		})),
+	transactionSummary: {
+		total: transactions.length,
+		totalAmount: transactions.reduce((sum, t) => sum + t.amount, 0),
+	},
+}));
+```
+
+## Visual Customization
+
+The `options` parameter allows you to customize how the context appears in the UI:
+
+```tsx
+import { Star, AlertCircle, CheckCircle } from 'lucide-react';
+
+// Different colors and icons for different priorities
+subscribeInputContext(
+	highPriorityTasks,
+	(tasks) => ({ highPriorityTasks: tasks }),
+	{
+		icon: <AlertCircle />,
+		color: '#EF4444', // Red for high priority
+	}
+);
+
+subscribeInputContext(completedTasks, (tasks) => ({ completedTasks: tasks }), {
+	icon: <CheckCircle />,
+	color: '#10B981', // Green for completed
+});
+
+subscribeInputContext(starredItems, (items) => ({ starredItems: items }), {
+	icon: <Star />,
+	color: '#F59E0B', // Yellow for starred
+});
+```
+
+## Integration with Chat Input
+
+The subscribed context automatically becomes available to your AI agent when using Cedar's chat components:
+
+```tsx
+import { ChatInput } from 'cedar-os-components';
+
+function MyChat() {
+	// Your subscribeInputContext calls here...
+
+	return (
+		<div>
+			{/* Context is automatically included when user sends messages */}
+			<ChatInput placeholder='Ask me about your todos, selected nodes, or anything else...' />
+		</div>
+	);
+}
+```
+
+The agent will receive the context in a structured format and can reference it when generating responses, making the conversation more contextual and relevant to your application's current state.
