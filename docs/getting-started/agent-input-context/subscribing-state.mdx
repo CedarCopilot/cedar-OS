@@ -1,16 +1,43 @@
 ---
-title: 'Subscribing State'
-description: 'Make your application state available to AI agents'
+title: 'Subscribing State to Input'
+description: 'Automatically add state to the agent input context'
 ---
 
-Cedar's state subscription system allows you to make any part of your application state available to AI agents as context. This enables agents to understand your app's current state and provide more relevant, contextual responses.
+Cedar's `subscribeInputContext` function allows you to automatically make any part of your application state available to AI agents as context. This enables agents to understand your app's current state and provide more relevant, contextual responses.
 
-## Basic State Registration
+## subscribeInputContext Overview
 
-Register state using the `useCedarState` hook:
+The `subscribeInputContext` function subscribes to local state changes and automatically updates the agent's input context whenever the state changes. This means your AI agent always has access to the most up-to-date information from your application.
+
+### Function Signature
+
+```typescript
+function subscribeInputContext<T>(
+	localState: T,
+	mapFn: (state: T) => Record<string, any>,
+	options?: {
+		icon?: ReactNode;
+		color?: string;
+	}
+): void;
+```
+
+### Parameters
+
+- **`localState: T`** - The local state to subscribe to (any type)
+- **`mapFn: (state: T) => Record<string, any>`** - Function that maps your state to context entries
+- **`options`** (optional) - Configuration for visual representation:
+  - `icon?: ReactNode` - Icon to display for this context
+  - `color?: string` - Hex color for visual styling
+
+## Basic Usage Example
+
+Here's a simple example with a todo list:
 
 ```tsx
-import { useCedarState } from 'cedar-os';
+import React, { useState } from 'react';
+import { subscribeInputContext } from 'cedar-os';
+import { CheckCircle } from 'lucide-react';
 
 function TodoApp() {
 	const [todos, setTodos] = useState([
@@ -18,10 +45,17 @@ function TodoApp() {
 		{ id: 2, text: 'Walk the dog', completed: true },
 	]);
 
-	// Make todos available to the agent
-	useCedarState('todos', todos, {
-		description: "User's todo list with completion status",
-	});
+	// Subscribe todos to input context
+	subscribeInputContext(
+		todos,
+		(todoList) => ({
+			todos: todoList, // Key 'todos' will be available to the agent
+		}),
+		{
+			icon: <CheckCircle />,
+			color: '#10B981', // Green color
+		}
+	);
 
 	return (
 		<div>
@@ -32,240 +66,242 @@ function TodoApp() {
 }
 ```
 
-## State Registration Options
+## Complex State Example
 
-Configure how state is exposed to agents:
-
-```tsx
-useCedarState('user-profile', userProfile, {
-	description: 'Current user profile information',
-
-	// Transform state before sending to agent
-	transform: (profile) => ({
-		name: profile.name,
-		tier: profile.subscriptionTier,
-		preferences: profile.preferences,
-		// Exclude sensitive data
-		// email: profile.email, // Commented out for privacy
-	}),
-
-	// Only include state when relevant
-	condition: () => user.isLoggedIn,
-
-	// Update frequency
-	debounceMs: 500, // Wait 500ms between updates
-
-	// Priority for context inclusion
-	priority: 'high', // 'low', 'medium', 'high'
-});
-```
-
-## Complex State Structures
-
-Handle nested and complex state:
+Here's a more advanced example from the Product Roadmap demo:
 
 ```tsx
-function EcommerceApp() {
-	const [appState, setAppState] = useState({
-		cart: { items: [], total: 0 },
-		user: { id: null, preferences: {} },
-		currentPage: 'home',
-		filters: { category: 'all', priceRange: [0, 1000] },
-	});
+import { subscribeInputContext } from 'cedar-os';
+import { Box } from 'lucide-react';
+import { Node } from 'reactflow';
 
-	// Register different parts of state separately
-	useCedarState('shopping-cart', appState.cart, {
-		description: 'Current shopping cart contents and total',
-		transform: (cart) => ({
-			itemCount: cart.items.length,
-			total: cart.total,
-			items: cart.items.map((item) => ({
-				name: item.name,
-				price: item.price,
-				quantity: item.quantity,
+interface FeatureNodeData {
+	title: string;
+	status: 'planned' | 'in-progress' | 'completed';
+	priority: 'low' | 'medium' | 'high';
+	description?: string;
+}
+
+function SelectedNodesPanel() {
+	const [selected, setSelected] = useState<Node<FeatureNodeData>[]>([]);
+
+	// Subscribe selected nodes to input context
+	subscribeInputContext(
+		selected,
+		(nodes: Node<FeatureNodeData>[]) => ({
+			selectedNodes: nodes.map((node) => ({
+				id: node.id,
+				title: node.data.title,
+				status: node.data.status,
+				priority: node.data.priority,
+				description: node.data.description,
 			})),
 		}),
-	});
-
-	useCedarState('user-context', appState.user, {
-		description: 'User preferences and settings',
-		condition: () => appState.user.id !== null,
-	});
-
-	useCedarState(
-		'page-context',
 		{
-			currentPage: appState.currentPage,
-			filters: appState.filters,
-		},
-		{
-			description: 'Current page and active filters',
+			icon: <Box />,
+			color: '#8B5CF6', // Purple color for selected nodes
 		}
 	);
 
-	return <YourAppComponents />;
+	// Update selection when user selects nodes
+	useOnSelectionChange({
+		onChange: ({ nodes }) => setSelected(nodes),
+	});
+
+	return (
+		<div>
+			<h4>Selected Nodes</h4>
+			{selected.map((node) => (
+				<div key={node.id}>{node.data.title}</div>
+			))}
+		</div>
+	);
 }
 ```
 
-## Dynamic State Registration
+## How It Works Automatically
 
-Register state dynamically based on conditions:
+When you use `subscribeInputContext`, here's what happens automatically:
+
+1. **State Monitoring**: The function uses React's `useEffect` to monitor changes to your `localState`
+2. **Context Mapping**: When state changes, your `mapFn` transforms the state into context entries
+3. **Store Update**: The mapped context is automatically added to Cedar's internal store
+4. **Agent Access**: When the user sends a message, the agent receives this context along with the message
+
+### Context Structure
+
+The context entries follow this structure:
+
+```typescript
+interface ContextEntry {
+	id: string;
+	source: 'mention' | 'subscription' | 'manual';
+	data: any;
+	metadata?: {
+		label?: string;
+		icon?: ReactNode;
+		color?: string;
+		[key: string]: any;
+	};
+}
+```
+
+When using `subscribeInputContext`, entries are automatically marked with `source: 'subscription'`.
+
+## Multiple State Subscriptions
+
+You can subscribe multiple pieces of state:
 
 ```tsx
-function DynamicStateApp() {
-	const { registerState, unregisterState } = useCedarStore();
+function MyApp() {
+	const [user, setUser] = useState(null);
+	const [preferences, setPreferences] = useState({});
+	const [currentPage, setCurrentPage] = useState('/dashboard');
 
-	useEffect(() => {
-		// Register state when component mounts
-		registerState('component-state', {
-			mountTime: Date.now(),
-			componentId: 'dynamic-app',
-		});
-
-		// Cleanup when component unmounts
-		return () => {
-			unregisterState('component-state');
-		};
-	}, []);
-
-	// Conditionally register state
-	useEffect(() => {
-		if (user.isAdmin) {
-			registerState('admin-tools', {
-				availableActions: getAdminActions(),
-				systemHealth: getSystemHealth(),
-			});
-		} else {
-			unregisterState('admin-tools');
+	// Subscribe user data
+	subscribeInputContext(
+		user,
+		(userData) => ({
+			currentUser: userData
+				? {
+						id: userData.id,
+						name: userData.name,
+						role: userData.role,
+				  }
+				: null,
+		}),
+		{
+			icon: <User />,
+			color: '#3B82F6',
 		}
-	}, [user.isAdmin]);
+	);
 
-	return <div>Your app content</div>;
-}
-```
+	// Subscribe preferences
+	subscribeInputContext(
+		preferences,
+		(prefs) => ({
+			userPreferences: prefs,
+		}),
+		{
+			icon: <Settings />,
+			color: '#6B7280',
+		}
+	);
 
-## State Transformation
-
-Transform state before sending to agents:
-
-```tsx
-// Transform database records to agent-friendly format
-useCedarState('projects', projects, {
-	transform: (projects) => {
-		return projects.map((project) => ({
-			id: project.id,
-			name: project.name,
-			status: project.status,
-			progress: `${project.completedTasks}/${project.totalTasks}`,
-			dueDate: project.dueDate?.toLocaleDateString(),
-			teamSize: project.members.length,
-			// Don't include sensitive data
-			budget: project.budget > 10000 ? 'high' : 'standard',
-		}));
-	},
-});
-
-// Aggregate state for better context
-useCedarState('app-summary', null, {
-	transform: () => {
-		const activeUsers = getActiveUserCount();
-		const systemLoad = getSystemLoad();
-		const recentErrors = getRecentErrors();
-
-		return {
-			summary: `${activeUsers} active users, system load: ${systemLoad}%`,
-			health: recentErrors.length === 0 ? 'healthy' : 'issues detected',
-			lastUpdate: new Date().toISOString(),
-		};
-	},
-});
-```
-
-## State Watching and Updates
-
-Monitor state changes and update context:
-
-```tsx
-function StateWatcher() {
-	const [watchedState, setWatchedState] = useState({});
-	const { updateRegisteredState } = useCedarStore();
-
-	// Watch for external state changes
-	useEffect(() => {
-		const subscription = externalStateManager.subscribe((newState) => {
-			setWatchedState(newState);
-
-			// Manually update registered state
-			updateRegisteredState('external-data', {
-				...newState,
-				lastSync: Date.now(),
-			});
-		});
-
-		return () => subscription.unsubscribe();
-	}, []);
-
-	return <div>State watcher active</div>;
-}
-```
-
-## State Context in Messages
-
-Access registered state in custom message handlers:
-
-```tsx
-import { useCedarStore } from 'cedar-os';
-
-function CustomMessageHandler() {
-	const { getRegisteredState, callLLM } = useCedarStore();
-
-	const handleCustomAction = async () => {
-		// Get current state
-		const currentTodos = getRegisteredState('todos');
-		const userProfile = getRegisteredState('user-profile');
-
-		// Use state in AI call
-		await callLLM({
-			prompt: 'Suggest the next task based on my current todos',
-			context: {
-				todos: currentTodos,
-				userPreferences: userProfile?.preferences,
+	// Subscribe navigation state
+	subscribeInputContext(
+		currentPage,
+		(page) => ({
+			currentPage: {
+				path: page,
+				timestamp: new Date().toISOString(),
 			},
-		});
-	};
+		}),
+		{
+			icon: <Navigation />,
+			color: '#F59E0B',
+		}
+	);
 
-	return <button onClick={handleCustomAction}>Get AI Suggestion</button>;
+	return <YourAppContent />;
 }
 ```
 
-## Performance Optimization
+## Best Practices
 
-Optimize state registration for performance:
+### 1. Transform Sensitive Data
+
+Don't expose sensitive information to the agent:
 
 ```tsx
-// Memoize expensive transformations
-const expensiveTransform = useMemo(() => {
-	return (data) => {
-		// Expensive computation here
-		return processLargeDataset(data);
-	};
-}, []);
+subscribeInputContext(userProfile, (profile) => ({
+	user: {
+		name: profile.name,
+		tier: profile.subscriptionTier,
+		preferences: profile.preferences,
+		// Don't include: email, password, tokens, etc.
+	},
+}));
+```
 
-useCedarState('large-dataset', largeData, {
-	transform: expensiveTransform,
-	debounceMs: 1000, // Reduce update frequency
-	condition: () => shouldIncludeData, // Only when needed
+### 2. Use Meaningful Keys
+
+Choose descriptive keys for your context:
+
+```tsx
+subscribeInputContext(shoppingCart, (cart) => ({
+	shoppingCart: cart.items, // Clear and descriptive
+	cartTotal: cart.total,
+	cartItemCount: cart.items.length,
+}));
+```
+
+### 3. Optimize Large Data Sets
+
+For large data sets, consider filtering or summarizing:
+
+```tsx
+subscribeInputContext(allTransactions, (transactions) => ({
+	recentTransactions: transactions
+		.slice(0, 10) // Only last 10 transactions
+		.map((t) => ({
+			id: t.id,
+			amount: t.amount,
+			date: t.date,
+			// Exclude detailed metadata
+		})),
+	transactionSummary: {
+		total: transactions.length,
+		totalAmount: transactions.reduce((sum, t) => sum + t.amount, 0),
+	},
+}));
+```
+
+## Visual Customization
+
+The `options` parameter allows you to customize how the context appears in the UI:
+
+```tsx
+import { Star, AlertCircle, CheckCircle } from 'lucide-react';
+
+// Different colors and icons for different priorities
+subscribeInputContext(
+	highPriorityTasks,
+	(tasks) => ({ highPriorityTasks: tasks }),
+	{
+		icon: <AlertCircle />,
+		color: '#EF4444', // Red for high priority
+	}
+);
+
+subscribeInputContext(completedTasks, (tasks) => ({ completedTasks: tasks }), {
+	icon: <CheckCircle />,
+	color: '#10B981', // Green for completed
 });
 
-// Use refs for frequently changing data
-const frequentDataRef = useRef();
-useCedarState('frequent-updates', null, {
-	transform: () => frequentDataRef.current,
-	debounceMs: 2000, // Batch updates
+subscribeInputContext(starredItems, (items) => ({ starredItems: items }), {
+	icon: <Star />,
+	color: '#F59E0B', // Yellow for starred
 });
 ```
 
-## Next Steps
+## Integration with Chat Input
 
-- Learn about [mentions functionality](/getting-started/chat/mentions)
-- Explore [state access patterns](/getting-started/state-access/agentic-state-access)
+The subscribed context automatically becomes available to your AI agent when using Cedar's chat components:
+
+```tsx
+import { ChatInput } from 'cedar-os-components';
+
+function MyChat() {
+	// Your subscribeInputContext calls here...
+
+	return (
+		<div>
+			{/* Context is automatically included when user sends messages */}
+			<ChatInput placeholder='Ask me about your todos, selected nodes, or anything else...' />
+		</div>
+	);
+}
+```
+
+The agent will receive the context in a structured format and can reference it when generating responses, making the conversation more contextual and relevant to your application's current state.

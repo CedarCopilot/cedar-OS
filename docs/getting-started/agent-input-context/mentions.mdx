@@ -5,39 +5,13 @@ description: 'Enable @ mentions for contextual references in chat'
 
 Cedar's mention system allows users to reference specific data, people, or objects in their messages using @ symbols. This provides a natural way to give agents precise context about what the user is referring to.
 
-## Basic Mentions Setup
-
-Enable mentions in your chat input:
-
-```tsx
-import { ChatInput, useStateBasedMentionProvider } from 'cedar-os';
-
-function MentionEnabledChat() {
-	// Set up mention providers
-	useStateBasedMentionProvider('todos', {
-		displayField: 'text',
-		searchFields: ['text', 'category'],
-		icon: '✓',
-	});
-
-	return (
-		<ChatInput
-			enableMentions={true}
-			mentionTrigger='@'
-			placeholder='Type @ to mention items...'
-		/>
-	);
-}
-```
-
-## Built-in Mention Providers
-
 ### State-Based Mentions
 
-Reference registered application state:
+Automatically allows the user to @ mention any registered state items. The state must first be a cedarState. See the [Agentic State](/getting-started/state-access/agentic-state-access) documentation.
 
 ```tsx
-import { useCedarState, useStateBasedMentionProvider } from 'cedar-os';
+import { useState } from 'react';
+import { useRegisterState, useStateBasedMentionProvider } from 'cedar-os';
 
 function TodoApp() {
 	const [todos, setTodos] = useState([
@@ -45,42 +19,87 @@ function TodoApp() {
 		{ id: 2, text: 'Call dentist', category: 'health' },
 	]);
 
-	// Register state
-	useCedarState('todos', todos);
+	// Register the state
+	useRegisterState({
+		key: 'todos',
+		value: todos,
+		setValue: setTodos,
+		description: 'Todo items',
+	});
 
 	// Enable mentions for todos
-	useStateBasedMentionProvider('todos', {
-		displayField: 'text',
+	useStateBasedMentionProvider({
+		stateKey: 'todos',
+		trigger: '@',
+		labelField: 'text',
 		searchFields: ['text', 'category'],
+		description: 'Todo items',
 		icon: '📝',
 		color: '#3b82f6',
 	});
 
-	return <ChatInput enableMentions={true} />;
+	return <ChatInput />;
 }
 ```
 
-### User Mentions
+### useMentionProvider
 
-Mention team members or users:
+UseMentionProvider allows you to add anything as a mention, which formats and adds even non-state or other items as part of the input context.
 
 ```tsx
-const users = [
-	{
-		id: 1,
-		name: 'Alice Johnson',
-		email: 'alice@company.com',
-		role: 'Designer',
-	},
-	{ id: 2, name: 'Bob Smith', email: 'bob@company.com', role: 'Developer' },
-];
+import { useMentionProvider } from 'cedar-os';
 
-useMentionProvider('users', users, {
-	displayField: 'name',
-	searchFields: ['name', 'email', 'role'],
-	icon: '👤',
-	formatter: (user) => `@${user.name} (${user.role})`,
-});
+function UserMentions() {
+	const users = [
+		{
+			id: 1,
+			name: 'Alice Johnson',
+			email: 'alice@company.com',
+			role: 'Designer',
+		},
+		{ id: 2, name: 'Bob Smith', email: 'bob@company.com', role: 'Developer' },
+	];
+
+	useMentionProvider({
+		id: 'users',
+		trigger: '@',
+		label: 'Users',
+		description: 'Team members',
+		icon: '👤',
+		getItems: (query) => {
+			const filtered = query
+				? users.filter(
+						(user) =>
+							user.name.toLowerCase().includes(query.toLowerCase()) ||
+							user.email.toLowerCase().includes(query.toLowerCase()) ||
+							user.role.toLowerCase().includes(query.toLowerCase())
+				  )
+				: users;
+
+			return filtered.map((user) => ({
+				id: user.id.toString(),
+				label: `${user.name} (${user.role})`,
+				data: user,
+				metadata: {
+					icon: '👤',
+					color: '#10b981',
+				},
+			}));
+		},
+		toContextEntry: (item) => ({
+			id: item.id,
+			source: 'mention',
+			data: item.data,
+			metadata: {
+				label: item.label,
+				icon: '👤',
+				color: '#10b981',
+			},
+		}),
+	});
+
+	return <ChatInput />;
+}
 ```
 
 ## Custom Mention Providers
@@ -91,79 +110,150 @@ Create custom mention sources:
 import { useMentionProvider } from 'cedar-os';
 
 function CustomMentions() {
-	// Static mention provider
-	useMentionProvider(
-		'commands',
-		[
-			{ id: 'help', name: 'help', description: 'Show available commands' },
-			{ id: 'reset', name: 'reset', description: 'Reset the conversation' },
-			{ id: 'export', name: 'export', description: 'Export chat history' },
-		],
-		{
-			displayField: 'name',
-			searchFields: ['name', 'description'],
-			icon: '⚡',
-			category: 'Commands',
-		}
-	);
+	// Static mention provider for commands
+	useMentionProvider({
+		id: 'commands',
+		trigger: '/',
+		label: 'Commands',
+		description: 'Available commands',
+		icon: '⚡',
+		color: '#f59e0b',
+		getItems: (query) => {
+			const commands = [
+				{ id: 'help', name: 'help', description: 'Show available commands' },
+				{ id: 'reset', name: 'reset', description: 'Reset the conversation' },
+				{ id: 'export', name: 'export', description: 'Export chat history' },
+			];
 
-	// Dynamic mention provider
-	useMentionProvider(
-		'files',
-		async (query) => {
+			const filtered = query
+				? commands.filter(
+						(cmd) =>
+							cmd.name.toLowerCase().includes(query.toLowerCase()) ||
+							cmd.description.toLowerCase().includes(query.toLowerCase())
+				  )
+				: commands;
+
+			return filtered.map((cmd) => ({
+				id: cmd.id,
+				label: cmd.name,
+				data: cmd,
+				metadata: {
+					icon: '⚡',
+					color: '#f59e0b',
+				},
+			}));
+		},
+		toContextEntry: (item) => ({
+			id: item.id,
+			source: 'mention',
+			data: item.data,
+			metadata: {
+				label: item.label,
+				icon: '⚡',
+				color: '#f59e0b',
+			},
+		}),
+	});
+
+	// Dynamic mention provider for files
+	useMentionProvider({
+		id: 'files',
+		trigger: '#',
+		label: 'Files',
+		description: 'Project files',
+		icon: '📄',
+		color: '#8b5cf6',
+		getItems: async (query) => {
+			// Simulate async file search
 			const files = await searchFiles(query);
 			return files.map((file) => ({
 				id: file.id,
-				name: file.name,
-				path: file.path,
-				type: file.type,
+				label: file.name,
+				data: file,
+				metadata: {
+					icon: '📄',
+					color: '#8b5cf6',
+				},
 			}));
 		},
-		{
-			displayField: 'name',
-			searchFields: ['name', 'path'],
-			icon: '📄',
-			debounceMs: 300, // Debounce API calls
-		}
-	);
+		toContextEntry: (item) => ({
+			id: item.id,
+			source: 'mention',
+			data: item.data,
+			metadata: {
+				label: item.label,
+				icon: '📄',
+				color: '#8b5cf6',
+			},
+		}),
+	});
 
-	return <ChatInput enableMentions={true} />;
+	return <ChatInput />;
+}
+
+// Mock function for demonstration
+async function searchFiles(query: string) {
+	// Simulate API call
+	return [
+		{ id: '1', name: 'README.md', path: '/README.md', type: 'markdown' },
+		{ id: '2', name: 'package.json', path: '/package.json', type: 'json' },
+	].filter(
+		(file) => !query || file.name.toLowerCase().includes(query.toLowerCase())
+	);
 }
 ```
 
-## Mention Configuration
+## Custom Rendering
 
-Customize mention behavior:
+Customize how mentions appear in different contexts:
 
 ```tsx
-<ChatInput
-	enableMentions={true}
-	mentionConfig={{
-		trigger: '@',
-		minQueryLength: 1,
-		maxSuggestions: 10,
-		caseSensitive: false,
-		highlightColor: '#3b82f6',
+import { useMentionProvider } from 'cedar-os';
 
-		// Customize suggestion rendering
-		renderSuggestion: (item, provider) => (
+function CustomRendering() {
+	useMentionProvider({
+		id: 'users',
+		trigger: '@',
+		label: 'Users',
+		icon: '👤',
+		getItems: (query) => {
+			// ... get items logic
+		},
+		toContextEntry: (item) => ({
+			id: item.id,
+			source: 'mention',
+			data: item.data,
+			metadata: { label: item.label, icon: '👤' },
+		}),
+
+		// Custom rendering in the mention menu
+		renderMenuItem: (item) => (
 			<div className='flex items-center gap-2 p-2'>
-				<span className='text-lg'>{provider.icon}</span>
+				<span className='text-lg'>👤</span>
 				<div>
-					<div className='font-medium'>{item[provider.displayField]}</div>
-					<div className='text-sm text-gray-500'>{item.description}</div>
+					<div className='font-medium'>{item.label}</div>
+					<div className='text-sm text-gray-500'>{item.data.role}</div>
 				</div>
 			</div>
 		),
 
-		// Customize mention rendering in input
-		renderMention: (mention) => (
+		// Custom rendering in the editor
+		renderEditorItem: (item, attrs) => (
 			<span className='bg-blue-100 text-blue-800 px-1 rounded'>
-				{mention.provider.icon} {mention.display}
+				👤 {item.label}
 			</span>
 		),
-	}}
-/>
+
+		// Custom rendering in context badges
+		renderContextBadge: (entry) => (
+			<div className='bg-gray-100 px-2 py-1 rounded text-sm'>
+				👤 {entry.metadata?.label}
+			</div>
+		),
+	});
+
+	return <ChatInput />;
+}
 ```
 
 ## Multiple Mention Types
@@ -171,29 +261,106 @@ Customize mention behavior:
 Support different mention triggers:
 
 ```tsx
+import { useMentionProvider } from 'cedar-os';
+
 function MultiMentionChat() {
+	const users = [
+		{ id: '1', name: 'Alice', role: 'Designer' },
+		{ id: '2', name: 'Bob', role: 'Developer' },
+	];
+
+	const channels = [
+		{ id: '1', name: 'general', topic: 'General discussion' },
+		{ id: '2', name: 'dev', topic: 'Development updates' },
+	];
+
+	const commands = [
+		{ id: '1', name: 'help', description: 'Show help' },
+		{ id: '2', name: 'reset', description: 'Reset chat' },
+	];
+
 	// @ for users
-	useMentionProvider('users', users, {
+	useMentionProvider({
+		id: 'users',
 		trigger: '@',
-		displayField: 'name',
+		label: 'Users',
 		icon: '👤',
+		getItems: (query) => {
+			const filtered = query
+				? users.filter((u) =>
+						u.name.toLowerCase().includes(query.toLowerCase())
+				  )
+				: users;
+			return filtered.map((user) => ({
+				id: user.id,
+				label: user.name,
+				data: user,
+				metadata: { icon: '👤' },
+			}));
+		},
+		toContextEntry: (item) => ({
+			id: item.id,
+			source: 'mention',
+			data: item.data,
+			metadata: { label: item.label, icon: '👤' },
+		}),
 	});
 
 	// # for channels/topics
-	useMentionProvider('channels', channels, {
+	useMentionProvider({
+		id: 'channels',
 		trigger: '#',
-		displayField: 'name',
+		label: 'Channels',
 		icon: '📢',
+		getItems: (query) => {
+			const filtered = query
+				? channels.filter((c) =>
+						c.name.toLowerCase().includes(query.toLowerCase())
+				  )
+				: channels;
+			return filtered.map((channel) => ({
+				id: channel.id,
+				label: channel.name,
+				data: channel,
+				metadata: { icon: '📢' },
+			}));
+		},
+		toContextEntry: (item) => ({
+			id: item.id,
+			source: 'mention',
+			data: item.data,
+			metadata: { label: item.label, icon: '📢' },
+		}),
 	});
 
 	// / for commands
-	useMentionProvider('commands', commands, {
+	useMentionProvider({
+		id: 'commands',
 		trigger: '/',
-		displayField: 'name',
+		label: 'Commands',
 		icon: '⚡',
+		getItems: (query) => {
+			const filtered = query
+				? commands.filter((c) =>
+						c.name.toLowerCase().includes(query.toLowerCase())
+				  )
+				: commands;
+			return filtered.map((command) => ({
+				id: command.id,
+				label: command.name,
+				data: command,
+				metadata: { icon: '⚡' },
+			}));
+		},
+		toContextEntry: (item) => ({
+			id: item.id,
+			source: 'mention',
+			data: item.data,
+			metadata: { label: item.label, icon: '⚡' },
+		}),
 	});
 
-	return <ChatInput enableMentions={true} mentionTriggers={['@', '#', '/']} />;
+	return <ChatInput />;
 }
 ```
 
@@ -202,25 +369,91 @@ function MultiMentionChat() {
 Show different mentions based on context:
 
 ```tsx
+import { useEffect } from 'react';
+import { useMentionProvider } from 'cedar-os';
+
 function ContextualMentions() {
 	const currentPage = useCurrentPage();
 
 	// Conditional mention providers
 	useEffect(() => {
 		if (currentPage === 'projects') {
-			useMentionProvider('projects', getProjects(), {
-				displayField: 'name',
+			const projects = getProjects();
+			useMentionProvider({
+				id: 'projects',
+				trigger: '@',
+				label: 'Projects',
 				icon: '📁',
+				getItems: (query) => {
+					const filtered = query
+						? projects.filter((p) =>
+								p.name.toLowerCase().includes(query.toLowerCase())
+						  )
+						: projects;
+					return filtered.map((project) => ({
+						id: project.id,
+						label: project.name,
+						data: project,
+						metadata: { icon: '📁' },
+					}));
+				},
+				toContextEntry: (item) => ({
+					id: item.id,
+					source: 'mention',
+					data: item.data,
+					metadata: { label: item.label, icon: '📁' },
+				}),
 			});
 		} else if (currentPage === 'tasks') {
-			useMentionProvider('tasks', getTasks(), {
-				displayField: 'title',
+			const tasks = getTasks();
+			useMentionProvider({
+				id: 'tasks',
+				trigger: '@',
+				label: 'Tasks',
 				icon: '✅',
+				getItems: (query) => {
+					const filtered = query
+						? tasks.filter((t) =>
+								t.title.toLowerCase().includes(query.toLowerCase())
+						  )
+						: tasks;
+					return filtered.map((task) => ({
+						id: task.id,
+						label: task.title,
+						data: task,
+						metadata: { icon: '✅' },
+					}));
+				},
+				toContextEntry: (item) => ({
+					id: item.id,
+					source: 'mention',
+					data: item.data,
+					metadata: { label: item.label, icon: '✅' },
+				}),
 			});
 		}
 	}, [currentPage]);
 
-	return <ChatInput enableMentions={true} />;
+	return <ChatInput />;
+}
+
+// Mock functions for demonstration
+function useCurrentPage() {
+	return 'projects'; // or 'tasks'
+}
+
+function getProjects() {
+	return [
+		{ id: '1', name: 'Website Redesign' },
+		{ id: '2', name: 'Mobile App' },
+	];
+}
+
+function getTasks() {
+	return [
+		{ id: '1', title: 'Fix login bug' },
+		{ id: '2', title: 'Add dark mode' },
+	];
 }
 ```
 
@@ -251,75 +484,177 @@ Access mentioned items in your agent context:
 
 ## Advanced Mention Features
 
-### Mention Validation
+### Filtering and Validation
 
-Validate mentions before sending:
+You can implement custom filtering and validation logic within your mention providers:
 
 ```tsx
-const mentionValidator = (mentions) => {
-	for (const mention of mentions) {
-		if (mention.type === 'users' && !mention.data.active) {
-			return `User ${mention.data.name} is no longer active`;
-		}
-		if (mention.type === 'projects' && mention.data.archived) {
-			return `Project ${mention.data.name} is archived`;
-		}
-	}
-	return null; // Valid
-};
+import { useMentionProvider } from 'cedar-os';
 
-<ChatInput enableMentions={true} mentionValidator={mentionValidator} />;
+function ValidatedMentions() {
+	const currentUser = getCurrentUser();
+
+	useMentionProvider({
+		id: 'team-users',
+		trigger: '@',
+		label: 'Team Members',
+		icon: '👤',
+		getItems: (query) => {
+			const allUsers = getAllUsers();
+
+			// Filter by permissions - only show users in same team
+			const allowedUsers = allUsers.filter(
+				(user) => user.teamId === currentUser.teamId && user.active
+			);
+
+			// Filter by search query
+			const filtered = query
+				? allowedUsers.filter((user) =>
+						user.name.toLowerCase().includes(query.toLowerCase())
+				  )
+				: allowedUsers;
+
+			return filtered.map((user) => ({
+				id: user.id,
+				label: user.name,
+				data: user,
+				metadata: {
+					icon: '👤',
+					color: user.active ? '#10b981' : '#6b7280',
+				},
+			}));
+		},
+		toContextEntry: (item) => ({
+			id: item.id,
+			source: 'mention',
+			data: item.data,
+			metadata: {
+				label: item.label,
+				icon: '👤',
+				// Validate data is still current
+				valid: item.data.active,
+			},
+		}),
+	});
+
+	return <ChatInput />;
+}
+
+// Mock functions
+function getCurrentUser() {
+	return { id: '1', teamId: 'team-a' };
+}
+
+function getAllUsers() {
+	return [
+		{ id: '1', name: 'Alice', teamId: 'team-a', active: true },
+		{ id: '2', name: 'Bob', teamId: 'team-a', active: false },
+		{ id: '3', name: 'Charlie', teamId: 'team-b', active: true },
+	];
+}
 ```
 
-### Mention Permissions
+### Rich Context Information
 
-Control who can mention what:
-
-```tsx
-const mentionPermissions = {
-	users: (user, mentionedUser) => {
-		// Only allow mentioning users in same team
-		return user.teamId === mentionedUser.teamId;
-	},
-
-	projects: (user, project) => {
-		// Only allow mentioning projects user has access to
-		return project.members.includes(user.id);
-	},
-};
-
-<ChatInput enableMentions={true} mentionPermissions={mentionPermissions} />;
-```
-
-### Rich Mention Previews
-
-Show detailed previews when hovering over mentions:
+Provide detailed context data through the mention system:
 
 ```tsx
-const mentionPreviews = {
-	users: (user) => (
-		<div className='p-3 bg-white border rounded shadow-lg'>
-			<div className='flex items-center gap-2'>
-				<img src={user.avatar} className='w-8 h-8 rounded-full' />
-				<div>
-					<div className='font-medium'>{user.name}</div>
-					<div className='text-sm text-gray-500'>{user.role}</div>
+import { useMentionProvider } from 'cedar-os';
+
+function RichContextMentions() {
+	useMentionProvider({
+		id: 'project-tasks',
+		trigger: '#',
+		label: 'Tasks',
+		icon: '✅',
+		getItems: async (query) => {
+			const tasks = await fetchTasks(query);
+			return tasks.map((task) => ({
+				id: task.id,
+				label: `${task.title} (${task.status})`,
+				data: {
+					...task,
+					// Include rich context data
+					assignee: task.assignee,
+					dueDate: task.dueDate,
+					priority: task.priority,
+					comments: task.comments,
+				},
+				metadata: {
+					icon: getTaskIcon(task.status),
+					color: getTaskColor(task.priority),
+				},
+			}));
+		},
+		toContextEntry: (item) => ({
+			id: item.id,
+			source: 'mention',
+			data: item.data,
+			metadata: {
+				label: item.label,
+				icon: item.metadata?.icon,
+				color: item.metadata?.color,
+				// Additional metadata for agent context
+				type: 'task',
+				status: item.data.status,
+				priority: item.data.priority,
+			},
+		}),
+
+		// Rich preview in mention menu
+		renderMenuItem: (item) => (
+			<div
+				className='p-2 border-l-2'
+				style={{ borderColor: item.metadata?.color }}>
+				<div className='flex items-center justify-between'>
+					<span className='font-medium'>{item.data.title}</span>
+					<span className='text-xs bg-gray-100 px-2 py-1 rounded'>
+						{item.data.status}
+					</span>
+				</div>
+				<div className='text-sm text-gray-500 mt-1'>
+					Due: {item.data.dueDate} • Assigned to: {item.data.assignee?.name}
 				</div>
 			</div>
-		</div>
-	),
+		),
+	});
 
-	tasks: (task) => (
-		<div className='p-3 bg-white border rounded shadow-lg'>
-			<div className='font-medium'>{task.title}</div>
-			<div className='text-sm text-gray-500'>
-				Status: {task.status} • Due: {task.dueDate}
-			</div>
-		</div>
-	),
-};
+	return <ChatInput />;
+}
 
-<ChatInput enableMentions={true} mentionPreviews={mentionPreviews} />;
+// Helper functions
+function getTaskIcon(status: string) {
+	const icons = {
+		todo: '⏳',
+		'in-progress': '🔄',
+		done: '✅',
+		blocked: '🚫',
+	};
+	return icons[status] || '📋';
+}
+
+function getTaskColor(priority: string) {
+	const colors = {
+		high: '#ef4444',
+		medium: '#f59e0b',
+		low: '#10b981',
+	};
+	return colors[priority] || '#6b7280';
+}
+
+async function fetchTasks(query: string) {
+	// Mock async task fetching
+	return [
+		{
+			id: '1',
+			title: 'Fix login bug',
+			status: 'in-progress',
+			priority: 'high',
+			dueDate: '2024-01-15',
+			assignee: { name: 'Alice' },
+		},
+	];
+}
 ```
 
 ## Next Steps

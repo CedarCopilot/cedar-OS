@@ -3,212 +3,411 @@ title: 'Agent Input Context'
 description: 'Provide additional context to your AI agents'
 ---
 
-Agent Input Context allows you to provide additional information to your AI agents beyond just the user's message. This includes application state, user data, conversation history, and any other contextual information that helps the agent provide better responses.
+Agent Input Context allows you to provide additional information to your AI agents beyond just the user's message.
+
+This includes application state, user data, conversation history, and any other contextual information that helps the agent provide better responses.
 
 ## How It Works
 
 When a user sends a message, Cedar automatically gathers context from various sources:
 
-1. **Registered State**: Application state you've made available to the agent
+1. **Registered State**: Application state you've made available to the agent via `useCedarState`
 2. **Mentions**: Specific data the user has referenced with @ mentions
-3. **Conversation History**: Previous messages in the chat
-4. **Custom Context**: Any additional data you provide
+3. **Additional Context**: Context entries you've manually added
+4. **Chat Input Content**: The current editor content with mentions
 
-## Basic Usage
+Cedar provides several methods to stringify and access this context for your AI agents.
 
-Enable context gathering in your chat components:
+# Adding Context
+
+## Mentions System
+
+Cedar's mention system allows users to reference specific data using @ symbols. You can create mention providers that let users easily reference state or custom data:
 
 ```tsx
-import { ChatInput } from 'cedar-os';
+import { useStateBasedMentionProvider } from 'cedar-os';
+import { FileText } from 'lucide-react';
 
-function ContextAwareChat() {
-	return (
-		<ChatInput
-			enableContext={true}
-			contextSources={['state', 'mentions', 'history']}
-			maxContextLength={5000} // Limit context size
-		/>
-	);
+function DocumentChat() {
+	const [documents] = useCedarState('documents', [
+		{ id: 'doc1', title: 'Project Proposal', type: 'pdf' },
+		{ id: 'doc2', title: 'Meeting Notes', type: 'doc' },
+	]);
+
+	// Create a mention provider for documents
+	useStateBasedMentionProvider({
+		stateKey: 'documents',
+		trigger: '@',
+		labelField: 'title',
+		searchFields: ['title', 'type'],
+		description: 'Documents',
+		icon: <FileText size={16} />,
+		color: '#8b5cf6',
+	});
+
+	return <ChatInput />;
 }
 ```
 
-## Context Sources
+For detailed information about mentions, including custom providers, multiple triggers, and advanced rendering, see the [Mentions documentation](/getting-started/agent-input-context/mentions).
 
-### Automatic Context
+## State Subscription
 
-Cedar automatically includes:
+Automatically sync your specific cedarStates to the agent input context using `subscribeInputContext`:
 
-- **User Message**: The current message being sent
-- **Chat History**: Recent conversation messages
-- **System State**: Basic application information
+```tsx
+import { subscribeInputContext } from 'cedar-os';
+import { useState } from 'react';
 
-### Custom Context
+function AutoSyncChat() {
+	const [appState, setAppState] = useState({
+		currentTab: 'dashboard',
+		selectedItems: ['item1', 'item2'],
+	});
 
-Add your own context providers:
+	// Automatically sync state to context
+	subscribeInputContext(
+		appState,
+		(state) => ({
+			'app-state': [
+				{
+					id: 'current-state',
+					currentTab: state.currentTab,
+					selectedItems: state.selectedItems,
+				},
+			],
+		}),
+		{
+			icon: <Settings size={16} />,
+			color: '#6b7280',
+		}
+	);
+
+	return <ChatInput />;
+}
+```
+
+For comprehensive examples and best practices for state subscription, see the [Subscribing State documentation](/getting-started/agent-input-context/subscribing-state).
+
+# Advanced
+
+This is for advanced understanding. Move on to [Agentic State Access](/getting-started/state-access/agentic-state-access) or [Spells](/getting-started/spells/spells) for better functionality.
+
+## Default Context Tokenization
+
+Cedar automatically manages sending this additional context to the LLM. However, if you're interested in how it does it, here's a breakdown. Cedar's `sendMessage` function automatically tokenizes context using these steps:
+
+1. **Extract Editor Content**: `stringifyEditor()` converts the rich text editor content to plain text
+2. **Combine with Context**: `stringifyInputContext()` merges the editor content with additional context
+3. **Send to AI**: The combined string is sent as the prompt to your AI provider
+
+Here's how the default process works:
+
+```tsx
+// Inside sendMessage (simplified)
+const editorContent = state.stringifyEditor(); // "Update @task-123 status"
+const fullContext = state.stringifyInputContext(); // Full context with mentions data
+
+// fullContext contains:
+// User Text: Update @task-123 status
+//
+// Additional Context: {
+//   "tasks": [{
+//     "id": "task-123",
+//     "source": "mention",
+//     "data": { "title": "Fix login bug", "status": "in-progress" },
+//     "metadata": { "label": "Fix login bug" }
+//   }]
+// }
+```
+
+## Accessing Additional Context
+
+You can access the context data in several ways:
+
+### Raw Context Access
 
 ```tsx
 import { useCedarStore } from 'cedar-os';
 
-function MyComponent() {
-	const { setContextProvider } = useCedarStore();
+function ContextInspector() {
+	const { additionalContext } = useCedarStore();
 
-	useEffect(() => {
-		setContextProvider('user-profile', () => ({
-			userId: user.id,
-			preferences: user.preferences,
-			subscription: user.subscriptionTier,
-		}));
-
-		setContextProvider('app-state', () => ({
-			currentPage: window.location.pathname,
-			userActions: getRecentActions(),
-			environmentInfo: getEnvironmentData(),
-		}));
-	}, [user]);
-
-	return <ChatInput enableContext={true} />;
-}
-```
-
-## Context Formatting
-
-Control how context is formatted for the AI:
-
-```tsx
-<ChatInput
-	contextFormatter={{
-		includeTimestamps: true,
-		maxHistoryMessages: 10,
-		summarizeOldMessages: true,
-		formatters: {
-			'user-profile': (data) => `User: ${data.userId} (${data.subscription})`,
-			'app-state': (data) => `Current page: ${data.currentPage}`,
-		},
-	}}
-/>
-```
-
-## Context Visibility
-
-Show users what context is being sent:
-
-```tsx
-function TransparentChat() {
-	const [showContext, setShowContext] = useState(false);
+	// Access raw context structure
+	const tasks = additionalContext.tasks || [];
+	const mentionedDocuments = additionalContext.documents || [];
 
 	return (
 		<div>
-			<button
-				onClick={() => setShowContext(!showContext)}
-				className='text-sm text-gray-600 mb-2'>
-				{showContext ? 'Hide' : 'Show'} Context
-			</button>
-
-			<ChatInput
-				enableContext={true}
-				showContextPreview={showContext}
-				onContextGenerated={(context) => {
-					console.log('Generated context:', context);
-				}}
-			/>
+			<h3>Current Context:</h3>
+			{Object.entries(additionalContext).map(([key, entries]) => (
+				<div key={key}>
+					<h4>{key}</h4>
+					{entries.map((entry) => (
+						<div key={entry.id}>
+							{entry.metadata?.label} ({entry.source})
+						</div>
+					))}
+				</div>
+			))}
 		</div>
 	);
 }
 ```
 
-## Context Optimization
-
-Optimize context for better performance and relevance:
+### Stringified Context Access
 
 ```tsx
-const contextConfig = {
-	// Prioritize recent and relevant information
-	prioritization: {
-		recentMessages: 1.0,
-		mentionedState: 0.9,
-		userProfile: 0.7,
-		appState: 0.5,
-	},
+import { useCedarStore } from 'cedar-os';
 
-	// Compress context when it gets too large
-	compression: {
-		enabled: true,
-		maxTokens: 3000,
-		strategy: 'summarize', // or 'truncate'
-	},
+function ContextStringifier() {
+	const { stringifyEditor, stringifyAdditionalContext, stringifyInputContext } =
+		useCedarStore();
 
-	// Cache context for performance
-	caching: {
-		enabled: true,
-		ttl: 60000, // 1 minute
-		keyGenerator: (sources) => `context-${sources.join('-')}`,
-	},
-};
+	const inspectContext = () => {
+		// Get just the user's text input
+		const userText = stringifyEditor();
+		console.log('User text:', userText);
 
-<ChatInput contextConfig={contextConfig} />;
+		// Get additional context as JSON
+		const contextData = stringifyAdditionalContext();
+		console.log('Context data:', contextData);
+
+		// Get combined input and context (what gets sent to AI)
+		const fullContext = stringifyInputContext();
+		console.log('Full context:', fullContext);
+	};
+
+	return <button onClick={inspectContext}>Inspect Context</button>;
+}
 ```
 
-## Advanced Context Patterns
+## Adding Specific Context
+
+### Manual Context Entries
+
+Add context entries programmatically for specific use cases:
+
+```tsx
+import { useCedarStore } from 'cedar-os';
+
+function ErrorReportingChat() {
+	const { addContextEntry, removeContextEntry } = useCedarStore();
+
+	const addErrorContext = (error: Error) => {
+		addContextEntry('errors', {
+			id: `error-${Date.now()}`,
+			source: 'manual',
+			data: {
+				message: error.message,
+				stack: error.stack,
+				timestamp: new Date().toISOString(),
+				url: window.location.href,
+			},
+			metadata: {
+				label: `Error: ${error.message}`,
+				color: '#ef4444',
+			},
+		});
+	};
+
+	const addUserContext = (user: any) => {
+		addContextEntry('user-info', {
+			id: 'current-user',
+			source: 'manual',
+			data: {
+				id: user.id,
+				role: user.role,
+				permissions: user.permissions,
+			},
+			metadata: {
+				label: `User: ${user.name}`,
+				color: '#3b82f6',
+			},
+		});
+	};
+
+	return (
+		<div>
+			<button onClick={() => addErrorContext(new Error('Sample error'))}>
+				Add Error Context
+			</button>
+			<ChatInput />
+		</div>
+	);
+}
+```
 
 ### Conditional Context
 
-Include context based on conditions:
+Add context based on application state or user actions:
 
 ```tsx
-const contextProviders = {
-	'error-logs': () => {
-		// Only include error logs if user is asking about issues
-		const lastMessage = getLastUserMessage();
-		if (lastMessage.includes('error') || lastMessage.includes('bug')) {
-			return getRecentErrorLogs();
-		}
-		return null;
-	},
+import { useCedarStore } from 'cedar-os';
+import { useEffect } from 'react';
 
-	'user-data': () => {
-		// Only include sensitive data if user is authenticated
-		if (user.isAuthenticated) {
-			return getUserPersonalData();
+function ConditionalContextChat() {
+	const { addContextEntry, clearContextBySource } = useCedarStore();
+	const currentRoute = useRouter().pathname;
+	const selectedItems = useSelection();
+
+	useEffect(() => {
+		// Clear previous route context
+		clearContextBySource('manual');
+
+		// Add route-specific context
+		if (currentRoute === '/dashboard') {
+			addContextEntry('navigation', {
+				id: 'dashboard-context',
+				source: 'manual',
+				data: {
+					page: 'dashboard',
+					widgets: getDashboardWidgets(),
+					metrics: getCurrentMetrics(),
+				},
+				metadata: {
+					label: 'Dashboard Context',
+				},
+			});
 		}
-		return { status: 'guest' };
-	},
-};
+
+		// Add selection context if items are selected
+		if (selectedItems.length > 0) {
+			addContextEntry('selection', {
+				id: 'current-selection',
+				source: 'manual',
+				data: {
+					items: selectedItems,
+					count: selectedItems.length,
+					types: [...new Set(selectedItems.map((item) => item.type))],
+				},
+				metadata: {
+					label: `${selectedItems.length} items selected`,
+				},
+			});
+		}
+	}, [currentRoute, selectedItems]);
+
+	return <ChatInput />;
+}
 ```
 
-### Context Middleware
+## Custom Context Processing
 
-Process context before sending to AI:
+Create your own message sending logic with custom context filtering:
 
 ```tsx
-const contextMiddleware = [
-	// Remove sensitive information
-	(context) => {
-		return {
-			...context,
-			userProfile: {
-				...context.userProfile,
-				password: undefined,
-				ssn: undefined,
-			},
-		};
-	},
+import { useCedarStore } from 'cedar-os';
 
-	// Add computed fields
-	(context) => {
-		return {
-			...context,
-			computed: {
-				userTier: calculateUserTier(context.userProfile),
-				riskLevel: assessRiskLevel(context.appState),
-			},
-		};
-	},
-];
+function CustomContextProcessor() {
+	const store = useCedarStore();
 
-<ChatInput contextMiddleware={contextMiddleware} />;
+	const sendMessageWithFilteredContext = async (
+		contextFilter?: (key: string, entries: ContextEntry[]) => ContextEntry[]
+	) => {
+		// Get the user's input
+		const editorContent = store.stringifyEditor();
+
+		// Get raw additional context
+		const rawContext = store.additionalContext;
+
+		// Apply custom filtering if provided
+		let filteredContext = rawContext;
+		if (contextFilter) {
+			filteredContext = {};
+			Object.entries(rawContext).forEach(([key, entries]) => {
+				const filtered = contextFilter(key, entries);
+				if (filtered.length > 0) {
+					filteredContext[key] = filtered;
+				}
+			});
+		}
+
+		// Create custom context string
+		const contextString = JSON.stringify(filteredContext, null, 2);
+		const customPrompt = `User Text: ${editorContent}\n\nFiltered Context: ${contextString}`;
+
+		// Send to AI with custom prompt
+		const response = await store.callLLM({
+			prompt: customPrompt,
+			systemPrompt:
+				'You are a helpful assistant with access to filtered context.',
+		});
+
+		// Handle response
+		store.handleLLMResult(response);
+
+		// Add user message to chat
+		store.addMessage({
+			role: 'user',
+			type: 'text',
+			content: editorContent,
+		});
+
+		// Clear mentions after sending
+		store.clearMentions();
+	};
+
+	// Example: Only include high-priority tasks
+	const sendWithHighPriorityTasksOnly = () => {
+		sendMessageWithFilteredContext((key, entries) => {
+			if (key === 'tasks') {
+				return entries.filter((entry) => entry.data.priority === 'high');
+			}
+			return entries; // Keep other context as-is
+		});
+	};
+
+	// Example: Exclude sensitive data
+	const sendWithoutSensitiveData = () => {
+		sendMessageWithFilteredContext((key, entries) => {
+			if (key === 'user-profile') {
+				return entries.map((entry) => ({
+					...entry,
+					data: {
+						...entry.data,
+						email: undefined,
+						phone: undefined,
+						ssn: undefined,
+					},
+				}));
+			}
+			return entries;
+		});
+	};
+
+	// Example: Only include recent items
+	const sendWithRecentContextOnly = () => {
+		const oneHourAgo = Date.now() - 60 * 60 * 1000;
+
+		sendMessageWithFilteredContext((key, entries) => {
+			return entries.filter((entry) => {
+				const entryTime = entry.data.timestamp || entry.data.createdAt;
+				return entryTime && new Date(entryTime).getTime() > oneHourAgo;
+			});
+		});
+	};
+
+	return (
+		<div>
+			<ChatInput />
+			<div className='flex gap-2 mt-2'>
+				<button onClick={sendWithHighPriorityTasksOnly}>
+					Send with High Priority Tasks Only
+				</button>
+				<button onClick={sendWithoutSensitiveData}>
+					Send without Sensitive Data
+				</button>
+				<button onClick={sendWithRecentContextOnly}>
+					Send with Recent Context Only
+				</button>
+			</div>
+		</div>
+	);
+}
 ```
 
 ## Next Steps
 
-- Learn about [subscribing to state](/getting-started/chat/subscribing-state)
-- Explore [mentions functionality](/getting-started/chat/mentions)
+- Learn about [mentions functionality](/getting-started/agent-input-context/mentions) for detailed @ mention patterns
+- Explore [subscribing to state](/getting-started/agent-input-context/subscribing-state) for automatic state synchronization
