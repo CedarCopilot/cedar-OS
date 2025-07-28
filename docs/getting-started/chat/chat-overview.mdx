@@ -59,7 +59,10 @@ function App() {
 				minWidth: 300,
 				maxWidth: 800,
 			}}
-			resizable={true}>
+			resizable={true}
+			topOffset={64} // Offset for navbar height (optional)
+			className='' // Additional styling (optional)
+		>
 			{/* Your main page content goes here */}
 			<div className='p-8'>
 				<h1>Your App Content</h1>
