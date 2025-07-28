@@ -15,7 +15,7 @@ export default function CedarPlaygroundPage() {
 	const [activeChatTab, setActiveChatTab] = useState('caption');
 
 	const pageContent = (
-		<div className='bg-gray-50 px-8 space-y-8'>
+		<div className='px-8 space-y-8'>
 			{/* Header Section */}
 			<div className='py-16 px-8'>
 				<div className='text-center max-w-4xl mx-auto'>
@@ -84,7 +84,8 @@ export default function CedarPlaygroundPage() {
 					minWidth: 300,
 					maxWidth: 600,
 				}}
-				resizable={true}>
+				resizable={true}
+				topOffset={64}>
 				{pageContent}
 			</SidePanelCedarChat>
 		);
