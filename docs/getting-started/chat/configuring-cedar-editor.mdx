@@ -1,0 +1,173 @@
+---
+title: 'Configuring the Cedar Editor'
+description: 'Customize the chat input editor behavior and features'
+---
+
+# Configuring the Cedar Editor
+
+The Cedar editor is the rich text input component that powers chat interactions. It supports mentions, keyboard shortcuts, auto-completion, and extensive customization options.
+
+## Basic Configuration
+
+Configure the editor through the `useCedarEditor` hook or ChatInput props:
+
+```tsx
+import { ChatInput } from 'cedar-os';
+
+function CustomChat() {
+	return (
+		<ChatInput
+			placeholder='Type your message...'
+			maxLength={2000}
+			autoFocus={true}
+			multiline={true}
+			onSubmit={(message) => console.log('Submitted:', message)}
+		/>
+	);
+}
+```
+
+## Advanced Editor Configuration
+
+Use the `useCedarEditor` hook for fine-grained control:
+
+```tsx
+import { useCedarEditor } from 'cedar-os';
+
+function AdvancedChat() {
+	const { editor, editorRef } = useCedarEditor({
+		placeholder: 'Ask me anything...',
+		maxLength: 5000,
+		enableMentions: true,
+		enableKeyboardShortcuts: true,
+		autoComplete: {
+			enabled: true,
+			suggestions: ['help', 'explain', 'summarize', 'translate'],
+		},
+		formatting: {
+			bold: true,
+			italic: true,
+			code: true,
+			links: true,
+		},
+	});
+
+	return (
+		<div>
+			<div ref={editorRef} />
+			<button onClick={() => editor.focus()}>Focus Editor</button>
+		</div>
+	);
+}
+```
+
+## Keyboard Shortcuts
+
+Cedar editor comes with built-in keyboard shortcuts:
+
+| Shortcut        | Action              |
+| --------------- | ------------------- |
+| `Enter`         | Submit message      |
+| `Shift + Enter` | New line            |
+| `Ctrl/Cmd + B`  | Bold text           |
+| `Ctrl/Cmd + I`  | Italic text         |
+| `Ctrl/Cmd + K`  | Insert link         |
+| `@`             | Trigger mentions    |
+| `Tab`           | Accept autocomplete |
+
+### Custom Shortcuts
+
+Add your own keyboard shortcuts:
+
+```tsx
+const { editor } = useCedarEditor({
+	keyboardShortcuts: {
+		'Ctrl+Shift+C': () => {
+			// Clear editor content
+			editor.clear();
+		},
+		'Ctrl+Shift+S': () => {
+			// Save draft
+			localStorage.setItem('draft', editor.getContent());
+		},
+	},
+});
+```
+
+## Styling and Themes
+
+Customize the editor appearance:
+
+```tsx
+<ChatInput
+	className='custom-chat-input'
+	style={{
+		minHeight: '120px',
+		borderRadius: '12px',
+		padding: '16px',
+	}}
+	theme={{
+		colors: {
+			background: '#f8f9fa',
+			text: '#333333',
+			placeholder: '#6c757d',
+			border: '#dee2e6',
+			focus: '#0066cc',
+		},
+		fonts: {
+			family: 'Inter, sans-serif',
+			size: '14px',
+			lineHeight: '1.5',
+		},
+	}}
+/>
+```
+
+## Editor Events
+
+Handle various editor events:
+
+```tsx
+<ChatInput
+	onFocus={() => console.log('Editor focused')}
+	onBlur={() => console.log('Editor blurred')}
+	onChange={(content) => console.log('Content changed:', content)}
+	onKeyDown={(event) => {
+		if (event.key === 'Escape') {
+			// Handle escape key
+		}
+	}}
+	onPaste={(event, content) => {
+		console.log('Pasted content:', content);
+	}}
+/>
+```
+
+## Content Validation
+
+Add validation rules for user input:
+
+```tsx
+const { editor } = useCedarEditor({
+	validation: {
+		maxLength: 1000,
+		minLength: 1,
+		allowedTags: ['b', 'i', 'code', 'a'],
+		blockedWords: ['spam', 'inappropriate'],
+		customValidator: (content) => {
+			if (content.includes('@everyone')) {
+				return 'Mass mentions are not allowed';
+			}
+			return null; // Valid
+		},
+	},
+	onValidationError: (error) => {
+		console.error('Validation error:', error);
+	},
+});
+```
+
+## Next Steps
+
+- Learn about [custom message rendering](/getting-started/chat/custom-message-rendering)
+- Explore [agent input context](/getting-started/chat/agent-input-context)

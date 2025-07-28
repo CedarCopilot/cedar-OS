@@ -10,7 +10,7 @@ Mastra is a full-featured typescript framework to build agents. It provides memo
 First, set up your Mastra backend and then configure Cedar-OS to connect to it:
 
 ```tsx CedarCopilot
-import { CedarCopilot } from '@cedar-os/cedar';
+import { CedarCopilot } from 'cedar-os';
 
 function App() {
 	return (
@@ -31,15 +31,14 @@ function App() {
 With Mastra, you specify routes instead of models:
 
 ```tsx
-import { useTypedAgentConnection } from '@cedar-os/cedar';
+import { useTypedAgentConnection } from 'cedar-os';
 
 const { callLLM, streamLLM } = useTypedAgentConnection('mastra');
 
-// Non-streaming call
+// Non-streaming call - TypeScript enforces 'route' parameter
 const response = await callLLM({
 	route: '/chat/execute-function',
 	prompt: 'Help me analyze this data',
-	systemPrompt: 'You are a helpful data analyst',
 	temperature: 0.7,
 	// Pass any additional data your Mastra backend expects
 	context: {
@@ -48,12 +47,16 @@ const response = await callLLM({
 	},
 });
 
+// Response is typed as LLMResponse
+console.log(response.content); // string
+console.log(response.usage?.totalTokens); // number | undefined
+console.log(response.metadata?.model); // string | undefined
+
 // Streaming call
 streamLLM(
 	{
 		route: '/chat/execute-function',
 		prompt: 'Generate a detailed report',
-		systemPrompt: 'You are a report generator',
 	},
 	(event) => {
 		if (event.type === 'chunk') {
@@ -113,8 +116,8 @@ Create a typed wrapper for your custom routes:
 
 ```tsx
 // utils/mastra-functions.ts
-import { useTypedAgentConnection } from '@cedar-os/cedar';
-import type { MastraParams } from '@cedar-os/cedar';
+import { useTypedAgentConnection } from 'cedar-os';
+import type { MastraParams } from 'cedar-os';
 
 interface AnalyzeDataParams extends Omit<MastraParams, 'route'> {
 	dataType: 'csv' | 'json' | 'text';

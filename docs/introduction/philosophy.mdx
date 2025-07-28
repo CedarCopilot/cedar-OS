@@ -1,28 +1,42 @@
 ---
-title: 'Our Philosophy'
-description: 'Learn about the principles and thinking behind Cedar-OS'
+title: 'Is Cedar right for you?'
+description: 'What we built Cedar for, our principles, limitations & strengths'
 ---
 
-## On Craft and Developer Experience
+# Should you use Cedar?
 
-We have two primary principles.
+Our goal is to enable people building **the most ambitious AI-native applications of the future**.
 
-**Simplicity.**
+We believe in the craft and creativity of the community. We believe that giving you control allows you to customise Cedar to make the user experiences better.
 
-Cedar is built so that everything works out of the box. You want a working chat? Import `<ChatInput/>` and `<CedarMessages/>` and _it just works_.
+## Cedar is fully extensible and customisable
 
-**Craft.**
+There are good reasons not to use Cedar (see "Cedar is opinionated" below). However, worries about hitting customisability, control, and hitting the limits of Cedar shouldn't be one of them.
 
-We believe in the craft and creativity of the community.
+1. **Every single component is downloaded Shadcn style. You own all the code and can style it however you want**
+2. **Every single internal function can be overridden in one line.**
+3. **We will always consider the developer experience in extending and customising Cedar a core part of what we enable.**
 
-We believe that giving you control allows you to customise Cedar to what you want to build, and more importantly, what will make the user experiences better.
+## Cedar is simple.
 
-This is the reason we made Cedar-OS fully open source, this is why we allow you to download the code any component with one command, this is why we built the architecture in a way that lets you override any internal function with **one line**.
+Cedar is built so that everything works out of the box. You want a working chat? Import `<CedarFloatingChat/>` and _it just works_. Want streaming? Add `streaming={true}` to the messages component. We automatically handle the functionality switches.
 
-But we also want you to understand how it works on a behind the scenes level. At the end of each component (this will be filled in over time), we'll explain how the component is built and how you might customise it.
+Because you own the code, we feel much more comfortable creating configurations that work out of the box and should handle 100% of most use cases, knowing you can customise anything.
 
-## Making Software Human
+## Cedar is opinionated
 
-We are firm and deep believers in craft, and making software _human_.
+We've been building copilots in production for different companies for the past month, and have converged on systems and structures that work well across the board.
 
-Applications traditionally allow the user to do work in pre-defined ways. With Cedar-OS, we're changing that paradigm to create more natural, intuitive interactions between humans and AI.
+We also believe that good design reflects the nature of the product, and so we're very big on animation to represent the fluidity of AI.
+
+We use tailwind, zustand, and are built on top of react. We're working on mobile, but we want to handle react really well before moving on to different web frameworks.
+
+See [Architecture](/introduction/architecture) for how Cedar works behind the scenes.
+
+## We haven't figured out the future of human-software interaction
+
+> What happens when a new medium enters the scene, is that we tend to fall back to old medium habits. If you go back to first televion shows, they were basically radio shows with a camera pointed at them. It took us the better part of the 50’s to really understand how television was gonna come into its own as it's own medium. **-Steve Jobs**
+
+We think we've had a glimpse of the future, and are working on brand new interfaces for communicating back and forth with LLM's, but we know there are going to be brand new interactions and functionality that we'll need to support.
+
+That's why we've built a pretty generalisable, extensible system as a base, but we expect Cedar to change a lot over the coming months. We hope you'll stick with us to get some of the new exciting things coming out.
