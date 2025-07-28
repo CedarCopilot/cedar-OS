@@ -1,0 +1,273 @@
+---
+title: 'Subscribing State'
+description: 'Make your application state available to AI agents'
+---
+
+# Subscribing State
+
+Cedar's state subscription system allows you to make any part of your application state available to AI agents as context. This enables agents to understand your app's current state and provide more relevant, contextual responses.
+
+## Basic State Registration
+
+Register state using the `useCedarState` hook:
+
+```tsx
+import { useCedarState } from 'cedar-os';
+
+function TodoApp() {
+	const [todos, setTodos] = useState([
+		{ id: 1, text: 'Buy groceries', completed: false },
+		{ id: 2, text: 'Walk the dog', completed: true },
+	]);
+
+	// Make todos available to the agent
+	useCedarState('todos', todos, {
+		description: "User's todo list with completion status",
+	});
+
+	return (
+		<div>
+			<TodoList todos={todos} onToggle={setTodos} />
+			<ChatInput /> {/* Agent can now see todos in context */}
+		</div>
+	);
+}
+```
+
+## State Registration Options
+
+Configure how state is exposed to agents:
+
+```tsx
+useCedarState('user-profile', userProfile, {
+	description: 'Current user profile information',
+
+	// Transform state before sending to agent
+	transform: (profile) => ({
+		name: profile.name,
+		tier: profile.subscriptionTier,
+		preferences: profile.preferences,
+		// Exclude sensitive data
+		// email: profile.email, // Commented out for privacy
+	}),
+
+	// Only include state when relevant
+	condition: () => user.isLoggedIn,
+
+	// Update frequency
+	debounceMs: 500, // Wait 500ms between updates
+
+	// Priority for context inclusion
+	priority: 'high', // 'low', 'medium', 'high'
+});
+```
+
+## Complex State Structures
+
+Handle nested and complex state:
+
+```tsx
+function EcommerceApp() {
+	const [appState, setAppState] = useState({
+		cart: { items: [], total: 0 },
+		user: { id: null, preferences: {} },
+		currentPage: 'home',
+		filters: { category: 'all', priceRange: [0, 1000] },
+	});
+
+	// Register different parts of state separately
+	useCedarState('shopping-cart', appState.cart, {
+		description: 'Current shopping cart contents and total',
+		transform: (cart) => ({
+			itemCount: cart.items.length,
+			total: cart.total,
+			items: cart.items.map((item) => ({
+				name: item.name,
+				price: item.price,
+				quantity: item.quantity,
+			})),
+		}),
+	});
+
+	useCedarState('user-context', appState.user, {
+		description: 'User preferences and settings',
+		condition: () => appState.user.id !== null,
+	});
+
+	useCedarState(
+		'page-context',
+		{
+			currentPage: appState.currentPage,
+			filters: appState.filters,
+		},
+		{
+			description: 'Current page and active filters',
+		}
+	);
+
+	return <YourAppComponents />;
+}
+```
+
+## Dynamic State Registration
+
+Register state dynamically based on conditions:
+
+```tsx
+function DynamicStateApp() {
+	const { registerState, unregisterState } = useCedarStore();
+
+	useEffect(() => {
+		// Register state when component mounts
+		registerState('component-state', {
+			mountTime: Date.now(),
+			componentId: 'dynamic-app',
+		});
+
+		// Cleanup when component unmounts
+		return () => {
+			unregisterState('component-state');
+		};
+	}, []);
+
+	// Conditionally register state
+	useEffect(() => {
+		if (user.isAdmin) {
+			registerState('admin-tools', {
+				availableActions: getAdminActions(),
+				systemHealth: getSystemHealth(),
+			});
+		} else {
+			unregisterState('admin-tools');
+		}
+	}, [user.isAdmin]);
+
+	return <div>Your app content</div>;
+}
+```
+
+## State Transformation
+
+Transform state before sending to agents:
+
+```tsx
+// Transform database records to agent-friendly format
+useCedarState('projects', projects, {
+	transform: (projects) => {
+		return projects.map((project) => ({
+			id: project.id,
+			name: project.name,
+			status: project.status,
+			progress: `${project.completedTasks}/${project.totalTasks}`,
+			dueDate: project.dueDate?.toLocaleDateString(),
+			teamSize: project.members.length,
+			// Don't include sensitive data
+			budget: project.budget > 10000 ? 'high' : 'standard',
+		}));
+	},
+});
+
+// Aggregate state for better context
+useCedarState('app-summary', null, {
+	transform: () => {
+		const activeUsers = getActiveUserCount();
+		const systemLoad = getSystemLoad();
+		const recentErrors = getRecentErrors();
+
+		return {
+			summary: `${activeUsers} active users, system load: ${systemLoad}%`,
+			health: recentErrors.length === 0 ? 'healthy' : 'issues detected',
+			lastUpdate: new Date().toISOString(),
+		};
+	},
+});
+```
+
+## State Watching and Updates
+
+Monitor state changes and update context:
+
+```tsx
+function StateWatcher() {
+	const [watchedState, setWatchedState] = useState({});
+	const { updateRegisteredState } = useCedarStore();
+
+	// Watch for external state changes
+	useEffect(() => {
+		const subscription = externalStateManager.subscribe((newState) => {
+			setWatchedState(newState);
+
+			// Manually update registered state
+			updateRegisteredState('external-data', {
+				...newState,
+				lastSync: Date.now(),
+			});
+		});
+
+		return () => subscription.unsubscribe();
+	}, []);
+
+	return <div>State watcher active</div>;
+}
+```
+
+## State Context in Messages
+
+Access registered state in custom message handlers:
+
+```tsx
+import { useCedarStore } from 'cedar-os';
+
+function CustomMessageHandler() {
+	const { getRegisteredState, callLLM } = useCedarStore();
+
+	const handleCustomAction = async () => {
+		// Get current state
+		const currentTodos = getRegisteredState('todos');
+		const userProfile = getRegisteredState('user-profile');
+
+		// Use state in AI call
+		await callLLM({
+			prompt: 'Suggest the next task based on my current todos',
+			context: {
+				todos: currentTodos,
+				userPreferences: userProfile?.preferences,
+			},
+		});
+	};
+
+	return <button onClick={handleCustomAction}>Get AI Suggestion</button>;
+}
+```
+
+## Performance Optimization
+
+Optimize state registration for performance:
+
+```tsx
+// Memoize expensive transformations
+const expensiveTransform = useMemo(() => {
+	return (data) => {
+		// Expensive computation here
+		return processLargeDataset(data);
+	};
+}, []);
+
+useCedarState('large-dataset', largeData, {
+	transform: expensiveTransform,
+	debounceMs: 1000, // Reduce update frequency
+	condition: () => shouldIncludeData, // Only when needed
+});
+
+// Use refs for frequently changing data
+const frequentDataRef = useRef();
+useCedarState('frequent-updates', null, {
+	transform: () => frequentDataRef.current,
+	debounceMs: 2000, // Batch updates
+});
+```
+
+## Next Steps
+
+- Learn about [mentions functionality](/getting-started/chat/mentions)
+- Explore [state access patterns](/getting-started/state-access/agentic-state-access)
