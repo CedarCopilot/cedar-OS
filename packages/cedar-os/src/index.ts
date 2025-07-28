@@ -127,3 +127,9 @@ export {
 	useStyling,
 	useVoice,
 } from '@/store/CedarStore';
+
+// Export Tiptap components
+export {
+	Editor as CedarEditor,
+	EditorContent as CedarEditorContent,
+} from '@tiptap/react';
