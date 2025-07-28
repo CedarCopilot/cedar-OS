@@ -1,11 +1,12 @@
 import { Command } from 'commander';
 import { initCommand } from './commands/init';
+import { createCommand } from './commands/create';
 
 const program = new Command();
 
 program
-	.name('cedar-os')
-	.description('CLI for installing cedar-os components')
+	.name('create-cedar')
+	.description('Create or add Cedar-OS to a project')
 	.version('0.0.1');
 
 program
@@ -17,4 +18,17 @@ program
 	.option('-y, --yes', 'Skip confirmation prompts')
 	.action(initCommand);
 
-program.parse();
+// program
+// 	.command('create')
+// 	.description('Scaffold a new Cedar-OS Next.js project or add to existing')
+// 	.option('-p, --project-name <name>', 'Project directory name')
+// 	.option('-t, --template <template>', 'Template name', 'simple-chat')
+// 	.option('-y, --yes', 'Skip all prompts')
+// 	.action(createCommandTemp);
+
+// If user runs without subcommand default to create
+if (!process.argv.slice(2).length) {
+	createCommand({});
+} else {
+	program.parse();
+}
