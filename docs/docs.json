@@ -7,7 +7,7 @@
 		"light": "#07C983",
 		"dark": "#15803D"
 	},
-	"favicon": "/favicon.svg",
+	"favicon": "/CedarLogoTransparent.png",
 	"navigation": {
 		"groups": [
 			{
@@ -98,20 +98,20 @@
 		]
 	},
 	"logo": {
-		"light": "/logo/light.svg",
-		"dark": "/logo/dark.svg"
+		"light": "/logo/light.png",
+		"dark": "/logo/dark.png"
 	},
 	"navbar": {
 		"links": [
 			{
 				"label": "GitHub",
-				"href": "https://github.com/cedar-os"
+				"href": "https://github.com/CedarCopilot/cedar-OS"
 			}
 		]
 	},
 	"footer": {
 		"socials": {
-			"github": "https://github.com/cedar-os"
+			"github": "https://github.com/CedarCopilot/cedar-OS"
 		}
 	}
 }
