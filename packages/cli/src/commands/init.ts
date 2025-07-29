@@ -1,12 +1,20 @@
-// ------------------------------------------------------------
-// cedar-os init
-// Installs/updates Cedar component files inside a project.
-// ------------------------------------------------------------
-// This file intentionally keeps ALL logic in one place so the
-// create command can just call `initCommand`.  The only changes
-// below are structural: helper functions + banner comments to
-// make the flow easier to follow.
-// ------------------------------------------------------------
+// packages/cli/src/commands/init.ts
+// --------------------------------------------------
+// ADD-SAPLING COMMAND IMPLEMENTATION
+// Installs Cedar-OS components and package to existing projects
+// --------------------------------------------------
+// 
+// This command provides granular control over Cedar installation:
+// 1. Prompts for component selection (or uses --all flag)
+// 2. Installs required dependencies 
+// 3. Downloads component source files from remote registry
+// 4. Installs cedar-os package
+// 5. Shows next steps for configuration
+//
+// Used by both:
+// - Direct add-sapling command invocation
+// - plant-seed command for existing Next.js projects
+// --------------------------------------------------
 
 import * as p from '@clack/prompts';
 import { intro, outro, spinner, confirm, select, text } from '@clack/prompts';
@@ -116,6 +124,12 @@ export interface InitOptions {
 	yes?: boolean;
 }
 
+// =============================================================================
+// MAIN ADD-SAPLING COMMAND FUNCTION
+// =============================================================================
+// This function handles the complete flow for adding Cedar components to 
+// an existing project. It's designed to be called both directly via the
+// add-sapling command and indirectly from the plant-seed command.
 export async function initCommand(options: InitOptions) {
 	intro(pc.bgCyan(pc.black(' cedar add-sapling ')));
 	console.log(pc.green("Welcome to Cedar-OS, let's get you set up!"));
@@ -126,12 +140,17 @@ export async function initCommand(options: InitOptions) {
 	);
 
 	try {
+		// ==========================================================================
+		// STEP 1: DETERMINE TARGET DIRECTORY
+		// ==========================================================================
+		// Where to install the Cedar components (shadcn-style local files)
 		const defaultDir = 'src/components/cedar-os';
 		let targetDir = options.dir;
 
-		// Ask for target directory if none provided
+		// Ask for target directory if none provided via CLI args
 		if (!targetDir) {
 			if (options.yes) {
+				// Use default when --yes flag is provided
 				targetDir = defaultDir;
 			} else {
 				const useDefault = await confirm({
