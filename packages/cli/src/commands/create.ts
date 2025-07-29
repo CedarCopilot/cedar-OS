@@ -1,4 +1,12 @@
-import { intro, outro, text, confirm, select, cancel, isCancel } from '@clack/prompts';
+import {
+	intro,
+	outro,
+	text,
+	confirm,
+	select,
+	cancel,
+	isCancel,
+} from '@clack/prompts';
 import pc from 'picocolors';
 import path from 'path';
 import { spawn } from 'cross-spawn';
@@ -22,23 +30,24 @@ interface Template {
 
 // Template registry - easily extensible for new templates
 const TEMPLATES: Record<string, Template> = {
-	'mastra': {
+	mastra: {
 		name: 'Mastra + Cedar',
-		description: 'Full-stack template with Mastra framework and Cedar components',
+		description:
+			'Full-stack template with Mastra framework and Cedar components',
 		url: 'https://github.com/CedarCopilot/cedar-mastra-starter',
-		includesCedar: true
-	}
+		includesCedar: true,
+	},
 };
 
 // Helper function to run shell commands
 function runCommand(
 	command: string,
 	args: string[],
-	options: { cwd?: string } = {}
+	options: { cwd?: string; stdio?: 'inherit' | 'pipe' | 'ignore' } = {}
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const child = spawn(command, args, {
-			stdio: 'inherit',
+			stdio: options.stdio || 'inherit',
 			cwd: options.cwd || process.cwd(),
 		});
 
@@ -65,36 +74,36 @@ function runCommand(
 // Helper function to detect package manager
 function detectPackageManager(): { manager: string; installCmd: string[] } {
 	const cwd = process.cwd();
-	
+
 	// Check for lock files to determine package manager
 	if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) {
 		return { manager: 'pnpm', installCmd: ['install'] };
 	}
-	
+
 	if (fs.existsSync(path.join(cwd, 'yarn.lock'))) {
 		return { manager: 'yarn', installCmd: ['install'] };
 	}
-	
+
 	if (fs.existsSync(path.join(cwd, 'bun.lockb'))) {
 		return { manager: 'bun', installCmd: ['install'] };
 	}
-	
+
 	// Check if package managers are available in PATH
 	try {
 		spawnSync('pnpm', ['--version'], { stdio: 'ignore' });
 		return { manager: 'pnpm', installCmd: ['install'] };
 	} catch {}
-	
+
 	try {
 		spawnSync('yarn', ['--version'], { stdio: 'ignore' });
 		return { manager: 'yarn', installCmd: ['install'] };
 	} catch {}
-	
+
 	try {
 		spawnSync('bun', ['--version'], { stdio: 'ignore' });
 		return { manager: 'bun', installCmd: ['install'] };
 	} catch {}
-	
+
 	// Default to npm
 	return { manager: 'npm', installCmd: ['install'] };
 }
@@ -102,35 +111,45 @@ function detectPackageManager(): { manager: string; installCmd: string[] } {
 // Helper function to show template-specific next steps
 function showNextSteps(template: Template | null, projectName: string) {
 	const { manager } = detectPackageManager();
-	
+
 	console.log('\n' + pc.bold('🎉 Success! Your Cedar project is ready.'));
 	console.log('\n' + pc.bold('Next steps:'));
-	console.log(pc.gray(`• Navigate to your project: ${pc.cyan(`cd ${projectName}`)}`));
 	console.log(
-		pc.gray('• Set up your API key: ') +
-		pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started#set-up-your-api-key')
+		pc.gray(`• Navigate to your project: ${pc.cyan(`cd ${projectName}`)}`)
 	);
 
 	if (template && template.includesCedar) {
 		// Template includes Cedar (like Mastra) - different flow
-		console.log(pc.gray(`• Install dependencies: ${pc.cyan(`${manager} install`)}`));
-		console.log(pc.gray(`• Start development: ${pc.cyan('npm run dev')} (starts both Next.js and Mastra backend)`));
 		console.log(
-			'\n' + pc.gray('📖 Resume setup: ') +
-			pc.cyan('https://docs.cedarcopilot.com/getting-started/agent-backend-connection/agent-backend-connection#initial-configuration')
+			pc.gray(
+				`• Install dependencies: ${pc.cyan(
+					`${manager} install && cd src/backend && ${manager} install && cd ../..`
+				)}`
+			)
+		);
+		console.log(
+			pc.gray(
+				`• Start development: ${pc.cyan(
+					'npm run dev'
+				)} (starts both Next.js and Mastra backend)`
+			)
 		);
 	} else {
 		// Standard Next.js or no template
 		console.log(
-			pc.gray('• Configure your backend: ') +
-			pc.cyan('https://docs.cedarcopilot.com/getting-started/agent-backend-connection/agent-backend-connection#initial-configuration')
-		);
-		console.log(pc.gray(`• Start development: ${pc.cyan(`${manager === 'npm' ? 'npm run dev' : `${manager} dev`}`)}`));
-		console.log(
-			'\n' + pc.gray('📖 Full setup guide: ') +
-			pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started')
+			pc.gray(
+				`• Start development: ${pc.cyan(
+					`${manager === 'npm' ? 'npm run dev' : `${manager} dev`}`
+				)}`
+			)
 		);
 	}
+
+	console.log(
+		'\n' +
+			pc.gray('📖 Resume the quickstart guide: ') +
+			pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started')
+	);
 }
 
 // Helper function to show manual installation fallback
@@ -143,8 +162,11 @@ function showManualInstallation() {
 		)
 	);
 	console.log(
-		'\n' + pc.gray('Need help? ') +
-		pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started#troubleshooting')
+		'\n' +
+			pc.gray('Need help? ') +
+			pc.cyan(
+				'https://docs.cedarcopilot.com/getting-started/getting-started#troubleshooting'
+			)
 	);
 }
 
@@ -247,18 +269,18 @@ export async function createCommand(opts: CreateOptions) {
 		// -------------- STEP 4: Create Next.js app ---------------------------
 		console.log(
 			pc.gray(
-				`Creating ${selectedTemplate ? selectedTemplate.name : 'standard Next.js'} project...`
+				`Creating ${
+					selectedTemplate ? selectedTemplate.name : 'standard Next.js'
+				} project...`
 			)
 		);
 
 		try {
 			if (selectedTemplate) {
 				// Clone the selected template
-				await runCommand(
-					'git',
-					['clone', selectedTemplate.url, projectName],
-					{ cwd }
-				);
+				await runCommand('git', ['clone', selectedTemplate.url, projectName], {
+					cwd,
+				});
 
 				// Remove .git directory to start fresh
 				const projectDir = path.resolve(cwd, projectName);
@@ -267,24 +289,14 @@ export async function createCommand(opts: CreateOptions) {
 				// Initialize new git repo
 				await runCommand('git', ['init'], { cwd: projectDir });
 
-				console.log(pc.green(`✅ ${selectedTemplate.name} template cloned successfully!`));
-			} else {
-				// Create standard Next.js app
-				await runCommand(
-					'npx',
-					[
-						'create-next-app@latest',
-						projectName,
-						'--typescript',
-						'--tailwind',
-						'--eslint',
-						'--app',
-						'--src-dir',
-						'--import-alias',
-						'@/*',
-					],
-					{ cwd }
+				console.log(
+					pc.green(`✅ ${selectedTemplate.name} template cloned successfully!`)
 				);
+			} else {
+				// Create standard Next.js app - let Next.js handle all prompting
+				await runCommand('npx', ['create-next-app@latest', projectName], {
+					cwd,
+				});
 				console.log(pc.green('✅ Next.js app created successfully!'));
 			}
 		} catch (error) {
@@ -309,11 +321,16 @@ export async function createCommand(opts: CreateOptions) {
 				process.exit(1);
 			}
 		} else {
-			console.log(pc.green('✅ Cedar components already included in template!'));
+			console.log(
+				pc.green('✅ Cedar components already included in template!')
+			);
 		}
 
 		// -------------- DONE -------------------------------------------------
-		showNextSteps(selectedTemplate, projectName);
+		// Note: runCedarAdd already shows next steps, so we only show them for templates that include Cedar
+		if (selectedTemplate && selectedTemplate.includesCedar) {
+			showNextSteps(selectedTemplate, projectName);
+		}
 		outro(pc.green('Happy coding! 🚀'));
 	} catch (err) {
 		console.error(pc.red('Something went wrong:'), err);

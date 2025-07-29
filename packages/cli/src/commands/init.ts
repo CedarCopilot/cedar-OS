@@ -15,7 +15,7 @@ import fetch from 'node-fetch';
 import path from 'path';
 import { spawn } from 'cross-spawn';
 import fs from 'fs';
-import { getAllComponents } from '../registry';
+import { getAllComponents, collectDependencies } from '../utils/registry';
 import {
 	downloadMultipleComponents,
 	createDirectory,
@@ -74,6 +74,10 @@ function detectPackageManager(): { manager: string; installCmd: string[] } {
 		return { manager: 'bun', installCmd: ['add'] };
 	}
 
+	if (fs.existsSync(path.join(cwd, 'package-lock.json'))) {
+		return { manager: 'npm', installCmd: ['install'] };
+	}
+
 	// Check if package managers are available in PATH
 	try {
 		spawnSync('pnpm', ['--version'], { stdio: 'ignore' });
@@ -100,16 +104,8 @@ function detectPackageManager(): { manager: string; installCmd: string[] } {
 function printNextSteps() {
 	console.log('\n' + pc.bold('Next steps:'));
 	console.log(
-		pc.gray('• Set up your API key: ') +
-		pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started#set-up-your-api-key')
-	);
-	console.log(
-		pc.gray('• Configure your backend: ') +
-		pc.cyan('https://docs.cedarcopilot.com/getting-started/agent-backend-connection/agent-backend-connection#initial-configuration')
-	);
-	console.log(
-		'\n' + pc.gray('📖 Resume setup: ') +
-		pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started')
+		pc.gray('📖 Resume the quickstart guide: ') +
+			pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started')
 	);
 }
 
@@ -124,7 +120,9 @@ export async function initCommand(options: InitOptions) {
 	intro(pc.bgCyan(pc.black(' cedar add-sapling ')));
 	console.log(pc.green("Welcome to Cedar-OS, let's get you set up!"));
 	console.log(
-		pc.cyan('🌱 Adding saplings to your Cedar forest (downloading components)...')
+		pc.cyan(
+			'🌱 Adding saplings to your Cedar forest (downloading components)...'
+		)
 	);
 
 	try {
@@ -186,7 +184,7 @@ export async function initCommand(options: InitOptions) {
 		// --------------------------------------------------
 		// STEP 1  •  Determine which components to install
 		// --------------------------------------------------
-		let componentsToInstall = getAllComponents();
+		let componentsToInstall = await getAllComponents();
 
 		if (dirExists) {
 			const diffSpin = spinner();
@@ -270,15 +268,26 @@ export async function initCommand(options: InitOptions) {
 		// STEP 2  •  Ask for component dependencies approval
 		// --------------------------------------------------
 		const { manager, installCmd } = detectPackageManager();
-		const componentDeps = ['lucide-react', 'motion-plus-react'];
+		const componentNames = componentsToInstall.map((c) => c.name);
+		const componentDeps = await collectDependencies(componentNames);
+
+		// Always include these core dependencies for Cedar components
+		const coreDeps = ['lucide-react', 'motion', 'motion-plus-react'];
+		const allDeps = [...new Set([...coreDeps, ...componentDeps])].filter(
+			(dep) => dep !== 'react' && dep !== 'motion/react'
+		);
 
 		if (!options.yes) {
+			const depsDisplay =
+				allDeps.length <= 3
+					? allDeps.map((dep) => pc.cyan(dep)).join(', ')
+					: `${allDeps
+							.slice(0, 2)
+							.map((dep) => pc.cyan(dep))
+							.join(', ')} and ${pc.cyan(`${allDeps.length - 2} more`)}`;
+
 			const installDeps = await confirm({
-				message: `Cedar components require ${pc.cyan(
-					'lucide-react'
-				)} and ${pc.cyan(
-					'motion-plus-react'
-				)}. Install these dependencies using ${manager}?`,
+				message: `Cedar components require ${depsDisplay}. Install these dependencies using ${manager}?`,
 				initialValue: true,
 			});
 
@@ -294,7 +303,7 @@ export async function initCommand(options: InitOptions) {
 				);
 
 				try {
-					await runCommand(manager, [...installCmd, ...componentDeps], {
+					await runCommand(manager, [...installCmd, ...allDeps], {
 						silent: true,
 					});
 					depInstallSpin.stop(
@@ -309,9 +318,7 @@ export async function initCommand(options: InitOptions) {
 					);
 					console.log(pc.gray('You can install them manually by running:'));
 					console.log(
-						pc.cyan(
-							`  ${manager} ${installCmd.join(' ')} ${componentDeps.join(' ')}`
-						)
+						pc.cyan(`  ${manager} ${installCmd.join(' ')} ${allDeps.join(' ')}`)
 					);
 					console.log(
 						pc.gray(
@@ -323,9 +330,7 @@ export async function initCommand(options: InitOptions) {
 				console.log(pc.yellow('⚠️  Skipping dependency installation.'));
 				console.log(pc.gray('Remember to install these manually:'));
 				console.log(
-					pc.cyan(
-						`  ${manager} ${installCmd.join(' ')} ${componentDeps.join(' ')}`
-					)
+					pc.cyan(`  ${manager} ${installCmd.join(' ')} ${allDeps.join(' ')}`)
 				);
 			}
 		} else {
@@ -336,7 +341,7 @@ export async function initCommand(options: InitOptions) {
 			);
 
 			try {
-				await runCommand(manager, [...installCmd, ...componentDeps], {
+				await runCommand(manager, [...installCmd, ...allDeps], {
 					silent: true,
 				});
 				depInstallSpin.stop(
@@ -351,9 +356,7 @@ export async function initCommand(options: InitOptions) {
 				);
 				console.log(pc.gray('You can install them manually by running:'));
 				console.log(
-					pc.cyan(
-						`  ${manager} ${installCmd.join(' ')} ${componentDeps.join(' ')}`
-					)
+					pc.cyan(`  ${manager} ${installCmd.join(' ')} ${allDeps.join(' ')}`)
 				);
 			}
 		}

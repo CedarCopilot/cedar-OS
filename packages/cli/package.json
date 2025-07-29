@@ -1,6 +1,6 @@
 {
 	"name": "cedar-os-cli",
-	"version": "0.1.0",
+	"version": "0.1.8",
 	"description": "CLI tool for scaffolding Cedar-OS projects and installing components",
 	"main": "dist/index.mjs",
 	"bin": {
@@ -10,7 +10,8 @@
 		"build": "tsup",
 		"dev": "tsup --watch",
 		"clean": "rm -rf dist",
-		"prepublishOnly": "npm run clean && npm run build"
+		"prepublishOnly": "npm run clean && npm run build",
+		"p": "pnpm install && npm version patch && npm publish"
 	},
 	"keywords": [
 		"cedar-os",

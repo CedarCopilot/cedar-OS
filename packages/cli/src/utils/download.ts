@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { ComponentInfo } from '../registry';
+import { ComponentInfo } from './registry';
 
 // Updated base URL to point to the new cedar-os-components package structure
 export const GITHUB_BASE_URL =
@@ -11,14 +11,12 @@ export async function downloadComponent(
 	component: ComponentInfo,
 	targetDir: string
 ): Promise<void> {
-	const componentDir = path.join(targetDir, component.category);
-
-	// Ensure component directory exists
-	await fs.mkdir(componentDir, { recursive: true });
-
 	for (const file of component.files) {
-		const sourceUrl = `${GITHUB_BASE_URL}/${component.category}/${file}`;
-		const targetPath = path.join(componentDir, file);
+		const sourceUrl = `${GITHUB_BASE_URL}/${file}`;
+		const targetPath = path.join(targetDir, file);
+		
+		// Ensure directory exists for this file
+		await fs.mkdir(path.dirname(targetPath), { recursive: true });
 
 		try {
 			const response = await fetch(sourceUrl);

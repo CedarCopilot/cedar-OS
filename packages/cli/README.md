@@ -39,6 +39,7 @@ Options:
 **What it does:**
 - **Existing Next.js project**: Adds Cedar components + cedar-os package
 - **New project**: Template selection → Creates project → Adds Cedar (unless template includes it)
+- **Mastra template**: Installs dependencies in both main project and backend directory
 
 ### `add-sapling`  
 Add Cedar-OS components and package to your existing project. Use when you need more control over component installation.
@@ -52,8 +53,8 @@ Options:
 ```
 
 **What it installs:**
-- Cedar-OS components (UI files)
-- Component dependencies (lucide-react, motion-plus-react)  
+- Cedar-OS components (UI files from remote registry)
+- Smart dependency resolution (installs only what your components need)
 - Cedar-OS package (cedar-os npm package)
 
 ## Documentation

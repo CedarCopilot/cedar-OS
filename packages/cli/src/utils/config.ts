@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { ComponentInfo } from '../registry';
+import { ComponentInfo } from './registry';
 
 // Local copy of ProviderConfig to avoid cross-package imports
 export type ProviderConfig =
