@@ -1,39 +1,41 @@
 export interface ComponentRegistryEntry {
 	name: string;
-	type:
-		| 'components:ui'
-		| 'components:chat'
-		| 'components:container'
-		| 'components:text'
-		| 'components:ornament'
-		| 'components:structural'
-		| 'components:input';
+	type: 'chatComponents' | 'chatInput' | 'chatMessages' | 'containers' | 'inputs' | 'ornaments' | 'structural' | 'text' | 'ui';
 	dependencies?: string[];
 	devDependencies?: string[];
-	files: {
-		name: string;
-		content?: string;
-		type?: 'registry:ui' | 'registry:component';
-	}[];
-	meta?: {
-		importName?: string;
-		displayName?: string;
-		description?: string;
+	registryDependencies?: string[];
+	files: string[]; // Just the filenames, paths will be derived from type
+	meta: {
+		importName: string;
+		displayName: string;
+		description: string;
 	};
 }
+
+// Helper function to get full file paths based on type and filename
+export const getFilePath = (type: ComponentRegistryEntry['type'], filename: string): string => {
+	return `${type}/${filename}`;
+};
+
+// Helper function to get all file paths for a component
+export const getComponentFiles = (entry: ComponentRegistryEntry) => {
+	return entry.files.map(filename => ({
+		name: filename,
+		path: getFilePath(entry.type, filename),
+		type: filename.endsWith('.tsx') ? 'registry:component' as const : 
+			  filename.endsWith('.css') ? 'registry:style' as const : 
+			  'registry:ui' as const
+	}));
+};
 
 export const registry: ComponentRegistryEntry[] = [
 	// Chat Components
 	{
 		name: 'cedar-caption-chat',
-		type: 'components:chat',
+		type: 'chatComponents',
 		dependencies: ['react', 'lucide-react', 'uuid'],
-		files: [
-			{
-				name: 'chatComponents/CedarCaptionChat.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['CedarCaptionChat.tsx'],
 		meta: {
 			importName: 'CedarCaptionChat',
 			displayName: 'Cedar Caption Chat',
@@ -42,14 +44,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'floating-cedar-chat',
-		type: 'components:chat',
+		type: 'chatComponents',
 		dependencies: ['react', 'lucide-react', 'motion/react'],
-		files: [
-			{
-				name: 'chatComponents/FloatingCedarChat.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['FloatingCedarChat.tsx'],
 		meta: {
 			importName: 'FloatingCedarChat',
 			displayName: 'Floating Cedar Chat',
@@ -58,14 +56,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'side-panel-cedar-chat',
-		type: 'components:chat',
+		type: 'chatComponents',
 		dependencies: ['react', 'lucide-react', 'motion/react'],
-		files: [
-			{
-				name: 'chatComponents/SidePanelCedarChat.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['SidePanelCedarChat.tsx'],
 		meta: {
 			importName: 'SidePanelCedarChat',
 			displayName: 'Side Panel Cedar Chat',
@@ -76,20 +70,10 @@ export const registry: ComponentRegistryEntry[] = [
 	// Chat Input
 	{
 		name: 'chat-input',
-		type: 'components:input',
+		type: 'chatInput',
 		dependencies: ['react', 'lucide-react', 'motion/react'],
-		files: [
-			{
-				name: 'chatInput/ChatInput.tsx',
-				type: 'registry:component',
-			},
-			{
-				name: 'chatInput/ChatInput.css',
-			},
-			{
-				name: 'chatInput/index.ts',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['ChatInput.tsx', 'ChatInput.css', 'index.ts'],
 		meta: {
 			importName: 'ChatInput',
 			displayName: 'Chat Input',
@@ -98,14 +82,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'context-badge-row',
-		type: 'components:input',
+		type: 'chatInput',
 		dependencies: ['react', 'lucide-react'],
-		files: [
-			{
-				name: 'chatInput/ContextBadgeRow.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['ContextBadgeRow.tsx'],
 		meta: {
 			importName: 'ContextBadgeRow',
 			displayName: 'Context Badge Row',
@@ -116,14 +96,10 @@ export const registry: ComponentRegistryEntry[] = [
 	// Chat Messages
 	{
 		name: 'caption-messages',
-		type: 'components:chat',
+		type: 'chatMessages',
 		dependencies: ['react', 'lucide-react', 'motion-plus-react'],
-		files: [
-			{
-				name: 'chatMessages/CaptionMessages.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['CaptionMessages.tsx'],
 		meta: {
 			importName: 'CaptionMessages',
 			displayName: 'Caption Messages',
@@ -132,14 +108,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'chat-bubbles',
-		type: 'components:chat',
+		type: 'chatMessages',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'chatMessages/ChatBubbles.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['ChatBubbles.tsx'],
 		meta: {
 			importName: 'ChatBubbles',
 			displayName: 'Chat Bubbles',
@@ -148,14 +120,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'chat-renderer',
-		type: 'components:chat',
+		type: 'chatMessages',
 		dependencies: ['react', 'react-markdown', 'motion-plus-react'],
-		files: [
-			{
-				name: 'chatMessages/ChatRenderer.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['ChatRenderer.tsx'],
 		meta: {
 			importName: 'ChatRenderer',
 			displayName: 'Chat Renderer',
@@ -164,14 +132,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'dialogue-options',
-		type: 'components:chat',
+		type: 'chatMessages',
 		dependencies: ['react'],
-		files: [
-			{
-				name: 'chatMessages/DialogueOptions.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['DialogueOptions.tsx'],
 		meta: {
 			importName: 'DialogueOptions',
 			displayName: 'Dialogue Options',
@@ -180,14 +144,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'multiple-choice',
-		type: 'components:chat',
+		type: 'chatMessages',
 		dependencies: ['react'],
-		files: [
-			{
-				name: 'chatMessages/MultipleChoice.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['MultipleChoice.tsx'],
 		meta: {
 			importName: 'MultipleChoice',
 			displayName: 'Multiple Choice',
@@ -196,14 +156,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'storyline',
-		type: 'components:chat',
+		type: 'chatMessages',
 		dependencies: ['react', 'framer-motion'],
-		files: [
-			{
-				name: 'chatMessages/Storyline.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['Storyline.tsx'],
 		meta: {
 			importName: 'Storyline',
 			displayName: 'Storyline',
@@ -212,14 +168,9 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'storyline-edge',
-		type: 'components:chat',
+		type: 'chatMessages',
 		dependencies: ['react', 'framer-motion'],
-		files: [
-			{
-				name: 'chatMessages/StorylineEdge.tsx',
-				type: 'registry:component',
-			},
-		],
+		files: ['StorylineEdge.tsx'],
 		meta: {
 			importName: 'StorylineEdge',
 			displayName: 'Storyline Edge',
@@ -228,14 +179,9 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'streaming-text',
-		type: 'components:text',
+		type: 'chatMessages',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'chatMessages/StreamingText.tsx',
-				type: 'registry:component',
-			},
-		],
+		files: ['StreamingText.tsx'],
 		meta: {
 			importName: 'StreamingText',
 			displayName: 'Streaming Text',
@@ -244,14 +190,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'todo-list',
-		type: 'components:chat',
+		type: 'chatMessages',
 		dependencies: ['react', 'lucide-react'],
-		files: [
-			{
-				name: 'chatMessages/TodoList.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['TodoList.tsx'],
 		meta: {
 			importName: 'TodoList',
 			displayName: 'Todo List',
@@ -260,14 +202,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'collapsed-chat-button',
-		type: 'components:chat',
+		type: 'chatMessages',
 		dependencies: ['react', 'lucide-react'],
-		files: [
-			{
-				name: 'chatMessages/structural/CollapsedChatButton.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['structural/CollapsedChatButton.tsx'],
 		meta: {
 			importName: 'CollapsedChatButton',
 			displayName: 'Collapsed Chat Button',
@@ -278,14 +216,10 @@ export const registry: ComponentRegistryEntry[] = [
 	// Containers
 	{
 		name: 'container-3d',
-		type: 'components:container',
+		type: 'containers',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'containers/Container3D.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['Container3D.tsx'],
 		meta: {
 			importName: 'Container3D',
 			displayName: '3D Container',
@@ -294,14 +228,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'container-3d-button',
-		type: 'components:container',
+		type: 'containers',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'containers/Container3DButton.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['Container3DButton.tsx'],
 		meta: {
 			importName: 'Container3DButton',
 			displayName: '3D Container Button',
@@ -310,14 +240,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'flat-3d-button',
-		type: 'components:container',
+		type: 'containers',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'containers/Flat3dButton.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['Flat3dButton.tsx'],
 		meta: {
 			importName: 'Flat3dButton',
 			displayName: 'Flat 3D Button',
@@ -326,14 +252,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'flat-3d-container',
-		type: 'components:container',
+		type: 'containers',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'containers/Flat3dContainer.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['Flat3dContainer.tsx'],
 		meta: {
 			importName: 'Flat3dContainer',
 			displayName: 'Flat 3D Container',
@@ -342,14 +264,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'glassy-pane-container',
-		type: 'components:container',
+		type: 'containers',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'containers/GlassyPaneContainer.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['GlassyPaneContainer.tsx'],
 		meta: {
 			importName: 'GlassyPaneContainer',
 			displayName: 'Glassy Pane Container',
@@ -360,14 +278,9 @@ export const registry: ComponentRegistryEntry[] = [
 	// Inputs
 	{
 		name: 'tooltip-menu',
-		type: 'components:input',
+		type: 'inputs',
 		dependencies: ['react', 'lucide-react'],
-		files: [
-			{
-				name: 'inputs/TooltipMenu.tsx',
-				type: 'registry:component',
-			},
-		],
+		files: ['TooltipMenu.tsx'],
 		meta: {
 			importName: 'TooltipMenu',
 			displayName: 'Tooltip Menu',
@@ -378,14 +291,9 @@ export const registry: ComponentRegistryEntry[] = [
 	// Ornaments
 	{
 		name: 'glowing-mesh',
-		type: 'components:ornament',
+		type: 'ornaments',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'ornaments/GlowingMesh.tsx',
-				type: 'registry:component',
-			},
-		],
+		files: ['GlowingMesh.tsx'],
 		meta: {
 			importName: 'GlowingMesh',
 			displayName: 'Glowing Mesh',
@@ -394,14 +302,9 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'glowing-mesh-gradient',
-		type: 'components:ornament',
+		type: 'ornaments',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'ornaments/GlowingMeshGradient.tsx',
-				type: 'registry:component',
-			},
-		],
+		files: ['GlowingMeshGradient.tsx'],
 		meta: {
 			importName: 'GlowingMeshGradient',
 			displayName: 'Glowing Mesh Gradient',
@@ -410,14 +313,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'gradient-mesh',
-		type: 'components:ornament',
+		type: 'ornaments',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'ornaments/GradientMesh.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['GradientMesh.tsx'],
 		meta: {
 			importName: 'GradientMesh',
 			displayName: 'Gradient Mesh',
@@ -426,14 +325,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'inset-glow',
-		type: 'components:ornament',
+		type: 'ornaments',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'ornaments/InsetGlow.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['InsetGlow.tsx'],
 		meta: {
 			importName: 'InsetGlow',
 			displayName: 'Inset Glow',
@@ -444,14 +339,9 @@ export const registry: ComponentRegistryEntry[] = [
 	// Structural
 	{
 		name: 'floating-container',
-		type: 'components:structural',
+		type: 'structural',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'structural/FloatingContainer.tsx',
-				type: 'registry:component',
-			},
-		],
+		files: ['FloatingContainer.tsx'],
 		meta: {
 			importName: 'FloatingContainer',
 			displayName: 'Floating Container',
@@ -460,14 +350,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'side-panel-container',
-		type: 'components:structural',
+		type: 'structural',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'structural/SidePanelContainer.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['SidePanelContainer.tsx'],
 		meta: {
 			importName: 'SidePanelContainer',
 			displayName: 'Side Panel Container',
@@ -478,14 +364,10 @@ export const registry: ComponentRegistryEntry[] = [
 	// Text
 	{
 		name: 'shimmer-text',
-		type: 'components:text',
+		type: 'text',
 		dependencies: ['react', 'motion/react', 'lucide-react'],
-		files: [
-			{
-				name: 'text/ShimmerText.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['ShimmerText.tsx'],
 		meta: {
 			importName: 'ShimmerText',
 			displayName: 'Shimmer Text',
@@ -494,14 +376,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'typewriter-text',
-		type: 'components:text',
+		type: 'text',
 		dependencies: ['react', 'motion/react'],
-		files: [
-			{
-				name: 'text/TypewriterText.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['TypewriterText.tsx'],
 		meta: {
 			importName: 'TypewriterText',
 			displayName: 'Typewriter Text',
@@ -512,14 +390,9 @@ export const registry: ComponentRegistryEntry[] = [
 	// UI
 	{
 		name: 'keyboard-shortcut',
-		type: 'components:ui',
+		type: 'ui',
 		dependencies: ['react'],
-		files: [
-			{
-				name: 'ui/KeyboardShortcut.tsx',
-				type: 'registry:component',
-			},
-		],
+		files: ['KeyboardShortcut.tsx'],
 		meta: {
 			importName: 'KeyboardShortcut',
 			displayName: 'Keyboard Shortcut',
@@ -528,19 +401,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'slider-3d',
-		type: 'components:ui',
-		dependencies: [
-			'react',
-			'motion/react',
-			'motion-plus-react',
-			'lucide-react',
-		],
-		files: [
-			{
-				name: 'ui/Slider3D.tsx',
-				type: 'registry:component',
-			},
-		],
+		type: 'ui',
+		dependencies: ['react', 'motion/react', 'motion-plus-react', 'lucide-react'],
+		registryDependencies: ['cedar-os'],
+		files: ['Slider3D.tsx'],
 		meta: {
 			importName: 'Slider3D',
 			displayName: '3D Slider',
@@ -549,14 +413,10 @@ export const registry: ComponentRegistryEntry[] = [
 	},
 	{
 		name: 'button',
-		type: 'components:ui',
+		type: 'ui',
 		dependencies: ['react', '@radix-ui/react-slot', 'class-variance-authority'],
-		files: [
-			{
-				name: 'ui/button.tsx',
-				type: 'registry:component',
-			},
-		],
+		registryDependencies: ['cedar-os'],
+		files: ['button.tsx'],
 		meta: {
 			importName: 'Button',
 			displayName: 'Button',
