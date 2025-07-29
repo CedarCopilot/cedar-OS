@@ -9,10 +9,12 @@
 // ------------------------------------------------------------
 
 import * as p from '@clack/prompts';
-import { intro, outro, spinner, confirm, select } from '@clack/prompts';
+import { intro, outro, spinner, confirm, select, text } from '@clack/prompts';
 import pc from 'picocolors';
 import fetch from 'node-fetch';
 import path from 'path';
+import { spawn } from 'cross-spawn';
+import fs from 'fs';
 import { getAllComponents } from '../registry';
 import {
 	downloadMultipleComponents,
@@ -20,11 +22,80 @@ import {
 	checkDirectoryExists,
 	GITHUB_BASE_URL,
 } from '../utils/download';
-import fs from 'fs';
+import { spawnSync } from 'child_process';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Helper function to run shell commands
+function runCommand(
+	command: string,
+	args: string[],
+	options: { cwd?: string; silent?: boolean } = {}
+): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const child = spawn(command, args, {
+			stdio: options.silent ? 'pipe' : 'inherit',
+			cwd: options.cwd || process.cwd(),
+		});
+
+		child.on('close', (code) => {
+			if (code !== 0) {
+				reject(
+					new Error(
+						`Command "${command} ${args.join(
+							' '
+						)}" failed with exit code ${code}`
+					)
+				);
+			} else {
+				resolve();
+			}
+		});
+
+		child.on('error', (error) => {
+			reject(error);
+		});
+	});
+}
+
+// Helper function to detect package manager
+function detectPackageManager(): { manager: string; installCmd: string[] } {
+	const cwd = process.cwd();
+
+	// Check for lock files to determine package manager
+	if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) {
+		return { manager: 'pnpm', installCmd: ['add'] };
+	}
+
+	if (fs.existsSync(path.join(cwd, 'yarn.lock'))) {
+		return { manager: 'yarn', installCmd: ['add'] };
+	}
+
+	if (fs.existsSync(path.join(cwd, 'bun.lockb'))) {
+		return { manager: 'bun', installCmd: ['add'] };
+	}
+
+	// Check if package managers are available in PATH
+	try {
+		spawnSync('pnpm', ['--version'], { stdio: 'ignore' });
+		return { manager: 'pnpm', installCmd: ['add'] };
+	} catch {}
+
+	try {
+		spawnSync('yarn', ['--version'], { stdio: 'ignore' });
+		return { manager: 'yarn', installCmd: ['add'] };
+	} catch {}
+
+	try {
+		spawnSync('bun', ['--version'], { stdio: 'ignore' });
+		return { manager: 'bun', installCmd: ['add'] };
+	} catch {}
+
+	// Default to npm
+	return { manager: 'npm', installCmd: ['install'] };
+}
+
 // -----------------------------
-// Helper: print “next steps” link
+// Helper: print "next steps" link
 // -----------------------------
 function printNextSteps() {
 	console.log('\n' + pc.bold('Next steps:'));
@@ -48,6 +119,9 @@ export interface InitOptions {
 export async function initCommand(options: InitOptions) {
 	intro(pc.bgCyan(pc.black(' cedar-os init ')));
 	console.log(pc.green("Welcome to Cedar-OS, let's get you set up!"));
+	console.log(
+		pc.cyan('🌲 Planting your Cedar tree (downloading components)...')
+	);
 
 	try {
 		const defaultDir = 'src/components/cedar-os';
@@ -70,7 +144,22 @@ export async function initCommand(options: InitOptions) {
 					process.exit(0);
 				}
 
-				targetDir = useDefault ? defaultDir : 'cedar-os-components';
+				if (useDefault) {
+					targetDir = defaultDir;
+				} else {
+					const customDir = await text({
+						message: 'Enter installation directory:',
+						placeholder: 'components/cedar-os',
+						initialValue: 'components/cedar-os',
+					});
+
+					if (p.isCancel(customDir)) {
+						p.cancel('Operation cancelled.');
+						process.exit(0);
+					}
+
+					targetDir = customDir || 'components/cedar-os';
+				}
 			}
 		}
 
@@ -173,7 +262,101 @@ export async function initCommand(options: InitOptions) {
 			return;
 		}
 
-		// Create directory only if it doesn't exist yet
+		// --------------------------------------------------
+		// STEP 2  •  Ask for component dependencies approval
+		// --------------------------------------------------
+		const { manager, installCmd } = detectPackageManager();
+		const componentDeps = ['lucide-react', 'motion-plus-react'];
+
+		if (!options.yes) {
+			const installDeps = await confirm({
+				message: `Cedar components require ${pc.cyan(
+					'lucide-react'
+				)} and ${pc.cyan(
+					'motion-plus-react'
+				)}. Install these dependencies using ${manager}?`,
+				initialValue: true,
+			});
+
+			if (p.isCancel(installDeps)) {
+				p.cancel('Operation cancelled.');
+				process.exit(0);
+			}
+
+			if (installDeps) {
+				const depInstallSpin = spinner();
+				depInstallSpin.start(
+					`📦 Installing component dependencies using ${manager}...`
+				);
+
+				try {
+					await runCommand(manager, [...installCmd, ...componentDeps], {
+						silent: true,
+					});
+					depInstallSpin.stop(
+						'✅ Component dependencies installed successfully!'
+					);
+				} catch {
+					depInstallSpin.stop('❌ Failed to install component dependencies.');
+					console.log(
+						pc.yellow(
+							'\nWarning: Failed to install component dependencies automatically.'
+						)
+					);
+					console.log(pc.gray('You can install them manually by running:'));
+					console.log(
+						pc.cyan(
+							`  ${manager} ${installCmd.join(' ')} ${componentDeps.join(' ')}`
+						)
+					);
+					console.log(
+						pc.gray(
+							'Components may not work properly without these dependencies.'
+						)
+					);
+				}
+			} else {
+				console.log(pc.yellow('⚠️  Skipping dependency installation.'));
+				console.log(pc.gray('Remember to install these manually:'));
+				console.log(
+					pc.cyan(
+						`  ${manager} ${installCmd.join(' ')} ${componentDeps.join(' ')}`
+					)
+				);
+			}
+		} else {
+			// Auto-install dependencies when using --yes flag
+			const depInstallSpin = spinner();
+			depInstallSpin.start(
+				`📦 Installing component dependencies using ${manager}...`
+			);
+
+			try {
+				await runCommand(manager, [...installCmd, ...componentDeps], {
+					silent: true,
+				});
+				depInstallSpin.stop(
+					'✅ Component dependencies installed successfully!'
+				);
+			} catch {
+				depInstallSpin.stop('❌ Failed to install component dependencies.');
+				console.log(
+					pc.yellow(
+						'\nWarning: Failed to install component dependencies automatically.'
+					)
+				);
+				console.log(pc.gray('You can install them manually by running:'));
+				console.log(
+					pc.cyan(
+						`  ${manager} ${installCmd.join(' ')} ${componentDeps.join(' ')}`
+					)
+				);
+			}
+		}
+
+		// --------------------------------------------------
+		// STEP 3  •  Create directory and download components
+		// --------------------------------------------------
 		const s = spinner();
 		if (!dirExists) {
 			s.start('Creating directory...');
@@ -206,17 +389,27 @@ export async function initCommand(options: InitOptions) {
 		}
 
 		// --------------------------------------------------
-		// STEP 4  •  Simulate registry / dependency install
+		// STEP 4  •  Install cedar-os package
 		// --------------------------------------------------
-		const regSpin = spinner();
-		regSpin.start('🔍  Checking component registry...');
-		await wait(2000);
-		regSpin.stop('Registry looks good!');
-
 		const depSpin = spinner();
-		depSpin.start('📦  Installing peer dependencies (if any)...');
-		await wait(2000);
-		depSpin.stop('Dependencies installed.');
+		depSpin.start(
+			`📦  Installing cedar-os and its dependencies using ${manager}...`
+		);
+
+		try {
+			await runCommand(manager, [...installCmd, 'cedar-os'], { silent: true });
+			depSpin.stop('✅ Dependencies installed successfully!');
+		} catch {
+			depSpin.stop('❌ Failed to install dependencies.');
+			console.log(
+				pc.yellow(
+					'\nWarning: Failed to install cedar-os package automatically.'
+				)
+			);
+			console.log(pc.gray('You can install it manually by running:'));
+			console.log(pc.cyan(`  ${manager} ${installCmd.join(' ')} cedar-os`));
+			console.log(pc.gray("This won't affect the component installation."));
+		}
 
 		// Final tip
 		printNextSteps();
