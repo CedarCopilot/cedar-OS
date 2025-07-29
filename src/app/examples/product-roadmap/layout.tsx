@@ -19,6 +19,7 @@ export default function ProductRoadmapLayout({
 			process.env.NODE_ENV === 'development'
 				? 'http://localhost:4111'
 				: 'https://modern-lemon-whale.mastra.cloud', // Mastra dev server default port
+		chatPath: '/chat/execute-function',
 	};
 
 	// const llmProvider: ProviderConfig = {

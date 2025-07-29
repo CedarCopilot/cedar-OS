@@ -487,9 +487,10 @@ export const createAgentConnectionSlice: StateCreator<
 					llmParams = { ...llmParams, model: model || 'gpt-4o-mini' };
 					break;
 				case 'mastra':
+					const chatPath = config.chatPath || '/chat';
 					llmParams = {
 						...llmParams,
-						route: route || '/chat/execute-function',
+						route: route || `${chatPath}`,
 					};
 					break;
 				case 'ai-sdk':

@@ -29,6 +29,19 @@ Choose your provider and configure it with the CedarCopilot component. By defaul
 ```tsx AI SDK
 import { CedarCopilot } from 'cedar-os';
 
+// TypeScript Type
+type AISDKConfig = {
+	provider: 'ai-sdk';
+	providers: {
+		openai?: { apiKey: string };
+		anthropic?: { apiKey: string };
+		google?: { apiKey: string };
+		mistral?: { apiKey: string };
+		groq?: { apiKey: string };
+		xai?: { apiKey: string };
+	};
+};
+
 function App() {
 	return (
 		// You don't need to put every model,
@@ -46,6 +59,12 @@ function App() {
 					google: {
 						apiKey: process.env.GOOGLE_API_KEY,
 					},
+					groq: {
+						apiKey: process.env.GROQ_API_KEY,
+					},
+					xai: {
+						apiKey: process.env.XAI_API_KEY,
+					},
 				},
 			}}>
 			<YourApp />
@@ -56,6 +75,12 @@ function App() {
 
 ```tsx OpenAI
 import { CedarCopilot } from 'cedar-os';
+
+// TypeScript Type
+type OpenAIConfig = {
+	provider: 'openai';
+	apiKey: string;
+};
 
 function App() {
 	return (
@@ -73,6 +98,12 @@ function App() {
 ```tsx Anthropic
 import { CedarCopilot } from 'cedar-os';
 
+// TypeScript Type
+type AnthropicConfig = {
+	provider: 'anthropic';
+	apiKey: string;
+};
+
 function App() {
 	return (
 		<CedarCopilot
@@ -89,6 +120,14 @@ function App() {
 ```tsx Mastra
 import { CedarCopilot } from 'cedar-os';
 
+// TypeScript Type
+type MastraConfig = {
+	provider: 'mastra';
+	baseURL: string;
+	apiKey?: string; // Optional: only if your backend requires auth
+	chatPath?: string; // Optional: base chat path (defaults to '/chat')
+};
+
 function App() {
 	return (
 		<CedarCopilot
@@ -96,6 +135,7 @@ function App() {
 				provider: 'mastra',
 				baseURL: 'http://localhost:3000/api', // Your Mastra backend URL
 				apiKey: process.env.MASTRA_API_KEY, // Optional: only if your backend requires auth
+				chatPath: '/chat', // Optional: base chat path (defaults to '/chat')
 			}}>
 			<YourApp />
 		</CedarCopilot>
@@ -105,6 +145,12 @@ function App() {
 
 ```tsx Custom Backend
 import { CedarCopilot } from 'cedar-os';
+
+// TypeScript Type
+type CustomConfig = {
+	provider: 'custom';
+	config: Record<string, unknown>; // Flexible config object for any custom backend needs
+};
 
 function App() {
 	return (
@@ -126,6 +172,21 @@ function App() {
 ```
 
 </CodeGroup>
+
+### Mastra Configuration Options
+
+When using the Mastra provider, you have additional configuration options:
+
+- **baseURL**: The base URL of your Mastra backend (required)
+- **apiKey**: Optional API key if your backend requires authentication
+- **chatPath**: Optional base path for chat endpoints (defaults to `/chat`)
+
+The `chatPath` parameter is particularly useful if your Mastra backend uses a different base path for chat endpoints. For example:
+
+- With default `chatPath: '/chat'`: Routes become `/chat/execute-function`, `/chat/init`, etc.
+- With custom `chatPath: '/api/v1/chat'`: Routes become `/api/v1/chat/execute-function`, `/api/v1/chat/init`, etc.
+
+When you use the high-level `sendMessage()` function, Cedar-OS automatically constructs the route as `${chatPath}/execute-function`. You can still override this by passing a custom `route` parameter to `sendMessage()`.
 
 ### Creating Typed Functions
 
@@ -166,6 +227,13 @@ const openaiResponse = await callLLM({
 // Example with Anthropic model through AI SDK
 const anthropicResponse = await callLLM({
 	model: 'anthropic/claude-3-sonnet',
+	prompt: 'Hello, AI!',
+	systemPrompt: 'You are a helpful assistant.',
+});
+
+// Example with xAI Grok model through AI SDK
+const grokResponse = await callLLM({
+	model: 'xai/grok-beta',
 	prompt: 'Hello, AI!',
 	systemPrompt: 'You are a helpful assistant.',
 });
@@ -361,7 +429,7 @@ interface MastraParams extends BaseParams {
 
 // Example usage
 const response = await callLLM({
-	route: '/chat/completions',
+	route: '/chat/completions', // Full route path
 	prompt: 'Hello, AI!',
 });
 
@@ -371,8 +439,10 @@ console.log(response.usage?.totalTokens); // number | undefined
 console.log(response.object); // unknown (for structured responses)
 
 // Example with additional Mastra features
+// Note: When using sendMessage(), the default route is automatically constructed
+// as `${chatPath}/execute-function` (e.g., '/chat/execute-function')
 const advancedResponse = await callLLM({
-	route: '/chat/execute-function',
+	route: '/chat/execute-function', // This would be the default for sendMessage()
 	prompt: 'Remember my name is John',
 	// Additional Mastra-specific parameters can be added
 	sessionId: 'user-123',

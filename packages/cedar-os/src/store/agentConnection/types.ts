@@ -85,13 +85,16 @@ export type AISDKProviderConfig = {
 	mistral?: {
 		apiKey: string;
 	};
+	xai?: {
+		apiKey: string;
+	};
 };
 
 // Provider configurations
 export type ProviderConfig =
 	| { provider: 'openai'; apiKey: string }
 	| { provider: 'anthropic'; apiKey: string }
-	| { provider: 'mastra'; apiKey?: string; baseURL: string }
+	| { provider: 'mastra'; apiKey?: string; baseURL: string; chatPath?: string }
 	| { provider: 'ai-sdk'; providers: AISDKProviderConfig }
 	| { provider: 'custom'; config: Record<string, unknown> };
 
