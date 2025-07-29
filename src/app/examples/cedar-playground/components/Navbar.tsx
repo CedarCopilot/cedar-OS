@@ -9,8 +9,9 @@ import {
 } from '@/components/ui/navigation-menu';
 import Toggle3D from '@/components/ui/toggle3d';
 import { useStyling } from 'cedar-os';
-import { GithubIcon, Moon, Sun, TreePine } from 'lucide-react';
+import { GithubIcon, Moon, Sun } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function Navbar() {
 	const { styling, toggleDarkMode } = useStyling();
@@ -21,10 +22,16 @@ export function Navbar() {
 				<div className='flex items-center justify-between h-16'>
 					{/* Logo and Brand */}
 					<div className='flex items-center gap-2'>
-						<TreePine className='w-6 h-6 text-green-600 dark:text-green-400' />
-						<span className='text-xl font-bold text-gray-900 dark:text-white'>
-							Cedar
-						</span>
+						<Image
+							src={
+								styling.darkMode
+									? '/cedar-logo-dark.png'
+									: '/cedar-logo-light.png'
+							}
+							alt='Cedar Logo'
+							width={70}
+							height={24}
+						/>
 					</div>
 
 					{/* Navigation Menu */}
