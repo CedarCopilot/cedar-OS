@@ -155,18 +155,20 @@ function showNextSteps(template: Template | null, projectName: string) {
 // Helper function to show manual installation fallback
 function showManualInstallation() {
 	console.log('\n' + pc.red('❌ Installation failed.'));
-	console.log(pc.yellow('Please try manual installation instead:'));
+	console.log(pc.yellow('Try these alternatives:'));
 	console.log(
-		pc.cyan(
-			'https://docs.cedarcopilot.com/getting-started/getting-started#install-manually'
-		)
+		'\n' + pc.bold('1. Create a Next.js project manually and try add-sapling:')
+	);
+	console.log(pc.gray('   npx create-next-app@latest my-project'));
+	console.log(pc.gray('   cd my-project'));
+	console.log(pc.gray('   npx cedar-os-cli add-sapling'));
+	console.log(
+		'\n' + pc.bold('2. If that also fails, use full manual installation:')
 	);
 	console.log(
-		'\n' +
-			pc.gray('Need help? ') +
-			pc.cyan(
-				'https://docs.cedarcopilot.com/getting-started/getting-started#troubleshooting'
-			)
+		pc.cyan(
+			'   https://docs.cedarcopilot.com/getting-started/getting-started#manual-installation-cli-fallback'
+		)
 	);
 }
 

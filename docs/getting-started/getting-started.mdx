@@ -21,62 +21,95 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
 
   </Step>
 
-  <Step title="Install using the create-cedar CLI">
-    Our CLI is the fastest way to get started with Cedar-OS. Run the following command to start the interactive setup:
-
-    <CodeGroup>
-
-    ```bash npm
-    npx create-cedar@latest
-    ```
-
-    ```bash yarn
-    yarn create cedar@latest
-    ```
-
-    ```bash pnpm
-    pnpm create cedar@latest
-    ```
-
-    ```bash bun
-    bun create cedar@latest
-    ```
-
-    </CodeGroup>
-
-    **Install using CLI flags**
-
-    You can also run the Cedar CLI in non-interactive mode by passing all required flags, for example:
+  <Step title="Install using the cedar-os-cli">
+    Our CLI is the fastest way to get started with Cedar-OS. For most users, run this command - it automatically detects your setup and does the right thing:
 
     ```bash
-    npx create-cedar@latest --project-name my-cedar-app --provider ai-sdk --template chat
+    npx cedar-os-cli plant-seed
     ```
 
-    > See the create-cedar documentation for a full list of available CLI options.
+    **What `plant-seed` does:**
+    - **New project**: Offers template selection → Creates project → Adds Cedar components
+
+      <Info>
+      **Recommended:** We highly recommend starting with the Mastra template. It requires the least configuration and is the most powerful way to use Cedar-OS.
+      </Info>
+
+    - **Existing Next.js project**: Automatically adds Cedar components and required dependencies to your project
+
+    **About Cedar components:** Cedar-OS uses a [shadcn](https://ui.shadcn.com/)-style approach - components are copied directly into your project (not installed as dependencies). This gives you full control to customize, modify, and style the components as needed for your application.
+
+    **When to use `add-sapling` instead:**
+
+    Use this command to install cedar-os and download Cedar components in an existing project if `plant-seed` fails.
+
+    ```bash
+    # Add Cedar components and install dependencies only
+    npx cedar-os-cli add-sapling
+    ```
+
+    **Using CLI flags**
+
+    You can skip prompts using the `--yes` flag:
+
+    ```bash
+    npx cedar-os-cli plant-seed --project-name my-cedar-tree --yes
+    ```
 
   </Step>
 
   <Step title="Add your API key">
-    Add your API keys to the `.env.local` file:
+    Create a `.env.local` file in your project root and add your OpenAI API key:
 
     ```bash
-    # Choose one or more providers
+    # For client-side access (Cedar-OS components in browser)
     NEXT_PUBLIC_OPENAI_API_KEY=your-openai-api-key
-    NEXT_PUBLIC_ANTHROPIC_API_KEY=your-anthropic-api-key
-    NEXT_PUBLIC_GOOGLE_API_KEY=your-google-api-key
+
+    # For server-side access (API routes, server components)
+    OPENAI_API_KEY=your-openai-api-key
     ```
 
-    This example uses multiple providers. Each LLM provider uses a unique environment variable name. See [Agent Backend Connection](/getting-started/agent-backend-connection/overview) for more details. At this point, you can also skip to that page.
+    **Choose based on your setup:**
+    - Use `NEXT_PUBLIC_OPENAI_API_KEY` if Cedar-OS will make API calls directly from the browser
+    - Use `OPENAI_API_KEY` if you're routing calls through your backend/API routes
+    - You can include both if you need access from both client and server
+
+    This will be based on your agent configuration, see [Agent Backend Connection](/getting-started/agent-backend-connection/overview) for detailed configuration options.
 
   </Step>
 
   <Step title="Initialize CedarCopilot">
     Wrap your app with the `CedarCopilot` component and configure your AI provider:
 
+    <Warning>
+    **Important:** CedarCopilot must be used in a client component. Add `"use client"` at the top of any file that uses CedarCopilot.
+    </Warning>
+
     <CodeGroup>
 
+    ```tsx Mastra
+    "use client";
+
+    import { CedarCopilot } from 'cedar-os';
+
+    function App() {
+    	return (
+    		<CedarCopilot
+    			llmProvider={{
+    				provider: 'mastra',
+    				baseURL: 'http://localhost:4111', // Your Mastra backend URL
+    				apiKey: process.env.MASTRA_API_KEY, // Optional: only if your backend requires auth
+    			}}>
+    			<YourApp />
+    		</CedarCopilot>
+    	);
+    }
+    ```
+
     ```tsx AI SDK
-    import { CedarCopilot } from '@cedar-os/cedar';
+    "use client";
+
+    import { CedarCopilot } from 'cedar-os';
 
     function App() {
     	return (
@@ -104,7 +137,9 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     ```
 
     ```tsx OpenAI
-    import { CedarCopilot } from '@cedar-os/cedar';
+    "use client";
+
+    import { CedarCopilot } from 'cedar-os';
 
     function App() {
     	return (
@@ -120,7 +155,9 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     ```
 
     ```tsx Anthropic
-    import { CedarCopilot } from '@cedar-os/cedar';
+    "use client";
+
+    import { CedarCopilot } from 'cedar-os';
 
     function App() {
     	return (
@@ -135,25 +172,10 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     }
     ```
 
-    ```tsx Mastra
-    import { CedarCopilot } from '@cedar-os/cedar';
-
-    function App() {
-    	return (
-    		<CedarCopilot
-    			llmProvider={{
-    				provider: 'mastra',
-    				baseURL: 'http://localhost:3000/api', // Your Mastra backend URL
-    				apiKey: process.env.MASTRA_API_KEY, // Optional: only if your backend requires auth
-    			}}>
-    			<YourApp />
-    		</CedarCopilot>
-    	);
-    }
-    ```
-
     ```tsx Custom Backend
-    import { CedarCopilot } from '@cedar-os/cedar';
+    "use client";
+
+    import { CedarCopilot } from 'cedar-os';
 
     function App() {
     	return (
@@ -296,317 +318,6 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
   </Step>
 </Steps>
 
-## Install Manually
-
-If you prefer to install Cedar-OS manually or add it to an existing project:
-
-<Steps>
-  <Step title="Add to existing React project">
-    If you want to add Cedar-OS to an existing React project:
-
-    <CodeGroup>
-
-    ```bash npm
-    npm install cedar-os
-    ```
-
-    ```bash yarn
-    yarn add cedar-os
-    ```
-
-    ```bash pnpm
-    pnpm add cedar-os
-    ```
-
-    </CodeGroup>
-
-  </Step>
-
-  <Step title="Choose your integration approach">
-    Cedar-OS can be installed and integrated into a wide range of projects. Below are links to integration guides to help you get started:
-
-    - [Next.js](/getting-started/frameworks/nextjs)
-    - [Vite + React](/getting-started/frameworks/vite)
-    - [Create React App](/getting-started/frameworks/cra)
-
-  </Step>
-
-  <Step title="Create a new project from scratch">
-    If you're starting completely from scratch, here's how to create a new project with Cedar-OS manually:
-
-    <CodeGroup>
-
-    ```bash npm
-    # Create new React project
-    npx create-react-app my-cedar-app --template typescript
-    cd my-cedar-app
-
-    # Install Cedar-OS
-    npm install cedar-os
-    ```
-
-    ```bash yarn
-    # Create new React project
-    yarn create react-app my-cedar-app --template typescript
-    cd my-cedar-app
-
-    # Install Cedar-OS
-    yarn add cedar-os
-    ```
-
-    ```bash pnpm
-    # Create new React project
-    pnpm create react-app my-cedar-app --template typescript
-    cd my-cedar-app
-
-    # Install Cedar-OS
-    pnpm add cedar-os
-    ```
-
-    </CodeGroup>
-
-  </Step>
-
-  <Step title="Set up your API key">
-    Create a `.env.local` file in your project root:
-
-    ```bash
-    # Choose one or more providers
-    NEXT_PUBLIC_OPENAI_API_KEY=your-openai-api-key
-    NEXT_PUBLIC_ANTHROPIC_API_KEY=your-anthropic-api-key
-    NEXT_PUBLIC_GOOGLE_API_KEY=your-google-api-key
-    ```
-
-    This example uses multiple providers. Each LLM provider uses a unique environment variable name. See [Agent Backend Connection](/getting-started/agent-backend-connection/overview) for more details. At this point, you can also skip to that page.
-
-  </Step>
-
-  <Step title="Initialize CedarCopilot">
-    Wrap your app with the `CedarCopilot` component and configure your AI provider:
-
-    <CodeGroup>
-
-    ```tsx AI SDK
-    import { CedarCopilot } from '@cedar-os/cedar';
-
-    function App() {
-    	return (
-    		// You don't need to put every model,
-    		// but if you try to use a model without a key it will fail
-    		<CedarCopilot
-    			llmProvider={{
-    				provider: 'ai-sdk',
-    				providers: {
-    					openai: {
-    						apiKey: process.env.OPENAI_API_KEY,
-    					},
-    					anthropic: {
-    						apiKey: process.env.ANTHROPIC_API_KEY,
-    					},
-    					google: {
-    						apiKey: process.env.GOOGLE_API_KEY,
-    					},
-    				},
-    			}}>
-    			<YourApp />
-    		</CedarCopilot>
-    	);
-    }
-    ```
-
-    ```tsx OpenAI
-    import { CedarCopilot } from '@cedar-os/cedar';
-
-    function App() {
-    	return (
-    		<CedarCopilot
-    			llmProvider={{
-    				provider: 'openai',
-    				apiKey: process.env.OPENAI_API_KEY,
-    			}}>
-    			<YourApp />
-    		</CedarCopilot>
-    	);
-    }
-    ```
-
-    ```tsx Anthropic
-    import { CedarCopilot } from '@cedar-os/cedar';
-
-    function App() {
-    	return (
-    		<CedarCopilot
-    			llmProvider={{
-    				provider: 'anthropic',
-    				apiKey: process.env.ANTHROPIC_API_KEY,
-    			}}>
-    			<YourApp />
-    		</CedarCopilot>
-    	);
-    }
-    ```
-
-    ```tsx Mastra
-    import { CedarCopilot } from '@cedar-os/cedar';
-
-    function App() {
-    	return (
-    		<CedarCopilot
-    			llmProvider={{
-    				provider: 'mastra',
-    				baseURL: 'http://localhost:3000/api', // Your Mastra backend URL
-    				apiKey: process.env.MASTRA_API_KEY, // Optional: only if your backend requires auth
-    			}}>
-    			<YourApp />
-    		</CedarCopilot>
-    	);
-    }
-    ```
-
-    ```tsx Custom Backend
-    import { CedarCopilot } from '@cedar-os/cedar';
-
-    function App() {
-    	return (
-    		<CedarCopilot
-    			llmProvider={{
-    				provider: 'custom',
-    				config: {
-    					baseURL: 'https://your-api.com',
-    					apiKey: 'your-api-key',
-    					// Any additional config your backend needs
-    					organizationId: 'org-123',
-    					projectId: 'project-456',
-    				},
-    			}}>
-    			<YourApp />
-    		</CedarCopilot>
-    	);
-    }
-    ```
-
-    </CodeGroup>
-
-    Now you're ready to add a chat!
-
-  </Step>
-
-  <Step title="Using Cedar">
-    Now that you have Cedar-OS installed and configured, here are your next steps to build your AI-native application:
-
-    **Choose your next feature:**
-
-    - **[Configuring a Chat](/getting-started/messages/messages)** - Set up chat interfaces with `ChatInput` and `ChatBubbles` components for seamless AI conversations
-    - **[Adding State Access](/getting-started/state-access/agentic-state-access)** - Enable AI agents to read and modify your application state using `useCedarState`
-    - **[Using Spells](/getting-started/spells/spells)** - Create interactive radial menus and quick actions for enhanced user experience
-
-    **Quick start examples:**
-
-    <CodeGroup>
-
-    ```tsx Chat Setup
-    import { CedarFloatingChat } from 'cedar-os';
-
-    function ChatApp() {
-      return (
-        <div className="h-screen">
-          {/* This automatically works */}
-          <CedarFloatingChat />
-        </div>
-      );
-    }
-    ```
-
-        ```tsx State Access
-    import { useRegisterState } from 'cedar-os';
-    import { useState } from 'react';
-
-    function TodoApp() {
-      const [todos, setTodos] = useState([]);
-
-      useRegisterState({
-        key: 'todos',
-        value: todos,
-        setValue: setTodos,
-        description: 'User todo list manageable by AI',
-        customSetters: {
-          addTodo: {
-            name: 'addTodo',
-            description: 'Add a new todo item',
-            parameters: [
-              { name: 'text', type: 'string', description: 'Todo text' }
-            ],
-            execute: (currentTodos, text) => {
-              setTodos([...currentTodos, {
-                id: Date.now(),
-                text,
-                completed: false
-              }]);
-            }
-          },
-          toggleTodo: {
-            name: 'toggleTodo',
-            description: 'Toggle todo completion status',
-            parameters: [
-              { name: 'id', type: 'number', description: 'Todo ID' }
-            ],
-            execute: (currentTodos, id) => {
-              setTodos(currentTodos.map(t =>
-                t.id === id ? { ...t, completed: !t.completed } : t
-              ));
-            }
-          }
-        }
-      });
-
-      return (
-        <div>
-          {todos.map(todo => (
-            <div key={todo.id}>
-              <input
-                type="checkbox"
-                checked={todo.completed}
-                onChange={() => setTodos(todos.map(t =>
-                  t.id === todo.id ? { ...t, completed: !t.completed } : t
-                ))}
-              />
-              {todo.text}
-            </div>
-          ))}
-        </div>
-      );
-    }
-    ```
-
-    ```tsx Spells Integration
-    import { useSpells } from 'cedar-os';
-
-    function SpellsApp() {
-      const { registerSpell } = useSpells();
-
-      useEffect(() => {
-        registerSpell({
-          id: 'quick-action',
-          name: 'Quick Action',
-          icon: '⚡',
-          action: () => console.log('Spell activated!'),
-          trigger: 'cmd+k'
-        });
-      }, []);
-
-      return (
-        <div>
-          <p>Press Cmd+K to activate spells</p>
-        </div>
-      );
-    }
-    ```
-
-    </CodeGroup>
-
-  </Step>
-</Steps>
-
 ## Next Steps
 
 Now that you have Cedar-OS set up with basic functionality:
@@ -619,16 +330,77 @@ Now that you have Cedar-OS set up with basic functionality:
 
 4. **Build Complex Workflows**: Explore our [Examples](/examples) to see Cedar-OS in action with real applications.
 
-## Troubleshooting
+## If Things Are Going Wrong
 
-### Common Issues
+### Manual Installation (CLI Fallback)
+
+If all CLI commands are failing, you can manually install Cedar-OS:
+
+<Steps>
+  <Step title="Install the cedar-os package">
+    <CodeGroup>
+
+    ```bash npm
+    npm install cedar-os
+    ```
+
+    ```bash yarn
+    yarn add cedar-os
+    ```
+
+    ```bash pnpm
+    pnpm add cedar-os
+    ```
+
+    ```bash bun
+    bun add cedar-os
+    ```
+
+    </CodeGroup>
+
+  </Step>
+
+  <Step title="Copy component source code">
+    You will need to manually copy the component source code locally. The component files can be found here: [Cedar-OS Components](https://github.com/CedarCopilot/cedar-OS/tree/main/packages/cedar-os-components)
+
+    Copy the components you need into your project's component directory (typically `src/components/cedar-os/`).
+
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all the required dependencies for Cedar-OS components:
+
+    <CodeGroup>
+
+    ```bash npm
+    npm install lucide-react motion motion-plus-react uuid react-markdown framer-motion @radix-ui/react-slot class-variance-authority
+    ```
+
+    ```bash yarn
+    yarn add lucide-react motion motion-plus-react uuid react-markdown framer-motion @radix-ui/react-slot class-variance-authority
+    ```
+
+    ```bash pnpm
+    pnpm add lucide-react motion motion-plus-react uuid react-markdown framer-motion @radix-ui/react-slot class-variance-authority
+    ```
+
+    ```bash bun
+    bun add lucide-react motion motion-plus-react uuid react-markdown framer-motion @radix-ui/react-slot class-variance-authority
+    ```
+
+    </CodeGroup>
+
+  </Step>
+</Steps>
+
+### Troubleshooting Common Issues
 
 **Components not rendering**: Make sure you've wrapped your app with `CedarCopilot`.
 
+**Components missing ALL styling**: If Cedar-OS components are missing all styling (we promise they are beautiful!), make sure you have [Tailwind CSS configured](https://tailwindcss.com/docs/installation) in your project.
+
+**Don't see the chat?**: Make sure you add the correct chat component inside the `<CedarCopilot>` boundary. See [Chat Overview](/getting-started/chat/chat-overview) for setup instructions.
+
 **AI calls failing**: Check that your API keys are correctly set in environment variables and accessible in your client code.
 
-**State not updating**: Ensure you're using `useCedarState` and calling the returned setter function.
-
-**TypeScript errors**: Cedar-OS is fully typed - check that you're importing types correctly and using the right component props.
-
-Need help? Check our [Community Discord](https://discord.gg/cedar-os) or [GitHub Issues](https://github.com/cedar-os/cedar/issues).
+Need help? Check our [Community Discord](https://discord.gg/cedar-os) or [GitHub Issues](https://github.com/cedar-os/cedar/issues). We're always here to help :-D
