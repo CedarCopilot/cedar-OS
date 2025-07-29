@@ -19,4 +19,4 @@ export interface CedarStore
 		DebuggerSlice {}
 
 // Re-export StylingConfig for convenience
-export { StylingConfig };
+export type { StylingConfig };

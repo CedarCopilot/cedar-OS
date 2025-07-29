@@ -216,7 +216,7 @@ export const ChatInput: React.FC<{
 						layoutId: 'send-chat',
 						animate: {
 							opacity: isEditorEmpty ? 0.5 : 1,
-							backgroundColor: isEditorEmpty ? undefined : '#93c5fd',
+							backgroundColor: isEditorEmpty ? 'transparent' : '#93c5fd',
 						},
 						transition: { type: 'spring', stiffness: 300, damping: 20 },
 					}}
