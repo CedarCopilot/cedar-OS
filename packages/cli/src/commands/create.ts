@@ -141,9 +141,21 @@ function showNextSteps(template: Template | null, projectName: string) {
 		);
 		console.log(
 			pc.gray(
+				`• Create .env file: ${pc.cyan(
+					'echo "OPENAI_API_KEY=your-api-key-here" > .env.local'
+				)}`
+			)
+		);
+		console.log(
+			pc.gray(
 				`• Start development: ${pc.cyan(
 					'npm run dev'
 				)} (starts both Next.js and Mastra backend)`
+			)
+		);
+		console.log(
+			pc.green(
+				'\n🎉 Cedar chat should magically work! Try chatting with your AI assistant.'
 			)
 		);
 	} else {
@@ -159,7 +171,7 @@ function showNextSteps(template: Template | null, projectName: string) {
 
 	console.log(
 		'\n' +
-			pc.gray('📖 Resume the quickstart guide: ') +
+			pc.gray('📖 Need help or want to learn more? ') +
 			pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started')
 	);
 }
