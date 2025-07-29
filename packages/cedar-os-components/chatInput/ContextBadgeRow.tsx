@@ -6,7 +6,7 @@ import {
 	withClassName,
 } from 'cedar-os';
 import { X } from 'lucide-react';
-import type { Editor } from '@tiptap/react';
+import type { CedarEditor as Editor } from 'cedar-os';
 
 interface ContextBadgeRowProps {
 	editor?: Editor | null;

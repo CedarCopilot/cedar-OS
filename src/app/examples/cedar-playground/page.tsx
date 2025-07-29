@@ -15,7 +15,7 @@ export default function CedarPlaygroundPage() {
 	const [activeChatTab, setActiveChatTab] = useState('caption');
 
 	const pageContent = (
-		<div className='bg-gray-50 px-8 space-y-8'>
+		<div className='px-8 space-y-8'>
 			{/* Header Section */}
 			<div className='py-16 px-8'>
 				<div className='text-center max-w-4xl mx-auto'>
@@ -45,17 +45,17 @@ export default function CedarPlaygroundPage() {
 			<AgentBackendConnectionSection />
 
 			<ChatSection activeTab={activeChatTab} onTabChange={setActiveChatTab} />
+			{/* 
+			<StateAccessSection /> */}
 
-			<StateAccessSection />
+			{/* <SpellsSection /> */}
 
-			<SpellsSection />
+			{/* <VoiceSection /> */}
 
-			<VoiceSection />
-
-			<DiffHistorySection />
+			{/* <DiffHistorySection /> */}
 
 			{/* Footer Section */}
-			<div className='py-16 px-8'>
+			<div className='py-16 px-8 pt-[50vh]'>
 				<div className='text-center max-w-4xl mx-auto'>
 					<h2 className='text-3xl font-bold mb-6 text-gray-900 dark:text-white'>
 						That&apos;s Cedar-OS!
@@ -77,14 +77,15 @@ export default function CedarPlaygroundPage() {
 		return (
 			<SidePanelCedarChat
 				side='right'
-				title='Cedar Assistant'
+				title='Cedar Copilot'
 				collapsedLabel='Open Cedar Copilot'
 				dimensions={{
 					width: 400,
 					minWidth: 300,
 					maxWidth: 600,
 				}}
-				resizable={true}>
+				resizable={true}
+				topOffset={64}>
 				{pageContent}
 			</SidePanelCedarChat>
 		);

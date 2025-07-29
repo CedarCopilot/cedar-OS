@@ -1,31 +1,7 @@
-'use client';
+import React from 'react';
+import { CedarCopilotClient, CedarCopilotProps } from './CedarCopilot.client';
 
-import React, { useEffect } from 'react';
-import { useCedarStore } from '@/store/CedarStore';
-import type { ProviderConfig } from '@/store/agentConnection/types';
-
-export interface CedarCopilotProps {
-	children: React.ReactNode;
-	productId?: string | null;
-	userId?: string | null;
-	llmProvider?: ProviderConfig;
+// Server component wrapper so consumers can import CedarCopilot in Server Components
+export function CedarCopilot(props: CedarCopilotProps) {
+	return <CedarCopilotClient {...props} />;
 }
-
-// The main CedarCopilot component with Zustand store
-export const CedarCopilot: React.FC<CedarCopilotProps> = ({
-	children,
-	userId = null,
-	llmProvider,
-}) => {
-	const setProviderConfig = useCedarStore((state) => state.setProviderConfig);
-
-	useEffect(() => {
-		if (llmProvider) {
-			setProviderConfig(llmProvider);
-		}
-	}, [llmProvider, setProviderConfig]);
-
-	console.log('CedarCopilot', { userId, llmProvider });
-
-	return <>{children}</>;
-};

@@ -20,19 +20,19 @@ Cedar-OS bridges the gap between AI agents and React applications, providing a c
 
 ## Zustand State Management
 
-Let's say you want an AI to be able to read and write different parts of your react app. For example, you're making an AI-native email, and you want it to be able to help with drafts, categorise emails, and
+Let's say you want an AI to be able to read and write different parts of your react app. For example, you're making an AI-native email, and you want it to be able to help with drafts and categorise emails. You have an AI chat on the side that the user can ask it to do things. You'd find some immediate problems with this:
 
-1. **Component-scoped State**: A traditional react app typically has state inside of the component that uses it. This totally makes sense, and makes for a really great developer experience where you can combine logic and rendering together!
+1. **Component-scoped State**: React typically has state inside of the component that uses it. This totally makes sense, and makes for a really great developer experience where you can combine logic and rendering together!
 
    But this also means that floating up and collecting different states across the application to the AI involves a lot of scoping problems, prop drilling, and messy re-render optimisation.
 
 2. **Lack of Predefined Interactions**: The AI needs much more predefined ways of working with state! How does it interpret what this state means? How does it know how it can and should change it?
 
-3. **State Lifecycle Issues**: State disappears when the component is unmounted, or might have never loaded in!
+3. **State Lifecycle Issues**: State disappears when the component is unmounted, or might have never loaded in! AI should get to make changes, then navigate the user to see those changes.
 
 Cedar fixes this by:
 
-1. **State Portals**: Each "RegisterCedarState" acts like a portal the agent can reach the specific state. You don't need to worry about contexts, their scopes, and most importantly the fact that if one context field changes, everything that subscribes to it changes.
+1. **Register States**: Each "RegisterCedarState" acts like a portal the agent can reach the specific state. You don't need to worry about contexts, their scopes, and most importantly the fact that if one context field changes, everything that subscribes to it changes.
 2. **States for agents**: Our types support agent understanding and allow you to create custom setters that allow the agent to interact in predefined, safe ways.
 3. **Persistent State Registration**: State can be registered so the agent can see the contents even if the user doesn't have the component rendered in that moment, and backend loading behaviour can be configured.
 
@@ -47,14 +47,14 @@ Cedar fixes this by:
 
 ### Hooks Layer - The Foundation
 
-At the base, we provide optimized hooks that connect directly to our Zustand store:
+At the base, we provide optimized hooks that connect directly to our Zustand store. Examples:
 
 - **`useCedarState`**: Access and modify registered state with type safety
 - **`useTypedAgentConnection`**: Manage AI agent connections with full typing
 - **`useCedarEditor`**: Rich text editing with AI-aware features
 - **`useMessageRenderer`**: Handle streaming messages and custom components
 
-These hooks abstract away the complexity of state management, agent communication, and real-time updates while maintaining full type safety and performance optimization. You can of course create your own hooks that plug into the Zustand store.
+These hooks abstract away the complexity of state management, context, and real-time updates while maintaining full type safety and performance optimization. You can of course create your own hooks that plug into the Zustand store.
 
 ### Components Layer - Shadcn-Style Customization
 
@@ -77,14 +77,13 @@ Each component is designed to be sophisticated out-of-the-box while remaining co
 
 ### Complete Solutions - One-Line AI Experiences
 
-At the top layer, we provide complete, production-ready AI experiences. We can provide sophisticated solutions like this because you own the code, and so you can customise it however you want.
+At the top layer, we provide complete, production-ready AI experiences. We can provide sophisticated solutions like this because you own the code, and so you can customise it however you want. Example:
 
-- **`<FloatingCedarChat />`**: Floating chat interface that can be summoned anywhere. This combines `<ChatInput />`, `<ContextBadge />`, `<ChatMessages />`, and positional Containers like `<FloatingContainer />`
-- **`SidePanelCedarChat`**: Sidebar AI assistant for complex applications
+- **`<FloatingCedarChat />`**: Floating chat interface that can be summoned anywhere. This combines `<ChatInput />`, `<ContextBadge />`, `<ChatMessages />`, and positional Containers like `<FloatingContainer />` to create a floating chat.
 
 **The Power of This Architecture:**
 
 1. **Start Simple**: Drop in a complete solution like `CedarCopilot` and `FloatingCedarChat` and have AI working in minutes
-2. **Customize Gradually**: Replace individual components as your needs evolve
+2. **Customize Gradually**: Customise individual components as your needs evolve
 3. **Go Deep**: Use hooks directly for completely custom AI experiences
-4. **Never Hit Walls**: Since you own all the code, there are no limitations on what you can build
+4. **Never Hit Walls**: Since you own all the code, there are no limitations on what you can build.

@@ -92,7 +92,7 @@ export function ChatSection({
 	// Floating Chat Props
 	const [floatingProps, setFloatingProps] = useState({
 		side: 'right' as 'left' | 'right',
-		title: 'Cedar Assistant',
+		title: 'Cedar Copilot',
 		collapsedLabel: 'Open the Cedar Copilot',
 		resizable: true,
 		dimensions: {

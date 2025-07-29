@@ -1,23 +1,37 @@
 {
 	"name": "cedar-os",
-	"version": "0.0.1",
+	"version": "0.0.8",
 	"description": "",
 	"sideEffects": false,
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"clean": "rm -rf dist && mkdir -p dist",
 		"build": "npm run clean && tsup ./src",
-		"p": "npm i && pnpm install && NODE_OPTIONS='--max-old-space-size=8192' pnpm run build && npm publish",
+		"p": "pnpm install && NODE_OPTIONS='--max-old-space-size=8192' pnpm run build && npm publish",
 		"dev": "npm run clean && tsup --watch",
 		"watch": "tsup ./src --watch",
 		"dev:yalc": "nodemon --watch 'src/**/*' -e ts,tsx --exec 'NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build && yalc publish --push'"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/CedarCopilot/cedar-OS.git"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
 	"peerDependencies": {
-		"react": "^18.2.0",
-		"react-dom": "^18.2.0"
+		"@types/react": "*",
+		"@types/react-dom": "*",
+		"react": "^18 || ^19 || ^19.0.0-rc",
+		"react-dom": "^18 || ^19 || ^19.0.0-rc"
+	},
+	"peerDependenciesMeta": {
+		"@types/react": {
+			"optional": true
+		},
+		"@types/react-dom": {
+			"optional": true
+		}
 	},
 	"dependencies": {
 		"@floating-ui/dom": "^1.7.2",
@@ -49,8 +63,6 @@
 	"devDependencies": {
 		"@types/lodash": "^4.17.16",
 		"@types/node": "^20.17.19",
-		"@types/react": "^18.3.18",
-		"@types/react-dom": "^18.3.5",
 		"@types/uuid": "^10.0.0",
 		"autoprefixer": "^10.4.20",
 		"clsx": "^2.1.1",
@@ -62,6 +74,12 @@
 		"tailwindcss-animate": "^1.0.7",
 		"tsup": "^8.3.6",
 		"typescript": "^5.7.3"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"bugs": {
+		"url": "https://github.com/CedarCopilot/cedar-OS/issues"
 	},
 	"files": [
 		"dist",

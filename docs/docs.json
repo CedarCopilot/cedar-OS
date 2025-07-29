@@ -93,7 +93,10 @@
 			{
 				"group": "Customising Cedar",
 				"icon": "palette",
-				"pages": ["getting-started/customising/customising-cedar"]
+				"pages": [
+					"getting-started/customising/styling",
+					"getting-started/customising/customising-cedar"
+				]
 			}
 		]
 	},

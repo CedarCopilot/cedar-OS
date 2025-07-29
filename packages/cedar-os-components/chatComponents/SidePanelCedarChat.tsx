@@ -21,6 +21,8 @@ interface SidePanelCedarChatProps {
 		maxWidth?: number;
 	};
 	resizable?: boolean;
+	className?: string; // Additional CSS classes for positioning
+	topOffset?: number; // Top offset in pixels (e.g., for navbar height)
 }
 
 export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
@@ -36,6 +38,8 @@ export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
 		maxWidth: 800,
 	},
 	resizable = true,
+	className = '',
+	topOffset = 0,
 }) => {
 	// Get showChat state and setShowChat from store
 	const showChat = useCedarStore((state) => state.showChat);
@@ -62,7 +66,8 @@ export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
 				side={side}
 				dimensions={dimensions}
 				resizable={resizable}
-				panelClassName='bg-white dark:bg-gray-900'
+				topOffset={topOffset}
+				panelClassName={`dark:bg-gray-900 ${className}`}
 				panelContent={
 					<Container3D className='flex flex-col h-full'>
 						{/* Header */}

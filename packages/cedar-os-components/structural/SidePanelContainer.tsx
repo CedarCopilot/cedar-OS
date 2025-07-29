@@ -18,6 +18,7 @@ interface SidePanelContainerProps {
 	dimensions?: SidePanelDimensions;
 	resizable?: boolean;
 	onResize?: (width: number) => void;
+	topOffset?: number; // Top offset in pixels
 }
 
 export const SidePanelContainer: React.FC<SidePanelContainerProps> = ({
@@ -30,6 +31,7 @@ export const SidePanelContainer: React.FC<SidePanelContainerProps> = ({
 	dimensions = {},
 	resizable = true,
 	onResize,
+	topOffset = 0,
 }) => {
 	// Extract dimensions with defaults
 	const { width: initialWidth = 600, minWidth = 300, maxWidth } = dimensions;
@@ -159,8 +161,10 @@ export const SidePanelContainer: React.FC<SidePanelContainerProps> = ({
 			{isActive && (
 				<motion.div
 					ref={panelRef}
-					className={cn('fixed top-0 h-full z-[60]', panelClassName)}
+					className={cn('fixed z-[60]', panelClassName)}
 					style={{
+						top: `${topOffset}px`,
+						height: `calc(100vh - ${topOffset}px)`,
 						width: effectiveWidth,
 						maxWidth: isMobile ? '100vw' : `${calculatedMaxWidth}px`,
 						minWidth: isMobile ? '100vw' : `${minWidth}px`,
