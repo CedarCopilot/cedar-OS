@@ -1,8 +1,34 @@
 import { ReactRenderer } from '@tiptap/react';
-import tippy from 'tippy.js';
+import type { Editor, Range } from '@tiptap/core';
+import {
+	computePosition,
+	flip,
+	shift,
+	offset,
+	autoUpdate,
+	type VirtualElement,
+	type Placement,
+} from '@floating-ui/dom';
 import MentionList from '@/components/chatInput/MentionList';
 import type { MentionItem } from '@/store/agentInputContext/types';
 import { useCedarStore } from '@/store/CedarStore';
+
+// Define types for suggestion props
+interface SuggestionProps<I> {
+	editor: Editor;
+	range: Range;
+	query: string;
+	text: string;
+	items: I[];
+	command: (props: I) => void;
+	decorationNode: Element | null;
+	clientRect?: (() => DOMRect | null) | null;
+}
+
+interface SuggestionKeyDownProps {
+	event: KeyboardEvent;
+	range: Range;
+}
 
 const mentionSuggestion = {
 	items: async ({ query }: { query: string }) => {
@@ -30,10 +56,13 @@ const mentionSuggestion = {
 
 	render: () => {
 		let component: ReactRenderer;
-		let popup: any;
+		let popupElement: HTMLDivElement | null = null;
+		let cleanup: (() => void) | null = null;
 
 		return {
-			onStart: (props: any) => {
+			onStart: (
+				props: SuggestionProps<MentionItem & { providerId: string }>
+			) => {
 				component = new ReactRenderer(MentionList, {
 					props,
 					editor: props.editor,
@@ -43,53 +72,121 @@ const mentionSuggestion = {
 					return;
 				}
 
-				popup = tippy('body', {
-					getReferenceClientRect: props.clientRect,
-					appendTo: () => document.body,
-					content: component.element,
-					showOnCreate: true,
-					interactive: true,
-					trigger: 'manual',
-					placement: 'bottom-start',
-				});
+				// Create popup element
+				popupElement = document.createElement('div');
+				popupElement.style.position = 'absolute';
+				popupElement.style.zIndex = '9999';
+				popupElement.style.maxWidth = '32rem'; // equivalent to max-w-lg (512px)
+				popupElement.style.minWidth = '12rem'; // equivalent to min-w-48 (192px)
+				popupElement.style.width = 'fit-content';
+				popupElement.appendChild(component.element);
+				document.body.appendChild(popupElement);
+
+				// Create virtual element for positioning
+				const virtualElement: VirtualElement = {
+					getBoundingClientRect: () => {
+						const rect = props.clientRect?.();
+						return rect || new DOMRect();
+					},
+				};
+
+				// Update position function
+				const updatePosition = async () => {
+					if (!popupElement) return;
+
+					const { x, y } = await computePosition(virtualElement, popupElement, {
+						placement: 'bottom-start' as Placement,
+						middleware: [offset(6), flip(), shift({ padding: 5 })],
+					});
+
+					Object.assign(popupElement.style, {
+						left: `${x}px`,
+						top: `${y}px`,
+					});
+				};
+
+				// Set up auto update
+				cleanup = autoUpdate(virtualElement, popupElement, updatePosition);
 			},
 
-			onUpdate(props: any) {
+			onUpdate(props: SuggestionProps<MentionItem & { providerId: string }>) {
 				component.updateProps(props);
 
-				if (!props.clientRect) {
+				if (!props.clientRect || !popupElement) {
 					return;
 				}
 
-				popup[0].setProps({
-					getReferenceClientRect: props.clientRect,
+				// Create updated virtual element
+				const virtualElement: VirtualElement = {
+					getBoundingClientRect: () => {
+						const rect = props.clientRect?.();
+						return rect || new DOMRect();
+					},
+				};
+
+				// Update position
+				computePosition(virtualElement, popupElement, {
+					placement: 'bottom-start' as Placement,
+					middleware: [offset(6), flip(), shift({ padding: 5 })],
+				}).then(({ x, y }) => {
+					if (popupElement) {
+						Object.assign(popupElement.style, {
+							left: `${x}px`,
+							top: `${y}px`,
+						});
+					}
 				});
 			},
 
-			onKeyDown(props: any) {
+			onKeyDown(props: SuggestionKeyDownProps) {
 				if (props.event.key === 'Escape') {
-					popup[0].hide();
+					if (popupElement) {
+						popupElement.style.display = 'none';
+					}
 					return true;
 				}
 
-				return (component.ref as any)?.onKeyDown(props);
+				// Type assertion for MentionList ref
+				const mentionListRef = component.ref as {
+					onKeyDown?: (data: { event: KeyboardEvent }) => boolean;
+				} | null;
+
+				if (mentionListRef?.onKeyDown) {
+					// Pass the native KeyboardEvent directly
+					return mentionListRef.onKeyDown({ event: props.event });
+				}
+
+				return false;
 			},
 
 			onExit() {
-				popup[0].destroy();
+				if (cleanup) {
+					cleanup();
+				}
+				if (popupElement && popupElement.parentNode) {
+					popupElement.parentNode.removeChild(popupElement);
+				}
 				component.destroy();
 			},
 		};
 	},
 
-	command: ({ editor, range, props }: any) => {
-		const item = props as MentionItem & { providerId: string };
+	command: ({
+		editor,
+		range,
+		props,
+	}: {
+		editor: Editor;
+		range: Range;
+		props: MentionItem & { providerId: string };
+	}) => {
+		const item = props;
 
 		// Get the provider that created this item
 		const provider = useCedarStore
 			.getState()
 			.getMentionProvidersByTrigger('@')
-			.find((p: any) => p.id === item.providerId);
+			.find((p) => p.id === item.providerId);
 
 		if (!provider) {
 			console.warn('No provider found for item:', item);
