@@ -19,7 +19,6 @@ If you're using Tailwind CSS 4.0 or later, add the following `@source` directive
 
 /* Add Cedar-OS components to Tailwind's content sources */
 @source "../node_modules/cedar-os/**/*.{js,ts,jsx,tsx}";
-@source "../node_modules/cedar-os-components/**/*.{js,ts,jsx,tsx}";
 ```
 
 ### Tailwind 3.x Configuration
@@ -39,7 +38,6 @@ module.exports = {
 
 		// Add Cedar-OS component paths
 		'./node_modules/cedar-os/**/*.{js,ts,jsx,tsx}',
-		'./node_modules/cedar-os-components/**/*.{js,ts,jsx,tsx}',
 	],
 	// ... rest of your config
 };
@@ -123,7 +121,7 @@ function ThemeCustomizer() {
 Cedar components automatically respond to the global styling configuration. For example, the chat components will use your configured colors:
 
 ```tsx
-import { FloatingCedarChat } from 'cedar-os-components';
+import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { useCedarStore } from 'cedar-os';
 
 function StyledChat() {
@@ -272,7 +270,7 @@ If Cedar component styles aren't working:
 1. **Check Tailwind Config**: Ensure Cedar paths are included in your Tailwind configuration
 2. **Clear Cache**: Try clearing your build cache and rebuilding
 3. **Check CSS Import**: Make sure you're importing your global CSS file that includes Tailwind directives
-4. **Verify Installation**: Ensure both `cedar-os` and `cedar-os-components` are properly installed
+4. **Verify Installation**: Ensure both `cedar-os` and components are properly installed
 
 ### Dark Mode Issues
 
