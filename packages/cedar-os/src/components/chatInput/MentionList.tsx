@@ -6,6 +6,7 @@ import React, {
 	useEffect,
 	useImperativeHandle,
 	useState,
+	useRef,
 } from 'react';
 
 interface MentionListProps {
@@ -21,10 +22,33 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
 	({ items, command }, ref) => {
 		const [selectedIndex, setSelectedIndex] = useState(0);
 		const providers = useMentionProvidersByTrigger('@');
+		const containerRef = useRef<HTMLDivElement>(null);
+		const itemRefs = useRef<(HTMLButtonElement | HTMLDivElement | null)[]>([]);
 
 		useEffect(() => {
 			setSelectedIndex(0);
 		}, [items]);
+
+		// Scroll selected item into view
+		useEffect(() => {
+			const selectedItem = itemRefs.current[selectedIndex];
+			if (selectedItem && containerRef.current) {
+				const container = containerRef.current;
+				const itemTop = selectedItem.offsetTop;
+				const itemBottom = itemTop + selectedItem.offsetHeight;
+				const containerTop = container.scrollTop;
+				const containerBottom = containerTop + container.clientHeight;
+
+				// Scroll down if item is below visible area
+				if (itemBottom > containerBottom) {
+					container.scrollTop = itemBottom - container.clientHeight;
+				}
+				// Scroll up if item is above visible area
+				else if (itemTop < containerTop) {
+					container.scrollTop = itemTop;
+				}
+			}
+		}, [selectedIndex]);
 
 		const selectItem = (index: number) => {
 			const item = items[index];
@@ -76,8 +100,9 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
 				return (
 					<div
 						key={item.id}
+						ref={(el) => (itemRefs.current[index] = el)}
 						className={cn(
-							'w-full text-left px-3 py-1 hover:bg-gray-200 cursor-pointer',
+							'text-left px-3 py-1 hover:bg-gray-200 cursor-pointer',
 							index === selectedIndex && 'bg-gray-200'
 						)}
 						onClick={() => selectItem(index)}>
@@ -99,6 +124,7 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
 			return (
 				<button
 					key={item.id}
+					ref={(el) => (itemRefs.current[index] = el)}
 					type='button'
 					className={cn(
 						'w-full text-left px-2 py-1.5 cursor-pointer text-black text-sm transition-colors',
@@ -125,7 +151,9 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
 		};
 
 		return (
-			<div className='shadow-lg bg-white rounded-md max-h-60 overflow-y-auto scrollbar-hide'>
+			<div
+				ref={containerRef}
+				className='shadow-lg bg-white rounded-md max-h-60 overflow-y-auto scrollbar-hide'>
 				{items.length > 0 ? (
 					items.map((item, index) => renderItem(item, index))
 				) : (

@@ -1,6 +1,6 @@
 import { useVoice, VoiceIndicator, cn } from 'cedar-os';
 
-import { EditorContent } from '@tiptap/react';
+import { CedarEditorContent as EditorContent } from 'cedar-os';
 import { Code, Image, Mic, SendHorizontal } from 'lucide-react';
 import { motion } from 'motion/react';
 import React, { useCallback, useEffect } from 'react';
