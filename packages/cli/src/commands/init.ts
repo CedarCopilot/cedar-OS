@@ -100,12 +100,16 @@ function detectPackageManager(): { manager: string; installCmd: string[] } {
 function printNextSteps() {
 	console.log('\n' + pc.bold('Next steps:'));
 	console.log(
-		pc.gray('• Resume the setup where you left off by adding your API key:')
+		pc.gray('• Set up your API key: ') +
+		pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started#set-up-your-api-key')
 	);
 	console.log(
-		pc.cyan(
-			'https://docs.cedarcopilot.com/getting-started/getting-started#set-up-your-api-key'
-		)
+		pc.gray('• Configure your backend: ') +
+		pc.cyan('https://docs.cedarcopilot.com/getting-started/agent-backend-connection/agent-backend-connection#initial-configuration')
+	);
+	console.log(
+		'\n' + pc.gray('📖 Resume setup: ') +
+		pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started')
 	);
 }
 
@@ -117,10 +121,10 @@ export interface InitOptions {
 }
 
 export async function initCommand(options: InitOptions) {
-	intro(pc.bgCyan(pc.black(' cedar-os init ')));
+	intro(pc.bgCyan(pc.black(' cedar add-sapling ')));
 	console.log(pc.green("Welcome to Cedar-OS, let's get you set up!"));
 	console.log(
-		pc.cyan('🌲 Planting your Cedar tree (downloading components)...')
+		pc.cyan('🌱 Adding saplings to your Cedar forest (downloading components)...')
 	);
 
 	try {

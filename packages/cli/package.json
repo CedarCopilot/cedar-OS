@@ -1,25 +1,39 @@
 {
-	"name": "create-cedar",
-	"version": "0.0.1",
-	"description": "CLI tool for installing cedar-os components",
+	"name": "cedar-os-cli",
+	"version": "0.1.0",
+	"description": "CLI tool for scaffolding Cedar-OS projects and installing components",
 	"main": "dist/index.mjs",
 	"bin": {
-		"create-cedar": "dist/index.mjs",
-		"cedar-os": "dist/index.mjs"
+		"cedar": "dist/index.mjs"
 	},
 	"scripts": {
 		"build": "tsup",
 		"dev": "tsup --watch",
-		"clean": "rm -rf dist"
+		"clean": "rm -rf dist",
+		"prepublishOnly": "npm run clean && npm run build"
 	},
 	"keywords": [
 		"cedar-os",
 		"cli",
 		"components",
-		"ui"
+		"ui",
+		"nextjs",
+		"react",
+		"mastra",
+		"scaffold",
+		"template"
 	],
-	"author": "",
+	"author": "Cedar Team",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/CedarCopilot/cedar-OS.git",
+		"directory": "packages/cli"
+	},
+	"homepage": "https://docs.cedarcopilot.com",
+	"bugs": {
+		"url": "https://github.com/CedarCopilot/cedar-OS/issues"
+	},
 	"dependencies": {
 		"@clack/prompts": "^0.7.0",
 		"chalk": "^5.3.0",

@@ -5,13 +5,13 @@ import { createCommand } from './commands/create';
 const program = new Command();
 
 program
-	.name('create-cedar')
+	.name('cedar')
 	.description('Create or add Cedar-OS to a project')
-	.version('0.0.1');
+	.version('0.1.0');
 
 program
-	.command('init')
-	.description('Initialize cedar-os components in your project')
+	.command('add-sapling')
+	.description('Add Cedar-OS components and package to your existing project')
 	.option('-d, --dir <path>', 'Installation directory')
 	.option('-c, --components <names...>', 'Specific components to install')
 	.option('-a, --all', 'Install all components')
@@ -19,13 +19,13 @@ program
 	.action(initCommand);
 
 program
-	.command('create')
-	.description('Scaffold a new Cedar-OS Next.js project or add to existing')
+	.command('plant-seed')
+	.description('Create new Cedar-OS project or add Cedar to existing Next.js project')
 	.option('-p, --project-name <name>', 'Project directory name')
 	.option('-y, --yes', 'Skip all prompts')
 	.action(createCommand);
 
-// If user runs without subcommand default to create
+// If user runs without subcommand default to plant-seed
 if (!process.argv.slice(2).length) {
 	createCommand({});
 } else {
