@@ -1,13 +1,12 @@
-import React from 'react';
-import { X } from 'lucide-react';
-import { AnimatePresence } from 'motion/react';
-import { useCedarStore } from 'cedar-os';
-import { FloatingContainer } from '@/structural/FloatingContainer';
-import { CollapsedButton } from '@/chatMessages/structural/CollapsedChatButton';
 import { ChatInput } from '@/chatInput/ChatInput';
 import ChatBubbles from '@/chatMessages/ChatBubbles';
+import { CollapsedButton } from '@/chatMessages/structural/CollapsedChatButton';
 import Container3D from '@/containers/Container3D';
-
+import { FloatingContainer } from '@/structural/FloatingContainer';
+import { useCedarStore } from 'cedar-os';
+import { X } from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
+import React from 'react';
 interface FloatingCedarChatProps {
 	side?: 'left' | 'right';
 	title?: string;
@@ -30,12 +29,8 @@ export const FloatingCedarChat: React.FC<FloatingCedarChatProps> = ({
 	collapsedLabel = 'How can I help you today?',
 	companyLogo,
 	dimensions = {
-		width: 400,
-		height: 600,
 		minWidth: 350,
 		minHeight: 400,
-		maxWidth: 600,
-		maxHeight: 800,
 	},
 	resizable = true,
 }) => {
@@ -64,7 +59,7 @@ export const FloatingCedarChat: React.FC<FloatingCedarChatProps> = ({
 				className='cedar-floating-chat'>
 				<Container3D className='flex flex-col h-full text-sm'>
 					{/* Header */}
-					<div className='flex-shrink-0 z-20 flex flex-row items-center justify-between px-4 py-2 min-w-0 border-b border-gray-200 dark:border-gray-700'>
+					<div className='flex-shrink-0 z-20 flex flex-row items-center justify-between px-5 pt-3 min-w-0 border-b border-gray-200 dark:border-gray-700'>
 						<div className='flex items-center min-w-0 flex-1'>
 							{companyLogo && (
 								<div className='flex-shrink-0 w-6 h-6 mr-2'>{companyLogo}</div>

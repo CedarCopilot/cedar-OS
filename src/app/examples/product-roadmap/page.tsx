@@ -24,6 +24,7 @@ import {
 	FeatureNode,
 	FeatureNodeData,
 } from '@/app/examples/product-roadmap/components/FeatureNode';
+import { FloatingMenu } from '@/app/examples/product-roadmap/components/FloatingMenu';
 import {
 	getEdges,
 	saveEdges,
@@ -33,6 +34,9 @@ import {
 	getNodes,
 	saveNodes,
 } from '@/app/examples/product-roadmap/supabase/nodes';
+import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
+import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
+import { TooltipMenu } from '@/inputs/TooltipMenu';
 import {
 	subscribeInputContext,
 	useRegisterState,
@@ -41,7 +45,6 @@ import {
 import { ArrowRight, Box, CheckCircle, Loader } from 'lucide-react';
 import { motion } from 'motion/react';
 import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
-import { TooltipMenu } from '@/inputs/TooltipMenu';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)
@@ -492,7 +495,6 @@ function FlowCanvas() {
 				fitView>
 				<Background gap={16} size={1} />
 				<Controls />
-				<CedarCaptionChat />
 			</ReactFlow>
 			{edgeMenu && (
 				<TooltipMenu
@@ -564,12 +566,42 @@ function SelectedNodesPanel() {
 // -----------------------------------------------------------------------------
 
 export default function ProductMapPage() {
-	return (
+	const [chatMode, setChatMode] = React.useState<
+		'floating' | 'sidepanel' | 'caption'
+	>('caption');
+
+	const renderContent = () => (
 		<ReactFlowProvider>
 			<div className='relative h-screen w-full'>
 				<FlowCanvas />
 				<SelectedNodesPanel />
+				<FloatingMenu
+					onChatModeChange={setChatMode}
+					currentChatMode={chatMode}
+				/>
+				{chatMode === 'caption' && <CedarCaptionChat />}
+				{chatMode === 'floating' && (
+					<FloatingCedarChat
+						side='right'
+						title='Product Roadmap Assistant'
+						collapsedLabel='Need help with your roadmap?'
+					/>
+				)}
 			</div>
 		</ReactFlowProvider>
 	);
+
+	if (chatMode === 'sidepanel') {
+		return (
+			<SidePanelCedarChat
+				side='right'
+				title='Product Roadmap Assistant'
+				collapsedLabel='Need help with your roadmap?'
+				showCollapsedButton={true}>
+				{renderContent()}
+			</SidePanelCedarChat>
+		);
+	}
+
+	return renderContent();
 }

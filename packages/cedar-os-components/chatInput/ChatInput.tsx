@@ -216,13 +216,13 @@ export const ChatInput: React.FC<{
 						layoutId: 'send-chat',
 						animate: {
 							opacity: isEditorEmpty ? 0.5 : 1,
-							backgroundColor: isEditorEmpty ? '#ffffff' : '#93c5fd',
+							backgroundColor: isEditorEmpty ? 'transparent' : '#93c5fd',
 						},
 						transition: { type: 'spring', stiffness: 300, damping: 20 },
 					}}
 					onClick={handleSubmit}
 					color={isEditorEmpty ? undefined : '#93c5fd'}
-					className='flex items-center flex-shrink-0 ml-auto -mt-0.5 rounded-full'
+					className='flex items-center flex-shrink-0 ml-auto -mt-0.5 rounded-full bg-white dark:bg-gray-800'
 					childClassName='p-1.5'>
 					<motion.div
 						animate={{ rotate: isEditorEmpty ? 0 : -90 }}

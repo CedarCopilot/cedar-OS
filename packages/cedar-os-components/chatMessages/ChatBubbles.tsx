@@ -53,10 +53,14 @@ export const ChatBubbles: React.FC<ChatBubblesProps> = ({
 		<div
 			ref={containerRef}
 			className={cn(
-				'w-full h-full mb-0 flex flex-col space-y-1 pb-3 relative scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent',
+				'w-full h-full mb-0 flex flex-col space-y-1 pb-3 relative',
 				containerClasses
 			)}
-			style={containerStyle}>
+			style={{
+				...containerStyle,
+				// Custom scrollbar styles for Firefox
+				scrollbarColor: 'rgba(156, 163, 175, 0.8) transparent',
+			}}>
 			{/* Messages container */}
 			<div className='relative z-20 px-1 py-1'>
 				<AnimatePresence initial={false}>
