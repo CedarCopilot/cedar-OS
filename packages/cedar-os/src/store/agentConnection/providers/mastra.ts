@@ -181,7 +181,9 @@ export const initialiseChat = async (
 		headers.Authorization = `Bearer ${config.apiKey}`;
 	}
 
-	const response = await fetch(`${config.baseURL}/chat/init`, {
+	// Isabelle check how to initialise
+	const chatPath = config.chatPath || '/chat';
+	const response = await fetch(`${config.baseURL}${chatPath}/init`, {
 		method: 'POST',
 		headers,
 		body: JSON.stringify({

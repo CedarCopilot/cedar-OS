@@ -34,6 +34,7 @@
 		}
 	},
 	"dependencies": {
+		"@ai-sdk/xai": "^1.2.18",
 		"@floating-ui/dom": "^1.7.2",
 		"@mastra/client-js": "^0.1.16",
 		"@radix-ui/react-label": "^2.1.4",

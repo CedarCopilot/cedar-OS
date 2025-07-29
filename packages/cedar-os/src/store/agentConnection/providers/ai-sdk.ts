@@ -18,6 +18,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createMistral } from '@ai-sdk/mistral';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createGroq } from '@ai-sdk/groq';
+import { createXai } from '@ai-sdk/xai';
 
 type AISDKConfig = InferProviderConfig<'ai-sdk'>;
 
@@ -44,6 +45,7 @@ const providerImplementations = {
 	google: (apiKey: string) => createGoogleGenerativeAI({ apiKey }),
 	mistral: (apiKey: string) => createMistral({ apiKey }),
 	groq: (apiKey: string) => createGroq({ apiKey }),
+	xai: (apiKey: string) => createXai({ apiKey }),
 } as const;
 
 // Helper function to parse model string and get provider/model
