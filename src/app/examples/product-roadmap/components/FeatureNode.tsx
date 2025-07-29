@@ -351,10 +351,10 @@ function FeatureNodeComponent({
 
 	// Soft background colors for status
 	const statusBackgroundColor: Record<FeatureStatus, string> = {
-		done: 'bg-green-50',
-		planned: 'bg-yellow-50',
-		backlog: 'bg-gray-50',
-		'in progress': 'bg-blue-50',
+		done: 'bg-green-50 dark:bg-green-900/20',
+		planned: 'bg-yellow-50 dark:bg-yellow-900/20',
+		backlog: 'bg-gray-50 dark:bg-gray-800/50',
+		'in progress': 'bg-blue-50 dark:bg-blue-900/20',
 	};
 
 	// All available statuses
@@ -414,15 +414,15 @@ function FeatureNodeComponent({
 
 	// Diff overlay colors
 	const diffOverlayColor: Record<DiffType, string> = {
-		added: 'bg-green-200/50',
-		removed: 'bg-red-200/50',
-		changed: 'bg-yellow-200/50',
+		added: 'bg-green-200/50 dark:bg-green-700/30',
+		removed: 'bg-red-200/50 dark:bg-red-700/30',
+		changed: 'bg-yellow-200/50 dark:bg-yellow-700/30',
 	};
 
 	// When selected, add an outer ring highlight without affecting inner layout
 	const borderClass = selected
-		? 'border border-gray-200 ring-4 ring-indigo-600'
-		: 'border border-gray-200';
+		? 'border border-gray-200 dark:border-gray-700 ring-4 ring-indigo-600 dark:ring-indigo-400'
+		: 'border border-gray-200 dark:border-gray-700';
 
 	return (
 		<>
@@ -458,7 +458,7 @@ function FeatureNodeComponent({
 			)}
 
 			<div
-				className={`relative rounded-lg p-4 shadow-sm ${borderClass} ${
+				className={`relative rounded-lg p-4 shadow-sm dark:shadow-gray-900/50 ${borderClass} ${
 					statusBackgroundColor[status] ? statusBackgroundColor[status] : ''
 				} ${isResizing ? 'select-none' : ''} flex flex-col`}
 				style={{
@@ -499,11 +499,11 @@ function FeatureNodeComponent({
 											setEditingTitle(false);
 										}
 									}}
-									className='w-full text-sm font-semibold text-gray-900 border border-gray-300 rounded p-1'
+									className='w-full text-sm font-semibold text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded p-1'
 								/>
 							) : (
 								<h3
-									className='text-sm font-semibold text-gray-900 flex-1'
+									className='text-sm font-semibold text-gray-900 dark:text-gray-100 flex-1'
 									onDoubleClick={() => setEditingTitle(true)}
 									tabIndex={0}
 									onKeyDown={(e) => {
@@ -612,7 +612,7 @@ function FeatureNodeComponent({
 									setEditingDescription(false);
 								}
 							}}
-							className='w-full h-full text-xs text-gray-600 dark:text-gray-300 border border-gray-300 rounded p-1 flex-1 resize-none'
+							className='w-full h-full text-xs text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 rounded p-1 flex-1 resize-none'
 							style={{ minHeight: '60px' }}
 						/>
 					) : (
@@ -629,7 +629,7 @@ function FeatureNodeComponent({
 							</ReactMarkdown>
 						</p>
 					)}
-					<div className='flex items-center justify-between text-[11px] text-gray-500 flex-none'>
+					<div className='flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 flex-none'>
 						<div className='flex items-center gap-2'>
 							<button
 								onClick={handleUpvote}
@@ -654,7 +654,7 @@ function FeatureNodeComponent({
 						</div>
 					</div>
 					{expanded && (
-						<div className='mt-2 text-xs text-gray-700 flex-none overflow-y-auto'>
+						<div className='mt-2 text-xs text-gray-700 dark:text-gray-300 flex-none overflow-y-auto'>
 							<ReactMarkdown remarkPlugins={[remarkGfm]}>
 								{data.details || 'No details provided.'}
 							</ReactMarkdown>
@@ -663,7 +663,9 @@ function FeatureNodeComponent({
 					{showComments && (
 						<div className='mt-2 space-y-1 flex-none'>
 							{comments.map((c) => (
-								<div key={c.id} className='text-xs'>
+								<div
+									key={c.id}
+									className='text-xs text-gray-700 dark:text-gray-300'>
 									<strong>{c.author}:</strong> {c.text}
 								</div>
 							))}
@@ -679,12 +681,12 @@ function FeatureNodeComponent({
 											handleAddComment();
 										}
 									}}
-									className='w-full text-xs border border-gray-300 rounded p-1'
+									className='w-full text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded p-1'
 									aria-label='New comment'
 								/>
 								<button
 									onClick={handleAddComment}
-									className='ml-2 text-xs text-blue-500'>
+									className='ml-2 text-xs text-blue-500 dark:text-blue-400'>
 									Post
 								</button>
 							</div>
@@ -705,7 +707,7 @@ function FeatureNodeComponent({
 						if (e.key === 'Enter') handleLabelDoubleClick('left');
 					}}>
 					{data.handleLabels?.['left'] && (
-						<span className='absolute -left-8 bg-white text-xs text-gray-700 px-1 rounded'>
+						<span className='absolute -left-8 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 px-1 rounded'>
 							{data.handleLabels['left']}
 						</span>
 					)}
@@ -722,7 +724,7 @@ function FeatureNodeComponent({
 						if (e.key === 'Enter') handleLabelDoubleClick('right');
 					}}>
 					{data.handleLabels?.['right'] && (
-						<span className='absolute -right-8 bg-white text-xs text-gray-700 px-1 rounded'>
+						<span className='absolute -right-8 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 px-1 rounded'>
 							{data.handleLabels['right']}
 						</span>
 					)}
@@ -730,7 +732,7 @@ function FeatureNodeComponent({
 
 				{/* Resize handle - outside content wrapper */}
 				<div
-					className='absolute bottom-0 right-0 w-4 h-4 cursor-se-resize hover:bg-gray-200 rounded-br-lg nodrag'
+					className='absolute bottom-0 right-0 w-4 h-4 cursor-se-resize hover:bg-gray-200 dark:hover:bg-gray-600 rounded-br-lg nodrag dark:[background:linear-gradient(135deg,transparent_50%,#4b5563_50%)]'
 					onMouseDown={handleResize}
 					style={{
 						background: 'linear-gradient(135deg, transparent 50%, #e5e7eb 50%)',

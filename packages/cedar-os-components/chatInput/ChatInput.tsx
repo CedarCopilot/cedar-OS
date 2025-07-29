@@ -1,6 +1,6 @@
 import { useVoice, VoiceIndicator, cn } from 'cedar-os';
 
-import { EditorContent } from '@tiptap/react';
+import { CedarEditorContent as EditorContent } from 'cedar-os';
 import { Code, Image, Mic, SendHorizontal } from 'lucide-react';
 import { motion } from 'motion/react';
 import React, { useCallback, useEffect } from 'react';
@@ -19,17 +19,9 @@ export const ChatInput: React.FC<{
 	handleFocus?: () => void;
 	handleBlur?: () => void;
 	isInputFocused?: boolean;
-	onSubmit?: (input: string) => void; //It
 	className?: string; // Additional classes for the container
-}> = ({
-	handleFocus,
-	handleBlur,
-	isInputFocused,
-	onSubmit,
-	className = '',
-}) => {
+}> = ({ handleFocus, handleBlur, isInputFocused, className = '' }) => {
 	const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
-		onSubmit,
 		onFocus: handleFocus,
 		onBlur: handleBlur,
 	});
@@ -216,13 +208,13 @@ export const ChatInput: React.FC<{
 						layoutId: 'send-chat',
 						animate: {
 							opacity: isEditorEmpty ? 0.5 : 1,
-							backgroundColor: isEditorEmpty ? '#ffffff' : '#93c5fd',
+							backgroundColor: isEditorEmpty ? 'transparent' : '#93c5fd',
 						},
 						transition: { type: 'spring', stiffness: 300, damping: 20 },
 					}}
 					onClick={handleSubmit}
 					color={isEditorEmpty ? undefined : '#93c5fd'}
-					className='flex items-center flex-shrink-0 ml-auto -mt-0.5 rounded-full'
+					className='flex items-center flex-shrink-0 ml-auto -mt-0.5 rounded-full bg-white dark:bg-gray-800'
 					childClassName='p-1.5'>
 					<motion.div
 						animate={{ rotate: isEditorEmpty ? 0 : -90 }}

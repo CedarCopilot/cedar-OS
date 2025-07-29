@@ -3,8 +3,6 @@ title: 'Configuring the Cedar Editor'
 description: 'Customize the chat input editor behavior and features'
 ---
 
-# Configuring the Cedar Editor
-
 The Cedar editor is the rich text input component that powers chat interactions. It supports mentions, keyboard shortcuts, auto-completion, and extensive customization options.
 
 ## Basic Configuration
@@ -12,18 +10,10 @@ The Cedar editor is the rich text input component that powers chat interactions.
 Configure the editor through the `useCedarEditor` hook or ChatInput props:
 
 ```tsx
-import { ChatInput } from 'cedar-os';
+import { ChatInput } from 'cedar-os-components/chatInput';
 
 function CustomChat() {
-	return (
-		<ChatInput
-			placeholder='Type your message...'
-			maxLength={2000}
-			autoFocus={true}
-			multiline={true}
-			onSubmit={(message) => console.log('Submitted:', message)}
-		/>
-	);
+	return <ChatInput className='custom-chat-input' />;
 }
 ```
 
@@ -33,29 +23,22 @@ Use the `useCedarEditor` hook for fine-grained control:
 
 ```tsx
 import { useCedarEditor } from 'cedar-os';
+import { EditorContent } from '@tiptap/react';
 
 function AdvancedChat() {
-	const { editor, editorRef } = useCedarEditor({
+	const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
 		placeholder: 'Ask me anything...',
-		maxLength: 5000,
-		enableMentions: true,
-		enableKeyboardShortcuts: true,
-		autoComplete: {
-			enabled: true,
-			suggestions: ['help', 'explain', 'summarize', 'translate'],
-		},
-		formatting: {
-			bold: true,
-			italic: true,
-			code: true,
-			links: true,
-		},
+		onFocus: () => console.log('Editor focused'),
+		onBlur: () => console.log('Editor blurred'),
 	});
 
 	return (
 		<div>
-			<div ref={editorRef} />
-			<button onClick={() => editor.focus()}>Focus Editor</button>
+			<EditorContent editor={editor} />
+			<button onClick={() => editor?.commands.focus()}>Focus Editor</button>
+			<button onClick={handleSubmit} disabled={isEditorEmpty}>
+				Submit
+			</button>
 		</div>
 	);
 }
@@ -65,62 +48,41 @@ function AdvancedChat() {
 
 Cedar editor comes with built-in keyboard shortcuts:
 
-| Shortcut        | Action              |
-| --------------- | ------------------- |
-| `Enter`         | Submit message      |
-| `Shift + Enter` | New line            |
-| `Ctrl/Cmd + B`  | Bold text           |
-| `Ctrl/Cmd + I`  | Italic text         |
-| `Ctrl/Cmd + K`  | Insert link         |
-| `@`             | Trigger mentions    |
-| `Tab`           | Accept autocomplete |
+| Shortcut        | Action            |
+| --------------- | ----------------- |
+| `Enter`         | Submit message    |
+| `Shift + Enter` | New line          |
+| `@`             | Trigger mentions  |
+| `Tab`           | Focus editor      |
+| `M`             | Toggle microphone |
 
 ### Custom Shortcuts
 
-Add your own keyboard shortcuts:
-
-```tsx
-const { editor } = useCedarEditor({
-	keyboardShortcuts: {
-		'Ctrl+Shift+C': () => {
-			// Clear editor content
-			editor.clear();
-		},
-		'Ctrl+Shift+S': () => {
-			// Save draft
-			localStorage.setItem('draft', editor.getContent());
-		},
-	},
-});
-```
+The editor uses TipTap under the hood, so you can extend it with custom keyboard shortcuts by configuring the editor extensions directly.
 
 ## Styling and Themes
 
 Customize the editor appearance:
 
 ```tsx
-<ChatInput
-	className='custom-chat-input'
-	style={{
-		minHeight: '120px',
-		borderRadius: '12px',
-		padding: '16px',
-	}}
-	theme={{
-		colors: {
-			background: '#f8f9fa',
-			text: '#333333',
-			placeholder: '#6c757d',
-			border: '#dee2e6',
-			focus: '#0066cc',
-		},
-		fonts: {
-			family: 'Inter, sans-serif',
-			size: '14px',
-			lineHeight: '1.5',
-		},
-	}}
-/>
+<ChatInput className='custom-chat-input' />
+```
+
+You can customize the appearance using CSS classes. The component uses Tailwind CSS classes internally, so you can override them:
+
+```css
+.custom-chat-input {
+	background: #f8f9fa;
+	border-radius: 12px;
+	padding: 16px;
+	min-height: 120px;
+}
+
+.custom-chat-input .ProseMirror {
+	font-family: 'Inter', sans-serif;
+	font-size: 14px;
+	line-height: 1.5;
+}
 ```
 
 ## Editor Events
@@ -129,45 +91,60 @@ Handle various editor events:
 
 ```tsx
 <ChatInput
-	onFocus={() => console.log('Editor focused')}
-	onBlur={() => console.log('Editor blurred')}
-	onChange={(content) => console.log('Content changed:', content)}
-	onKeyDown={(event) => {
-		if (event.key === 'Escape') {
-			// Handle escape key
-		}
-	}}
-	onPaste={(event, content) => {
-		console.log('Pasted content:', content);
-	}}
+	handleFocus={() => console.log('Editor focused')}
+	handleBlur={() => console.log('Editor blurred')}
+	className='my-chat-input'
 />
 ```
 
 ## Content Validation
 
-Add validation rules for user input:
+Content validation can be implemented using the `useCedarEditor` hook:
 
 ```tsx
-const { editor } = useCedarEditor({
-	validation: {
-		maxLength: 1000,
-		minLength: 1,
-		allowedTags: ['b', 'i', 'code', 'a'],
-		blockedWords: ['spam', 'inappropriate'],
-		customValidator: (content) => {
-			if (content.includes('@everyone')) {
-				return 'Mass mentions are not allowed';
-			}
-			return null; // Valid
-		},
-	},
-	onValidationError: (error) => {
-		console.error('Validation error:', error);
-	},
-});
+import { useCedarEditor } from 'cedar-os';
+import { EditorContent } from '@tiptap/react';
+
+function ValidatedChat() {
+	const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
+		placeholder: 'Type your message...',
+		onFocus: () => console.log('Editor focused'),
+		onBlur: () => console.log('Editor blurred'),
+	});
+
+	const handleCustomSubmit = () => {
+		if (!editor) return;
+
+		const text = editor.getText();
+
+		if (text.length > 1000) {
+			console.error('Message too long');
+			return;
+		}
+		if (text.includes('@everyone')) {
+			console.error('Mass mentions are not allowed');
+			return;
+		}
+
+		// Process valid message
+		console.log('Valid message:', text);
+		handleSubmit();
+	};
+
+	return (
+		<div>
+			<EditorContent editor={editor} />
+			<button onClick={handleCustomSubmit} disabled={isEditorEmpty}>
+				Submit
+			</button>
+		</div>
+	);
+}
+
+<ChatInput />;
 ```
 
 ## Next Steps
 
 - Learn about [custom message rendering](/getting-started/chat/custom-message-rendering)
-- Explore [agent input context](/getting-started/chat/agent-input-context)
+- Explore [agent input context](/getting-started/agent-input-context/agent-input-context)

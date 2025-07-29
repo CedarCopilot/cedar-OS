@@ -7,7 +7,7 @@
 		"light": "#07C983",
 		"dark": "#15803D"
 	},
-	"favicon": "/favicon.svg",
+	"favicon": "/CedarLogoTransparent.png",
 	"navigation": {
 		"groups": [
 			{
@@ -40,41 +40,27 @@
 				"pages": [
 					"getting-started/chat/chat-overview",
 					"getting-started/chat/streaming",
-					"getting-started/chat/configuring-cedar-editor",
-					"getting-started/chat/custom-message-rendering"
+					"getting-started/chat/custom-message-rendering",
+					"getting-started/chat/chat-components",
+					"getting-started/chat/configuring-cedar-editor"
 				]
 			},
 			{
 				"group": "Agent Input Context",
 				"icon": "at",
 				"pages": [
-					"getting-started/chat/agent-input-context",
-					"getting-started/chat/mentions",
-					"getting-started/chat/subscribing-state"
+					"getting-started/agent-input-context/agent-input-context",
+					"getting-started/agent-input-context/mentions",
+					"getting-started/agent-input-context/subscribing-state"
 				]
 			},
 			{
-				"group": "State Access",
+				"group": "Agentic State",
 				"icon": "database",
 				"pages": [
 					"getting-started/state-access/agentic-state-access",
-					"getting-started/state-access/register-state",
-					"getting-started/state-access/readable",
-					"getting-started/state-access/tracking"
+					"getting-started/state-access/diff-history-manager"
 				]
-			},
-			{
-				"group": "Spells",
-				"icon": "wand-magic-sparkles",
-				"pages": [
-					"getting-started/spells/spells",
-					"getting-started/spells/radial-menu"
-				]
-			},
-			{
-				"group": "Diff & History Manager (Beta)",
-				"icon": "clock-rotate-left",
-				"pages": ["getting-started/diff-history/diff-history-manager"]
 			},
 			{
 				"group": "Voice (Beta)",
@@ -85,6 +71,14 @@
 					"getting-started/voice/streams",
 					"getting-started/voice/websockets",
 					"getting-started/voice/components"
+				]
+			},
+			{
+				"group": "Spells (Coming Soon)",
+				"icon": "wand-magic-sparkles",
+				"pages": [
+					"getting-started/spells/spells",
+					"getting-started/spells/radial-menu"
 				]
 			},
 			{
@@ -100,25 +94,28 @@
 			{
 				"group": "Customising Cedar",
 				"icon": "palette",
-				"pages": ["getting-started/customising/customising-cedar"]
+				"pages": [
+					"getting-started/customising/styling",
+					"getting-started/customising/customising-cedar"
+				]
 			}
 		]
 	},
 	"logo": {
-		"light": "/logo/light.svg",
-		"dark": "/logo/dark.svg"
+		"light": "/logo/light.png",
+		"dark": "/logo/dark.png"
 	},
 	"navbar": {
 		"links": [
 			{
 				"label": "GitHub",
-				"href": "https://github.com/cedar-os"
+				"href": "https://github.com/CedarCopilot/cedar-OS"
 			}
 		]
 	},
 	"footer": {
 		"socials": {
-			"github": "https://github.com/cedar-os"
+			"github": "https://github.com/CedarCopilot/cedar-OS"
 		}
 	}
 }

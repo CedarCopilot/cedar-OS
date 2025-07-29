@@ -3,8 +3,6 @@ title: 'Agent Backend Connection'
 description: 'Overview of connecting AI agents to Cedar-OS'
 ---
 
-# Agent Backend Connection
-
 Before we get to the juicy interactions like speaking to your AI for it to do work inside your applications, we have to connect to the agent!
 
 Cedar-OS has working configurations with every major backend. We support:
@@ -14,14 +12,13 @@ Cedar-OS has working configurations with every major backend. We support:
 - **OpenAI** - Direct OpenAI API integration
 - **Anthropic** - Direct Anthropic API integration
 - **Custom Backend** - Build your own integration
-- **CedarRouter** (coming soon) - Our optimized routing solution
 
 ## How to choose your provider
 
-- **You want a full-featured agent**: **Mastra** - When you need memory across sessions (conversation history), tool calls, knowledge base, and more complex agent capabilities.
-- **Simplicity**: **AI SDK** - One interface, multiple providers. Perfect for getting started quickly.
-- **You only have one API Key**: **Anthropic/OpenAI** - Direct integration with a single provider.
-- **You already have a custom backend**: **Custom Backend** - (glad I could help)
+- **You want a full-featured agent: Mastra** - When you need memory across sessions (conversation history), tool calls, knowledge base, and more complex agent capabilities.
+- **Simplicity: AI SDK** - One interface, multiple providers. Perfect for getting started quickly.
+- **You only have one API Key: Anthropic/OpenAI** - Direct integration with a single provider.
+- **You already have a custom backend (e.g Langchain): Custom Backend** - glad I could help :^)
 
 ## Initial Configuration
 
@@ -355,14 +352,11 @@ const { callLLM, streamLLM, callLLMStructured } =
 // Mastra Expected Input Type (from cedar-os/types.ts)
 interface BaseParams {
 	prompt: string;
-	temperature?: number;
-	maxTokens?: number;
 	[key: string]: unknown;
 }
 
 interface MastraParams extends BaseParams {
 	route: string;
-	// Mastra doesn't require model as a param
 }
 
 // Example usage

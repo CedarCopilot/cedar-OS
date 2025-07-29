@@ -9,22 +9,29 @@ import {
 } from '@/components/ui/navigation-menu';
 import Toggle3D from '@/components/ui/toggle3d';
 import { useStyling } from 'cedar-os';
-import { GithubIcon, Moon, Sun, TreePine } from 'lucide-react';
+import { GithubIcon, Moon, Sun } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function Navbar() {
 	const { styling, toggleDarkMode } = useStyling();
 
 	return (
-		<nav className='fixed top-0 left-0 right-0 z-50 border-b transition-colors duration-300 bg-white/95 backdrop-blur-sm border-gray-200 dark:bg-gray-900/95 dark:border-gray-800'>
+		<nav className='sticky top-0 left-0 right-0 z-50 border-b transition-colors duration-300 bg-white/95 backdrop-blur-sm border-gray-200 dark:bg-gray-900/95 dark:border-gray-800'>
 			<div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
 				<div className='flex items-center justify-between h-16'>
 					{/* Logo and Brand */}
 					<div className='flex items-center gap-2'>
-						<TreePine className='w-6 h-6 text-green-600 dark:text-green-400' />
-						<span className='text-xl font-bold text-gray-900 dark:text-white'>
-							Cedar
-						</span>
+						<Image
+							src={
+								styling.darkMode
+									? '/cedar-logo-dark.png'
+									: '/cedar-logo-light.png'
+							}
+							alt='Cedar Logo'
+							width={70}
+							height={24}
+						/>
 					</div>
 
 					{/* Navigation Menu */}
