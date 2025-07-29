@@ -22,11 +22,13 @@ interface CedarCaptionChatProps {
 		maxWidth?: number;
 	};
 	className?: string;
+	showThinking?: boolean;
 }
 
 export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 	dimensions,
 	className = '',
+	showThinking = true,
 }) => {
 	// Check if there are any nodes with diffs
 	const nodesState = useCedarStore((state) => state.registeredStates.nodes);
@@ -161,7 +163,7 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 
 				<Container3D className='p-2'>
 					<div className='w-full pb-3'>
-						<CaptionMessages />
+						<CaptionMessages showThinking={showThinking} />
 					</div>
 
 					<ChatInput className='bg-transparent dark:bg-transparent p-0' />

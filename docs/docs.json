@@ -40,8 +40,9 @@
 				"pages": [
 					"getting-started/chat/chat-overview",
 					"getting-started/chat/streaming",
-					"getting-started/chat/configuring-cedar-editor",
-					"getting-started/chat/custom-message-rendering"
+					"getting-started/chat/custom-message-rendering",
+					"getting-started/chat/chat-components",
+					"getting-started/chat/configuring-cedar-editor"
 				]
 			},
 			{
@@ -62,14 +63,6 @@
 				]
 			},
 			{
-				"group": "Spells",
-				"icon": "wand-magic-sparkles",
-				"pages": [
-					"getting-started/spells/spells",
-					"getting-started/spells/radial-menu"
-				]
-			},
-			{
 				"group": "Voice (Beta)",
 				"icon": "microphone",
 				"pages": [
@@ -78,6 +71,14 @@
 					"getting-started/voice/streams",
 					"getting-started/voice/websockets",
 					"getting-started/voice/components"
+				]
+			},
+			{
+				"group": "Spells (Coming Soon)",
+				"icon": "wand-magic-sparkles",
+				"pages": [
+					"getting-started/spells/spells",
+					"getting-started/spells/radial-menu"
 				]
 			},
 			{

@@ -19,17 +19,9 @@ export const ChatInput: React.FC<{
 	handleFocus?: () => void;
 	handleBlur?: () => void;
 	isInputFocused?: boolean;
-	onSubmit?: (input: string) => void; //It
 	className?: string; // Additional classes for the container
-}> = ({
-	handleFocus,
-	handleBlur,
-	isInputFocused,
-	onSubmit,
-	className = '',
-}) => {
+}> = ({ handleFocus, handleBlur, isInputFocused, className = '' }) => {
 	const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
-		onSubmit,
 		onFocus: handleFocus,
 		onBlur: handleBlur,
 	});
