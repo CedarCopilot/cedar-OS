@@ -125,13 +125,13 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     				provider: 'ai-sdk',
     				providers: {
     					openai: {
-    						apiKey: process.env.OPENAI_API_KEY,
+    						apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
     					},
     					anthropic: {
-    						apiKey: process.env.ANTHROPIC_API_KEY,
+    						apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY,
     					},
     					google: {
-    						apiKey: process.env.GOOGLE_API_KEY,
+    						apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
     					},
     				},
     			}}>
@@ -151,7 +151,7 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     		<CedarCopilot
     			llmProvider={{
     				provider: 'openai',
-    				apiKey: process.env.OPENAI_API_KEY,
+    				apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
     			}}>
     			<YourApp />
     		</CedarCopilot>
@@ -169,7 +169,7 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     		<CedarCopilot
     			llmProvider={{
     				provider: 'anthropic',
-    				apiKey: process.env.ANTHROPIC_API_KEY,
+    				apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY,
     			}}>
     			<YourApp />
     		</CedarCopilot>
@@ -221,13 +221,13 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     <CodeGroup>
 
     ```tsx Chat Setup
-    import { CedarFloatingChat } from 'cedar-os';
+    import { FloatingCedarChat } from 'cedar-os';
 
     function ChatApp() {
       return (
         <div className="h-screen">
           {/* This automatically works */}
-          <CedarFloatingChat />
+          <FloatingCedarChat />
         </div>
       );
     }
