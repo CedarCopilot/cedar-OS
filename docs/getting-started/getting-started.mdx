@@ -17,6 +17,12 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     - React DOM 18.2.0 or higher
     - Node.js 18+ (for development)
 
+    **Framework Support:**
+    - ✅ **Next.js (Recommended)** - Full support with optimal performance
+    - ✅ **Create React App** - Supported with additional configuration
+    - ✅ **Vite + React** - Supported with additional configuration
+    - ✅ **Other React frameworks** - May require manual setup
+
   </Step>
 
   <Step title="Install using the cedar-os-cli">
@@ -34,6 +40,7 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
       </Info>
 
     - **Existing Next.js project**: Automatically adds Cedar components and required dependencies to your project
+    - **Existing React project**: Adds Cedar components with a note about Next.js being optimal
 
     **About Cedar components:** Cedar-OS uses a [shadcn](https://ui.shadcn.com/)-style approach - components are copied directly into your project (not installed as dependencies). This gives you full control to customize, modify, and style the components as needed for your application.
 
@@ -400,5 +407,9 @@ If all CLI commands are failing, you can manually install Cedar-OS:
 **Don't see the chat?**: Make sure you add the correct chat component inside the `<CedarCopilot>` boundary. See [Chat Overview](/getting-started/chat/chat-overview) for setup instructions.
 
 **AI calls failing**: Check that your API keys are correctly set in environment variables and accessible in your client code.
+
+**Using with non-Next.js frameworks**: While Cedar-OS works with Create React App, Vite, and other React frameworks, you may need to manually configure Tailwind CSS and ensure proper client-side rendering for optimal performance.
+
+**TypeScript errors**: Cedar-OS is fully typed - check that you're importing types correctly and using the right component props.
 
 Need help? Check our [Community Discord](https://discord.gg/cedar-os) or [GitHub Issues](https://github.com/cedar-os/cedar/issues). We're always here to help :-D

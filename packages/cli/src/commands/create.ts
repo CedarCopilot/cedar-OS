@@ -24,7 +24,7 @@ import path from 'path';
 import { spawn } from 'cross-spawn';
 import { spawnSync } from 'child_process';
 import fs from 'fs';
-import { isNextProject, runCedarAdd } from '../cli-helpers';
+import { isNextProject, isReactProject, runCedarAdd } from '../cli-helpers';
 
 export interface CreateOptions {
 	projectName?: string;
@@ -197,12 +197,11 @@ export async function createCommand(opts: CreateOptions) {
 		const cwd = process.cwd();
 
 		// ==========================================================================
-		// STEP 1: DETECT EXISTING NEXT.JS PROJECT
+		// STEP 1: DETECT EXISTING PROJECT TYPE
 		// ==========================================================================
-		// Check if we're already in a Next.js project by looking for:
-		// - next.config.js file
-		// - next dependency in package.json
+		// Check what kind of project we're in and handle accordingly
 		const inNext = isNextProject(cwd);
+		const inReact = isReactProject(cwd);
 
 		if (inNext) {
 			// =======================================================================
@@ -241,12 +240,52 @@ export async function createCommand(opts: CreateOptions) {
 				outro(pc.yellow('Operation cancelled. No changes made.'));
 				return;
 			}
+		} else if (inReact) {
+			// =======================================================================
+			// SCENARIO B: EXISTING REACT PROJECT (NON-NEXT.JS)
+			// =======================================================================
+			// User is in a React project but not Next.js
+			// Cedar works best with Next.js but can work with other React frameworks
+			let shouldAddToExisting = true;
+
+			// If not using --yes flag, ask for confirmation with warning
+			if (!opts.yes) {
+				const addToExisting = await confirm({
+					message:
+						'Detected React project. Cedar works best with Next.js, but you can add components to this project. Continue?',
+					initialValue: true,
+				});
+
+				if (isCancel(addToExisting)) {
+					cancel('Operation cancelled.');
+					process.exit(0);
+				}
+
+				shouldAddToExisting = addToExisting;
+			}
+
+			if (shouldAddToExisting) {
+				// Run the add-sapling command to install Cedar components
+				console.log(
+					pc.gray('Adding Cedar components to existing React project...')
+				);
+				console.log(
+					pc.yellow('⚠️  Note: Cedar works best with Next.js. You may need additional configuration.')
+				);
+				await runCedarAdd({ yes: opts.yes });
+				outro(pc.green('Cedar components added successfully!'));
+				return;
+			} else {
+				// User declined to add Cedar to existing project
+				outro(pc.yellow('Operation cancelled. No changes made.'));
+				return;
+			}
 		}
 
 		// ==========================================================================
-		// STEP 2: NOT IN NEXT.JS PROJECT - COLLECT PROJECT NAME
+		// STEP 2: NOT IN EXISTING PROJECT - COLLECT PROJECT NAME
 		// ==========================================================================
-		// User is not in a Next.js project, so we need to create a new one
+		// User is not in a Next.js or React project, so we need to create a new one
 		// First, get the project name from user or use defaults
 		let projectName = opts.projectName;
 		if (!projectName) {
