@@ -1,0 +1,551 @@
+---
+title: 'Custom Backend Implementation'
+description: 'Learn how to create a custom backend provider for Cedar-OS by implementing the required provider interface functions.'
+---
+
+# Custom Backend Implementation
+
+Cedar-OS provides a flexible agent connection system that allows you to integrate with any LLM provider or custom backend. This guide explains how to implement a custom provider by creating the required functions and registering them with the system.
+
+## Agent Connection Architecture
+
+The Cedar-OS agent connection system is built around a **provider pattern** that abstracts different LLM services behind a common interface. Each provider implements a set of standardized functions that handle:
+
+- **Non-streaming LLM calls** (`callLLM`)
+- **Structured output calls** (`callLLMStructured`)
+- **Streaming responses** (`streamLLM`)
+- **Response parsing** (`handleResponse`, `handleStreamResponse`)
+
+The system automatically handles:
+
+- Request/response logging
+- Error handling and retries
+- Stream management and cancellation
+- Type safety and validation
+
+## Provider Interface
+
+Every custom provider must implement the `ProviderImplementation` interface with these 5 required functions:
+
+```typescript
+interface ProviderImplementation<TParams, TConfig> {
+	callLLM: (params: TParams, config: TConfig) => Promise<LLMResponse>;
+	callLLMStructured: (
+		params: TParams & StructuredParams,
+		config: TConfig
+	) => Promise<LLMResponse>;
+	streamLLM: (
+		params: TParams,
+		config: TConfig,
+		handler: StreamHandler
+	) => StreamResponse;
+	handleResponse: (response: Response) => Promise<LLMResponse>;
+	handleStreamResponse: (chunk: string) => StreamEvent;
+}
+```
+
+## Required Function Implementations
+
+### 1. `callLLM` - Basic LLM Calls
+
+**Purpose:** Make non-streaming calls to your LLM service.
+
+**Input Parameters:**
+
+```typescript
+interface CustomParams extends BaseParams {
+	prompt: string; // The user's input prompt
+	systemPrompt?: string; // Optional system prompt
+	temperature?: number; // Sampling temperature (0-1)
+	maxTokens?: number; // Maximum tokens to generate
+	[key: string]: unknown; // Any additional custom parameters
+}
+
+// Your custom config type
+type CustomConfig = { provider: 'custom'; config: Record<string, unknown> };
+```
+
+**Expected Output:**
+
+```typescript
+interface LLMResponse {
+	content: string; // The generated text response
+	usage?: {
+		// Optional token usage info
+		promptTokens: number;
+		completionTokens: number;
+		totalTokens: number;
+	};
+	metadata?: Record<string, unknown>; // Optional metadata (model, id, etc.)
+	object?: unknown; // For structured output
+}
+```
+
+**Example Implementation:**
+
+```typescript
+callLLM: async (params, config) => {
+	const { prompt, systemPrompt, temperature, maxTokens, ...rest } = params;
+
+	// Build your API request
+	const response = await fetch('https://your-api.com/chat/completions', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${config.config.apiKey}`,
+		},
+		body: JSON.stringify({
+			messages: [
+				...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+				{ role: 'user', content: prompt },
+			],
+			temperature,
+			max_tokens: maxTokens,
+			...rest,
+		}),
+	});
+
+	return this.handleResponse(response);
+};
+```
+
+### 2. `callLLMStructured` - Structured Output Calls
+
+**Purpose:** Make calls that return structured data (JSON) based on a provided schema.
+
+**Input Parameters:**
+
+```typescript
+interface StructuredParams {
+	schema?: unknown; // JSON Schema or Zod schema
+	schemaName?: string; // Name for the schema
+	schemaDescription?: string; // Description of expected output
+}
+
+// Combined with your custom params
+type StructuredCustomParams = CustomParams & StructuredParams;
+```
+
+**Expected Output:** Same as `callLLM`, but with the `object` field populated with parsed structured data.
+
+**Example Implementation:**
+
+```typescript
+callLLMStructured: async (params, config) => {
+	const {
+		prompt,
+		systemPrompt,
+		schema,
+		schemaName,
+		schemaDescription,
+		...rest
+	} = params;
+
+	const body = {
+		messages: [
+			...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+			{ role: 'user', content: prompt },
+		],
+		...rest,
+	};
+
+	// Add schema for structured output (format depends on your API)
+	if (schema) {
+		body.response_format = {
+			type: 'json_schema',
+			json_schema: {
+				name: schemaName || 'response',
+				description: schemaDescription,
+				schema: schema,
+			},
+		};
+	}
+
+	const response = await fetch('https://your-api.com/chat/completions', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${config.config.apiKey}`,
+		},
+		body: JSON.stringify(body),
+	});
+
+	const result = await this.handleResponse(response);
+
+	// Parse structured output if schema was provided
+	if (schema && result.content) {
+		try {
+			result.object = JSON.parse(result.content);
+		} catch {
+			// Leave object undefined if parsing fails
+		}
+	}
+
+	return result;
+};
+```
+
+### 3. `streamLLM` - Streaming Responses
+
+**Purpose:** Handle real-time streaming responses from your LLM service.
+
+**Input Parameters:**
+
+- Same `params` as `callLLM`
+- `handler`: A callback function to process stream events
+
+**Stream Handler Types:**
+
+```typescript
+type StreamEvent =
+	| { type: 'chunk'; content: string } // New content chunk
+	| { type: 'done' } // Stream completed
+	| { type: 'error'; error: Error } // Error occurred
+	| { type: 'metadata'; data: unknown }; // Optional metadata
+
+type StreamHandler = (event: StreamEvent) => void | Promise<void>;
+```
+
+**Expected Output:**
+
+```typescript
+interface StreamResponse {
+	abort: () => void; // Function to cancel the stream
+	completion: Promise<void>; // Promise that resolves when stream completes
+}
+```
+
+**Example Implementation:**
+
+```typescript
+streamLLM: (params, config, handler) => {
+	const abortController = new AbortController();
+
+	const completion = (async () => {
+		try {
+			const { prompt, systemPrompt, temperature, maxTokens, ...rest } = params;
+
+			const response = await fetch('https://your-api.com/chat/completions', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${config.config.apiKey}`,
+				},
+				body: JSON.stringify({
+					messages: [
+						...(systemPrompt
+							? [{ role: 'system', content: systemPrompt }]
+							: []),
+						{ role: 'user', content: prompt },
+					],
+					temperature,
+					max_tokens: maxTokens,
+					stream: true, // Enable streaming
+					...rest,
+				}),
+				signal: abortController.signal,
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			// Handle Server-Sent Events stream
+			await this.handleEventStream(response, {
+				onMessage: (chunk) => {
+					// Parse your API's streaming format
+					try {
+						const data = JSON.parse(chunk);
+						const content = data.choices?.[0]?.delta?.content || '';
+						if (content) {
+							handler({ type: 'chunk', content });
+						}
+					} catch {
+						// Skip parsing errors
+					}
+				},
+				onDone: () => {
+					handler({ type: 'done' });
+				},
+			});
+		} catch (error) {
+			if (error instanceof Error && error.name !== 'AbortError') {
+				handler({ type: 'error', error });
+			}
+		}
+	})();
+
+	return {
+		abort: () => abortController.abort(),
+		completion,
+	};
+};
+```
+
+### 4. `handleResponse` - Parse API Responses
+
+**Purpose:** Convert your API's response format to the standard `LLMResponse` format.
+
+**Input:** Standard `Response` object from fetch
+**Output:** `LLMResponse` object
+
+**Example Implementation:**
+
+```typescript
+handleResponse: async (response) => {
+	if (!response.ok) {
+		throw new Error(`HTTP error! status: ${response.status}`);
+	}
+
+	const data = await response.json();
+
+	return {
+		content: data.choices?.[0]?.message?.content || data.text || '',
+		usage: data.usage
+			? {
+					promptTokens: data.usage.prompt_tokens || 0,
+					completionTokens: data.usage.completion_tokens || 0,
+					totalTokens: data.usage.total_tokens || 0,
+			  }
+			: undefined,
+		metadata: {
+			model: data.model,
+			id: data.id,
+			// Add any other relevant metadata
+		},
+	};
+};
+```
+
+### 5. `handleStreamResponse` - Parse Stream Chunks
+
+**Purpose:** Convert individual stream chunks to `StreamEvent` objects.
+
+**Input:** Raw string chunk from the stream
+**Output:** `StreamEvent` object
+
+**Example Implementation:**
+
+```typescript
+handleStreamResponse: (chunk) => {
+	try {
+		const data = JSON.parse(chunk);
+		const content = data.choices?.[0]?.delta?.content || '';
+		return { type: 'chunk', content };
+	} catch (error) {
+		return { type: 'error', error: error as Error };
+	}
+};
+```
+
+## Complete Custom Provider Example
+
+Here's a complete example of a custom provider implementation:
+
+```typescript
+import type {
+	CustomParams,
+	ProviderImplementation,
+	InferProviderConfig,
+	StructuredParams,
+	LLMResponse,
+	StreamHandler,
+	StreamResponse,
+	StreamEvent,
+} from '@cedar-os/core';
+
+type CustomConfig = InferProviderConfig<'custom'>;
+
+export const myCustomProvider: ProviderImplementation<
+	CustomParams,
+	CustomConfig
+> = {
+	callLLM: async (params, config) => {
+		const { prompt, systemPrompt, temperature, maxTokens, ...rest } = params;
+
+		const response = await fetch(`${config.config.baseURL}/chat/completions`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${config.config.apiKey}`,
+			},
+			body: JSON.stringify({
+				messages: [
+					...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+					{ role: 'user', content: prompt },
+				],
+				temperature,
+				max_tokens: maxTokens,
+				...rest,
+			}),
+		});
+
+		return myCustomProvider.handleResponse(response);
+	},
+
+	callLLMStructured: async (params, config) => {
+		// Implementation similar to callLLM but with schema handling
+		// ... (see example above)
+	},
+
+	streamLLM: (params, config, handler) => {
+		// Implementation for streaming
+		// ... (see example above)
+	},
+
+	handleResponse: async (response) => {
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data = await response.json();
+		return {
+			content: data.response || data.text || '',
+			usage: data.usage,
+			metadata: { model: data.model, id: data.id },
+		};
+	},
+
+	handleStreamResponse: (chunk) => {
+		try {
+			const data = JSON.parse(chunk);
+			const content = data.delta?.content || '';
+			return { type: 'chunk', content };
+		} catch (error) {
+			return { type: 'error', error: error as Error };
+		}
+	},
+};
+```
+
+## Registering Your Custom Provider
+
+After implementing your provider, you need to register it with the Cedar-OS system:
+
+### 1. Add to Provider Registry
+
+Update the provider registry in `packages/cedar-os/src/store/agentConnection/providers/index.ts`:
+
+```typescript
+import { myCustomProvider } from './my-custom-provider';
+
+export const providerRegistry = {
+	openai: openAIProvider,
+	anthropic: openAIProvider,
+	mastra: mastraProvider,
+	'ai-sdk': aiSDKProvider,
+	custom: myCustomProvider, // Replace the default with your implementation
+} as const;
+```
+
+### 2. Configure the Provider
+
+Set up your custom provider configuration:
+
+```typescript
+import { useCedarStore } from '@cedar-os/core';
+
+const store = useCedarStore();
+
+// Configure your custom provider
+store.setProviderConfig({
+	provider: 'custom',
+	config: {
+		apiKey: 'your-api-key',
+		baseURL: 'https://your-api.com',
+		model: 'your-model-name',
+		// Any other configuration your provider needs
+	},
+});
+
+// Connect to the provider
+await store.connect();
+```
+
+### 3. Use the Provider
+
+Once configured, you can use your custom provider like any other:
+
+```typescript
+// Make a basic call
+const response = await store.callLLM({
+	prompt: 'Hello, world!',
+	temperature: 0.7,
+	maxTokens: 100,
+});
+
+// Make a streaming call
+store.streamLLM(
+	{
+		prompt: 'Tell me a story',
+		temperature: 0.8,
+	},
+	(event) => {
+		if (event.type === 'chunk') {
+			console.log('New content:', event.content);
+		} else if (event.type === 'done') {
+			console.log('Stream completed');
+		}
+	}
+);
+```
+
+## Helper Utilities
+
+Cedar-OS provides several utility functions to help with common tasks:
+
+### Event Stream Handling
+
+For processing Server-Sent Events streams:
+
+```typescript
+import { handleEventStream } from '@cedar-os/core';
+
+await handleEventStream(response, {
+	onMessage: (chunk) => {
+		handler({ type: 'chunk', content: chunk });
+	},
+	onDone: () => {
+		handler({ type: 'done' });
+	},
+});
+```
+
+### Type Safety
+
+Use TypeScript interfaces for better type safety:
+
+```typescript
+interface MyProviderParams extends CustomParams {
+	model: string;
+	customSetting?: boolean;
+}
+
+interface MyProviderConfig {
+	provider: 'custom';
+	config: {
+		apiKey: string;
+		baseURL: string;
+		defaultModel: string;
+	};
+}
+```
+
+## Best Practices
+
+1. **Error Handling**: Always handle network errors, API errors, and parsing errors gracefully
+2. **Abort Signals**: Support cancellation in streaming operations using `AbortController`
+3. **Type Safety**: Use TypeScript interfaces for better development experience
+4. **Logging**: The system automatically logs requests/responses, but you can add custom logging
+5. **Configuration**: Make your provider configurable through the config object
+6. **Testing**: Test all functions thoroughly, especially streaming and error scenarios
+
+## Troubleshooting
+
+**Provider not found**: Make sure you've registered your provider in the provider registry.
+
+**Type errors**: Ensure your parameter and config types extend the required base interfaces.
+
+**Streaming issues**: Check that your API supports Server-Sent Events and that you're parsing the format correctly.
+
+**Authentication errors**: Verify your API key and authentication method match your provider's requirements.
