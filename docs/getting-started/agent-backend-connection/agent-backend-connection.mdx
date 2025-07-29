@@ -38,13 +38,13 @@ function App() {
 				provider: 'ai-sdk',
 				providers: {
 					openai: {
-						apiKey: process.env.OPENAI_API_KEY,
+						apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
 					},
 					anthropic: {
-						apiKey: process.env.ANTHROPIC_API_KEY,
+						apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY,
 					},
 					google: {
-						apiKey: process.env.GOOGLE_API_KEY,
+						apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
 					},
 				},
 			}}>
@@ -62,7 +62,7 @@ function App() {
 		<CedarCopilot
 			llmProvider={{
 				provider: 'openai',
-				apiKey: process.env.OPENAI_API_KEY,
+				apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
 			}}>
 			<YourApp />
 		</CedarCopilot>
@@ -78,7 +78,7 @@ function App() {
 		<CedarCopilot
 			llmProvider={{
 				provider: 'anthropic',
-				apiKey: process.env.ANTHROPIC_API_KEY,
+				apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY,
 			}}>
 			<YourApp />
 		</CedarCopilot>
