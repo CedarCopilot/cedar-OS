@@ -77,8 +77,7 @@ export interface AgentConnectionSlice {
 
 	// High-level methods that use callLLM/streamLLM
 	sendMessage: (params?: SendMessageParams) => Promise<void>;
-	handleLLMResult: (response: LLMResponse) => void;
-	handleLLMStreamResponse: (items: (string | object)[]) => void;
+	handleLLMResponse: (items: (string | object)[]) => void;
 
 	// Configuration methods
 	setProviderConfig: (config: ProviderConfig) => void;
@@ -104,7 +103,6 @@ export type TypedAgentConnectionSlice<T extends ProviderConfig> = Omit<
 		params: GetParamsForConfig<T>,
 		handler: StreamHandler
 	) => StreamResponse;
-	handleLLMResult: (response: LLMResponse) => void;
 };
 
 export const improvePrompt = async (
@@ -339,14 +337,16 @@ export const createAgentConnectionSlice: StateCreator<
 
 		set({ currentAbortController: abortController, isStreaming: true });
 
-		// Wrap the handler to log chunks
+		// Wrap the handler to log stream events
 		const wrappedHandler: StreamHandler = (event) => {
 			if (event.type === 'chunk') {
 				get().logStreamChunk(streamId, event.content);
 			} else if (event.type === 'done') {
-				get().logStreamEnd(streamId);
+				get().logStreamEnd(streamId, event.completedItems);
 			} else if (event.type === 'error') {
 				get().logAgentError(streamId, event.error);
+			} else if (event.type === 'object') {
+				get().logStreamObject(streamId, event.object);
 			}
 			handler(event);
 		};
@@ -374,82 +374,11 @@ export const createAgentConnectionSlice: StateCreator<
 		};
 	},
 
-	// Handle LLM result based on type
-	handleLLMResult: (response: LLMResponse) => {
+	// Handle LLM response
+	handleLLMResponse: (itemsToProcess: (string | object)[]) => {
 		const state = get();
 
-		// Check if there's an object field with structured output
-		if (response.object && typeof response.object === 'object') {
-			const structuredResponse = response.object as Record<string, unknown>;
-
-			// Handle based on the type field in the structured response
-			if (
-				'type' in structuredResponse &&
-				typeof structuredResponse.type === 'string'
-			) {
-				switch (structuredResponse.type) {
-					case 'action': {
-						// Execute the custom setter with the provided parameters
-						if (
-							'stateKey' in structuredResponse &&
-							'setterKey' in structuredResponse &&
-							typeof structuredResponse.stateKey === 'string' &&
-							typeof structuredResponse.setterKey === 'string'
-						) {
-							const args =
-								'args' in structuredResponse &&
-								Array.isArray(structuredResponse.args)
-									? structuredResponse.args
-									: [];
-							state.executeCustomSetter(
-								structuredResponse.stateKey,
-								structuredResponse.setterKey,
-								...args
-							);
-						}
-						break;
-					}
-					case 'message': {
-						// Add as a message with specific role/content
-						const role =
-							'role' in structuredResponse &&
-							typeof structuredResponse.role === 'string'
-								? structuredResponse.role
-								: 'assistant';
-						const content =
-							'content' in structuredResponse &&
-							typeof structuredResponse.content === 'string'
-								? structuredResponse.content
-								: response.content;
-						// Map system role to assistant if needed
-						const messageRole = role === 'system' ? 'assistant' : role;
-						state.addMessage({
-							role: messageRole as 'user' | 'assistant' | 'bot',
-							type: 'text',
-							content,
-						});
-						return; // Don't add the default message
-					}
-					// Add more cases as needed
-				}
-			}
-		}
-
-		// Default behavior: add the response content as an assistant message
-		if (response.content) {
-			state.addMessage({
-				role: 'assistant',
-				type: 'text',
-				content: response.content,
-			});
-		}
-	},
-
-	// Handle LLM stream response - unified handler for both streaming and non-streaming
-	handleLLMStreamResponse: (items: (string | object)[]) => {
-		const state = get();
-
-		items.forEach(item => {
+		itemsToProcess.forEach((item) => {
 			if (typeof item === 'string') {
 				// Handle text content - append to latest message
 				state.appendToLatestMessage(item);
@@ -457,7 +386,10 @@ export const createAgentConnectionSlice: StateCreator<
 				// Handle structured objects
 				const structuredResponse = item as Record<string, unknown>;
 
-				if ('type' in structuredResponse && typeof structuredResponse.type === 'string') {
+				if (
+					'type' in structuredResponse &&
+					typeof structuredResponse.type === 'string'
+				) {
 					switch (structuredResponse.type) {
 						case 'action': {
 							// Execute the custom setter with the provided parameters
@@ -503,7 +435,11 @@ export const createAgentConnectionSlice: StateCreator<
 						}
 						default:
 							// TODO: Check for registered generative UI handlers for other types
-							console.log('Unhandled structured response type:', structuredResponse.type, structuredResponse);
+							console.log(
+								'Unhandled structured response type:',
+								structuredResponse.type,
+								structuredResponse
+							);
 							break;
 					}
 				} else {
@@ -515,7 +451,6 @@ export const createAgentConnectionSlice: StateCreator<
 		});
 	},
 
-	// High-level sendMessage method that demonstrates flexible usage
 	sendMessage: async (params?: SendMessageParams) => {
 		const { model, systemPrompt, route, temperature, stream } = params || {};
 		const state = get();
@@ -571,18 +506,18 @@ export const createAgentConnectionSlice: StateCreator<
 					break;
 			}
 
-			// Step 5: Make the LLM call (streaming or non-streaming)
+			// Step 5: Make the LLM call (streaming and non-streaming branches)
 			if (stream) {
-				// Streaming approach - process responses in real-time
+				// Streaming approach - process each item as it comes in
 				const streamResponse = state.streamLLM(llmParams, (event) => {
 					switch (event.type) {
 						case 'chunk':
 							// Process single text chunk as array of one
-							state.handleLLMStreamResponse([event.content]);
+							state.handleLLMResponse([event.content]);
 							break;
 						case 'object':
 							// Process single object as array of one
-							state.handleLLMStreamResponse([event.object]);
+							state.handleLLMResponse([event.object]);
 							break;
 						case 'done':
 							// Stream completed - no additional processing needed
@@ -596,17 +531,17 @@ export const createAgentConnectionSlice: StateCreator<
 				// Wait for stream to complete
 				await streamResponse.completion;
 			} else {
-				// Non-streaming approach - use existing flow with new handler
+				// Non-streaming approach – call the LLM and process all items at once
 				const response = await state.callLLM(llmParams);
-				
+
 				// Process response content as array of one
 				if (response.content) {
-					state.handleLLMStreamResponse([response.content]);
+					state.handleLLMResponse([response.content]);
 				}
-				
+
 				// Process structured output if present
 				if (response.object) {
-					state.handleLLMStreamResponse([response.object]);
+					state.handleLLMResponse([response.object]);
 				}
 			}
 

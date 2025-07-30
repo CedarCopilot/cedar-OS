@@ -239,7 +239,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 			if (onSubmit) {
 				onSubmit(textContent);
 			} else {
-				sendMessage();
+				sendMessage({ stream: true });
 			}
 
 			editor.commands.clearContent();

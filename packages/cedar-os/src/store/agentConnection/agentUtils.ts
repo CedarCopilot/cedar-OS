@@ -1,72 +1,55 @@
-// Enhanced stream parser that handles both text chunks and JSON objects
-// Separates parsing logic from application handler logic
+/**
+ * Enhanced Server-Sent Events (SSE) stream parser
+ * 
+ * This function handles parsing of streaming responses from various LLM providers:
+ * - OpenAI: Uses delta format with choices array
+ * - Mastra: Uses custom object types  
+ * - Raw text: Plain text chunks
+ * 
+ * Key responsibilities:
+ * 1. Parse SSE format (data: content\n\n)
+ * 2. Handle mixed text/JSON content streams
+ * 3. Accumulate text messages and track completed items
+ * 4. Call handler immediately for real-time processing
+ * 5. Provide completion summary with all items
+ */
 
 import type { StreamHandler } from './types';
 
-export interface StreamHandlers {
-	handleChunk: (chunk: string) => void;
-	handleObject: (obj: object) => void;
-	handleComplete: (completedItems: (string | object)[]) => void;
-}
-
-// Process raw content chunks (handle newlines, encoding, etc.)
+/**
+ * Process raw content chunks to handle encoding and newlines
+ * Converts escaped newlines (\n) and actual newlines to proper line breaks
+ */
 const processContentChunk = (rawChunk: string): string => {
-	// Handle newline replacement - convert escaped newlines and actual newlines to proper newlines
 	return rawChunk.replace(/(\\n|\n)/g, '\n');
 };
 
-// Common default stream handlers factory for providers
-export const createDefaultStreamHandlers = (
-	handler: StreamHandler,
-	providerName: string = 'unknown'
-): StreamHandlers => ({
-	handleChunk: (chunk: string) => {
-		// Pass through to original handler
-		handler({ type: 'chunk', content: chunk });
-	},
-
-	handleObject: (obj: object) => {
-		// Call the handler with object type
-		handler({ type: 'object', object: obj });
-
-		// Handle message type objects for backward compatibility (primarily for Mastra)
-		if (
-			obj &&
-			typeof obj === 'object' &&
-			'type' in obj &&
-			obj.type === 'message'
-		) {
-			const messageContent =
-				'content' in obj && typeof obj.content === 'string'
-					? obj.content
-					: JSON.stringify(obj);
-			handler({ type: 'chunk', content: messageContent });
-		}
-	},
-
-	handleComplete: (completedItems: (string | object)[]) => {
-		// Call the original done handler
-		handler({ type: 'done' });
-
-		// Log completed messages for debugging
-		console.log(`${providerName} stream completed with items:`, completedItems);
-	},
-});
-
+/**
+ * Main SSE stream handler - processes Server-Sent Events from LLM providers
+ * 
+ * @param response - HTTP Response object with streaming body
+ * @param handler - StreamHandler to call for each parsed event (chunk, object, done, error)
+ */
 export async function handleEventStream(
 	response: Response,
-	handlers: StreamHandlers
+	handler: StreamHandler
 ): Promise<void> {
 	if (!response.ok || !response.body) {
 		throw new Error(`HTTP error! status: ${response.status}`);
 	}
 
+	// Set up streaming infrastructure
 	const reader = response.body.getReader();
 	const decoder = new TextDecoder();
 	let buffer = '';
-	const completedItems: (string | object)[] = [];
-	let currentTextMessage = '';
+	const completedItems: (string | object)[] = []; // Track all processed items for completion logging
+	let currentTextMessage = ''; // Accumulate text chunks into messages
 
+	/**
+	 * Parse Server-Sent Event format
+	 * Standard SSE format: "event: type\ndata: content\n\n"
+	 * Most providers only use the data field
+	 */
 	const parseSSEEvent = (raw: string) => {
 		let eventType = 'message';
 		let data = '';
@@ -75,92 +58,104 @@ export async function handleEventStream(
 			if (line.startsWith('event:')) {
 				eventType = line.slice(6).trim();
 			} else if (line.startsWith('data:')) {
-				data += line.slice(5);
+				data += line.slice(5); // Note: preserves leading space after 'data:'
 			}
 		}
 
 		return { eventType, data };
 	};
 
+	/**
+	 * Process the data content from SSE events
+	 * Handles multiple content formats:
+	 * 1. OpenAI delta format: {"choices": [{"delta": {"content": "text"}}]}
+	 * 2. Custom object format: {"type": "action", "data": {...}}
+	 * 3. Direct content: {"content": "text"}
+	 * 4. Plain text: raw string content
+	 */
 	const processDataContent = (data: string) => {
 		console.log('data', data, data.length);
-		// Handle special completion markers
+		
+		// Skip completion markers that signal end of stream
 		if (data.trim() === '[DONE]' || data.trim() === 'done') {
 			return;
 		}
 
-		// Try to parse as JSON first
+		// Attempt JSON parsing first (most common case)
 		try {
 			const parsed = JSON.parse(data);
 
-			// Handle OpenAI format: {"choices": [{"delta": {...}}]}
+			// OpenAI format: {"choices": [{"delta": {...}}]}
 			if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
 				const delta = parsed.choices[0].delta;
 
-				// Handle text content
+				// Process text content from delta
 				if (delta.content) {
 					const processedContent = processContentChunk(delta.content);
 					currentTextMessage += processedContent;
-					handlers.handleChunk(processedContent);
+					handler({ type: 'chunk', content: processedContent });
 				}
 
-				// Handle structured data (tool calls, function calls) - but skip role-only deltas
+				// Process structured data (tool calls, function calls)
+				// Skip role-only deltas which don't contain actual content
 				if (delta.tool_calls || delta.function_call) {
-					// Finalize current text message before object
+					// Save any accumulated text before processing object
 					if (currentTextMessage.trim()) {
 						completedItems.push(currentTextMessage.trim());
 						currentTextMessage = '';
 					}
-					handlers.handleObject(delta);
+					handler({ type: 'object', object: delta });
 					completedItems.push(delta);
 				}
 
-				// Handle empty delta (completion)
+				// Empty delta indicates completion for some providers
 				if (Object.keys(delta).length === 0) {
 					return;
 				}
 			}
-			// Handle Mastra/custom format: {"type": "...", "data": {...}}
+			// Mastra/custom format: {"type": "action", "data": {...}}
 			else if (parsed.type) {
-				// Finalize current text message before object
+				// Save accumulated text before processing object
 				if (currentTextMessage.trim()) {
 					completedItems.push(currentTextMessage.trim());
 					currentTextMessage = '';
 				}
-				handlers.handleObject(parsed);
+				handler({ type: 'object', object: parsed });
 				completedItems.push(parsed);
 			}
-			// Handle direct content format: {"content": "..."}
+			// Direct content format: {"content": "text content"}
 			else if (parsed.content) {
 				const processedContent = processContentChunk(parsed.content);
 				currentTextMessage += processedContent;
-				handlers.handleChunk(processedContent);
+				handler({ type: 'chunk', content: processedContent });
 			}
-			// Handle any other JSON object
+			// Generic JSON object (fallback)
 			else {
-				// Finalize current text message before object
+				// Save accumulated text before processing object
 				if (currentTextMessage.trim()) {
 					completedItems.push(currentTextMessage.trim());
 					currentTextMessage = '';
 				}
-				handlers.handleObject(parsed);
+				handler({ type: 'object', object: parsed });
 				completedItems.push(parsed);
 			}
 		} catch {
-			// Not JSON, treat as plain text - but skip completion markers
+			// Not valid JSON, treat as plain text content
 			if (data.trim() && data !== '[DONE]' && data !== 'done') {
 				const processedContent = processContentChunk(data);
 				currentTextMessage += processedContent;
-				handlers.handleChunk(processedContent);
+				handler({ type: 'chunk', content: processedContent });
 			}
 		}
 	};
 
 	try {
+		// Main streaming loop - read and process SSE events
 		while (true) {
 			const { value, done } = await reader.read();
 			if (done) break;
 
+			// Decode bytes to string and add to buffer
 			buffer += decoder.decode(value, { stream: true });
 
 			// Process complete SSE events (delimited by \n\n)
@@ -169,12 +164,12 @@ export async function handleEventStream(
 				const rawEvent = buffer.slice(0, eventBoundary);
 				buffer = buffer.slice(eventBoundary + 2);
 
-				if (!rawEvent.trim()) continue;
+				if (!rawEvent.trim()) continue; // Skip empty events
 
 				const { eventType, data } = parseSSEEvent(rawEvent);
 
+				// Check for stream completion signals
 				if (eventType.trim() === 'done' || data.trim() === '[DONE]') {
-					// Stream completion
 					break;
 				} else {
 					processDataContent(data);
@@ -182,13 +177,13 @@ export async function handleEventStream(
 			}
 		}
 
-		// Add any final accumulated text message
+		// Finalize any remaining accumulated text
 		if (currentTextMessage.trim()) {
 			completedItems.push(currentTextMessage.trim());
 		}
 
-		// Call completion handler with the completed items array
-		handlers.handleComplete(completedItems);
+		// Signal completion with summary of all processed items
+		handler({ type: 'done', completedItems });
 	} catch (error) {
 		console.error('Error in handleEventStream:', error);
 		throw error;
