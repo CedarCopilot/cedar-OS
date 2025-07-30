@@ -14,6 +14,7 @@ import Flat3dContainer from '@/containers/Flat3dContainer';
 import { ShimmerText } from '@/text/ShimmerText';
 import KeyboardShortcut from '@/ui/KeyboardShortcut';
 import Slider from '@/ui/Slider3D';
+import { TypewriterText } from '@/text/TypewriterText';
 
 interface CaptionMessagesProps {
 	showThinking?: boolean;
@@ -57,7 +58,10 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 					) : (
 						<>
 							<span style={{ color: styling.accentColor }}>Cedar: </span>
-							<span className='break-words'>{latestMessage.content}</span>
+							<TypewriterText
+								text={latestMessage.content}
+								className='break-words'
+							/>
 						</>
 					)}
 				</div>
