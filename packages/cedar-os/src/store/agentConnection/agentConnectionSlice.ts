@@ -25,6 +25,8 @@ export interface SendMessageParams {
 	temperature?: number;
 	// Optional conversation/thread ID
 	conversationId?: string;
+	// Enable streaming responses
+	stream?: boolean;
 }
 
 // Helper type to get params based on provider config
@@ -76,6 +78,7 @@ export interface AgentConnectionSlice {
 	// High-level methods that use callLLM/streamLLM
 	sendMessage: (params?: SendMessageParams) => Promise<void>;
 	handleLLMResult: (response: LLMResponse) => void;
+	handleLLMStreamResponse: (items: (string | object)[]) => void;
 
 	// Configuration methods
 	setProviderConfig: (config: ProviderConfig) => void;
@@ -442,9 +445,79 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 	},
 
+	// Handle LLM stream response - unified handler for both streaming and non-streaming
+	handleLLMStreamResponse: (items: (string | object)[]) => {
+		const state = get();
+
+		items.forEach(item => {
+			if (typeof item === 'string') {
+				// Handle text content - append to latest message
+				state.appendToLatestMessage(item);
+			} else if (item && typeof item === 'object') {
+				// Handle structured objects
+				const structuredResponse = item as Record<string, unknown>;
+
+				if ('type' in structuredResponse && typeof structuredResponse.type === 'string') {
+					switch (structuredResponse.type) {
+						case 'action': {
+							// Execute the custom setter with the provided parameters
+							if (
+								'stateKey' in structuredResponse &&
+								'setterKey' in structuredResponse &&
+								typeof structuredResponse.stateKey === 'string' &&
+								typeof structuredResponse.setterKey === 'string'
+							) {
+								const args =
+									'args' in structuredResponse &&
+									Array.isArray(structuredResponse.args)
+										? structuredResponse.args
+										: [];
+								state.executeCustomSetter(
+									structuredResponse.stateKey,
+									structuredResponse.setterKey,
+									...args
+								);
+							}
+							break;
+						}
+						case 'message': {
+							// Add as a message with specific role/content
+							const role =
+								'role' in structuredResponse &&
+								typeof structuredResponse.role === 'string'
+									? structuredResponse.role
+									: 'assistant';
+							const content =
+								'content' in structuredResponse &&
+								typeof structuredResponse.content === 'string'
+									? structuredResponse.content
+									: JSON.stringify(structuredResponse);
+							// Map system role to assistant if needed
+							const messageRole = role === 'system' ? 'assistant' : role;
+							state.addMessage({
+								role: messageRole as 'user' | 'assistant' | 'bot',
+								type: 'text',
+								content,
+							});
+							break;
+						}
+						default:
+							// TODO: Check for registered generative UI handlers for other types
+							console.log('Unhandled structured response type:', structuredResponse.type, structuredResponse);
+							break;
+					}
+				} else {
+					// Handle objects without explicit type (e.g., OpenAI delta objects)
+					// TODO: Check for registered generative UI handlers
+					console.log('Unhandled object response:', structuredResponse);
+				}
+			}
+		});
+	},
+
 	// High-level sendMessage method that demonstrates flexible usage
 	sendMessage: async (params?: SendMessageParams) => {
-		const { model, systemPrompt, route, temperature } = params || {};
+		const { model, systemPrompt, route, temperature, stream } = params || {};
 		const state = get();
 
 		// Set processing state
@@ -498,11 +571,44 @@ export const createAgentConnectionSlice: StateCreator<
 					break;
 			}
 
-			// Step 5: Make the LLM call
-			const response = await state.callLLM(llmParams);
+			// Step 5: Make the LLM call (streaming or non-streaming)
+			if (stream) {
+				// Streaming approach - process responses in real-time
+				const streamResponse = state.streamLLM(llmParams, (event) => {
+					switch (event.type) {
+						case 'chunk':
+							// Process single text chunk as array of one
+							state.handleLLMStreamResponse([event.content]);
+							break;
+						case 'object':
+							// Process single object as array of one
+							state.handleLLMStreamResponse([event.object]);
+							break;
+						case 'done':
+							// Stream completed - no additional processing needed
+							break;
+						case 'error':
+							console.error('Stream error:', event.error);
+							break;
+					}
+				});
 
-			// Step 6: Handle the response
-			state.handleLLMResult(response);
+				// Wait for stream to complete
+				await streamResponse.completion;
+			} else {
+				// Non-streaming approach - use existing flow with new handler
+				const response = await state.callLLM(llmParams);
+				
+				// Process response content as array of one
+				if (response.content) {
+					state.handleLLMStreamResponse([response.content]);
+				}
+				
+				// Process structured output if present
+				if (response.object) {
+					state.handleLLMStreamResponse([response.object]);
+				}
+			}
 
 			// Clear the chat input content after successful send
 			state.setChatInputContent({

@@ -4,7 +4,7 @@ import type {
 	InferProviderConfig,
 	StructuredParams,
 } from '../types';
-import { handleEventStream } from '../agentUtils';
+import { handleEventStream, createDefaultStreamHandlers } from '../agentUtils';
 
 type OpenAIConfig = InferProviderConfig<'openai'>;
 
@@ -76,23 +76,10 @@ export const openAIProvider: ProviderImplementation<
 					throw new Error(`HTTP error! status: ${response.status}`);
 				}
 
-				await handleEventStream(response, {
-					onMessage: (chunk) => {
-						// Parse OpenAI's SSE format
-						try {
-							const data = JSON.parse(chunk);
-							const content = data.choices?.[0]?.delta?.content || '';
-							if (content) {
-								handler({ type: 'chunk', content });
-							}
-						} catch {
-							// Skip parsing errors
-						}
-					},
-					onDone: () => {
-						handler({ type: 'done' });
-					},
-				});
+				// OpenAI uses SSE format, our unified parser handles it automatically
+				const streamHandlers = createDefaultStreamHandlers(handler, 'OpenAI');
+
+				await handleEventStream(response, streamHandlers);
 			} catch (error) {
 				if (error instanceof Error && error.name !== 'AbortError') {
 					handler({ type: 'error', error });

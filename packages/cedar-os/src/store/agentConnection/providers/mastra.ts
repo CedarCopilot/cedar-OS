@@ -4,7 +4,7 @@ import type {
 	InferProviderConfig,
 	StructuredParams,
 } from '../types';
-import { handleEventStream } from '../agentUtils';
+import { handleEventStream, createDefaultStreamHandlers } from '../agentUtils';
 
 type MastraConfig = InferProviderConfig<'mastra'>;
 
@@ -120,14 +120,9 @@ export const mastraProvider: ProviderImplementation<
 					throw new Error(`HTTP error! status: ${response.status}`);
 				}
 
-				await handleEventStream(response, {
-					onMessage: (chunk) => {
-						handler({ type: 'chunk', content: chunk });
-					},
-					onDone: () => {
-						handler({ type: 'done' });
-					},
-				});
+				const streamHandlers = createDefaultStreamHandlers(handler, 'Mastra');
+
+				await handleEventStream(response, streamHandlers);
 			} catch (error) {
 				if (error instanceof Error && error.name !== 'AbortError') {
 					handler({ type: 'error', error });

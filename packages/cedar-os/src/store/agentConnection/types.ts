@@ -15,6 +15,7 @@ export interface LLMResponse {
 
 export type StreamEvent =
 	| { type: 'chunk'; content: string }
+	| { type: 'object'; object: object }
 	| { type: 'done' }
 	| { type: 'error'; error: Error }
 	| { type: 'metadata'; data: unknown };
