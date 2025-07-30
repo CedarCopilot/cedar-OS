@@ -3,13 +3,13 @@ title: 'Streaming'
 description: 'Enable real-time streaming responses in chat components'
 ---
 
-Cedar makes it incredibly easy to enable streaming responses in your chat interface. Simply add the `streaming` prop to any chat component or ChatInput, and responses will appear in real-time as they're generated.
+Cedar enables streaming responses by default in your chat interface. Responses appear in real-time as they're generated. You can disable streaming by setting the `stream` prop to `false` on any chat component or ChatInput.
 
 ## Quick Start
 
 ### With Pre-built Components
 
-Add streaming to any of the pre-built chat components:
+Streaming is enabled by default for all pre-built chat components:
 
 ```tsx
 import { FloatingCedarChat } from 'cedar-os-components';
@@ -17,7 +17,7 @@ import { FloatingCedarChat } from 'cedar-os-components';
 function App() {
 	return (
 		<FloatingCedarChat
-			streaming={true} // Enable streaming
+			// Streaming is enabled by default
 			side='right'
 			title='Streaming Assistant'
 		/>
@@ -25,9 +25,19 @@ function App() {
 }
 ```
 
+To disable streaming, set `stream={false}`:
+
+```tsx
+<FloatingCedarChat
+	stream={false} // Disable streaming
+	side='right'
+	title='Non-Streaming Assistant'
+/>
+```
+
 ### With Individual Components
 
-Enable streaming on the ChatInput component directly:
+The ChatInput component has streaming enabled by default, but you can override it:
 
 ```tsx
 import { ChatInput, ChatBubbles } from 'cedar-os';
@@ -39,7 +49,7 @@ function CustomChat() {
 				<ChatBubbles />
 			</div>
 			<ChatInput
-				streaming={true} // Enable streaming
+				stream={false} // Override to disable streaming
 				position='embedded'
 			/>
 		</div>
@@ -51,66 +61,161 @@ function CustomChat() {
 
 When streaming is enabled:
 
-1. **Immediate Response**: The AI response appears immediately as an empty message
-2. **Real-time Updates**: Text streams in character by character as it's generated
+1. **Real-time Updates**: Text streams in character by character as it's generated
+2. **Out of the box support for streaming flexible objects**: Handle structured objects and custom events (see [Custom Message Rendering](/getting-started/chat/custom-message-rendering))
 3. **Smooth Animation**: Built-in typewriter effect for natural reading experience
 4. **Error Handling**: Graceful fallbacks if streaming fails
 
-## Configuration Options
+## Additional Configuration necessary by provider
 
-You can customize the streaming behavior:
+- **OpenAI and AI SDK**: Streaming is supported out of the box
+- **Mastra and Custom backend**: The backend is required to send a data-only SSE stream of information in either streamed text or entire objects
 
-```tsx
-<ChatInput
-	streaming={true}
-	streamingOptions={{
-		showCursor: true, // Show blinking cursor while streaming
-		animationSpeed: 50, // Milliseconds between characters
-		enableSound: false, // Audio feedback (coming soon)
-	}}
-/>
-```
+<AccordionGroup>
+  <Accordion title="Uhhh... what is a data-only SSE stream?">
+ 	Server-Sent Events (SSE) are part of a one-way streaming protocol to deliver a sequence of `data:` messages over a single HTTP connection. The stream mixes plain text and structured JSON, sent as newline-delimited chunks prefixed with `data:`.
 
-## Backend Requirements
+    Under the hood, the server emits:
 
-Your AI provider must support streaming responses. Cedar works with:
+    **Text chunks for incremental message rendering**
+    ```
+    → data: Hello, how can I help you?
+    ```
 
-- **OpenAI**: Streaming supported out of the box
-- **Anthropic**: Streaming supported out of the box
-- **AI SDK**: Streaming supported for all providers
-- **Mastra**: Streaming support depends on your configuration
-- **Custom**: Implement Server-Sent Events (SSE) endpoint
+    **JSON objects for structured data or tool outputs**
+    ```
+    → data: {"type":"action","command":"search","query":"nearest cafe"}
+    ```
 
-## Advanced Usage
+    Our client handlers will parse each `data:` line as it arrives and handle parsed text or JSON accordingly. This enables real-time, mixed-format updates with minimal overhead.
 
-For custom implementations, you can control streaming programmatically:
+  </Accordion>
+</AccordionGroup>
 
-```tsx
-import { useCedarStore } from 'cedar-os';
+<AccordionGroup>
+  <Accordion title="Sample Backend Streaming Handler Implementation">
+  	Feel free to drop these handlers into your backend to take care of Cedar-OS-compatible streaming.
 
-function CustomComponent() {
-	const { callLLM } = useCedarStore();
+    **1. Example Usage:**
 
-	const handleStreamingCall = async () => {
-		await callLLM({
-			prompt: 'Tell me a story',
-			streaming: true,
-			onChunk: (chunk) => {
-				console.log('Received chunk:', chunk);
-			},
-			onComplete: (fullResponse) => {
-				console.log('Streaming complete:', fullResponse);
-			},
-		});
-	};
+    ```typescript
+    // Return statement of /handleStream
+    return createSSEStream(async (controller) => {
+    	// Handle application execution logic with controller variable available
 
-	return (
-		<button onClick={handleStreamingCall}>Start Streaming Response</button>
-	);
-}
-```
+    	// Stream text responses from your agent
+    	const streamResult = await agent.stream({
+    		prompt,
+    		temperature,
+    		maxTokens,
+    		systemPrompt,
+    	});
+
+    	// Stream the text result using the helper function
+    	await handleTextStream(streamResult, controller);
+
+    	// Example: Stream a tool call result as structured JSON
+    	const toolCallResult = {
+    		type: 'tool_call',
+    		tool: 'plant_seed',
+    		result: {
+    			status: 'success',
+    			message: 'A new Cedar tree has been planted <3',
+    		},
+    		timestamp: new Date().toISOString(),
+    	};
+
+    	// Stream the JSON event using the helper function
+    	streamJSONEvent(controller, toolCallResult);
+    });
+
+    /**
+     * Handles streaming of text chunks using data-only format.
+     * Pass your agent's stream result and the controller to stream text chunks to frontend.
+     */
+    export async function handleTextStream(
+    	streamResult: StreamTextResult<any, any>,
+    	streamController: ReadableStreamDefaultController<Uint8Array>
+    ): Promise<string> {
+    	const encoder = new TextEncoder();
+    	const chunks: string[] = [];
+
+    	// Stream raw text chunks through data field
+    	for await (const chunk of streamResult.textStream) {
+    		chunks.push(chunk);
+    		// Escape literal newlines for SSE compliance
+    		const escaped = chunk.replace(/\n/g, '\\n');
+    		streamController.enqueue(encoder.encode(`data:${escaped}\n\n`));
+    	}
+
+    	return chunks.join('');
+    }
+
+    /**
+     * Emit any JSON object as a data event.
+     * Use this to stream structured data like tool results, progress updates, or custom events.
+     */
+    export function streamJSONEvent<T>(
+    	controller: ReadableStreamDefaultController<Uint8Array>,
+    	eventData: T
+    ) {
+    	const encoder = new TextEncoder();
+    	controller.enqueue(encoder.encode('data: '));
+    	controller.enqueue(encoder.encode(`${JSON.stringify(eventData)}\n\n`));
+    }
+    ```
+
+    **2. Core SSE Stream Creator:**
+
+    ```typescript
+    /**
+     * Creates a Server-Sent Events stream response.
+     * Pass a callback function that receives a controller for streaming data.
+     * Use this as your main endpoint return value for streaming responses.
+     */
+    export function createSSEStream(
+    	cb: (controller: ReadableStreamDefaultController<Uint8Array>) => Promise<void>
+    ): Response {
+    	const encoder = new TextEncoder();
+
+    	const stream = new ReadableStream<Uint8Array>({
+    		async start(controller) {
+    			try {
+    				// Execute your application logic with streaming controller
+    				await cb(controller);
+
+    				// Signal completion with empty data
+    				controller.enqueue(encoder.encode('event: done\n'));
+    				controller.enqueue(encoder.encode('data:\n\n'));
+    			} catch (err) {
+    				console.error('Error during SSE stream', err);
+
+    				const message = err instanceof Error ? err.message : 'Internal error';
+    				controller.enqueue(encoder.encode('data: '));
+    				controller.enqueue(
+    					encoder.encode(`${JSON.stringify({ type: 'error', message })}\n\n`)
+    				);
+    			} finally {
+    				controller.close();
+    			}
+    		},
+    	});
+
+    	return new Response(stream, {
+    		headers: {
+    			'Content-Type': 'text/event-stream',
+    			'Cache-Control': 'no-cache',
+    			Connection: 'keep-alive',
+    		},
+    	});
+    }
+    ```
+
+  </Accordion>
+</AccordionGroup>
 
 ## Next Steps
 
+- Set up our [cedar-mastra-starter](https://github.com/CedarCopilot/cedar-mastra-starter) for an example of streaming from a separate Mastra server.
+- Sending back a custom object type? Render it using [custom message rendering](/getting-started/chat/custom-message-rendering)
 - Learn about [configuring the Cedar editor](/getting-started/chat/configuring-cedar-editor)
-- Explore [custom message rendering](/getting-started/chat/custom-message-rendering)
