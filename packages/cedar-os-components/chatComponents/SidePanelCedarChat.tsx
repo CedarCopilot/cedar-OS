@@ -23,6 +23,7 @@ interface SidePanelCedarChatProps {
 	resizable?: boolean;
 	className?: string; // Additional CSS classes for positioning
 	topOffset?: number; // Top offset in pixels (e.g., for navbar height)
+	stream?: boolean; // Whether to use streaming for responses
 }
 
 export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
@@ -40,6 +41,7 @@ export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
 	resizable = true,
 	className = '',
 	topOffset = 0,
+	stream = true,
 }) => {
 	// Get showChat state and setShowChat from store
 	const showChat = useCedarStore((state) => state.showChat);
@@ -101,6 +103,7 @@ export const SidePanelCedarChat: React.FC<SidePanelCedarChatProps> = ({
 								handleFocus={() => {}}
 								handleBlur={() => {}}
 								isInputFocused={false}
+								stream={stream}
 							/>
 						</div>
 					</Container3D>
