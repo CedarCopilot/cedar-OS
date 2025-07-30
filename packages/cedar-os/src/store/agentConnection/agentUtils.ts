@@ -4,6 +4,7 @@
  * This function handles parsing of streaming responses from various LLM providers:
  * - OpenAI: Uses delta format with choices array
  * - Mastra: Uses custom object types
+ * - AI SDK: Uses direct text streaming (handled internally by AI SDK)
  * - Raw text: Plain text chunks
  *
  * Key responsibilities:

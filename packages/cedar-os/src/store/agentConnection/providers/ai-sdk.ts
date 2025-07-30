@@ -282,11 +282,22 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 					...rest,
 				});
 
+				// Track completed items for completion summary
+				const completedItems: (string | object)[] = [];
+				let fullTextContent = '';
+
 				for await (const chunk of result.textStream) {
+					fullTextContent += chunk;
 					handler({ type: 'chunk', content: chunk });
 				}
 
-				handler({ type: 'done' });
+				// Add the complete text message to completed items
+				if (fullTextContent.trim()) {
+					completedItems.push(fullTextContent.trim());
+				}
+
+				// Signal completion with completed items summary
+				handler({ type: 'done', completedItems });
 			} catch (error) {
 				if (error instanceof Error && error.name !== 'AbortError') {
 					handler({ type: 'error', error });
