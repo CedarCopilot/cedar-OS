@@ -321,6 +321,7 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 		};
 	},
 
+	// This can be safely removed
 	handleStreamResponse: (chunk) => {
 		// AI SDK handles streaming internally
 		return { type: 'chunk', content: chunk };
