@@ -444,7 +444,6 @@ export const createAgentConnectionSlice: StateCreator<
 					}
 				} else {
 					// Handle objects without explicit type (e.g., OpenAI delta objects)
-					// TODO: Check for registered generative UI handlers
 					console.log('Unhandled object response:', structuredResponse);
 				}
 			}

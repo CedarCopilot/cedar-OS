@@ -1,11 +1,11 @@
 /**
  * Enhanced Server-Sent Events (SSE) stream parser
- * 
+ *
  * This function handles parsing of streaming responses from various LLM providers:
  * - OpenAI: Uses delta format with choices array
- * - Mastra: Uses custom object types  
+ * - Mastra: Uses custom object types
  * - Raw text: Plain text chunks
- * 
+ *
  * Key responsibilities:
  * 1. Parse SSE format (data: content\n\n)
  * 2. Handle mixed text/JSON content streams
@@ -26,7 +26,7 @@ const processContentChunk = (rawChunk: string): string => {
 
 /**
  * Main SSE stream handler - processes Server-Sent Events from LLM providers
- * 
+ *
  * @param response - HTTP Response object with streaming body
  * @param handler - StreamHandler to call for each parsed event (chunk, object, done, error)
  */
@@ -74,8 +74,6 @@ export async function handleEventStream(
 	 * 4. Plain text: raw string content
 	 */
 	const processDataContent = (data: string) => {
-		console.log('data', data, data.length);
-		
 		// Skip completion markers that signal end of stream
 		if (data.trim() === '[DONE]' || data.trim() === 'done') {
 			return;
@@ -185,7 +183,7 @@ export async function handleEventStream(
 		// Signal completion with summary of all processed items
 		handler({ type: 'done', completedItems });
 	} catch (error) {
-		console.error('Error in handleEventStream:', error);
+		handler({ type: 'error', error: error as Error });
 		throw error;
 	}
 }
