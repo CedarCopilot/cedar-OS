@@ -3,260 +3,145 @@ title: 'Extending Mastra'
 description: 'Connecting Cedar-OS with Mastra'
 ---
 
-Mastra is a full-featured typescript framework to build agents. It provides memory, tool calls, knowledge base, and more. It's our personal recommended choice when building complex agents.
+Mastra is a full-featured typescript framework to build agents. It provides memory, tool calls, knowledge base, and more. It's our personal recommended choice when building complex agents. Our features are designed to integrate most seamlessly with a backend server configured in Mastra.
+
+<Info>
+	{' '}
+	**Note:** Cedar-OS is not currently compatible with Mastra's client SDK. To use
+	Cedar-OS with Mastra, run a Mastra server and point Cedar-OS at it.{' '}
+</Info>
+
+**Want to skip the docs?** Clone the [cedar-mastra-starter](https://github.com/CedarCopilot/cedar-mastra-starter) starter repository and to interactively explore the possible interactions between Mastra and Cedar.
 
 ## Initial Configuration
 
-First, set up your Mastra backend and then configure Cedar-OS to connect to it:
+<Steps>
+<Step title="Spin up a Mastra backend">
+Follow the official guide: [Install using the `create-mastra` CLI](https://mastra.ai/en/docs/getting-started/installation#install-using-the-create-mastra-cli).
+</Step>
 
-```tsx CedarCopilot
+<Step title='Understand Cedar-Backend Communication'>
+	Understand how Cedar speaks to your backend, including default API routes,
+	return types, etc. - [Agent Backend
+	Connection](https://docs.cedarcopilot.com/getting-started/agent-backend-connection/agent-backend-connection)
+</Step>
+
+<Step title="Point Cedar-OS at your backend">
+```tsx
 import { CedarCopilot } from 'cedar-os';
-
 function App() {
 	return (
 		<CedarCopilot
 			llmProvider={{
-				provider: 'mastra',
-				baseURL: 'http://localhost:3000/api', // Your Mastra backend URL
-				apiKey: process.env.MASTRA_API_KEY, // Optional: only if your backend requires auth
-			}}>
+					provider: 'mastra',
+					baseURL: 'http://localhost:4111', // default dev port for Mastra
+					apiKey: process.env.NEXT_PUBLIC_MASTRA_API_KEY, // optional — only for backend auth
+				}}>
 			<YourApp />
 		</CedarCopilot>
-	);
+	); 
 }
-```
+````
+</Step>
 
-## Basic Usage
+<Step title="Backend Configuration">
+[Register API routes](https://mastra.ai/en/examples/deployment/custom-api-route) in your Mastra server so Cedar's chat components have something to talk to:
 
-With Mastra, you specify routes instead of models:
+```ts mastra/src/index.ts
+import { registerApiRoute } from '@mastra/core/server';
 
-```tsx
-import { useTypedAgentConnection } from 'cedar-os';
-
-const { callLLM, streamLLM } = useTypedAgentConnection('mastra');
-
-// Non-streaming call - TypeScript enforces 'route' parameter
-const response = await callLLM({
-	route: '/chat/execute-function',
-	prompt: 'Help me analyze this data',
-	temperature: 0.7,
-	// Pass any additional data your Mastra backend expects
-	context: {
-		userId: 'user-123',
-		sessionId: 'session-456',
+// POST /chat/execute-function
+// The chat's non-streaming default endpoint
+registerApiRoute('/chat/execute-function', {
+	method: 'POST',
+	// …validate input w/ zod
+	handler: async (c) => {
+		/* your agent.generate() logic */
 	},
 });
 
-// Response is typed as LLMResponse
-console.log(response.content); // string
-console.log(response.usage?.totalTokens); // number | undefined
-console.log(response.metadata?.model); // string | undefined
-
-// Streaming call
-streamLLM(
-	{
-		route: '/chat/execute-function',
-		prompt: 'Generate a detailed report',
-	},
-	(event) => {
-		if (event.type === 'chunk') {
-			console.log('Received:', event.content);
-		} else if (event.type === 'done') {
-			console.log('Stream complete');
-		}
-	}
-);
-```
-
-## Extending the Backend
-
-Mastra backends can be extended with custom routes and functionality. Here's how to create typed functions:
-
-### 1. Define Your Backend Routes
-
-In your Mastra backend:
-
-```typescript
-// backend/routes/agent.ts
-import { z } from 'zod';
-import { createRoute } from 'mastra';
-
-// Define input schema
-const analyzeDataSchema = z.object({
-	prompt: z.string(),
-	dataType: z.enum(['csv', 'json', 'text']),
-	analysisType: z.enum(['summary', 'insights', 'visualization']),
-});
-
-// Create a typed route
-export const analyzeDataRoute = createRoute({
-	path: '/analyze-data',
-	input: analyzeDataSchema,
-	handler: async ({ input, llm }) => {
-		// Your custom logic here
-		const result = await llm.generate({
-			prompt: `Analyze this ${input.dataType} data: ${input.prompt}`,
-			system: `You are a data analyst specializing in ${input.analysisType}`,
-		});
-
-		return {
-			analysis: result.text,
-			metadata: {
-				dataType: input.dataType,
-				analysisType: input.analysisType,
-			},
-		};
+// POST /chat/execute-function/stream (SSE)
+// The chat's streaming default endpoint
+registerApiRoute('/chat/execute-function/stream', {
+	method: 'POST',
+	handler: async (c) => {
+		/* stream agent output in SSE format */
 	},
 });
 ```
 
-### 2. Create Typed Functions in Cedar-OS
+</Step>
 
-Create a typed wrapper for your custom routes:
+<Step title="Add Cedar Chat">
+Drop a Cedar chat component into your frontend – see [Chat Overview](https://docs.cedarcopilot.com/getting-started/chat/chat-overview).
+Your backend and frontend are now linked! You're ready to start bringing the power of your Mastra agentic workflows to your UI.
+</Step>
+</Steps>
 
-```tsx
-// utils/mastra-functions.ts
-import { useTypedAgentConnection } from 'cedar-os';
-import type { MastraParams } from 'cedar-os';
+## Features to explore
 
-interface AnalyzeDataParams extends Omit<MastraParams, 'route'> {
-	dataType: 'csv' | 'json' | 'text';
-	analysisType: 'summary' | 'insights' | 'visualization';
-}
+Now that you have Cedar-OS connected to Mastra, explore these powerful features:
 
-export function useMastraFunctions() {
-	const { callLLM, streamLLM } = useTypedAgentConnection('mastra');
+- **[State Access & Manipulation](https://docs.cedarcopilot.com/getting-started/state-access/agentic-state-access#useregisterstate-hook)** - Use the `useRegisterState` hook for communicating frontend state and letting agents manipulate your frontend state
+- **[Mentions & Context](https://docs.cedarcopilot.com/getting-started/agent-input-context/mentions#usementionprovider)** - Send @ mentions to your backend using the `useMentionProvider`
 
-	return {
-		analyzeData: async (params: AnalyzeDataParams) => {
-			return callLLM({
-				...params,
-				route: '/analyze-data',
-			});
-		},
+## New to Mastra? Here are a few primitives to understand
 
-		generateReport: async (params: Omit<MastraParams, 'route'>) => {
-			return callLLM({
-				...params,
-				route: '/generate-report',
-			});
-		},
-
-		// Add more typed functions as needed
-	};
-}
+<Tabs>
+<Tab title="Agent">
+```ts
+// Agents encapsulate instructions, model, memory and tools
+export const roadmap = new Agent({
+  name: 'Roadmap',
+  model: openai('gpt-4o-mini'),
+  tools: { upvoteTool },
+  instructions: `You are …`,
+});
+// Docs: https://mastra.ai/en/docs/agents/overview
 ```
-
-### 3. Use Your Typed Functions
-
-```tsx
-import { useMastraFunctions } from '@/utils/mastra-functions';
-
-function DataAnalyzer() {
-	const { analyzeData } = useMastraFunctions();
-
-	const handleAnalysis = async () => {
-		const result = await analyzeData({
-			prompt: 'Analyze sales data from Q4',
-			dataType: 'csv',
-			analysisType: 'insights',
-			temperature: 0.3, // Lower temperature for analytical tasks
-		});
-
-		console.log(result.content);
-		// Access structured data if your backend returns it
-		if (result.object) {
-			console.log(result.object.metadata);
-		}
-	};
-
-	return <button onClick={handleAnalysis}>Analyze Data</button>;
-}
+</Tab>
+<Tab title="Tool">
+```ts
+// Tools expose type-safe side effects
+export const upvoteTool = createTool({
+  id: 'upvote-feature',
+  inputSchema: z.object({ id: z.string() }),
+  execute: async ({ context }) => { /* … */ },
+});
+// Docs: https://mastra.ai/en/docs/tools-mcp/overview
 ```
-
-## Advanced Features
-
-### Memory and Context
-
-Mastra supports conversation memory out of the box:
-
-```tsx
-const response = await callLLM({
-	route: '/chat/with-memory',
-	prompt: 'Continue our previous discussion',
-	conversationId: 'conv-123', // Mastra will maintain context
-	userId: 'user-456',
+</Tab>
+<Tab title="Workflow">
+```ts
+// Orchestrate multi-step logic
+const roadmapWorkflow = createWorkflow({ id: 'roadmap-analysis' })
+  .then(step1)
+  .then(step2);
+roadmapWorkflow.commit();
+// Docs: https://mastra.ai/en/docs/workflows/overview
+```
+</Tab>
+<Tab title="index.ts">
+```ts
+// Register all your Mastra primitives here, and configure agent memory, message storage, etc.
+export const mastra = new Mastra({
+  agents: { roadmap },
+  server: { apiRoutes },
+  workflows: { roadmapWorkflow }
+  storage: new LibSQLStore({ url: ':memory:' }),
 });
 ```
+</Tab>
+</Tabs>
 
-### Tool Calls
+## Deployment
 
-Enable your agent to use tools:
+The recommended deployment setup is:
 
-```tsx
-const response = await callLLM({
-	route: '/chat/with-tools',
-	prompt: 'Search for the latest AI news and summarize it',
-	tools: ['web-search', 'summarizer'], // Tools configured in your Mastra backend
-	toolConfig: {
-		maxResults: 5,
-		summaryLength: 'brief',
-	},
-});
-```
-
-### Structured Output
-
-Mastra can return structured data using JSON Schema:
-
-```tsx
-const response = await callLLM({
-	route: '/extract-entities',
-	prompt: 'Extract key information from this text...',
-	outputSchema: {
-		type: 'object',
-		properties: {
-			entities: {
-				type: 'array',
-				items: {
-					type: 'object',
-					properties: {
-						name: { type: 'string' },
-						type: { type: 'string' },
-						confidence: { type: 'number' },
-					},
-				},
-			},
-		},
-	},
-});
-
-// Access structured data
-const entities = response.object?.entities || [];
-```
-
-## Best Practices
-
-1. **Route Organization**: Keep your routes organized by functionality (`/chat/*`, `/analyze/*`, `/generate/*`)
-
-2. **Error Handling**: Always handle errors gracefully:
-
-   ```tsx
-   try {
-   	const response = await callLLM({ route: '/chat', prompt: '...' });
-   } catch (error) {
-   	console.error('Mastra error:', error);
-   	// Handle appropriately
-   }
-   ```
-
-3. **Type Safety**: Create typed wrappers for all your custom routes to maintain type safety across your application
-
-4. **Performance**: Use streaming for long-running operations to provide better user feedback
+- **Frontend**: Deploy to [Vercel](https://vercel.com) for optimal performance and seamless integration
+- **Backend**: Use [Mastra Cloud](https://mastra.ai/cloud) for hosting your Mastra server
 
 ## Next Steps
 
-- Set up your [Mastra backend](https://mastra.dev/docs)
-- Explore [tool integrations](https://mastra.dev/docs/tools)
-- Learn about [memory systems](https://mastra.dev/docs/memory)
-- Configure [knowledge bases](https://mastra.dev/docs/knowledge)
+- Clone & run the [cedar-mastra-starter](https://github.com/CedarCopilot/cedar-mastra-starter) to see everything in action.
+- Explore the official Mastra docs for further customisation.
