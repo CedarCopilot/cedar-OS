@@ -12,6 +12,7 @@ import {
 import MentionList from '@/components/chatInput/MentionList';
 import type { MentionItem } from '@/store/agentInputContext/types';
 import { useCedarStore } from '@/store/CedarStore';
+import { MentionNodeAttrs } from '@tiptap/extension-mention';
 
 // Define types for suggestion props
 interface SuggestionProps<I> {
@@ -178,7 +179,7 @@ const mentionSuggestion = {
 	}: {
 		editor: Editor;
 		range: Range;
-		props: MentionItem & { providerId: string };
+		props: MentionNodeAttrs & { providerId?: string };
 	}) => {
 		const item = props;
 
