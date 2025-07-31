@@ -76,23 +76,8 @@ export const openAIProvider: ProviderImplementation<
 					throw new Error(`HTTP error! status: ${response.status}`);
 				}
 
-				await handleEventStream(response, {
-					onMessage: (chunk) => {
-						// Parse OpenAI's SSE format
-						try {
-							const data = JSON.parse(chunk);
-							const content = data.choices?.[0]?.delta?.content || '';
-							if (content) {
-								handler({ type: 'chunk', content });
-							}
-						} catch {
-							// Skip parsing errors
-						}
-					},
-					onDone: () => {
-						handler({ type: 'done' });
-					},
-				});
+				// OpenAI uses SSE format, our unified parser handles it automatically
+				await handleEventStream(response, handler);
 			} catch (error) {
 				if (error instanceof Error && error.name !== 'AbortError') {
 					handler({ type: 'error', error });
@@ -128,6 +113,7 @@ export const openAIProvider: ProviderImplementation<
 		};
 	},
 
+	// This can be safely removed
 	handleStreamResponse: (chunk) => {
 		try {
 			const data = JSON.parse(chunk);

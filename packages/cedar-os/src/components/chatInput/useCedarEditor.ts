@@ -230,7 +230,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 		return resultText;
 	};
 
-	const handleSubmit = async () => {
+	const handleSubmit = async ({ stream = true }: { stream?: boolean } = {}) => {
 		if (!editor || isEditorEmpty) return;
 
 		const textContent = getEditorTextWithChoices();
@@ -239,7 +239,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 			if (onSubmit) {
 				onSubmit(textContent);
 			} else {
-				sendMessage();
+				sendMessage({ stream });
 			}
 
 			editor.commands.clearContent();

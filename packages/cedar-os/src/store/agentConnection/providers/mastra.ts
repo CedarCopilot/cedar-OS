@@ -120,14 +120,7 @@ export const mastraProvider: ProviderImplementation<
 					throw new Error(`HTTP error! status: ${response.status}`);
 				}
 
-				await handleEventStream(response, {
-					onMessage: (chunk) => {
-						handler({ type: 'chunk', content: chunk });
-					},
-					onDone: () => {
-						handler({ type: 'done' });
-					},
-				});
+				await handleEventStream(response, handler);
 			} catch (error) {
 				if (error instanceof Error && error.name !== 'AbortError') {
 					handler({ type: 'error', error });
@@ -160,6 +153,7 @@ export const mastraProvider: ProviderImplementation<
 		};
 	},
 
+	// This can be safely removed
 	handleStreamResponse: (chunk) => {
 		return { type: 'chunk', content: chunk };
 	},

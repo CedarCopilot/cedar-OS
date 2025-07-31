@@ -11,6 +11,7 @@ export interface DebugLogEntry {
 		| 'error'
 		| 'stream-start'
 		| 'stream-chunk'
+		| 'stream-object'
 		| 'stream-end';
 	provider?: string;
 	data: {
@@ -18,6 +19,8 @@ export interface DebugLogEntry {
 		response?: LLMResponse;
 		error?: Error;
 		chunk?: string;
+		object?: object;
+		completedItems?: (string | object)[];
 	};
 	duration?: number; // milliseconds for request-response pairs
 }
@@ -34,7 +37,11 @@ export interface DebuggerSlice {
 	logAgentError: (requestId: string, error: Error) => void;
 	logStreamStart: (params: BaseParams, provider: string) => string; // returns stream ID
 	logStreamChunk: (streamId: string, chunk: string) => void;
-	logStreamEnd: (streamId: string) => void;
+	logStreamObject: (streamId: string, object: object) => void;
+	logStreamEnd: (
+		streamId: string,
+		completedItems?: (string | object)[]
+	) => void;
 	clearDebugLogs: () => void;
 	setDebugEnabled: (enabled: boolean) => void;
 	setMaxLogs: (max: number) => void;
@@ -176,8 +183,26 @@ export const createDebuggerSlice: StateCreator<
 			],
 		}));
 	},
+	logStreamObject: (streamId, object) => {
+		const state = get();
+		if (!state.isDebugEnabled) return;
 
-	logStreamEnd: (streamId) => {
+		const entry: DebugLogEntry = {
+			id: `object_${streamId}_${Date.now()}`,
+			timestamp: new Date(),
+			type: 'stream-object',
+			data: { object },
+		};
+
+		set((state) => ({
+			agentConnectionLogs: [
+				entry,
+				...state.agentConnectionLogs.slice(0, state.maxLogs - 1),
+			],
+		}));
+	},
+
+	logStreamEnd: (streamId, completedItems) => {
 		const state = get();
 		if (!state.isDebugEnabled) return;
 
@@ -191,7 +216,7 @@ export const createDebuggerSlice: StateCreator<
 			timestamp: new Date(),
 			type: 'stream-end',
 			provider: streamStart?.provider,
-			data: {},
+			data: { completedItems },
 			duration: streamStart
 				? new Date().getTime() - streamStart.timestamp.getTime()
 				: undefined,
