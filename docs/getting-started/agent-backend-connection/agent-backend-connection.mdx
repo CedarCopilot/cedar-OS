@@ -188,8 +188,8 @@ The `chatPath` parameter is particularly useful if your Mastra backend uses a di
 
 The high-level `sendMessage()` function (that handles sending the chat), calls by default:
 
-- `${chatPath}/execute-function` (on message send, non-streaming)
-- `${chatPath}/execute-function/stream` (on message send, streaming).
+- `${chatPath}` (on message send, non-streaming)
+- `${chatPath}/stream` (on message send, streaming).
 
 You can still override this by passing a custom `route` parameter to `sendMessage()`.
 
@@ -452,9 +452,9 @@ console.log(response.object); // unknown (for structured responses)
 
 // Example with additional Mastra features
 // Note: When using sendMessage(), the default route is automatically constructed
-// as `${chatPath}/execute-function` (e.g., '/chat/execute-function')
+// as `${chatPath}` (e.g., '/chat')
 const advancedResponse = await callLLM({
-	route: '/chat/execute-function', // This would be the default for sendMessage()
+	route: '/chat', // This would be the default for sendMessage()
 	prompt: 'Remember my name is John',
 	// Additional Mastra-specific parameters can be added
 	sessionId: 'user-123',

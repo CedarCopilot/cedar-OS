@@ -37,7 +37,7 @@ const { callLLM, streamLLM } = useTypedAgentConnection('mastra');
 
 // Non-streaming call - TypeScript enforces 'route' parameter
 const response = await callLLM({
-	route: '/chat/execute-function',
+	route: '/chat',
 	prompt: 'Help me analyze this data',
 	temperature: 0.7,
 	// Pass any additional data your Mastra backend expects
@@ -55,7 +55,7 @@ console.log(response.metadata?.model); // string | undefined
 // Streaming call
 streamLLM(
 	{
-		route: '/chat/execute-function',
+		route: '/chat/stream',
 		prompt: 'Generate a detailed report',
 	},
 	(event) => {
