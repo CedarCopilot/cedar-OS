@@ -20,7 +20,14 @@ export const ChatInput: React.FC<{
 	handleBlur?: () => void;
 	isInputFocused?: boolean;
 	className?: string; // Additional classes for the container
-}> = ({ handleFocus, handleBlur, isInputFocused, className = '' }) => {
+	stream?: boolean; // Whether to use streaming for responses
+}> = ({
+	handleFocus,
+	handleBlur,
+	isInputFocused,
+	className = '',
+	stream = true,
+}) => {
 	const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
 		onFocus: handleFocus,
 		onBlur: handleBlur,
@@ -212,7 +219,7 @@ export const ChatInput: React.FC<{
 						},
 						transition: { type: 'spring', stiffness: 300, damping: 20 },
 					}}
-					onClick={handleSubmit}
+					onClick={() => handleSubmit({ stream })}
 					color={isEditorEmpty ? undefined : '#93c5fd'}
 					className='flex items-center flex-shrink-0 ml-auto -mt-0.5 rounded-full bg-white dark:bg-gray-800'
 					childClassName='p-1.5'>

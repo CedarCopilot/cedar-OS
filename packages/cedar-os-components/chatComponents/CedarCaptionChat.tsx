@@ -23,12 +23,14 @@ interface CedarCaptionChatProps {
 	};
 	className?: string;
 	showThinking?: boolean;
+	stream?: boolean; // Whether to use streaming for responses
 }
 
 export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 	dimensions,
 	className = '',
 	showThinking = true,
+	stream = true,
 }) => {
 	// Check if there are any nodes with diffs
 	const nodesState = useCedarStore((state) => state.registeredStates.nodes);
@@ -166,7 +168,10 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 						<CaptionMessages showThinking={showThinking} />
 					</div>
 
-					<ChatInput className='bg-transparent dark:bg-transparent p-0' />
+					<ChatInput
+						className='bg-transparent dark:bg-transparent p-0'
+						stream={stream}
+					/>
 				</Container3D>
 			</div>
 		</FloatingContainer>

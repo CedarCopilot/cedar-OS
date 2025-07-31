@@ -2,7 +2,7 @@
 // --------------------------------------------------
 // PLANT-SEED COMMAND IMPLEMENTATION
 // The smart command that auto-detects your setup and does the right thing:
-// 
+//
 // 1. EXISTING NEXT.JS PROJECT → Runs add-sapling to install Cedar components
 // 2. NEW PROJECT → Template selection → Project creation → Cedar installation
 // 3. NON-NEXT.JS → Guides user to create Next.js project first
@@ -158,6 +158,11 @@ function showNextSteps(template: Template | null, projectName: string) {
 				'\n🎉 Cedar chat should magically work! Try chatting with your AI assistant.'
 			)
 		);
+		console.log(
+			pc.green(
+				'\n🤓 To learn about the features implemented in this template, global search [STEP X] comments and follow them in order.'
+			)
+		);
 	} else {
 		// Standard Next.js or no template
 		console.log(
@@ -282,7 +287,9 @@ export async function createCommand(opts: CreateOptions) {
 					pc.gray('Adding Cedar components to existing React project...')
 				);
 				console.log(
-					pc.yellow('⚠️  Note: Cedar works best with Next.js. You may need additional configuration.')
+					pc.yellow(
+						'⚠️  Note: Cedar works best with Next.js. You may need additional configuration.'
+					)
 				);
 				await runCedarAdd({ yes: opts.yes });
 				outro(pc.green('Cedar components added successfully!'));
@@ -446,7 +453,7 @@ export async function createCommand(opts: CreateOptions) {
 		// STEP 7: COMPLETION
 		// ==========================================================================
 		// Show appropriate next steps based on template selection
-		// Note: runCedarAdd already shows next steps, so we only show them for 
+		// Note: runCedarAdd already shows next steps, so we only show them for
 		// templates that include Cedar (since they skip the runCedarAdd step)
 		if (selectedTemplate && selectedTemplate.includesCedar) {
 			showNextSteps(selectedTemplate, projectName);

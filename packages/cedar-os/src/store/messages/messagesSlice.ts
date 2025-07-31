@@ -20,6 +20,7 @@ export interface MessagesSlice {
 	// Actions
 	setMessages: (messages: Message[]) => void;
 	addMessage: (message: MessageInput) => Message;
+	appendToLatestMessage: (content: string) => void;
 	updateMessage: (id: string, updates: Partial<Message>) => void;
 	deleteMessage: (id: string) => void;
 	clearMessages: () => void;
@@ -69,6 +70,27 @@ export const createMessagesSlice: StateCreator<
 			}));
 
 			return newMessage;
+		},
+
+		appendToLatestMessage: (content: string) => {
+			const state = get();
+			const messages = state.messages;
+			const latestMessage = messages[messages.length - 1];
+
+			// Check if latest message is assistant type
+			if (latestMessage && latestMessage.role === 'assistant') {
+				// Append to existing assistant message (content is already processed)
+				state.updateMessage(latestMessage.id, {
+					content: latestMessage.content + content,
+				});
+			} else {
+				// Create new assistant message
+				state.addMessage({
+					role: 'assistant',
+					type: 'text',
+					content: content,
+				});
+			}
 		},
 
 		updateMessage: (id: string, updates: Partial<Message>) => {
