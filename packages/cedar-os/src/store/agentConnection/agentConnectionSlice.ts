@@ -442,7 +442,6 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 	},
 
-	// High-level sendMessage method that demonstrates flexible usage
 	sendMessage: async (params?: SendMessageParams) => {
 		const { model, systemPrompt, route, temperature } = params || {};
 		const state = get();
