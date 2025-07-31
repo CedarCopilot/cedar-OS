@@ -112,29 +112,47 @@ export async function handleEventStream(
 					return;
 				}
 			}
-			// Mastra/custom format: {"type": "action", "data": {...}}
-			else if (parsed.type) {
-				// Save accumulated text before processing object
-				if (currentTextMessage.trim()) {
-					completedItems.push(currentTextMessage.trim());
-					currentTextMessage = '';
-				}
-				handler({ type: 'object', object: parsed });
-				completedItems.push(parsed);
-			}
-			// Direct content format: {"content": "text content"}
-			else if (parsed.content) {
+			// 1. Direct content (may accompany a structured object)
+			if (typeof parsed.content === 'string' && parsed.content.length > 0) {
 				const processedContent = processContentChunk(parsed.content);
 				currentTextMessage += processedContent;
 				handler({ type: 'chunk', content: processedContent });
 			}
-			// Generic JSON object (fallback)
-			else {
-				// Save accumulated text before processing object
+
+			// 2. Mastra/custom structured object handling
+			//    a) Inline object        -> {"type": "action", ... }
+			//    b) Nested under object  -> {"object": {"type": "action", ...}}
+			if (
+				parsed.type ||
+				(parsed.object && (parsed.object as { type?: string }).type)
+			) {
+				const structuredObject = parsed.type
+					? parsed
+					: (parsed.object as object);
+
+				// Flush any accumulated text before sending the object event
 				if (currentTextMessage.trim()) {
 					completedItems.push(currentTextMessage.trim());
 					currentTextMessage = '';
 				}
+
+				handler({ type: 'object', object: structuredObject });
+				completedItems.push(structuredObject);
+			}
+
+			// 3. Fallback for generic JSON without recognised fields but still valuable
+			if (
+				!parsed.choices &&
+				!parsed.type &&
+				!(parsed.object && (parsed.object as { type?: string }).type) &&
+				!parsed.content
+			) {
+				// Flush accumulated text first
+				if (currentTextMessage.trim()) {
+					completedItems.push(currentTextMessage.trim());
+					currentTextMessage = '';
+				}
+
 				handler({ type: 'object', object: parsed });
 				completedItems.push(parsed);
 			}

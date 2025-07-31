@@ -5,6 +5,10 @@ description: 'Enable real-time streaming responses in chat components'
 
 Cedar enables streaming responses by default in your chat interface. Responses appear in real-time as they're generated. You can disable streaming by setting the `stream` prop to `false` on any chat component or ChatInput.
 
+<Info>
+**Partial Object Streaming Not Supported**: Cedar currently doesn't support partial object streaming. For structured data to be handled via Cedar's automatic handlers, only complete objects should be streamed or streaming should be turned off.
+</Info>
+
 ## Quick Start
 
 ### With Pre-built Components
