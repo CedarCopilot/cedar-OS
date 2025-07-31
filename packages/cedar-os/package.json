@@ -1,6 +1,6 @@
 {
 	"name": "cedar-os",
-	"version": "0.0.9",
+	"version": "0.0.10",
 	"description": "",
 	"sideEffects": false,
 	"scripts": {
