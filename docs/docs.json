@@ -59,6 +59,7 @@
 				"icon": "database",
 				"pages": [
 					"getting-started/state-access/agentic-state-access",
+					"getting-started/state-access/agentic-actions",
 					"getting-started/state-access/diff-history-manager"
 				]
 			},
