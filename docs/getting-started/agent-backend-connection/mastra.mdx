@@ -50,9 +50,9 @@ function App() {
 ```ts mastra/src/index.ts
 import { registerApiRoute } from '@mastra/core/server';
 
-// POST /chat/execute-function
+// POST /chat
 // The chat's non-streaming default endpoint
-registerApiRoute('/chat/execute-function', {
+registerApiRoute('/chat', {
 	method: 'POST',
 	// …validate input w/ zod
 	handler: async (c) => {
@@ -60,9 +60,9 @@ registerApiRoute('/chat/execute-function', {
 	},
 });
 
-// POST /chat/execute-function/stream (SSE)
+// POST /chat/stream (SSE)
 // The chat's streaming default endpoint
-registerApiRoute('/chat/execute-function/stream', {
+registerApiRoute('/chat/stream', {
 	method: 'POST',
 	handler: async (c) => {
 		/* stream agent output in SSE format */
