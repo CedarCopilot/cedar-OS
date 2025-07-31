@@ -186,13 +186,58 @@ The `chatPath` parameter is particularly useful if your Mastra backend uses a di
 - With default `chatPath: '/chat'`: Routes become `/chat/execute-function`, `/chat/init`, etc.
 - With custom `chatPath: '/api/v1/chat'`: Routes become `/api/v1/chat/execute-function`, `/api/v1/chat/init`, etc.
 
-When you use the high-level `sendMessage()` function, Cedar-OS automatically constructs the route as `${chatPath}/execute-function`. You can still override this by passing a custom `route` parameter to `sendMessage()`.
+The high-level `sendMessage()` function (that handles sending the chat), calls by default:
 
-### Creating Typed Functions
+- `${chatPath}/execute-function` (on message send, non-streaming)
+- `${chatPath}/execute-function/stream` (on message send, streaming).
+
+You can still override this by passing a custom `route` parameter to `sendMessage()`.
+
+### Typed Provider Connection
 
 Cedar-OS provides full TypeScript support. When you configure a provider, all methods are properly typed:
 
-The best practice for working with Cedar-OS is to create typed functions with hardcoded system prompts in a single file. This approach ensures consistency, type safety, and reusability across your application.
+```typescript
+// Types can be found in cedar-os/types.ts
+
+// Base params sent to all providers
+export interface BaseParams {
+	prompt: string; // Compiled frontend context and user message
+	systemPrompt?: string;
+	temperature?: number;
+	maxTokens?: number;
+	[key: string]: unknown;
+}
+
+// What the frontend expects in return
+export interface LLMResponse {
+	content: string; // In the chat sendMessage() flow, this is the message added to the chat
+	usage?: {
+		promptTokens: number;
+		completionTokens: number;
+		totalTokens: number;
+	};
+	metadata?: Record<string, unknown>;
+	object?: unknown; // The object field contains structured output that is parsed for state execution, generative UI, etc.
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Reserved object shapes in the Cedar chat">
+    When returning structured data in the `object` field of `LLMResponse`, objects with a `type` field have special meanings in Cedar-OS:
+
+    **`type: "action"`** - Defers to frontend action execution (state manipulation)
+    - Learn more: [Agentic State Access](/getting-started/state-access/agentic-state-access)
+
+    **`type: "message"`** - Processes and adds content as a message in the chat
+    - Automatically renders the object content as a new chat message
+
+    Other `type` values can be used for custom handling (such as generative UI).
+
+  </Accordion>
+</AccordionGroup>
+
+When designing agentic workflows, the best practice for working with Cedar-OS is to create typed functions with hardcoded system prompts in a single file. This approach ensures consistency, type safety, and reusability across your application.
 
 <CodeGroup>
 
@@ -203,15 +248,6 @@ import { z } from 'zod';
 // Get a typed connection for AI SDK
 const { callLLM, streamLLM, callLLMStructured } =
 	useTypedAgentConnection('ai-sdk');
-
-// AI SDK Expected Input Type (from cedar-os/types.ts)
-interface BaseParams {
-	prompt: string;
-	systemPrompt?: string;
-	temperature?: number;
-	maxTokens?: number;
-	[key: string]: unknown;
-}
 
 interface AISDKParams extends BaseParams {
 	model: string; // Format: "provider/model" e.g., "openai/gpt-4o", "anthropic/claude-3-sonnet"
@@ -270,15 +306,6 @@ import { z } from 'zod';
 const { callLLM, streamLLM, callLLMStructured } =
 	useTypedAgentConnection('openai');
 
-// OpenAI Expected Input Type (from cedar-os/types.ts)
-interface BaseParams {
-	prompt: string;
-	systemPrompt?: string;
-	temperature?: number;
-	maxTokens?: number;
-	[key: string]: unknown;
-}
-
 interface OpenAIParams extends BaseParams {
 	model: string;
 }
@@ -336,15 +363,6 @@ import { z } from 'zod';
 // Get a typed connection for Anthropic
 const { callLLM, streamLLM, callLLMStructured } =
 	useTypedAgentConnection('anthropic');
-
-// Anthropic Expected Input Type (from cedar-os/types.ts)
-interface BaseParams {
-	prompt: string;
-	systemPrompt?: string;
-	temperature?: number;
-	maxTokens?: number;
-	[key: string]: unknown;
-}
 
 interface AnthropicParams extends BaseParams {
 	model: string;
@@ -417,12 +435,6 @@ import { z } from 'zod';
 const { callLLM, streamLLM, callLLMStructured } =
 	useTypedAgentConnection('mastra');
 
-// Mastra Expected Input Type (from cedar-os/types.ts)
-interface BaseParams {
-	prompt: string;
-	[key: string]: unknown;
-}
-
 interface MastraParams extends BaseParams {
 	route: string;
 }
@@ -493,15 +505,6 @@ import { z } from 'zod';
 // Get a typed connection for Custom Backend
 const { callLLM, streamLLM, callLLMStructured } =
 	useTypedAgentConnection('custom');
-
-// Custom Expected Input Type (from cedar-os/types.ts)
-interface BaseParams {
-	prompt: string;
-	systemPrompt?: string;
-	temperature?: number;
-	maxTokens?: number;
-	[key: string]: unknown;
-}
 
 interface CustomParams extends BaseParams {
 	[key: string]: unknown;
@@ -586,12 +589,6 @@ console.log(reportResponse.object.recommendations); // string[]
 ```
 
 </CodeGroup>
-
-## Next Steps
-
-1. Choose your provider based on your needs
-2. Follow the initialization code above
-3. Start building your AI-powered application with Cedar-OS
 
 For more advanced usage, see our guides on:
 
