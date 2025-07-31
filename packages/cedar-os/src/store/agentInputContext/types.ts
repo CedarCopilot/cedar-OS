@@ -6,12 +6,12 @@ import type { ReactNode } from 'react';
 export interface ContextEntry {
 	id: string;
 	source: 'mention' | 'subscription' | 'manual';
-	data: any;
+	data: unknown;
 	metadata?: {
 		label?: string;
 		icon?: ReactNode;
 		color?: string; // Hex color
-		[key: string]: any;
+		[key: string]: unknown;
 	};
 }
 
@@ -26,13 +26,13 @@ export interface AdditionalContext {
  * Represents an item in the mention list
  */
 export interface MentionItem {
-	id: string;
-	label: string;
-	data?: any;
+	id: string | null;
+	label?: string | null;
+	data?: unknown;
 	metadata?: {
 		icon?: ReactNode;
 		color?: string; // Hex color
-		[key: string]: any;
+		[key: string]: unknown;
 	};
 	providerId?: string; // Internal use only
 }
@@ -50,7 +50,10 @@ export interface MentionProvider {
 	getItems: (query: string) => MentionItem[] | Promise<MentionItem[]>;
 	toContextEntry: (item: MentionItem) => ContextEntry;
 	renderMenuItem?: (item: MentionItem) => ReactNode;
-	renderEditorItem?: (item: MentionItem, attrs: any) => ReactNode;
+	renderEditorItem?: (
+		item: MentionItem,
+		attrs: Record<string, unknown>
+	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
 }
 
@@ -60,12 +63,15 @@ export interface MentionProvider {
 export interface StateBasedMentionProviderConfig {
 	stateKey: string;
 	trigger?: string;
-	labelField?: string | ((item: any) => string);
+	labelField?: string | ((item: unknown) => string);
 	searchFields?: string[];
 	description?: string;
 	icon?: ReactNode;
 	color?: string; // Hex color
 	renderMenuItem?: (item: MentionItem) => ReactNode;
-	renderEditorItem?: (item: MentionItem, attrs: any) => ReactNode;
+	renderEditorItem?: (
+		item: MentionItem,
+		attrs: Record<string, unknown>
+	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
 }
