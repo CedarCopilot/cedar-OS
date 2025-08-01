@@ -63,52 +63,103 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 	const wave2 = useMotionValue(0);
 	const rotate = useMotionValue(0);
 
+	// Create independent breathing motion values for each element
+	const breathe1 = useMotionValue(0); // Top left corner
+	const breathe2 = useMotionValue(0); // Bottom right corner
+	const breathe3 = useMotionValue(0); // Center element
+
 	// Create transformed values for inverse movements
 	const wave1Inverted = useTransform(wave1, (v) => -v);
 	const wave2Inverted = useTransform(wave2, (v) => -v * 0.8);
 	const rotateSlower = useTransform(rotate, (v) => -v * 0.5);
 	const rotateFaster = useTransform(rotate, (v) => v * 2);
-	const breatheScaled = useTransform(breathe, (v) => v * 1.2);
-	const wave2Amplified = useTransform(wave2, (v) => v * 1.5);
-	const wave1Dampened = useTransform(wave1, (v) => v * 0.7);
+	const wave2Amplified = useTransform(wave2, (v) => v * 1.6);
+	const wave1Dampened = useTransform(wave1, (v) => v * 1.5);
+	const breatheScaled = useTransform(breathe1, (v) => v * 1.2);
 
 	// Enhanced breathing animation - only if not neutral
 	useEffect(() => {
 		if (!isPresent || diffType === 'neutral') {
 			animate(breathe, 0, { duration: 0.5, ease: 'easeInOut' });
+			animate(breathe1, 0, { duration: 0.5, ease: 'easeInOut' });
+			animate(breathe2, 0, { duration: 0.5, ease: 'easeInOut' });
+			animate(breathe3, 0, { duration: 0.5, ease: 'easeInOut' });
 			return;
 		}
 
 		async function playBreathingAnimation() {
 			if (enableIntroAnimation) {
-				await animate(breathe, 1, {
-					duration: 0.5,
-					delay: 0.35,
-					ease: [0, 0.55, 0.45, 1],
-				});
+				// Set initial values to 0 for bloom effect
+				breathe1.set(0);
+				breathe2.set(0);
+				breathe3.set(0);
+
+				// Await all initial animations together
+				await Promise.all([
+					animate(breathe, 1, {
+						duration: 0.5,
+						delay: 0.35,
+						ease: [0, 0.55, 0.45, 1],
+					}),
+					animate(breathe1, 1, {
+						duration: 0.5,
+						delay: 0.35,
+						ease: [0, 0.55, 0.45, 1],
+					}),
+					animate(breathe2, 1, {
+						duration: 0.5,
+						delay: 0.55, // Slightly delayed
+						ease: [0, 0.55, 0.45, 1],
+					}),
+					animate(breathe3, 1, {
+						duration: 0.5,
+						delay: 0.55, // More delayed
+						ease: [0, 0.55, 0.45, 1],
+					}),
+				]);
 			} else {
 				breathe.set(1);
+				breathe1.set(1);
+				breathe2.set(1);
+				breathe3.set(1);
 			}
 
-			// Complex wave-like animations
-			animate(breathe, [1, 0.6, 1.3, 0.8, 1], {
-				duration: 4,
-				repeat: Infinity,
-				repeatType: 'loop',
-				ease: 'easeInOut',
-			});
-
-			// Wave motion 1 - horizontal drift
-			animate(wave1, [-20, 20, -20], {
-				duration: 6,
-				repeat: Infinity,
-				repeatType: 'loop',
-				ease: 'easeInOut',
-			});
-
-			// Wave motion 2 - vertical drift
-			animate(wave2, [-15, 15, -15], {
+			// Independent breathing animations with different patterns and timing
+			// Top left corner - standard breathing
+			animate(breathe1, [1, 0.8, 1.3, 0.8, 1], {
 				duration: 5,
+				repeat: Infinity,
+				repeatType: 'loop',
+				ease: 'easeInOut',
+			});
+
+			// Bottom right corner - different rhythm and amplitude
+			animate(breathe2, [1, 1.2, 0.7, 1.4, 0.9, 1], {
+				duration: 6.5,
+				repeat: Infinity,
+				repeatType: 'loop',
+				ease: 'easeInOut',
+			});
+
+			// Center element - unique pattern with different timing
+			animate(breathe3, [1, 0.9, 1.1, 1.3, 0.8, 1.2, 1], {
+				duration: 7.8,
+				repeat: Infinity,
+				repeatType: 'loop',
+				ease: 'easeInOut',
+			});
+
+			// Wave motion 1 - horizontal drift (reduced movement)
+			animate(wave1, [-10, 10, -10], {
+				duration: 9,
+				repeat: Infinity,
+				repeatType: 'loop',
+				ease: 'easeInOut',
+			});
+
+			// Wave motion 2 - vertical drift (reduced movement)
+			animate(wave2, [-8, 8, -8], {
+				duration: 7,
 				repeat: Infinity,
 				repeatType: 'loop',
 				ease: 'easeInOut',
@@ -116,7 +167,7 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 
 			// Slow rotation for organic movement
 			animate(rotate, [0, 360], {
-				duration: 20,
+				duration: 13,
 				repeat: Infinity,
 				repeatType: 'loop',
 				ease: 'linear',
@@ -127,6 +178,9 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 	}, [
 		isPresent,
 		breathe,
+		breathe1,
+		breathe2,
+		breathe3,
 		wave1,
 		wave2,
 		rotate,
@@ -215,66 +269,58 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 				{children}
 
 				{/* Gradient overlay - positioned on top of content */}
-				<div className='absolute inset-0 overflow-hidden rounded-lg pointer-events-none'>
-					{/* Soft colored overlay over all content */}
-					<div
-						className='absolute inset-0 rounded-lg'
-						style={{
-							backgroundColor:
-								diffType === 'added'
-									? 'rgba(134, 239, 172, 0.5)' // green-300 with 50% opacity
-									: diffType === 'removed'
-									? 'rgba(252, 165, 165, 0.5)' // red-300 with 50% opacity
-									: 'rgba(253, 230, 138, 0.5)', // amber-200 with 50% opacity
-							mixBlendMode: 'normal',
-						}}
-					/>
-
+				<div
+					className='absolute inset-0 overflow-hidden rounded-lg pointer-events-none'
+					style={{ zIndex: 1 }}>
 					{/* Expanding circle */}
-					{enableIntroAnimation && (
-						<motion.div
-							className='absolute rounded-full'
-							initial={{
-								scale: 0,
-								opacity: 1,
-								backgroundColor: diffColor,
-							}}
-							animate={{
-								scale: 10,
-								opacity: 0.2,
-								backgroundColor: diffColor,
-								transition: {
-									duration: enterDuration,
-									opacity: { duration: enterDuration, ease: 'easeInOut' },
-								},
-							}}
-							exit={{
-								scale: 0,
-								opacity: 1,
-								backgroundColor: diffColor,
-								transition: { duration: exitDuration },
-							}}
-							style={{
-								left: '50%',
-								top: '50%',
-								width: expandingCircleRadius,
-								height: expandingCircleRadius,
-								transform: 'translate(-50%, -50%)',
-								filter: 'blur(15px)',
-							}}
-						/>
-					)}
-
-					{/* Top Left corner gradient with wave motion */}
 					<motion.div
 						className='absolute rounded-full'
 						initial={
 							enableIntroAnimation
-								? { opacity: 0, scale: 0 }
-								: { opacity: 0.9, scale: 1 }
+								? {
+										scale: 0,
+										opacity: 1,
+										backgroundColor: diffColor,
+								  }
+								: {
+										scale: 4,
+										opacity: 0.2,
+										backgroundColor: diffColor,
+								  }
 						}
 						animate={{
-							opacity: 0.9,
+							scale: 5,
+							opacity: 0.2,
+							backgroundColor: diffColor,
+							transition: enableIntroAnimation
+								? {
+										duration: enterDuration,
+										opacity: { duration: enterDuration, ease: 'easeInOut' },
+								  }
+								: { duration: 0 },
+						}}
+						exit={{
+							scale: 0,
+							opacity: 1,
+							backgroundColor: diffColor,
+							transition: { duration: exitDuration },
+						}}
+						style={{
+							left: '50%',
+							top: '50%',
+							width: expandingCircleRadius,
+							height: expandingCircleRadius,
+							transform: 'translate(-50%, -50%)',
+							filter: 'blur(15px)',
+						}}
+					/>
+
+					{/* Top Left corner gradient with wave motion */}
+					<motion.div
+						className='absolute rounded-full'
+						initial={enableIntroAnimation ? { opacity: 0 } : { opacity: 0.9 }}
+						animate={{
+							opacity: 0.8,
 							transition: enableIntroAnimation
 								? {
 										duration: enterDuration,
@@ -283,17 +329,16 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 						}}
 						exit={{
 							opacity: 0,
-							scale: 0,
 							transition: { duration: exitDuration },
 						}}
 						style={{
 							top: -cornerSize * 0.5,
 							left: -cornerSize * 0.5,
-							width: cornerSize * 2,
-							height: cornerSize * 2,
+							width: cornerSize * 1.6,
+							height: cornerSize * 1.6,
 							background: diffColor,
-							filter: 'blur(100px)',
-							scale: breathe,
+							filter: 'blur(45px)',
+							scale: breatheScaled,
 							x: wave1,
 							y: wave2,
 							rotate: rotate,
@@ -303,11 +348,7 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 					{/* Bottom Right corner gradient with inverse wave motion */}
 					<motion.div
 						className='absolute rounded-full'
-						initial={
-							enableIntroAnimation
-								? { opacity: 0, scale: 0 }
-								: { opacity: 0.9, scale: 1 }
-						}
+						initial={enableIntroAnimation ? { opacity: 0 } : { opacity: 0.9 }}
 						animate={{
 							opacity: 0.9,
 							transition: enableIntroAnimation
@@ -318,17 +359,16 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 						}}
 						exit={{
 							opacity: 0,
-							scale: 0,
 							transition: { duration: exitDuration },
 						}}
 						style={{
 							bottom: -cornerSize * 0.5,
 							right: -cornerSize * 0.5,
-							width: cornerSize * 2,
-							height: cornerSize * 2,
+							width: cornerSize * 1.5,
+							height: cornerSize * 1.5,
 							background: diffColor,
-							filter: 'blur(100px)',
-							scale: breathe,
+							filter: 'blur(40px)',
+							scale: breathe2,
 							x: wave1Inverted, // Inverse horizontal movement
 							y: wave2Inverted, // Slightly different vertical movement
 							rotate: rotateSlower, // Slower counter-rotation
@@ -338,11 +378,7 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 					{/* Additional center gradient for more complexity */}
 					<motion.div
 						className='absolute rounded-full'
-						initial={
-							enableIntroAnimation
-								? { opacity: 0, scale: 0 }
-								: { opacity: 0.6, scale: 0.8 }
-						}
+						initial={enableIntroAnimation ? { opacity: 0 } : { opacity: 0.6 }}
 						animate={{
 							opacity: 0.6,
 							transition: enableIntroAnimation
@@ -353,17 +389,16 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 						}}
 						exit={{
 							opacity: 0,
-							scale: 0,
 							transition: { duration: exitDuration },
 						}}
 						style={{
-							top: '30%',
-							left: '60%',
+							top: '0%',
+							left: '40%',
 							width: cornerSize * 1.5,
 							height: cornerSize * 1.5,
 							background: diffColor,
-							filter: 'blur(80px)',
-							scale: breatheScaled,
+							filter: 'blur(50px)',
+							scale: breathe3,
 							x: wave2Amplified,
 							y: wave1Dampened,
 							rotate: rotateFaster,
