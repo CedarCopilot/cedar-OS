@@ -1,5 +1,11 @@
 import React, { useRef } from 'react';
-import { animate, motion, useIsPresent, useMotionValue } from 'motion/react';
+import {
+	animate,
+	motion,
+	useIsPresent,
+	useMotionValue,
+	useTransform,
+} from 'motion/react';
 import { useEffect, useState } from 'react';
 import { Check, X } from 'lucide-react';
 
@@ -52,6 +58,20 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 		};
 	}, []);
 
+	// Create multiple motion values for complex wave effects
+	const wave1 = useMotionValue(0);
+	const wave2 = useMotionValue(0);
+	const rotate = useMotionValue(0);
+
+	// Create transformed values for inverse movements
+	const wave1Inverted = useTransform(wave1, (v) => -v);
+	const wave2Inverted = useTransform(wave2, (v) => -v * 0.8);
+	const rotateSlower = useTransform(rotate, (v) => -v * 0.5);
+	const rotateFaster = useTransform(rotate, (v) => v * 2);
+	const breatheScaled = useTransform(breathe, (v) => v * 1.2);
+	const wave2Amplified = useTransform(wave2, (v) => v * 1.5);
+	const wave1Dampened = useTransform(wave1, (v) => v * 0.7);
+
 	// Enhanced breathing animation - only if not neutral
 	useEffect(() => {
 		if (!isPresent || diffType === 'neutral') {
@@ -70,17 +90,49 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 				breathe.set(1);
 			}
 
-			// Enhanced breathing animation with stronger effect
-			animate(breathe, [null, 0.4, 1.2, 0.6, 1], {
-				duration: 8,
+			// Complex wave-like animations
+			animate(breathe, [1, 0.6, 1.3, 0.8, 1], {
+				duration: 4,
 				repeat: Infinity,
 				repeatType: 'loop',
 				ease: 'easeInOut',
 			});
+
+			// Wave motion 1 - horizontal drift
+			animate(wave1, [-20, 20, -20], {
+				duration: 6,
+				repeat: Infinity,
+				repeatType: 'loop',
+				ease: 'easeInOut',
+			});
+
+			// Wave motion 2 - vertical drift
+			animate(wave2, [-15, 15, -15], {
+				duration: 5,
+				repeat: Infinity,
+				repeatType: 'loop',
+				ease: 'easeInOut',
+			});
+
+			// Slow rotation for organic movement
+			animate(rotate, [0, 360], {
+				duration: 20,
+				repeat: Infinity,
+				repeatType: 'loop',
+				ease: 'linear',
+			});
 		}
 
 		playBreathingAnimation();
-	}, [isPresent, breathe, enableIntroAnimation, diffType]);
+	}, [
+		isPresent,
+		breathe,
+		wave1,
+		wave2,
+		rotate,
+		enableIntroAnimation,
+		diffType,
+	]);
 
 	// Keyboard shortcut handler
 	useEffect(() => {
@@ -125,7 +177,7 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 			{/* Diff action buttons - positioned outside/above the node */}
 			{showDiffActions && (
 				<div
-					className='absolute flex gap-1 text-sm'
+					className='absolute flex gap-1 text-xs '
 					style={{
 						top: '-40px',
 						left: '50%',
@@ -134,17 +186,25 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 					}}>
 					<button
 						onClick={onAccept}
-						className='h-8 px-3 flex items-center gap-1 bg-green-300 hover:bg-green-100 shadow-sm border rounded text-sm font-medium'
+						className='h-8 px-3 flex items-center gap-1 bg-green-500/90 hover:bg-green-400/90 shadow-sm border rounded text-sm font-medium'
 						aria-label='Accept change'>
-						<Check className='h-4 w-4 mr-1' />
+						<Check className='h-4 w-4' />
 						Accept
+						<span className='ml-1 flex items-center gap-0.5'>
+							<span>⌘</span>
+							<span>Y</span>
+						</span>
 					</button>
 					<button
 						onClick={onReject}
-						className='h-8 px-3 flex items-center gap-1 bg-red-300 hover:bg-red-100 shadow-sm border rounded text-sm font-medium'
+						className='h-8 px-3 flex items-center gap-1 bg-red-500/90 hover:bg-red-400/90 shadow-sm border rounded text-sm font-medium'
 						aria-label='Reject change'>
-						<X className='h-4 w-4 mr-1' />
+						<X className='h-4 w-4' />
 						Reject
+						<span className='ml-1 flex items-center gap-0.5'>
+							<span>⌘</span>
+							<span>N</span>
+						</span>
 					</button>
 				</div>
 			)}
@@ -156,17 +216,17 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 
 				{/* Gradient overlay - positioned on top of content */}
 				<div className='absolute inset-0 overflow-hidden rounded-lg pointer-events-none'>
-					{/* Subtle background tint */}
+					{/* Soft colored overlay over all content */}
 					<div
-						className='absolute inset-0'
+						className='absolute inset-0 rounded-lg'
 						style={{
 							backgroundColor:
 								diffType === 'added'
-									? 'rgba(34, 197, 94, 0.2)'
+									? 'rgba(134, 239, 172, 0.5)' // green-300 with 50% opacity
 									: diffType === 'removed'
-									? 'rgba(239, 68, 68, 0.2)'
-									: 'rgba(251, 191, 36, 0.2)',
-							backdropFilter: 'blur(3px)',
+									? 'rgba(252, 165, 165, 0.5)' // red-300 with 50% opacity
+									: 'rgba(253, 230, 138, 0.5)', // amber-200 with 50% opacity
+							mixBlendMode: 'normal',
 						}}
 					/>
 
@@ -205,7 +265,7 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 						/>
 					)}
 
-					{/* Top Left corner gradient with enhanced breathing */}
+					{/* Top Left corner gradient with wave motion */}
 					<motion.div
 						className='absolute rounded-full'
 						initial={
@@ -234,10 +294,13 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 							background: diffColor,
 							filter: 'blur(100px)',
 							scale: breathe,
+							x: wave1,
+							y: wave2,
+							rotate: rotate,
 						}}
 					/>
 
-					{/* Bottom Right corner gradient with enhanced breathing */}
+					{/* Bottom Right corner gradient with inverse wave motion */}
 					<motion.div
 						className='absolute rounded-full'
 						initial={
@@ -266,6 +329,44 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 							background: diffColor,
 							filter: 'blur(100px)',
 							scale: breathe,
+							x: wave1Inverted, // Inverse horizontal movement
+							y: wave2Inverted, // Slightly different vertical movement
+							rotate: rotateSlower, // Slower counter-rotation
+						}}
+					/>
+
+					{/* Additional center gradient for more complexity */}
+					<motion.div
+						className='absolute rounded-full'
+						initial={
+							enableIntroAnimation
+								? { opacity: 0, scale: 0 }
+								: { opacity: 0.6, scale: 0.8 }
+						}
+						animate={{
+							opacity: 0.6,
+							transition: enableIntroAnimation
+								? {
+										duration: enterDuration * 1.2,
+								  }
+								: {},
+						}}
+						exit={{
+							opacity: 0,
+							scale: 0,
+							transition: { duration: exitDuration },
+						}}
+						style={{
+							top: '30%',
+							left: '60%',
+							width: cornerSize * 1.5,
+							height: cornerSize * 1.5,
+							background: diffColor,
+							filter: 'blur(80px)',
+							scale: breatheScaled,
+							x: wave2Amplified,
+							y: wave1Dampened,
+							rotate: rotateFaster,
 						}}
 					/>
 				</div>
