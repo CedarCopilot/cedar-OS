@@ -31,6 +31,7 @@ export const ChatInput: React.FC<{
 	const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
 		onFocus: handleFocus,
 		onBlur: handleBlur,
+		stream,
 	});
 
 	// Initialize voice functionality
@@ -219,7 +220,7 @@ export const ChatInput: React.FC<{
 						},
 						transition: { type: 'spring', stiffness: 300, damping: 20 },
 					}}
-					onClick={() => handleSubmit({ stream })}
+					onClick={() => handleSubmit()}
 					color={isEditorEmpty ? undefined : '#93c5fd'}
 					className='flex items-center flex-shrink-0 ml-auto -mt-0.5 rounded-full bg-white dark:bg-gray-800'
 					childClassName='p-1.5'>
