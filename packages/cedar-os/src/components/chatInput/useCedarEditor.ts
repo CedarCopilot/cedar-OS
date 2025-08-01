@@ -17,6 +17,10 @@ interface UseCedarEditorOptions {
 	onSubmit?: (text: string) => void;
 	onFocus?: () => void;
 	onBlur?: () => void;
+	/**
+	 * Whether to stream LLM responses. Defaults to true.
+	 */
+	stream?: boolean;
 }
 
 export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
@@ -25,6 +29,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 		onSubmit,
 		onFocus,
 		onBlur,
+		stream = true,
 	} = options;
 
 	const sendMessage = useCedarStore((state: CedarStore) => state.sendMessage);
@@ -230,7 +235,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 		return resultText;
 	};
 
-	const handleSubmit = async ({ stream = true }: { stream?: boolean } = {}) => {
+	const handleSubmit = async () => {
 		if (!editor || isEditorEmpty) return;
 
 		const textContent = getEditorTextWithChoices();
