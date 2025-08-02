@@ -17,6 +17,7 @@ interface DiffContainerProps {
 	onAccept?: () => void;
 	onReject?: () => void;
 	diffType?: 'neutral' | 'added' | 'removed' | 'changed';
+	opacity?: number;
 }
 
 const DiffContainer: React.FC<DiffContainerProps> = ({
@@ -27,6 +28,7 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 	onAccept,
 	onReject,
 	diffType = 'neutral',
+	opacity = 1,
 }) => {
 	const breathe = useMotionValue(0);
 	const isPresent = useIsPresent();
@@ -215,7 +217,7 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 	const diffColors = {
 		neutral: mainColor,
 		added: 'rgb(34, 197, 94)', // green-500
-		removed: 'rgb(239, 68, 68)', // red-500
+		removed: 'rgba(239, 68, 68, 0.85)', // red-500, less opaque
 		changed: 'rgb(251, 191, 36)', // amber-400
 	};
 
@@ -290,7 +292,7 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 						}
 						animate={{
 							scale: 5,
-							opacity: 0.2,
+							opacity: 0.2 * opacity,
 							backgroundColor: diffColor,
 							transition: enableIntroAnimation
 								? {
@@ -318,9 +320,11 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 					{/* Top Left corner gradient with wave motion */}
 					<motion.div
 						className='absolute rounded-full'
-						initial={enableIntroAnimation ? { opacity: 0 } : { opacity: 0.9 }}
+						initial={
+							enableIntroAnimation ? { opacity: 0 } : { opacity: 0.9 * opacity }
+						}
 						animate={{
-							opacity: 0.8,
+							opacity: 0.8 * opacity,
 							transition: enableIntroAnimation
 								? {
 										duration: enterDuration,
@@ -348,9 +352,11 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 					{/* Bottom Right corner gradient with inverse wave motion */}
 					<motion.div
 						className='absolute rounded-full'
-						initial={enableIntroAnimation ? { opacity: 0 } : { opacity: 0.9 }}
+						initial={
+							enableIntroAnimation ? { opacity: 0 } : { opacity: 0.9 * opacity }
+						}
 						animate={{
-							opacity: 0.9,
+							opacity: 0.9 * opacity,
 							transition: enableIntroAnimation
 								? {
 										duration: enterDuration,
@@ -378,9 +384,11 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 					{/* Additional center gradient for more complexity */}
 					<motion.div
 						className='absolute rounded-full'
-						initial={enableIntroAnimation ? { opacity: 0 } : { opacity: 0.6 }}
+						initial={
+							enableIntroAnimation ? { opacity: 0 } : { opacity: 0.6 * opacity }
+						}
 						animate={{
-							opacity: 0.6,
+							opacity: 0.6 * opacity,
 							transition: enableIntroAnimation
 								? {
 										duration: enterDuration * 1.2,
