@@ -50,7 +50,7 @@ export function createBorderColor(color: string): string {
  * Determines if a color is light or dark
  * @param color - The color in hex format
  */
-function isLightColor(color: string): boolean {
+export function isLightColor(color: string): boolean {
 	// Remove the # if it exists
 	const hex = color.replace('#', '');
 
@@ -129,4 +129,27 @@ export const desaturateColor = (color: string) => {
 	}
 	// If it's an rgb color or other format, assume it's rgb and add opacity
 	return color.replace('rgb', 'rgba').replace(')', ', 0.7)');
+};
+
+/**
+ * Calculates appropriate text color (black or white) based on background color contrast
+ * @param backgroundColor - Hex color code (with or without #)
+ * @returns '#ffffff' for white or '#000000' for black
+ */
+export const getThemeFromBackground = (backgroundColor: string): string => {
+	// Remove # if it exists
+	const hex = backgroundColor.replace('#', '');
+
+	// Convert to RGB
+	const r = parseInt(hex.substring(0, 2), 16);
+	const g = parseInt(hex.substring(2, 4), 16);
+	const b = parseInt(hex.substring(4, 6), 16);
+
+	// Calculate luminance - using perceived brightness formula
+	// https://www.w3.org/TR/WCAG20-TECHS/G18.html
+	const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+	// Return white for dark backgrounds, black for light backgrounds
+	// Threshold of 0.55 tends to work well for readability
+	return luminance > luminanceThreshold ? 'light' : 'dark';
 };

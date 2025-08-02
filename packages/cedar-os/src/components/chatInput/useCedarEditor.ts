@@ -17,9 +17,6 @@ interface UseCedarEditorOptions {
 	onSubmit?: (text: string) => void;
 	onFocus?: () => void;
 	onBlur?: () => void;
-	/**
-	 * Whether to stream LLM responses. Defaults to true.
-	 */
 	stream?: boolean;
 }
 
