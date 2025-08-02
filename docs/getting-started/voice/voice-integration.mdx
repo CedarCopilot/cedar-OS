@@ -18,7 +18,32 @@ Cedar-OS provides a complete voice integration system that enables natural voice
 
 ## Quick Start
 
-### 1. Basic Setup
+### 1. Automatic Configuration with Mastra
+
+The easiest way to set up voice integration is through the Mastra provider configuration:
+
+```typescript
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'mastra',
+				baseURL: 'http://localhost:3000/api',
+				voiceRoute: '/chat/voice-execute', // Automatically configures voice endpoint
+			}}>
+			<YourVoiceApp />
+		</CedarCopilot>
+	);
+}
+```
+
+When you specify a `voiceRoute` in your Mastra configuration, Cedar-OS automatically sets the voice endpoint to `baseURL + voiceRoute`.
+
+### 2. Manual Configuration
+
+For non-Mastra providers or custom setups, configure the voice endpoint manually:
 
 ```typescript
 import { useCedarStore } from '@cedar/core';
@@ -27,7 +52,7 @@ function VoiceChat() {
 	const voice = useCedarStore((state) => state.voice);
 
 	useEffect(() => {
-		// Configure the voice endpoint
+		// Configure the voice endpoint manually
 		voice.setVoiceEndpoint('http://localhost:3456/api/chat/voice');
 
 		// Cleanup on unmount
@@ -50,7 +75,7 @@ function VoiceChat() {
 }
 ```
 
-### 2. Request Microphone Permission
+### 3. Request Microphone Permission
 
 ```typescript
 const handleEnableVoice = async () => {
@@ -67,7 +92,7 @@ const handleEnableVoice = async () => {
 };
 ```
 
-### 3. Using the Voice Indicator
+### 4. Using the Voice Indicator
 
 ```typescript
 import { VoiceIndicator } from '@cedar/voice';
@@ -82,6 +107,44 @@ function App() {
 		</div>
 	);
 }
+```
+
+## Provider-Specific Voice Configuration
+
+### Mastra Provider
+
+When using the Mastra provider, voice configuration is streamlined through the provider setup:
+
+```typescript
+<CedarCopilot
+	llmProvider={{
+		provider: 'mastra',
+		baseURL: 'http://localhost:3000/api',
+		chatPath: '/chat',
+		voiceRoute: '/chat/voice-execute', // Automatically sets voice endpoint
+	}}>
+	<YourApp />
+</CedarCopilot>
+```
+
+**Benefits of Mastra voice integration:**
+
+- Automatic endpoint configuration
+- Consistent routing with chat endpoints
+- Built-in context passing
+- Structured response handling
+
+### Other Providers
+
+For OpenAI, Anthropic, AI SDK, or custom providers, configure the voice endpoint manually:
+
+```typescript
+const voice = useCedarStore((state) => state.voice);
+
+useEffect(() => {
+	// Set your custom voice endpoint
+	voice.setVoiceEndpoint('https://your-backend.com/api/voice');
+}, []);
 ```
 
 ## Voice State
