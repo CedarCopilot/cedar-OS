@@ -390,60 +390,9 @@ export const createAgentConnectionSlice: StateCreator<
 					'type' in structuredResponse &&
 					typeof structuredResponse.type === 'string'
 				) {
-					switch (structuredResponse.type) {
-						case 'action': {
-							// Execute the custom setter with the provided parameters
-							if (
-								'stateKey' in structuredResponse &&
-								'setterKey' in structuredResponse &&
-								typeof structuredResponse.stateKey === 'string' &&
-								typeof structuredResponse.setterKey === 'string'
-							) {
-								const args =
-									'args' in structuredResponse &&
-									Array.isArray(structuredResponse.args)
-										? structuredResponse.args
-										: [];
-								state.executeCustomSetter(
-									structuredResponse.stateKey,
-									structuredResponse.setterKey,
-									...args
-								);
-							}
-							break;
-						}
-						case 'message': {
-							// Add as a message with specific role/content
-							const role =
-								'role' in structuredResponse &&
-								typeof structuredResponse.role === 'string'
-									? structuredResponse.role
-									: 'assistant';
-							const content =
-								'content' in structuredResponse &&
-								typeof structuredResponse.content === 'string'
-									? structuredResponse.content
-									: JSON.stringify(structuredResponse);
-							// Map system role to assistant if needed
-							const messageRole = role === 'system' ? 'assistant' : role;
-							state.addMessage({
-								role: messageRole as 'user' | 'assistant' | 'bot',
-								type: 'text',
-								content,
-							});
-							break;
-						}
-						default:
-							// TODO: Check for registered generative UI handlers for other types
-							console.log(
-								'Unhandled structured response type:',
-								structuredResponse.type,
-								structuredResponse
-							);
-							break;
-					}
+					// Delegate structured message handling to messages slice
+					state.processStructuredMessage(structuredResponse);
 				} else {
-					// Handle objects without explicit type (e.g., OpenAI delta objects)
 					console.log('Unhandled object response:', structuredResponse);
 				}
 			}
