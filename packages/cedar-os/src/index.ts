@@ -74,8 +74,10 @@ export type {
 	MessageRenderer,
 	MessageRendererConfig,
 	MessageRendererRegistry,
+	MessageRendererEntry,
 	MessageRole,
 	MultipleChoiceMessage,
+	ActionMessage,
 	SliderMessage,
 	StorylineMessage,
 	StorylineSection,
@@ -84,8 +86,13 @@ export type {
 	TickerMessage,
 	TodoListItem,
 	TodoListMessage,
+	StageUpdateStatus,
+	StageUpdateMessage,
 	TypedMessage,
 } from '@/store/messages/types';
+
+// Export Mastra renderer entries and types
+export type { MastraEventType, MastraMessage } from '@/store/messages/mastra';
 
 // Export types
 export type { StylingSlice } from '@/store/stylingSlice';

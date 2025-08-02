@@ -8,6 +8,8 @@ import {
 	DialogueOptionsMessage,
 	MultipleChoiceMessage,
 	SliderMessage,
+	StageUpdateMessage,
+	ActionMessage,
 } from 'cedar-os';
 import Flat3dButton from '@/containers/Flat3dButton';
 import Flat3dContainer from '@/containers/Flat3dContainer';
@@ -38,7 +40,7 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 		} else {
 			// Find the last non-user message
 			for (let i = messages.length - 1; i >= 0; i--) {
-				if (messages[i].role !== 'user') {
+				if (messages[i].role !== 'user' && messages[i].type === 'text') {
 					return messages[i];
 				}
 			}
@@ -194,6 +196,25 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 					/>
 				</div>
 			);
+
+		case 'stage_update': {
+			const stageMsg = latestMessage as StageUpdateMessage;
+			return (
+				<div className='font-semibold text-lg'>
+					<ShimmerText text={stageMsg.message} state={stageMsg.status} />
+				</div>
+			);
+		}
+
+		case 'action': {
+			const actionMsg = latestMessage as ActionMessage;
+			const label = actionMsg.setterKey || actionMsg.content || 'Action';
+			return (
+				<div className='font-semibold text-lg'>
+					<ShimmerText text={`⚙️ ${label}`} state='in_progress' />
+				</div>
+			);
+		}
 
 		default:
 			return null;

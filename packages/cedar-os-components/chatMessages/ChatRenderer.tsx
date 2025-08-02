@@ -1,4 +1,11 @@
-import { useCedarStore, useStyling, Message, TickerMessage } from 'cedar-os';
+import {
+	useCedarStore,
+	useStyling,
+	Message,
+	TickerMessage,
+	StageUpdateMessage,
+	ActionMessage,
+} from 'cedar-os';
 import { Ticker } from 'motion-plus-react';
 import React from 'react';
 import ReactMarkdown, { Components } from 'react-markdown';
@@ -6,6 +13,7 @@ import DialogueOptions from '@/chatMessages/DialogueOptions';
 import MultipleChoice from '@/chatMessages/MultipleChoice';
 import TodoList from '@/chatMessages/TodoList';
 import Flat3dContainer from '@/containers/Flat3dContainer';
+import { ShimmerText } from '@/text/ShimmerText';
 
 interface ChatRendererProps {
 	message: Message;
@@ -17,10 +25,10 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 	const isDark = styling.darkMode;
 
 	// Check if there's a registered renderer for this message type
-	const customRenderer = getMessageRenderer(message.type);
-	if (customRenderer) {
+	const entry = getMessageRenderer(message.type);
+	if (entry) {
 		// Use the custom renderer
-		return <>{customRenderer(message)}</>;
+		return <>{entry.renderer(message)}</>;
 	}
 
 	// Gradient mask for ticker edges
@@ -147,6 +155,29 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 				<div className='w-full'>
 					<div className='mb-2'>
 						<Ticker hoverFactor={0} items={items} style={{ maskImage: mask }} />
+					</div>
+				</div>
+			);
+		}
+
+		case 'stage_update': {
+			const stageMsg = message as StageUpdateMessage;
+			return (
+				<div className='max-w-[100%]'>
+					<div {...getMessageStyles(stageMsg.role)}>
+						<ShimmerText text={stageMsg.message} state={stageMsg.status} />
+					</div>
+				</div>
+			);
+		}
+
+		case 'action': {
+			const actionMsg = message as ActionMessage;
+			const label = actionMsg.setterKey || 'Action';
+			return (
+				<div className='max-w-[100%]'>
+					<div {...getMessageStyles(actionMsg.role)}>
+						<ShimmerText text={`Completed action ${label}`} state='complete' />
 					</div>
 				</div>
 			);
