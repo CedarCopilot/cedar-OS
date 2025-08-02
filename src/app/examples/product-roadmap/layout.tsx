@@ -20,6 +20,7 @@ export default function ProductRoadmapLayout({
 				? 'http://localhost:4111'
 				: 'https://modern-lemon-whale.mastra.cloud', // Mastra dev server default port
 		chatPath: '/chat/execute-function',
+		voiceRoute: '/chat/voice-execute',
 	};
 
 	// const llmProvider: ProviderConfig = {

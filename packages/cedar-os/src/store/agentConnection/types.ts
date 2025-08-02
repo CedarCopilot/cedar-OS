@@ -95,7 +95,13 @@ export type AISDKProviderConfig = {
 export type ProviderConfig =
 	| { provider: 'openai'; apiKey: string }
 	| { provider: 'anthropic'; apiKey: string }
-	| { provider: 'mastra'; apiKey?: string; baseURL: string; chatPath?: string }
+	| {
+			provider: 'mastra';
+			apiKey?: string;
+			baseURL: string;
+			chatPath?: string;
+			voiceRoute?: string;
+	  }
 	| { provider: 'ai-sdk'; providers: AISDKProviderConfig }
 	| { provider: 'custom'; config: Record<string, unknown> };
 

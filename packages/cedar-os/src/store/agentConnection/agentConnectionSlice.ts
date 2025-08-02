@@ -562,7 +562,15 @@ export const createAgentConnectionSlice: StateCreator<
 	},
 
 	// Configuration methods
-	setProviderConfig: (config) => set({ providerConfig: config }),
+	setProviderConfig: (config) => {
+		set({ providerConfig: config });
+
+		// If it's a Mastra provider with a voiceRoute, update the voice endpoint
+		if (config.provider === 'mastra' && config.voiceRoute) {
+			const voiceEndpoint = `${config.baseURL}${config.voiceRoute}`;
+			get().setVoiceEndpoint(voiceEndpoint);
+		}
+	},
 
 	// Connection management
 	connect: async () => {

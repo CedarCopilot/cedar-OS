@@ -54,7 +54,7 @@ const initialVoiceState: VoiceState = {
 	isVoiceEnabled: false,
 	isListening: false,
 	isSpeaking: false,
-	voiceEndpoint: 'http://localhost:4111/chat/voice-execute', // Default endpoint
+	voiceEndpoint: '', // Default endpoint
 	voicePermissionStatus: 'prompt',
 	audioStream: null,
 	audioContext: null,
