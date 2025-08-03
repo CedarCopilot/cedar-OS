@@ -29,14 +29,15 @@ export type MessageRole = 'bot' | 'user' | 'assistant';
 // Type for input messages where ID is optional - will be auto-generated if not provided
 export type MessageInput =
 	| (Omit<TextMessage, 'id'> & { id?: string })
-	| (Omit<ActionMessage, 'id'> & { id?: string })
 	| (Omit<StorylineMessage, 'id'> & { id?: string })
 	| (Omit<MultipleChoiceMessage, 'id'> & { id?: string })
 	| (Omit<TodoListMessage, 'id'> & { id?: string })
 	| (Omit<DialogueOptionsMessage, 'id'> & { id?: string })
 	| (Omit<TickerMessage, 'id'> & { id?: string })
 	| (Omit<SliderMessage, 'id'> & { id?: string })
-	| (Omit<StageUpdateMessage, 'id'> & { id?: string });
+	| (Omit<CustomMessage<string, Record<string, unknown>>, 'id'> & {
+			id?: string;
+	  });
 
 // Default Cedar message types as a union
 export type DefaultMessage =
@@ -47,8 +48,7 @@ export type DefaultMessage =
 	| MultipleChoiceMessage
 	| StorylineMessage
 	| SliderMessage
-	| StageUpdateMessage
-	| ActionMessage;
+	| CustomMessage<string, Record<string, unknown>>;
 
 // Type helper to extract a specific message by type
 export type MessageByType<T extends string, M = DefaultMessage> = Extract<

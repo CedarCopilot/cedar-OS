@@ -3,8 +3,11 @@ import {
 	useStyling,
 	Message,
 	TickerMessage,
-	StageUpdateMessage,
 	ActionMessage,
+	DialogueOptionsMessage,
+	MultipleChoiceMessage,
+	TodoListMessage,
+	StageUpdateStatus,
 } from 'cedar-os';
 import { Ticker } from 'motion-plus-react';
 import React from 'react';
@@ -102,7 +105,7 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 					<div
 						{...getMessageStyles(message.role)}
 						className={`${getMessageStyles(message.role).className} w-full`}>
-						<DialogueOptions message={message} />
+						<DialogueOptions message={message as DialogueOptionsMessage} />
 					</div>
 				</div>
 			);
@@ -113,7 +116,7 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 					<div
 						{...getMessageStyles(message.role)}
 						className={`${getMessageStyles(message.role).className} w-full`}>
-						<MultipleChoice message={message} />
+						<MultipleChoice message={message as MultipleChoiceMessage} />
 					</div>
 				</div>
 			);
@@ -125,7 +128,7 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 					<div
 						{...messageStyles.style}
 						className={`${messageStyles.className} w-full`}>
-						<TodoList message={message} />
+						<TodoList message={message as TodoListMessage} />
 					</div>
 				</div>
 			);
@@ -161,11 +164,13 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 		}
 
 		case 'stage_update': {
-			const stageMsg = message as StageUpdateMessage;
 			return (
 				<div className='max-w-[100%]'>
-					<div {...getMessageStyles(stageMsg.role)}>
-						<ShimmerText text={stageMsg.message} state={stageMsg.status} />
+					<div {...getMessageStyles(message.role)}>
+						<ShimmerText
+							text={message.message as string}
+							state={message.status as StageUpdateStatus}
+						/>
 					</div>
 				</div>
 			);

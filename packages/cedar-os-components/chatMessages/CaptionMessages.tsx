@@ -8,8 +8,8 @@ import {
 	DialogueOptionsMessage,
 	MultipleChoiceMessage,
 	SliderMessage,
-	StageUpdateMessage,
 	ActionMessage,
+	StageUpdateStatus,
 } from 'cedar-os';
 import Flat3dButton from '@/containers/Flat3dButton';
 import Flat3dContainer from '@/containers/Flat3dContainer';
@@ -198,10 +198,12 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 			);
 
 		case 'stage_update': {
-			const stageMsg = latestMessage as StageUpdateMessage;
 			return (
 				<div className='font-semibold text-lg'>
-					<ShimmerText text={stageMsg.message} state={stageMsg.status} />
+					<ShimmerText
+						text={latestMessage.message as string}
+						state={latestMessage.status as StageUpdateStatus}
+					/>
 				</div>
 			);
 		}
