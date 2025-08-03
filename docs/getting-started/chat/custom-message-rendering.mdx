@@ -1,239 +1,405 @@
 ---
 title: 'Custom Message Rendering'
-description: 'Create custom message components and renderers'
+description: 'Create custom message handlers and renderers for structured data'
 ---
 
-Cedar allows you to completely customize how messages are displayed in your chat interface. You can create custom message components, override default renderers, and add interactive elements to messages.
+Cedar's custom message handling and rendering system enables all UI interfaces that come from streamed or sent events from the backend. This system processes structured objects with a `type` field, enabling Generative UI, state mutations, diff applying, and all frontend interactions with structured data from your agents.
 
-## Custom Message Components
+### Structured Object Shape
 
-Create custom components for specific message types:
+Any object that this system processes must have a `type` field:
+
+```typescript
+interface StructuredObject {
+	type: string;
+	[key: string]: unknown;
+}
+```
+
+When the backend sends structured data, Cedar's `processStructuredMessage()` function:
+
+1. Checks for a `type` field
+2. Looks for a registered **handler** first (full control)
+3. Falls back to a **renderer** (UI control only)
+4. Defaults to JSON display in the chat if neither exists
+
+## Levels of Control
+
+The following examples demonstrate Cedar's Generative UI capabilities - where your agent can send structured data that updates your UI and executes actions in real-time.
+
+Let's use an action example to show the three different levels of control. When your backend sends this structured object:
+
+```typescript
+{
+  type: 'action',
+  stateKey: 'todos',
+  setterKey: 'addTodo',
+  args: ['Review pull request #123', 'high'],
+  description: 'Add high priority todo item'
+}
+```
+
+### Full Control: Message Handlers
+
+Override the default action handler to add custom business logic before executing the action.
+
+<Info>
+	If handling a message manually, it will NOT be automatically added to the
+	chat. Call `addMessage` manually to do this.
+</Info>
+
+```typescript
+import { useCedarStore } from 'cedar-os';
+
+// Override the default action handler with custom logic
+const store = useCedarStore.getState();
+store.registerMessageHandler('action', {
+	type: 'action',
+	handler: (obj, store) => {
+		// Custom business logic before executing action
+		console.log('Processing action:', obj.stateKey, obj.setterKey, obj.args);
+
+		// Log action for analytics
+		if (obj.stateKey === 'todos') {
+			console.log('Todo action detected:', obj.description);
+		}
+
+		// Execute the state setter (same as default handler)
+		if (obj.stateKey && obj.setterKey) {
+			const args = Array.isArray(obj.args) ? obj.args : [];
+			store.executeCustomSetter(obj.stateKey, obj.setterKey, ...args);
+		}
+
+		// Update UI components outside of chat
+		if (obj.args?.[1] === 'high') {
+			// Show notification in notification panel
+			store.executeCustomSetter(
+				'notifications',
+				'show',
+				'High priority todo added!'
+			);
+			// Update dashboard badge count
+			store.executeCustomSetter('dashboard', 'incrementUrgentTasks');
+			// Highlight todo section in sidebar
+			store.executeCustomSetter('sidebar', 'highlightSection', 'todos');
+		}
+
+		// Don't add to chat - this action updates other parts of the UI
+
+		return true; // Indicates the object was handled
+	},
+	validateMessage: (obj) =>
+		obj.type === 'action' &&
+		typeof obj.stateKey === 'string' &&
+		typeof obj.setterKey === 'string',
+});
+```
+
+### UI Control Only: Message Renderers
+
+Define a custom renderer to control only the visual display. The default action handler executes and adds the message to chat, but you control how it looks:
 
 ```tsx
 import { useMessageRenderer } from 'cedar-os';
 
-// Custom component for code execution results
-function CodeResultMessage({ message }) {
-	return (
-		<div className='bg-gray-900 text-green-400 p-4 rounded-lg font-mono'>
-			<div className='text-xs text-gray-500 mb-2'>Execution Result</div>
-			<pre>{message.content}</pre>
-			<button
-				className='mt-2 text-blue-400 hover:text-blue-300'
-				onClick={() => navigator.clipboard.writeText(message.content)}>
-				Copy Result
-			</button>
-		</div>
-	);
-}
+function ActionRenderer({ message }) {
+	// Extract priority from args if it's a todo action
+	const priority = message.stateKey === 'todos' ? message.args?.[1] : null;
+	const todoText = message.stateKey === 'todos' ? message.args?.[0] : null;
 
-// Custom component for interactive surveys
-function SurveyMessage({ message, onResponse }) {
-	const [selectedOption, setSelectedOption] = useState(null);
+	const priorityColors = {
+		high: 'bg-red-50 border-red-200 text-red-800',
+		medium: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+		low: 'bg-green-50 border-green-200 text-green-800',
+	};
+
+	const priorityColor =
+		priorityColors[priority] || 'bg-blue-50 border-blue-200 text-blue-800';
 
 	return (
-		<div className='border rounded-lg p-4'>
-			<h3 className='font-semibold mb-3'>{message.content.question}</h3>
-			<div className='space-y-2'>
-				{message.content.options.map((option, index) => (
-					<button
-						key={index}
-						className={`block w-full text-left p-2 rounded ${
-							selectedOption === index ? 'bg-blue-100' : 'hover:bg-gray-50'
-						}`}
-						onClick={() => {
-							setSelectedOption(index);
-							onResponse(option);
-						}}>
-						{option}
-					</button>
-				))}
+		<div className={`border rounded-lg p-4 ${priorityColor}`}>
+			<div className='flex items-center gap-2'>
+				<span className='font-semibold'>
+					🔧 {message.stateKey}.{message.setterKey}()
+				</span>
+				{priority && (
+					<span className='text-xs px-2 py-1 rounded bg-white bg-opacity-50'>
+						{priority} priority
+					</span>
+				)}
 			</div>
-		</div>
-	);
-}
-```
-
-## Registering Custom Renderers
-
-Register your custom components with the message renderer:
-
-```tsx
-import { CedarCopilot } from 'cedar-os';
-
-function App() {
-	const customRenderers = {
-		'code-result': CodeResultMessage,
-		survey: SurveyMessage,
-		'file-upload': FileUploadMessage,
-		chart: ChartMessage,
-	};
-
-	return (
-		<CedarCopilot llmProvider={llmProvider} messageRenderers={customRenderers}>
-			{/* Your app content */}
-		</CedarCopilot>
-	);
-}
-```
-
-## Message Renderer Hook
-
-Use the `useMessageRenderer` hook for advanced customization:
-
-```tsx
-import { useMessageRenderer } from 'cedar-os';
-
-function CustomChatBubbles() {
-	const { renderMessage, registerRenderer } = useMessageRenderer();
-
-	// Register a new renderer
-	useEffect(() => {
-		registerRenderer('todo-list', ({ message }) => (
-			<TodoListMessage
-				items={message.content.items}
-				onToggle={(index) => {
-					// Handle todo toggle
-				}}
-			/>
-		));
-	}, [registerRenderer]);
-
-	return (
-		<div className='messages-container'>
-			{messages.map((message) => (
-				<div key={message.id} className='message-wrapper'>
-					{renderMessage(message)}
+			{message.description && (
+				<p className='mt-1 text-sm opacity-75'>{message.description}</p>
+			)}
+			{todoText && <p className='mt-2 font-medium'>📝 {todoText}</p>}
+			{message.args && (
+				<div className='mt-2 text-xs'>
+					<code>args: {JSON.stringify(message.args)}</code>
 				</div>
-			))}
+			)}
+		</div>
+	);
+}
+
+// Register the renderer - default handler still executes, but display is custom
+useMessageRenderer({
+	type: 'action',
+	renderer: ActionRenderer,
+	validateMessage: (msg) => msg.type === 'action',
+});
+```
+
+### No Control: Cedar Defaults
+
+Don't register any custom handler or renderer - Cedar's built-in action handler will execute the state setter and display the action using the default renderer:
+
+```tsx
+// No registration needed - Cedar's default action handler:
+// 1. Executes: store.executeCustomSetter('todos', 'addTodo', 'Review pull request #123', 'high')
+// 2. Adds action message to chat with default JSON-style rendering:
+
+{
+  "type": "action",
+  "stateKey": "todos",
+  "setterKey": "addTodo",
+  "args": ["Review pull request #123", "high"],
+  "description": "Add high priority todo item"
+}
+```
+
+This approach requires no code - the action gets executed and displayed automatically with Cedar's built-in styling (these components are downloaded locally so you can edit them directly).
+
+## Default Registered Object Types
+
+Cedar includes three built-in handler types that are automatically registered:
+
+### `message`
+
+Handles basic text messages with optional role specification.
+
+```typescript
+// Handled automatically when backend sends:
+{
+  type: 'message',
+  content: 'Hello from the agent!',
+  role: 'assistant' // optional, defaults to 'assistant'
+}
+```
+
+### `action`
+
+Executes state setters and renders action data.
+
+```typescript
+// Handled automatically when backend sends:
+{
+  type: 'action',
+  stateKey: 'myState',
+  setterKey: 'updateValue',
+  args: ['newValue'],
+  description: 'Updated user preference'
+}
+```
+
+### `stage_update`
+
+Shows agent progress with status indicators.
+
+```typescript
+// Handled automatically when backend sends:
+{
+  type: 'stage_update',
+  status: 'in_progress', // 'in_progress' | 'complete' | 'error' | 'thinking'
+  message: 'Analyzing document...'
+}
+```
+
+## Mastra Renderers
+
+Mastra agents stream real-time events during execution. Cedar provides automatic renderers for all Mastra event types to visualize agent workflows as they happen.
+
+#### Mastra Event Types
+
+When a Mastra agent runs, it streams these structured events:
+
+- `start` - Agent execution begins
+- `step-start` - Individual step starts
+- `tool-call` - Agent calls a tool
+- `tool-result` - Tool returns result
+- `step-finish` - Individual step completes
+- `tool-output` - Tool produces output
+- `step-result` - Step produces result
+- `step-output` - Step produces output
+- `finish` - Agent execution completes
+
+#### Automatic Usage
+
+Cedar provides pre-built renderers for all Mastra events (downloaded with Cedar components). Simply register them to automatically visualize agent workflows:
+
+```tsx
+import { mastraRendererEntries } from 'cedar-os-components/chatMessages/MastraRenderers';
+
+// Register all Mastra renderers at once
+const store = useCedarStore.getState();
+store.registerMessageRenderers(mastraRendererEntries);
+
+// Or use the auto-registration component
+import { MastraRenderers } from 'cedar-os-components/chatMessages/MastraRenderers';
+
+function ChatInterface() {
+	return (
+		<div>
+			<MastraRenderers />
+			{/* Your chat UI */}
 		</div>
 	);
 }
 ```
 
-## Message Types and Structure
+#### Overriding Specific Renderers
 
-Messages in Cedar follow this structure:
+You can override any Mastra renderer while keeping the rest. Here's how to customize the `tool-call` renderer:
 
 ```tsx
-interface Message {
-	id: string;
-	type: string; // 'text', 'image', 'file', or custom type
-	role: 'user' | 'assistant' | 'system';
-	content: any; // Content varies by type
-	timestamp: Date;
-	metadata?: {
-		streaming?: boolean;
-		error?: string;
-		[key: string]: any;
+import { useEffect } from 'react';
+import { useCedarStore } from 'cedar-os';
+import { mastraRendererEntries } from 'cedar-os-components/chatMessages/MastraRenderers';
+import type { MastraMessage, MessageRendererEntry } from 'cedar-os';
+
+// Custom renderer for tool calls
+const CustomToolCallRenderer: MessageRendererEntry['renderer'] = (msg) => {
+	const toolMsg = msg as MastraMessage<'tool-call'>;
+	const { toolName, args } = toolMsg.payload as {
+		toolName?: string;
+		args?: unknown;
 	};
+
+	return (
+		<div className='border-l-4 border-blue-500 pl-3 py-2 my-2 bg-blue-50'>
+			<div className='flex items-center gap-2'>
+				<span className='text-blue-700 font-semibold'>
+					🔧 {toolName ?? 'tool'}
+				</span>
+				<span className='text-xs text-blue-600 bg-blue-200 px-2 py-1 rounded'>
+					Tool Call
+				</span>
+			</div>
+			{args && (
+				<pre className='mt-2 text-xs text-blue-800 bg-white p-2 rounded'>
+					{JSON.stringify(args, null, 2)}
+				</pre>
+			)}
+		</div>
+	);
+};
+
+export function CustomMastraRenderers() {
+	const registerRenderers = useCedarStore((s) => s.registerMessageRenderers);
+	const unregisterRenderer = useCedarStore((s) => s.unregisterMessageRenderer);
+
+	useEffect(() => {
+		registerRenderers({
+			// Register all default Mastra renderers
+			...mastraRendererEntries,
+			// Override the tool-call renderer with our custom one
+			'tool-call': {
+				...mastraRendererEntries['tool-call'],
+				renderer: CustomToolCallRenderer,
+			},
+		});
+
+		return () => {
+			// Cleanup on unmount
+			Object.keys(mastraRendererEntries).forEach(unregisterRenderer);
+		};
+	}, [registerRenderers, unregisterRenderer]);
+
+	return null;
 }
 ```
 
-## Built-in Message Types
+This pattern allows you to selectively enhance specific Mastra events while maintaining the default behavior for others.
 
-Cedar provides several built-in message renderers:
+## Advanced Usage Examples
 
-### Text Messages
+### Conditional Rendering
 
-```tsx
-{
-  type: 'text',
-  content: 'Hello, how can I help you?'
-}
-```
-
-### Image Messages
-
-```tsx
-{
-  type: 'image',
-  content: {
-    url: 'https://example.com/image.jpg',
-    alt: 'Description',
-    caption: 'Optional caption'
-  }
-}
-```
-
-### File Messages
-
-```tsx
-{
-  type: 'file',
-  content: {
-    filename: 'document.pdf',
-    size: 1024000,
-    url: 'https://example.com/document.pdf',
-    type: 'application/pdf'
-  }
-}
-```
-
-## Conditional Rendering
-
-Render different components based on message properties:
+Render different components based on message fields:
 
 ```tsx
 function ConditionalRenderer({ message }) {
-	const { renderMessage } = useMessageRenderer();
-
-	// Custom logic for rendering based on user role
-	if (message.role === 'system') {
-		return <SystemNotification message={message} />;
+	// Different rendering based on message properties
+	if (message.priority === 'urgent') {
+		return (
+			<div className='bg-red-100 border-red-500 border-l-4 p-4'>
+				<div className='flex items-center'>
+					<span className='text-red-600 font-bold'>🚨 URGENT</span>
+					<span className='ml-2'>{message.content}</span>
+				</div>
+			</div>
+		);
 	}
 
-	// Custom rendering for messages with attachments
-	if (message.metadata?.hasAttachments) {
-		return <MessageWithAttachments message={message} />;
-	}
-
-	// Fall back to default renderer
-	return renderMessage(message);
-}
-```
-
-## Interactive Message Actions
-
-Add interactive elements to messages:
-
-```tsx
-function InteractiveMessage({ message }) {
-	const { addMessage, callLLM } = useCedarStore();
-
-	const handleFollowUp = async (question) => {
-		addMessage({
-			type: 'text',
-			role: 'user',
-			content: question,
-		});
-
-		await callLLM({
-			prompt: question,
-			context: message.content, // Use original message as context
-		});
-	};
-
-	return (
-		<div className='message-content'>
-			<p>{message.content}</p>
-
-			<div className='message-actions mt-2 space-x-2'>
+	if (message.category === 'code') {
+		return (
+			<div className='bg-gray-900 text-green-400 p-4 rounded font-mono'>
+				<pre>{message.content}</pre>
 				<button
-					onClick={() => handleFollowUp('Can you explain this further?')}
-					className='text-blue-600 hover:text-blue-800 text-sm'>
-					Explain Further
-				</button>
-				<button
-					onClick={() => handleFollowUp('Give me an example')}
-					className='text-blue-600 hover:text-blue-800 text-sm'>
-					Show Example
+					onClick={() => navigator.clipboard.writeText(message.content)}
+					className='mt-2 text-blue-400 hover:text-blue-300'>
+					Copy Code
 				</button>
 			</div>
-		</div>
-	);
+		);
+	}
+
+	// Default rendering
+	return <div className='p-2'>{message.content}</div>;
 }
+
+useMessageRenderer({
+	type: 'conditional_message',
+	renderer: ConditionalRenderer,
+	validateMessage: (msg) => msg.type === 'conditional_message',
+});
 ```
+
+### Rendering events beyond the chat
+
+Cedar is built on the principle that **chat is not the only place your agent should live**. The message system is designed to work across different UI contexts.
+
+```typescript
+// Register handler for agent prompts in any UI context
+store.registerMessageHandler('prompt_called', {
+	type: 'prompt_called',
+	handler: (obj, store) => {
+		// Could trigger UI updates, logs, analytics, etc.
+		console.log('Agent called prompt:', obj.promptName);
+
+		// Update some UI state
+		store.executeCustomSetter(
+			'agentStatus',
+			'setCurrentPrompt',
+			obj.promptName
+		);
+
+		// Optionally add to chat if in chat context
+		if (store.showChat) {
+			store.addMessage({
+				role: 'assistant',
+				type: 'stage_update',
+				content: '',
+				status: 'in_progress',
+				message: `Executing ${obj.promptName}...`,
+			});
+		}
+
+		return true;
+	},
+});
+```
+
+This system enables agents to communicate with your application through structured data, whether in chat interfaces, dashboards, or any other UI component that needs to respond to agent events.
 
 ## Next Steps
 
