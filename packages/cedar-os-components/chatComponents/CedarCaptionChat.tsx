@@ -22,14 +22,12 @@ interface CedarCaptionChatProps {
 		maxWidth?: number;
 	};
 	className?: string;
-	showThinking?: boolean;
 	stream?: boolean; // Whether to use streaming for responses
 }
 
 export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 	dimensions,
 	className = '',
-	showThinking = true,
 	stream = true,
 }) => {
 	// Check if there are any nodes with diffs
@@ -165,7 +163,7 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 
 				<Container3D className='p-2'>
 					<div className='w-full pb-3'>
-						<CaptionMessages showThinking={showThinking} />
+						<CaptionMessages />
 					</div>
 
 					<ChatInput

@@ -18,13 +18,7 @@ import KeyboardShortcut from '@/ui/KeyboardShortcut';
 import Slider from '@/ui/Slider3D';
 import { TypewriterText } from '@/text/TypewriterText';
 
-interface CaptionMessagesProps {
-	showThinking?: boolean;
-}
-
-const CaptionMessages: React.FC<CaptionMessagesProps> = ({
-	showThinking = true,
-}) => {
+const CaptionMessages: React.FC = () => {
 	const { messages } = useMessages();
 
 	const { isProcessing } = useMessages();
@@ -32,22 +26,18 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 	const store = useCedarStore((state) => state);
 	const styling = useCedarStore((state) => state.styling);
 
-	// Get the appropriate message based on showThinking prop
+	// Get the appropriate message
 	const latestMessage = React.useMemo(() => {
-		if (showThinking) {
-			// Show the latest message regardless of role
-			return messages[messages.length - 1];
-		} else {
-			// Find the last non-user message
-			for (let i = messages.length - 1; i >= 0; i--) {
-				if (messages[i].role !== 'user' && messages[i].type === 'text') {
-					return messages[i];
-				}
+		// Find the last non-user message
+		for (let i = messages.length - 1; i >= 0; i--) {
+			if (messages[i].role !== 'user' && messages[i].type === 'text') {
+				return messages[i];
 			}
-			return null;
 		}
-	}, [messages, showThinking]);
+		return null;
+	}, [messages]);
 
+	console.log('looking at message', latestMessage);
 	if (!latestMessage) return null;
 
 	// Render based on message type
