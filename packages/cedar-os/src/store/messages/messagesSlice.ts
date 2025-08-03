@@ -5,7 +5,6 @@ import type {
 	MessageInput,
 	MessageRendererEntry,
 	MessageRendererRegistry,
-	BaseMessage,
 	MessageHandler,
 	MessageHandlerEntry,
 } from './types';
@@ -213,40 +212,6 @@ export const createMessagesSlice: StateCreator<
 				}
 				const handled = handler(structuredResponse, get());
 				if (handled) return true;
-			}
-
-			// If there is no handler, check if we have a renderer for this type
-			const entry = get().getMessageRenderer(structuredResponse.type);
-			// If there is no renderer, add it as a text message
-			if (!entry) {
-				get().addMessage({
-					role: 'assistant',
-					type: 'text',
-					content: JSON.stringify(structuredResponse, null, 2),
-				});
-				return true;
-			}
-
-			const { validateMessage } = entry;
-
-			if (
-				validateMessage &&
-				!validateMessage(structuredResponse as unknown as BaseMessage)
-			) {
-				console.log(
-					'Message type',
-					structuredResponse.type,
-					'identified but failed validation:',
-					structuredResponse
-				);
-
-				// Add as a text message
-				get().addMessage({
-					role: 'assistant',
-					type: 'text',
-					content: JSON.stringify(structuredResponse, null, 2),
-				});
-				return true;
 			}
 
 			// Determine role, default assistant, map system -> assistant
