@@ -42,7 +42,8 @@
 					"getting-started/chat/streaming",
 					"getting-started/chat/custom-message-rendering",
 					"getting-started/chat/chat-components",
-					"getting-started/chat/configuring-cedar-editor"
+					"getting-started/chat/configuring-cedar-editor",
+					"getting-started/chat/storage-configuration"
 				]
 			},
 			{

@@ -1,0 +1,413 @@
+---
+title: 'Storage Configuration'
+description: 'Configure how Cedar persists chat messages and manages threads'
+---
+
+Cedar provides a flexible storage system for managing chat messages with automatic persistence and **automatic thread management**. By default, Cedar uses **local storage** - no configuration required.
+
+# Quick Start
+
+Cedar works out of the box with browser localStorage - no setup needed. Optionally, you can configure the storage key.
+
+With no configured storage adapter, Cedar will:
+
+- Use local storage with 'cedar' prefix
+- Use 'default' as the user ID (no userId needed)
+- Load any existing threads for the default user
+- Select the first thread or creates a 'default' thread
+- Persist messages as they're added
+
+# Storage Options
+
+Cedar supports four storage adapters:
+
+1. **Local Storage** (default) - Browser localStorage
+2. **Remote Storage** - HTTP API endpoints
+3. **No Storage** - Disables persistence
+4. **Custom Storage** - Your own implementation
+
+Configure storage by passing the `storage` prop to CedarCopilot:
+
+<CodeGroup>
+
+```typescript Local Storage (Default)
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	return (
+		<CedarCopilot
+			// No storage prop needed - uses local storage by default.
+			// Optionally pass in user ID
+			userId='user-123'>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+```typescript Local Storage (Custom Key)
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	return (
+		<CedarCopilot
+			storage={{
+				type: 'local',
+				options: {
+					key: 'my-app', // Optional: defaults to 'cedar'
+				},
+			}}
+			userId='user-123'>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+```typescript Remote Storage
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	return (
+		<CedarCopilot
+			storage={{
+				type: 'remote',
+				options: {
+					baseURL: 'https://api.myapp.com',
+					headers: {
+						// Optional
+						Authorization: 'Bearer your-token',
+						'X-Custom-Header': 'value',
+					},
+				},
+			}}
+			userId='user-123'>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+```typescript No Storage
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	return (
+		<CedarCopilot storage={{ type: 'none' }} userId='user-123'>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+```typescript Custom Storage
+import { CedarCopilot } from 'cedar-os';
+
+const myCustomAdapter = {
+	async listThreads(userId) {
+		return await myDatabase.getThreads(userId);
+	},
+	async loadMessages(userId, threadId) {
+		return await myDatabase.getMessages(userId, threadId);
+	},
+	async persistMessages(userId, threadId, messages) {
+		await myDatabase.saveMessages(userId, threadId, messages);
+	},
+};
+
+function App() {
+	return (
+		<CedarCopilot
+			storage={{
+				type: 'custom',
+				adapter: myCustomAdapter,
+			}}
+			userId='user-123'>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+</CodeGroup>
+
+### Thread Management Configuration
+
+You can customize the default thread behavior with thread management options passed to the storage adapter:
+
+```typescript
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	return (
+		<CedarCopilot
+			storage={{
+				type: 'local',
+				options: { ... },
+				threadManagement: {
+					autoLoadThreads: true,        // Default: true - load threads when user changes
+					autoSelectFirstThread: false, // Default: true - select first available thread
+					autoCreateThread: true,       // Default: true - create thread if none exist
+					defaultThreadId: 'main',      // Default: 'default' - fallback thread ID
+				}
+			}}
+			userId='user-123'>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+# Additional Configuration Requirements by Storage Type
+
+### Local Storage & No Storage
+
+**No additional configuration needed** - these options work out of the box.
+
+### Remote Storage
+
+You can implement any or all of the following routes. **If an endpoint is not implemented, Cedar will gracefully skip that functionality.**
+For example:
+
+- If you don't implement the save messages endpoints, Cedar assumes you handle persistence elsewhere
+- If you don't implement the list threads endpoints, Cedar will work with just one thread
+
+**Single-User or Backend-Handled User Context:**
+If your app has one user or your backend handles user context through authentication headers, implement these routes:
+
+| Method | Endpoint              | Purpose              | Request Body            | Response       |
+| ------ | --------------------- | -------------------- | ----------------------- | -------------- |
+| GET    | `/threads`            | List threads         | -                       | `ThreadMeta[]` |
+| GET    | `/threads/{threadId}` | Get thread messages  | -                       | `Message[]`    |
+| POST   | `/threads/{threadId}` | Save thread messages | `{messages: Message[]}` | -              |
+
+**Multi-User with URL-Based User Context:**
+If your app has multiple users and you want to pass the user ID in the URL, implement these routes:
+
+| Method | Endpoint                          | Purpose                    | Request Body            | Response       |
+| ------ | --------------------------------- | -------------------------- | ----------------------- | -------------- |
+| GET    | `/threads?userId={id}`            | List user's threads        | -                       | `ThreadMeta[]` |
+| GET    | `/threads/{threadId}?userId={id}` | Get user's thread messages | -                       | `Message[]`    |
+| POST   | `/threads/{threadId}?userId={id}` | Save to user's thread      | `{messages: Message[]}` | -              |
+
+## Custom Storage Implementation
+
+Implement your own storage solution by providing a custom adapter:
+
+<CodeGroup>
+
+```typescript Interface
+interface BaseStorageAdapter {
+	// Required methods
+	listThreads(userId?: string | null): Promise<ThreadMeta[]>;
+	loadMessages(
+		userId: string | null | undefined,
+		threadId: string
+	): Promise<Message[]>;
+	persistMessages(
+		userId: string | null | undefined,
+		threadId: string,
+		messages: Message[]
+	): Promise<void>;
+
+	// Optional methods
+	createThread?(
+		userId: string | null | undefined,
+		thread: ThreadMeta
+	): Promise<void>;
+	deleteThread?(
+		userId: string | null | undefined,
+		threadId: string
+	): Promise<void>;
+}
+```
+
+```typescript Example Implementation
+import { useCedarStore } from 'cedar-os';
+
+// Your custom storage implementation
+const myCustomAdapter = {
+	async listThreads(userId) {
+		// Implement: return list of thread metadata
+		return await myDatabase.getThreads(userId);
+	},
+
+	async loadMessages(userId, threadId) {
+		// Implement: return messages for thread
+		return await myDatabase.getMessages(userId, threadId);
+	},
+
+	async persistMessages(userId, threadId, messages) {
+		// Implement: save messages to your storage
+		await myDatabase.saveMessages(userId, threadId, messages);
+	},
+
+	// Optional: implement createThread and deleteThread
+	async createThread(userId, thread) {
+		await myDatabase.createThread(userId, thread);
+	},
+
+	async deleteThread(userId, threadId) {
+		await myDatabase.deleteThread(userId, threadId);
+	},
+};
+
+function App() {
+	const store = useCedarStore();
+
+	store.getState().setStorageAdapter({
+		type: 'custom',
+		adapter: myCustomAdapter,
+	});
+
+	return <YourChatComponent />;
+}
+```
+
+```typescript With CedarCopilot Configuration
+import { CedarCopilot } from 'cedar-os';
+
+// Your custom storage implementation
+const myCustomAdapter = {
+	async listThreads(userId) {
+		return await myDatabase.getThreads(userId);
+	},
+
+	async loadMessages(userId, threadId) {
+		return await myDatabase.getMessages(userId, threadId);
+	},
+
+	async persistMessages(userId, threadId, messages) {
+		await myDatabase.saveMessages(userId, threadId, messages);
+	},
+
+	async createThread(userId, thread) {
+		await myDatabase.createThread(userId, thread);
+	},
+
+	async deleteThread(userId, threadId) {
+		await myDatabase.deleteThread(userId, threadId);
+	},
+};
+
+function App() {
+	return (
+		<CedarCopilot
+			storage={{
+				type: 'custom',
+				adapter: myCustomAdapter,
+			}}
+			userId='user-123' // User ID passed in initial configuration
+		>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+</CodeGroup>
+
+# User and Thread Management
+
+### User ID Behavior
+
+Cedar supports multi-user scenarios with automatic thread loading:
+
+| Scenario          | Behavior         | Storage Key/Endpoint     | Thread Management                |
+| ----------------- | ---------------- | ------------------------ | -------------------------------- |
+| No user ID prop   | Uses `'default'` | `cedar-threads-default`  | Auto-loads threads for 'default' |
+| User ID provided  | Uses provided ID | `cedar-threads-{userId}` | Auto-loads threads for user      |
+| User ID is `null` | Uses `'default'` | `cedar-threads-default`  | Auto-loads threads for 'default' |
+
+**When a user ID changes, Cedar automatically:**
+
+1. Loads all threads for that user
+2. Selects the first thread (if `autoSelectFirstThread: true`)
+3. Creates a new thread if none exist (if `autoCreateThread: true`)
+4. Loads messages for the selected thread
+
+**Setting User ID:**
+
+<CodeGroup>
+
+```typescript Using Store
+import { useCedarStore } from 'cedar-os';
+
+function LoginHandler({ userId }: { userId: string }) {
+	const store = useCedarStore();
+
+	// Set user context - Cedar will load this user's threads
+	store.getState().setUserId(userId);
+
+	return <YourChatComponent />;
+}
+```
+
+```typescript Initial Configuration
+import { CedarCopilot } from 'cedar-os';
+
+function App({ userId }: { userId: string }) {
+	return (
+		<CedarCopilot
+			userId={userId} // Set user ID in initial configuration
+			storage={{
+				type: 'local', // or 'remote', 'none', 'custom'
+			}}>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+</CodeGroup>
+
+### Thread ID Behavior
+
+Organize conversations into separate threads:
+
+| Scenario            | Behavior         | Storage Key/Endpoint               |
+| ------------------- | ---------------- | ---------------------------------- |
+| No thread ID set    | Uses `'default'` | `cedar-thread-{userId}-default`    |
+| Thread ID provided  | Uses provided ID | `cedar-thread-{userId}-{threadId}` |
+| Thread ID is `null` | Uses `'default'` | `cedar-thread-{userId}-default`    |
+
+**Setting Thread ID:**
+
+```typescript
+import { useCedarStore } from 'cedar-os';
+
+function ConversationSwitcher() {
+	const store = useCedarStore();
+
+	const switchToThread = (threadId: string) => {
+		// Cedar will save current thread and load the new one
+		store.getState().setCurrentThreadId(threadId);
+	};
+
+	return (
+		<div>
+			<button onClick={() => switchToThread('project-discussion')}>
+				Project Discussion
+			</button>
+			<button onClick={() => switchToThread('support-ticket')}>
+				Support Ticket
+			</button>
+		</div>
+	);
+}
+```
+
+## Error Handling
+
+Cedar's storage system is designed to fail gracefully:
+
+- **Storage failures** are silently caught to prevent UI crashes
+- **Failed loads** return empty arrays rather than throwing errors
+- **Network timeouts** (for remote storage) don't break the interface
+- **Malformed data** is handled with safe fallbacks
+
+## Next Steps
+
+- Learn about [custom message rendering](/getting-started/chat/custom-message-rendering) for rich content
+- Explore [streaming responses](/getting-started/chat/streaming) for real-time interactions
+- Set up [agent backend connections](/getting-started/agent-backend-connection/agent-backend-connection) for AI responses
