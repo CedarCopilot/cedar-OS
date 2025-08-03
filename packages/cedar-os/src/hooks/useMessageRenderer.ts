@@ -2,6 +2,7 @@ import { useCedarStore } from '@/store/CedarStore';
 import type {
 	BaseMessage,
 	MessageRendererConfig,
+	MessageRenderer,
 } from '@/store/messages/types';
 import React, { useEffect, useMemo } from 'react';
 
@@ -20,12 +21,16 @@ export function useMessageRenderer<T extends BaseMessage = BaseMessage>(
 	);
 
 	// Memoize the renderer function to prevent unnecessary re-creations
-	const renderer = useMemo(() => {
+	const renderer = useMemo<MessageRenderer>(() => {
 		// Wrap the component to match the MessageRenderer signature
-		return (message: any) => {
-			const Component = config.renderer;
+
+		const Wrapped: MessageRenderer = (message: BaseMessage) => {
+			const Component = config.renderer as React.ComponentType<{
+				message: BaseMessage;
+			}>;
 			return React.createElement(Component, { message });
 		};
+		return Wrapped;
 	}, [config.renderer]);
 
 	// Extract stable values from config
@@ -35,20 +40,34 @@ export function useMessageRenderer<T extends BaseMessage = BaseMessage>(
 
 	useEffect(() => {
 		// Register the renderer
-		registerMessageRenderer(type, renderer);
+		registerMessageRenderer(type, {
+			type,
+			renderer,
+			priority,
+			validateMessage,
+		});
 
 		// Cleanup on unmount
 		return () => {
 			unregisterMessageRenderer(type);
 		};
-	}, [type, renderer, registerMessageRenderer, unregisterMessageRenderer]);
+	}, [
+		type,
+		renderer,
+		registerMessageRenderer,
+		unregisterMessageRenderer,
+		priority,
+		validateMessage,
+	]);
 }
 
 /**
  * Hook to register multiple message renderers at once
  * @param configs - Array of message renderer configurations
  */
-export function useMessageRenderers(configs: MessageRendererConfig<any>[]) {
+export function useMessageRenderers(
+	configs: MessageRendererConfig<BaseMessage>[]
+) {
 	const registerMessageRenderer = useCedarStore(
 		(s) => s.registerMessageRenderer
 	);
@@ -60,17 +79,24 @@ export function useMessageRenderers(configs: MessageRendererConfig<any>[]) {
 	const renderers = useMemo(() => {
 		return configs.map((config) => ({
 			type: config.type,
-			renderer: (message: any) => {
-				const Component = config.renderer;
-				return React.createElement(Component, { message });
+			entry: {
+				type: config.type,
+				renderer: (message: BaseMessage) => {
+					const Component = config.renderer as React.ComponentType<{
+						message: BaseMessage;
+					}>;
+					return React.createElement(Component, { message });
+				},
+				priority: config.priority,
+				validateMessage: config.validateMessage,
 			},
 		}));
 	}, [configs]);
 
 	useEffect(() => {
 		// Register all renderers
-		renderers.forEach(({ type, renderer }) => {
-			registerMessageRenderer(type, renderer);
+		renderers.forEach(({ type, entry }) => {
+			registerMessageRenderer(type, entry);
 		});
 
 		// Cleanup on unmount
