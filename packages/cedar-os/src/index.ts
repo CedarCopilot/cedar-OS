@@ -110,6 +110,18 @@ export type {
 // Export SendMessageParams from the slice
 export type { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
 
+// Export storage configuration types
+export type {
+	BaseStorageAdapter,
+	StorageConfig,
+	ThreadManagementConfig,
+	LocalAdapterOptions,
+	RemoteAdapterOptions,
+} from '@/store/storageSlice';
+
+// Export thread metadata type
+export type { ThreadMeta } from '@/store/historySlice';
+
 // Export voice components and types
 export { VoiceIndicator } from '@/store/voice/VoiceIndicator';
 export type { VoiceState } from '@/store/voice/voiceSlice';
