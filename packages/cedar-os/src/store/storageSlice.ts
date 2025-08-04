@@ -7,16 +7,43 @@ import { ThreadMeta } from '@/store/historySlice';
 // Type definitions
 // -------------------------------------------------
 export interface BaseStorageAdapter {
-	listThreads(userId?: string | null): Promise<ThreadMeta[]>;
 	loadMessages(
 		userId: string | null | undefined,
 		threadId: string
 	): Promise<Message[]>;
+	// Returns the message that was persisted
 	persistMessage(
 		userId: string | null | undefined,
 		threadId: string,
 		message: Message
-	): Promise<void>;
+	): Promise<Message>;
+	// Optional thread operations
+	listThreads?(userId?: string | null): Promise<ThreadMeta[]>;
+	createThread?(
+		userId: string | null | undefined,
+		threadId: string,
+		meta: ThreadMeta
+	): Promise<ThreadMeta>;
+	updateThread?(
+		userId: string | null | undefined,
+		threadId: string,
+		meta: ThreadMeta
+	): Promise<ThreadMeta>;
+	deleteThread?(
+		userId: string | null | undefined,
+		threadId: string
+	): Promise<ThreadMeta | undefined>;
+	// Optional message-level operations
+	updateMessage?(
+		userId: string | null | undefined,
+		threadId: string,
+		message: Message
+	): Promise<Message>;
+	deleteMessage?(
+		userId: string | null | undefined,
+		threadId: string,
+		messageId: string
+	): Promise<Message | undefined>;
 }
 
 export interface LocalAdapterOptions {
@@ -83,22 +110,16 @@ const createLocalAdapter = (
 	const threadKey = (userId: string | null | undefined, threadId: string) =>
 		`${prefix}-thread-${uidOrDefault(userId)}-${threadId}`;
 
-	const listThreads = async (userId?: string | null): Promise<ThreadMeta[]> => {
-		try {
-			const raw = localStorage.getItem(threadsKey(userId));
-			return raw ? (JSON.parse(raw) as ThreadMeta[]) : [];
-		} catch {
-			return [];
-		}
-	};
-
 	const persistThreadMeta = (userId: string, list: ThreadMeta[]) => {
 		localStorage.setItem(threadsKey(userId), JSON.stringify(list));
 	};
 
 	return {
 		type: 'local',
-		listThreads,
+		async listThreads(userId) {
+			const raw = localStorage.getItem(threadsKey(userId));
+			return raw ? (JSON.parse(raw) as ThreadMeta[]) : [];
+		},
 		async loadMessages(userId, threadId) {
 			try {
 				const raw = localStorage.getItem(threadKey(userId, threadId));
@@ -109,27 +130,88 @@ const createLocalAdapter = (
 		},
 		async persistMessage(userId, threadId, message) {
 			try {
-				// Load existing messages and append the new one
 				const existingMessages = await this.loadMessages(userId, threadId);
 				const updatedMessages = [...existingMessages, message];
-
-				// update meta list
-				const metaList = await this.listThreads(userId);
-				const idx = metaList.findIndex((m) => m.id === threadId);
-				const now = new Date().toISOString();
-				const first = updatedMessages[0]?.content ?? 'Chat';
-				const meta: ThreadMeta = {
-					id: threadId,
-					title: first.slice(0, 40),
-					updatedAt: now,
-					lastMessage: message.content ?? '',
-				};
-				if (idx === -1) metaList.push(meta);
-				else metaList[idx] = meta;
-				persistThreadMeta(userId ?? 'default', metaList);
+				localStorage.setItem(
+					threadKey(userId, threadId),
+					JSON.stringify(updatedMessages)
+				);
 			} catch {
 				/* ignore */
 			}
+			return message;
+		},
+		async createThread(userId, threadId, meta) {
+			try {
+				const metaList = await this.listThreads?.(userId);
+				if (metaList && !metaList.some((m) => m.id === threadId)) {
+					metaList.push(meta);
+					persistThreadMeta(userId ?? 'default', metaList);
+				}
+			} catch {
+				/* ignore */
+			}
+			return meta;
+		},
+		async updateThread(userId, threadId, meta) {
+			try {
+				const metaList = await this.listThreads?.(userId);
+				if (metaList) {
+					const idx = metaList.findIndex((m) => m.id === threadId);
+					if (idx === -1) metaList.push(meta);
+					else metaList[idx] = { ...metaList[idx], ...meta };
+					persistThreadMeta(userId ?? 'default', metaList);
+				}
+			} catch {
+				/* ignore */
+			}
+			return meta;
+		},
+		async deleteThread(userId, threadId) {
+			let removed: ThreadMeta | undefined;
+			try {
+				const metaList = await this.listThreads?.(userId);
+				if (metaList) {
+					const idx = metaList.findIndex((m) => m.id === threadId);
+					if (idx !== -1) removed = metaList[idx];
+					const newList = metaList.filter((m) => m.id !== threadId);
+					persistThreadMeta(userId ?? 'default', newList);
+					localStorage.removeItem(threadKey(userId, threadId));
+				}
+			} catch {
+				/* ignore */
+			}
+			return removed;
+		},
+		async updateMessage(userId, threadId, updatedMsg) {
+			try {
+				const msgs = await this.loadMessages(userId, threadId);
+				const newMsgs = msgs.map((m) =>
+					m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m
+				);
+				localStorage.setItem(
+					threadKey(userId, threadId),
+					JSON.stringify(newMsgs)
+				);
+			} catch {
+				/* ignore */
+			}
+			return updatedMsg;
+		},
+		async deleteMessage(userId, threadId, messageId) {
+			let removed: Message | undefined;
+			try {
+				const msgs = await this.loadMessages(userId, threadId);
+				removed = msgs.find((m) => m.id === messageId);
+				const newMsgs = msgs.filter((m) => m.id !== messageId);
+				localStorage.setItem(
+					threadKey(userId, threadId),
+					JSON.stringify(newMsgs)
+				);
+			} catch {
+				/* ignore */
+			}
+			return removed;
 		},
 	};
 };
@@ -140,9 +222,12 @@ const createNoopAdapter = (): NoopStorageAdapter => ({
 		return [];
 	},
 	async loadMessages() {
-		return [];
+		return [] as Message[];
 	},
-	async persistMessage() {},
+	async persistMessage(_userId, _threadId, message) {
+		// No persistence; just echo back
+		return message;
+	},
 });
 
 const createRemoteAdapter = (
@@ -184,12 +269,83 @@ const createRemoteAdapter = (
 					: `${opts.baseURL}/threads/${threadId}/messages`;
 				await fetch(url, {
 					method: 'POST',
-					headers,
+					headers: { ...headers, 'Content-Type': 'application/json' },
 					body: JSON.stringify({ message }),
 				});
 			} catch {
 				/* ignore */
 			}
+			return message;
+		},
+		async createThread(userId, threadId, meta) {
+			try {
+				const url = userId
+					? `${opts.baseURL}/threads?userId=${userId}`
+					: `${opts.baseURL}/threads`;
+				await fetch(url, {
+					method: 'POST',
+					headers: { ...headers, 'Content-Type': 'application/json' },
+					body: JSON.stringify({ threadId, meta }),
+				});
+			} catch {
+				/* ignore */
+			}
+			return meta;
+		},
+		async updateThread(userId, threadId, meta) {
+			try {
+				const url = userId
+					? `${opts.baseURL}/threads/${threadId}?userId=${userId}`
+					: `${opts.baseURL}/threads/${threadId}`;
+				await fetch(url, {
+					method: 'PUT',
+					headers: { ...headers, 'Content-Type': 'application/json' },
+					body: JSON.stringify({ meta }),
+				});
+			} catch {
+				/* ignore */
+			}
+			return meta;
+		},
+		async deleteThread(userId, threadId) {
+			try {
+				const url = userId
+					? `${opts.baseURL}/threads/${threadId}?userId=${userId}`
+					: `${opts.baseURL}/threads/${threadId}`;
+				await fetch(url, {
+					method: 'DELETE',
+					headers,
+				});
+			} catch {
+				/* ignore */
+			}
+			return undefined;
+		},
+		async updateMessage(userId, threadId, message) {
+			try {
+				const url = userId
+					? `${opts.baseURL}/threads/${threadId}/messages/${message.id}?userId=${userId}`
+					: `${opts.baseURL}/threads/${threadId}/messages/${message.id}`;
+				await fetch(url, {
+					method: 'PUT',
+					headers: { ...headers, 'Content-Type': 'application/json' },
+					body: JSON.stringify({ message }),
+				});
+			} catch {
+				/* ignore */
+			}
+			return message;
+		},
+		async deleteMessage(userId, threadId, messageId) {
+			try {
+				const url = userId
+					? `${opts.baseURL}/threads/${threadId}/messages/${messageId}?userId=${userId}`
+					: `${opts.baseURL}/threads/${threadId}/messages/${messageId}`;
+				await fetch(url, { method: 'DELETE', headers });
+			} catch {
+				/* ignore */
+			}
+			return undefined;
 		},
 	};
 };
@@ -214,7 +370,10 @@ export interface StorageSlice {
 	storageAdapter: StorageAdapter | undefined;
 	setStorageAdapter: (cfg?: StorageConfig) => void;
 	loadMessages: () => Promise<void>;
-	persistMessage: (message: Message) => Promise<void>;
+	persistMessage: (
+		message: Message,
+		autoCreateThread?: boolean
+	) => Promise<void>;
 	loadThreads: () => Promise<void>;
 }
 
@@ -228,7 +387,7 @@ export const createStorageSlice: StateCreator<
 
 	// Function to load threads and handle automatic thread selection
 	const loadAndSelectThreads = async (userId: string | null) => {
-		if (!adapter) return;
+		if (!adapter || !adapter.listThreads) return;
 
 		try {
 			const threads = await adapter.listThreads(userId);
@@ -311,12 +470,50 @@ export const createStorageSlice: StateCreator<
 				get().setMessages(msgs);
 			}
 		},
-		persistMessage: async (message) => {
+		persistMessage: async (message, autoCreateThread = true) => {
 			if (!adapter) return;
-			const uid = get().userId;
-			const tid = get().currentThreadId;
-			const threadToPersist = tid || 'default';
-			await adapter.persistMessage(uid, threadToPersist, message);
+
+			const state = get();
+			const uid = state.userId;
+			const tid = state.currentThreadId || 'default';
+
+			// Optionally create thread if it doesn't exist
+			if (autoCreateThread && adapter.listThreads) {
+				try {
+					const threads = await adapter.listThreads(uid);
+					const exists = threads.some((t) => t.id === tid);
+					if (!exists && adapter.createThread) {
+						const meta: ThreadMeta = {
+							id: tid,
+							title: (message.content ?? 'Chat').slice(0, 40),
+							updatedAt: new Date().toISOString(),
+							lastMessage: message.content ?? '',
+						};
+						await adapter.createThread(uid, tid, meta);
+					}
+				} catch {
+					/* ignore */
+				}
+			}
+
+			// Persist the message itself
+			await adapter.persistMessage(uid, tid, message);
+
+			// Update thread meta while preserving original title
+			if (adapter.updateThread) {
+				const existingMeta = get().threads?.find((t) => t.id === tid);
+				const meta: ThreadMeta = {
+					id: tid,
+					title:
+						existingMeta?.title ?? (message.content ?? 'Chat').slice(0, 40),
+					updatedAt: new Date().toISOString(),
+					lastMessage: message.content ?? '',
+				};
+				await adapter.updateThread(uid, tid, meta);
+			}
+
+			// Refresh thread list in the store
+			await loadAndSelectThreads(uid);
 		},
 		loadThreads: async () => {
 			const uid = get().userId;
