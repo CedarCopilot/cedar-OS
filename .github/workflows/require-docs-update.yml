@@ -20,10 +20,9 @@ jobs:
         run: |
           base_sha="${{ github.event.pull_request.base.sha }}"
           head_sha="${{ github.event.pull_request.head.sha }}"
-          echo "Base SHA: $base_sha"
-          echo "Head SHA: $head_sha"
-          changed_files=$(git diff --name-only "$base_sha" "$head_sha" -- 'docs/**/*.mdx' | wc -l)
+          changed_files=$(git diff --name-only "$base_sha" "$head_sha" -- 'docs/**/*.mdx' | grep -c '^')
           echo "changed_docs_count=$changed_files" >> $GITHUB_OUTPUT
+
           if [ "$changed_files" -eq 0 ]; then
             echo "❌ PR does not include updates to docs/*.mdx files. Please add or modify documentation." >&2
             exit 1
