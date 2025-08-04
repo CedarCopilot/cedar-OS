@@ -20,13 +20,17 @@ jobs:
           node-version: 20
           cache: 'npm'
 
+      - name: Install root dependencies (npm)
+        run: npm install --no-audit --prefer-offline
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
           run_install: false
 
-      - name: Install workspace dependencies (pnpm)
+      - name: Install cedar-os dependencies (pnpm)
+        working-directory: packages/cedar-os
         run: pnpm install --no-frozen-lockfile
 
       - name: Run cedar-os typecheck (pnpm)
