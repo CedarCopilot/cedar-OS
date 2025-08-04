@@ -1,0 +1,34 @@
+name: Cedar OS Build
+
+on:
+  pull_request:
+    paths:
+      - 'packages/cedar-os/**'
+      - '.github/workflows/build-cedar-os.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Install workspace dependencies (pnpm)
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build cedar-os package (pnpm)
+        working-directory: packages/cedar-os
+        run: pnpm run build
