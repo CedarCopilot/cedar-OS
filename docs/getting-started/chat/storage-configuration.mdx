@@ -148,20 +148,30 @@ For example:
 **Single-User or Backend-Handled User Context:**
 If your backend handles user context through authentication headers, implement these routes:
 
-| Method | Endpoint                       | Purpose             | Request Body         | Response       |
-| ------ | ------------------------------ | ------------------- | -------------------- | -------------- |
-| GET    | `/threads`                     | List threads        | -                    | `ThreadMeta[]` |
-| GET    | `/threads/{threadId}`          | Get thread messages | -                    | `Message[]`    |
-| POST   | `/threads/{threadId}/messages` | Add single message  | `{message: Message}` | -              |
+| Method | Endpoint                                   | Purpose                       | Request Body         | Response       |
+| ------ | ------------------------------------------ | ----------------------------- | -------------------- | -------------- |
+| GET    | `/threads`                                 | List threads (optional)       | -                    | `ThreadMeta[]` |
+| POST   | `/threads`                                 | Create new thread (optional)  | `{threadId, meta}`   | -              |
+| GET    | `/threads/{threadId}`                      | Get thread messages           | -                    | `Message[]`    |
+| PUT    | `/threads/{threadId}`                      | Update thread meta (optional) | `{meta: ThreadMeta}` | -              |
+| DELETE | `/threads/{threadId}`                      | Delete thread (optional)      | -                    | -              |
+| POST   | `/threads/{threadId}/messages`             | Add single message            | `{message: Message}` | -              |
+| PUT    | `/threads/{threadId}/messages/{messageId}` | Update message (optional)     | `{message: Message}` | -              |
+| DELETE | `/threads/{threadId}/messages/{messageId}` | Delete message (optional)     | -                    | -              |
 
 **Multi-User with URL-Based User Context:**
 If your app has multiple users and you want to pass the user ID in the URL, implement these routes:
 
-| Method | Endpoint                                   | Purpose                      | Request Body         | Response       |
-| ------ | ------------------------------------------ | ---------------------------- | -------------------- | -------------- |
-| GET    | `/threads?userId={id}`                     | List user's threads          | -                    | `ThreadMeta[]` |
-| GET    | `/threads/{threadId}?userId={id}`          | Get user's thread messages   | -                    | `Message[]`    |
-| POST   | `/threads/{threadId}/messages?userId={id}` | Add message to user's thread | `{message: Message}` | -              |
+| Method | Endpoint                                               | Purpose                       | Request Body         | Response       |
+| ------ | ------------------------------------------------------ | ----------------------------- | -------------------- | -------------- |
+| GET    | `/threads?userId={id}`                                 | List threads (optional)       | -                    | `ThreadMeta[]` |
+| POST   | `/threads?userId={id}`                                 | Create new thread (optional)  | `{threadId, meta}`   | -              |
+| GET    | `/threads/{threadId}?userId={id}`                      | Get user's thread messages    | -                    | `Message[]`    |
+| PUT    | `/threads/{threadId}?userId={id}`                      | Update thread meta (optional) | `{meta: ThreadMeta}` | -              |
+| DELETE | `/threads/{threadId}?userId={id}`                      | Delete thread (optional)      | -                    | -              |
+| POST   | `/threads/{threadId}/messages?userId={id}`             | Add message to user's thread  | `{message: Message}` | -              |
+| PUT    | `/threads/{threadId}/messages/{messageId}?userId={id}` | Update message (optional)     | `{message: Message}` | -              |
+| DELETE | `/threads/{threadId}/messages/{messageId}?userId={id}` | Delete message (optional)     | -                    | -              |
 
 ### Custom Storage
 
@@ -172,7 +182,6 @@ Implement your own storage solution by providing a custom adapter:
 ```typescript Interface
 interface BaseStorageAdapter {
 	// Required methods
-	listThreads(userId?: string | null): Promise<ThreadMeta[]>;
 	loadMessages(
 		userId: string | null | undefined,
 		threadId: string
@@ -181,44 +190,42 @@ interface BaseStorageAdapter {
 		userId: string | null | undefined,
 		threadId: string,
 		message: Message
-	): Promise<void>;
+	): Promise<Message>; // returns the saved message
+
+	// Optional thread methods
+	listThreads?(userId?: string | null): Promise<ThreadMeta[]>;
+	createThread?(
+		userId: string | null | undefined,
+		threadId: string,
+		meta: ThreadMeta
+	): Promise<ThreadMeta>; // returns new meta
+	updateThread?(
+		userId: string | null | undefined,
+		threadId: string,
+		meta: ThreadMeta
+	): Promise<ThreadMeta>; // returns updated meta
+	deleteThread?(
+		userId: string | null | undefined,
+		threadId: string
+	): Promise<ThreadMeta | undefined>; // returns deleted meta (optional)
+
+	// Optional message methods
+	updateMessage?(
+		userId: string | null | undefined,
+		threadId: string,
+		message: Message
+	): Promise<Message>; // returns updated message
+	deleteMessage?(
+		userId: string | null | undefined,
+		threadId: string,
+		messageId: string
+	): Promise<Message | undefined>; // returns deleted message (optional)
 }
 ```
+
+All mutator/creator functions return the object they operate on, making it easy to work with the freshly-persisted data (IDs, timestamps, etc.).
 
 ```typescript Example Implementation
-import { useCedarStore } from 'cedar-os';
-
-// Your custom storage implementation
-const myCustomAdapter = {
-	async listThreads(userId) {
-		// Implement: return list of thread metadata
-		return await myDatabase.getThreads(userId);
-	},
-
-	async loadMessages(userId, threadId) {
-		// Implement: return messages for thread
-		return await myDatabase.getMessages(userId, threadId);
-	},
-
-	async persistMessage(userId, threadId, message) {
-		// Implement: save messages to your storage
-		await myDatabase.saveMessages(userId, threadId, messages);
-	},
-};
-
-function App() {
-	const store = useCedarStore();
-
-	store.getState().setStorageAdapter({
-		type: 'custom',
-		adapter: myCustomAdapter,
-	});
-
-	return <YourChatComponent />;
-}
-```
-
-```typescript With CedarCopilot Configuration
 import { CedarCopilot } from 'cedar-os';
 
 // Your custom storage implementation
@@ -253,7 +260,7 @@ function App() {
 
 </CodeGroup>
 
-## How Message Storage Works
+## How Default Message Storage Works
 
 Cedar automatically handles message storage operations in the following way:
 
@@ -263,12 +270,13 @@ Cedar automatically handles message storage operations in the following way:
 - **When storage adapter changes**: Loads threads from the new storage system
 - **When the thread ID changes**: Automatically loads in all messages for that thread
 
-**Message Persistence:**
+**Message Persistence & Thread Updates:**
 
-- **User messages**: Persisted immediately when sent via `sendMessage()`
+- **User messages**: Persisted immediately when sent via `sendMessage()` (internally calls `store.persistMessage`).
 - **Assistant responses**:
-  - **Non-streaming**: Persisted immediately after LLM response completes
-  - **Streaming**: Collected during streaming, persisted once when stream finishes
+  - **Non-streaming**: Persisted right after the LLM reply finishes.
+  - **Streaming**: Buffered during streaming and persisted once when the stream ends.
+- **Automatic thread meta update**: Every persisted message refreshes the thread’s `updatedAt` and `lastMessage` fields. The thread title is **always** the very first message in the thread and is never overwritten.
 
 ## Manual Storage Access
 
@@ -287,50 +295,19 @@ function MyComponent() {
 		// Manually load threads for current user
 		await store.getState().loadThreads();
 
-		// Manually persist a single message
+		// Manually persist a single message (autoCreateThread optional)
 		const message = {
 			role: 'user',
 			type: 'text',
 			content: 'Hello world',
 		};
-		await store.getState().persistMessage(message);
+		await store.getState().persistMessage(message); // autoCreateThread defaults to true
+		await store.getState().persistMessage(message, false); // skip creating a new thread
 	};
 }
 ```
 
-## Thread Management
-
-### ThreadMeta Type
-
-Threads use the `ThreadMeta` interface for metadata:
-
-```typescript
-interface ThreadMeta {
-	id: string; // Unique thread identifier
-	title: string; // Display name for the thread
-	updatedAt: string; // ISO timestamp of last update
-	lastMessage: string; // Preview of the most recent message
-}
-```
-
 # User and Thread Management
-
-### User ID Behavior
-
-Cedar supports multi-user scenarios with automatic thread loading:
-
-| Scenario          | Behavior         | Storage Key/Endpoint     | Thread Management                |
-| ----------------- | ---------------- | ------------------------ | -------------------------------- |
-| No user ID prop   | Uses `'default'` | `cedar-threads-default`  | Auto-loads threads for 'default' |
-| User ID provided  | Uses provided ID | `cedar-threads-{userId}` | Auto-loads threads for user      |
-| User ID is `null` | Uses `'default'` | `cedar-threads-default`  | Auto-loads threads for 'default' |
-
-**When a user ID changes, Cedar automatically:**
-
-1. Loads all threads for that user
-2. Selects the first thread
-3. Creates a new thread if none exist
-4. Loads messages for the selected thread
 
 **Setting User ID:**
 
@@ -366,16 +343,6 @@ function App({ userId }: { userId: string }) {
 ```
 
 </CodeGroup>
-
-### Thread ID Behavior
-
-Organize conversations into separate threads:
-
-| Scenario            | Behavior         | Storage Key/Endpoint               |
-| ------------------- | ---------------- | ---------------------------------- |
-| No thread ID set    | Uses `'default'` | `cedar-thread-{userId}-default`    |
-| Thread ID provided  | Uses provided ID | `cedar-thread-{userId}-{threadId}` |
-| Thread ID is `null` | Uses `'default'` | `cedar-thread-{userId}-default`    |
 
 **Setting Thread ID:**
 
