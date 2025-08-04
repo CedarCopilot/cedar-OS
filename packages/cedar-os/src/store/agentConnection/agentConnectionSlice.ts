@@ -498,6 +498,11 @@ export const createAgentConnectionSlice: StateCreator<
 					llmParams = {
 						...llmParams,
 						route: route || `${chatPath}`,
+						// Attach thread and user identifiers when available
+						...(state.currentThreadId
+							? { threadId: state.currentThreadId }
+							: {}),
+						...(state.userId ? { resourceId: state.userId } : {}),
 					};
 					break;
 				case 'ai-sdk':
