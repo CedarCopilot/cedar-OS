@@ -110,8 +110,8 @@ const myCustomAdapter = {
 	async loadMessages(userId, threadId) {
 		return await myDatabase.getMessages(userId, threadId);
 	},
-	async persistMessages(userId, threadId, messages) {
-		await myDatabase.saveMessages(userId, threadId, messages);
+	async persistMessage(userId, threadId, message) {
+		await myDatabase.appendMessage(userId, threadId, message);
 	},
 };
 
@@ -131,33 +131,6 @@ function App() {
 
 </CodeGroup>
 
-### Thread Management Configuration
-
-You can customize the default thread behavior with thread management options passed to the storage adapter:
-
-```typescript
-import { CedarCopilot } from 'cedar-os';
-
-function App() {
-	return (
-		<CedarCopilot
-			storage={{
-				type: 'local',
-				options: { ... },
-				threadManagement: {
-					autoLoadThreads: true,        // Default: true - load threads when user changes
-					autoSelectFirstThread: false, // Default: true - select first available thread
-					autoCreateThread: true,       // Default: true - create thread if none exist
-					defaultThreadId: 'main',      // Default: 'default' - fallback thread ID
-				}
-			}}
-			userId='user-123'>
-			<YourChatComponent />
-		</CedarCopilot>
-	);
-}
-```
-
 # Additional Configuration Requirements by Storage Type
 
 ### Local Storage & No Storage
@@ -173,24 +146,24 @@ For example:
 - If you don't implement the list threads endpoints, Cedar will work with just one thread
 
 **Single-User or Backend-Handled User Context:**
-If your app has one user or your backend handles user context through authentication headers, implement these routes:
+If your backend handles user context through authentication headers, implement these routes:
 
-| Method | Endpoint              | Purpose              | Request Body            | Response       |
-| ------ | --------------------- | -------------------- | ----------------------- | -------------- |
-| GET    | `/threads`            | List threads         | -                       | `ThreadMeta[]` |
-| GET    | `/threads/{threadId}` | Get thread messages  | -                       | `Message[]`    |
-| POST   | `/threads/{threadId}` | Save thread messages | `{messages: Message[]}` | -              |
+| Method | Endpoint                       | Purpose             | Request Body         | Response       |
+| ------ | ------------------------------ | ------------------- | -------------------- | -------------- |
+| GET    | `/threads`                     | List threads        | -                    | `ThreadMeta[]` |
+| GET    | `/threads/{threadId}`          | Get thread messages | -                    | `Message[]`    |
+| POST   | `/threads/{threadId}/messages` | Add single message  | `{message: Message}` | -              |
 
 **Multi-User with URL-Based User Context:**
 If your app has multiple users and you want to pass the user ID in the URL, implement these routes:
 
-| Method | Endpoint                          | Purpose                    | Request Body            | Response       |
-| ------ | --------------------------------- | -------------------------- | ----------------------- | -------------- |
-| GET    | `/threads?userId={id}`            | List user's threads        | -                       | `ThreadMeta[]` |
-| GET    | `/threads/{threadId}?userId={id}` | Get user's thread messages | -                       | `Message[]`    |
-| POST   | `/threads/{threadId}?userId={id}` | Save to user's thread      | `{messages: Message[]}` | -              |
+| Method | Endpoint                                   | Purpose                      | Request Body         | Response       |
+| ------ | ------------------------------------------ | ---------------------------- | -------------------- | -------------- |
+| GET    | `/threads?userId={id}`                     | List user's threads          | -                    | `ThreadMeta[]` |
+| GET    | `/threads/{threadId}?userId={id}`          | Get user's thread messages   | -                    | `Message[]`    |
+| POST   | `/threads/{threadId}/messages?userId={id}` | Add message to user's thread | `{message: Message}` | -              |
 
-## Custom Storage Implementation
+### Custom Storage
 
 Implement your own storage solution by providing a custom adapter:
 
@@ -204,20 +177,10 @@ interface BaseStorageAdapter {
 		userId: string | null | undefined,
 		threadId: string
 	): Promise<Message[]>;
-	persistMessages(
+	persistMessage(
 		userId: string | null | undefined,
 		threadId: string,
-		messages: Message[]
-	): Promise<void>;
-
-	// Optional methods
-	createThread?(
-		userId: string | null | undefined,
-		thread: ThreadMeta
-	): Promise<void>;
-	deleteThread?(
-		userId: string | null | undefined,
-		threadId: string
+		message: Message
 	): Promise<void>;
 }
 ```
@@ -237,18 +200,9 @@ const myCustomAdapter = {
 		return await myDatabase.getMessages(userId, threadId);
 	},
 
-	async persistMessages(userId, threadId, messages) {
+	async persistMessage(userId, threadId, message) {
 		// Implement: save messages to your storage
 		await myDatabase.saveMessages(userId, threadId, messages);
-	},
-
-	// Optional: implement createThread and deleteThread
-	async createThread(userId, thread) {
-		await myDatabase.createThread(userId, thread);
-	},
-
-	async deleteThread(userId, threadId) {
-		await myDatabase.deleteThread(userId, threadId);
 	},
 };
 
@@ -277,16 +231,8 @@ const myCustomAdapter = {
 		return await myDatabase.getMessages(userId, threadId);
 	},
 
-	async persistMessages(userId, threadId, messages) {
-		await myDatabase.saveMessages(userId, threadId, messages);
-	},
-
-	async createThread(userId, thread) {
-		await myDatabase.createThread(userId, thread);
-	},
-
-	async deleteThread(userId, threadId) {
-		await myDatabase.deleteThread(userId, threadId);
+	async persistMessage(userId, threadId, message) {
+		await myDatabase.appendMessage(userId, threadId, message);
 	},
 };
 
@@ -307,6 +253,66 @@ function App() {
 
 </CodeGroup>
 
+## How Message Storage Works
+
+Cedar automatically handles message storage operations in the following way:
+
+**Thread & Message Loading:**
+
+- **When user ID changes**: Automatically loads all threads for that user
+- **When storage adapter changes**: Loads threads from the new storage system
+- **When the thread ID changes**: Automatically loads in all messages for that thread
+
+**Message Persistence:**
+
+- **User messages**: Persisted immediately when sent via `sendMessage()`
+- **Assistant responses**:
+  - **Non-streaming**: Persisted immediately after LLM response completes
+  - **Streaming**: Collected during streaming, persisted once when stream finishes
+
+## Manual Storage Access
+
+You can manually trigger storage operations from anywhere in your app:
+
+```typescript
+import { useCedarStore } from 'cedar-os';
+
+function MyComponent() {
+	const store = useCedarStore();
+
+	const manualStorageOperations = async () => {
+		// Manually load messages for current thread
+		await store.getState().loadMessages();
+
+		// Manually load threads for current user
+		await store.getState().loadThreads();
+
+		// Manually persist a single message
+		const message = {
+			role: 'user',
+			type: 'text',
+			content: 'Hello world',
+		};
+		await store.getState().persistMessage(message);
+	};
+}
+```
+
+## Thread Management
+
+### ThreadMeta Type
+
+Threads use the `ThreadMeta` interface for metadata:
+
+```typescript
+interface ThreadMeta {
+	id: string; // Unique thread identifier
+	title: string; // Display name for the thread
+	updatedAt: string; // ISO timestamp of last update
+	lastMessage: string; // Preview of the most recent message
+}
+```
+
 # User and Thread Management
 
 ### User ID Behavior
@@ -322,8 +328,8 @@ Cedar supports multi-user scenarios with automatic thread loading:
 **When a user ID changes, Cedar automatically:**
 
 1. Loads all threads for that user
-2. Selects the first thread (if `autoSelectFirstThread: true`)
-3. Creates a new thread if none exist (if `autoCreateThread: true`)
+2. Selects the first thread
+3. Creates a new thread if none exist
 4. Loads messages for the selected thread
 
 **Setting User ID:**
