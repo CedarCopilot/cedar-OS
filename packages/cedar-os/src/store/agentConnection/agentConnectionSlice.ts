@@ -382,7 +382,10 @@ export const createAgentConnectionSlice: StateCreator<
 			if (typeof item === 'string') {
 				// Handle text content - append to latest message
 				const latestMessage = state.appendToLatestMessage(item);
-				state.persistMessage(latestMessage);
+				// During streaming we defer persistence until stream completion
+				if (!state.isStreaming) {
+					state.persistMessage(latestMessage);
+				}
 			} else if (item && typeof item === 'object') {
 				// Handle structured objects
 				const structuredResponse = item as Record<string, unknown>;
@@ -432,7 +435,11 @@ export const createAgentConnectionSlice: StateCreator<
 								type: 'text' as const,
 								content,
 							};
-							state.addMessageWithPersist(message);
+							if (state.isStreaming) {
+								state.addMessage(message);
+							} else {
+								state.addMessageWithPersist(message);
+							}
 							break;
 						}
 						default:
@@ -515,6 +522,9 @@ export const createAgentConnectionSlice: StateCreator<
 
 			// Step 5: Make the LLM call (streaming and non-streaming branches)
 			if (stream) {
+				// Capture current message count so we know which ones are new during the stream
+				const startIdx = get().messages.length;
+
 				const streamResponse = state.streamLLM(llmParams, (event) => {
 					switch (event.type) {
 						case 'chunk':
@@ -536,8 +546,14 @@ export const createAgentConnectionSlice: StateCreator<
 
 				// Wait for stream to complete
 				await streamResponse.completion;
+
+				// Persist any new messages added during the stream (from startIdx onwards)
+				const newMessages = get().messages.slice(startIdx);
+				for (const m of newMessages) {
+					await state.persistMessage(m);
+				}
 			} else {
-				// Non-streaming approach – call the LLM and process all items at once
+				// Non-streaming approach – call the LLM and process all items at once
 				const response = await state.callLLM(llmParams);
 
 				// Process response content as array of one
