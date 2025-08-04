@@ -51,24 +51,6 @@ useCedarStore.subscribe(
 	}
 );
 
-// Persist messages whenever they change
-useCedarStore.subscribe(
-	(state) => state && state.messages,
-	(messages) => {
-		const adapter = useCedarStore.getState().storageAdapter;
-		if (!adapter || !messages || messages.length === 0) return;
-
-		const uid = useCedarStore.getState().userId;
-		const tid = useCedarStore.getState().currentThreadId || 'default';
-		adapter.persistMessages(uid, tid, messages).catch(() => {});
-	},
-	{
-		equalityFn: (a, b) => {
-			return JSON.stringify(a) === JSON.stringify(b);
-		},
-	}
-);
-
 export const useMessages = () => ({
 	messages: useCedarStore((state) => state.messages),
 	isProcessing: useCedarStore((state) => state.isProcessing),

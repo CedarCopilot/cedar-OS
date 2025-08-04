@@ -20,10 +20,10 @@ export interface BaseStorageAdapter {
 		userId: string | null | undefined,
 		threadId: string
 	): Promise<Message[]>;
-	persistMessages(
+	persistMessage(
 		userId: string | null | undefined,
 		threadId: string,
-		messages: Message[]
+		message: Message
 	): Promise<void>;
 	createThread?(
 		userId: string | null | undefined,
@@ -126,23 +126,22 @@ const createLocalAdapter = (
 				return [];
 			}
 		},
-		async persistMessages(userId, threadId, messages) {
+		async persistMessage(userId, threadId, message) {
 			try {
-				localStorage.setItem(
-					threadKey(userId, threadId),
-					JSON.stringify(messages)
-				);
+				// Load existing messages and append the new one
+				const existingMessages = await this.loadMessages(userId, threadId);
+				const updatedMessages = [...existingMessages, message];
 
 				// update meta list
-				const metaList = await listThreads(userId);
+				const metaList = await this.listThreads(userId);
 				const idx = metaList.findIndex((m) => m.id === threadId);
 				const now = new Date().toISOString();
-				const first = messages[0]?.content ?? 'Chat';
+				const first = updatedMessages[0]?.content ?? 'Chat';
 				const meta: ThreadMeta = {
 					id: threadId,
 					title: first.slice(0, 40),
 					updatedAt: now,
-					lastMessage: messages.at(-1)?.content ?? '',
+					lastMessage: message.content ?? '',
 				};
 				if (idx === -1) metaList.push(meta);
 				else metaList[idx] = meta;
@@ -174,7 +173,7 @@ const createNoopAdapter = (): NoopStorageAdapter => ({
 	async loadMessages() {
 		return [];
 	},
-	async persistMessages() {},
+	async persistMessage() {},
 });
 
 const createRemoteAdapter = (
@@ -209,15 +208,15 @@ const createRemoteAdapter = (
 				return [];
 			}
 		},
-		async persistMessages(userId, threadId, messages) {
+		async persistMessage(userId, threadId, message) {
 			try {
 				const url = userId
-					? `${opts.baseURL}/threads/${threadId}?userId=${userId}`
-					: `${opts.baseURL}/threads/${threadId}`;
+					? `${opts.baseURL}/threads/${threadId}/messages?userId=${userId}`
+					: `${opts.baseURL}/threads/${threadId}/messages`;
 				await fetch(url, {
 					method: 'POST',
 					headers,
-					body: JSON.stringify({ messages }),
+					body: JSON.stringify({ message }),
 				});
 			} catch {
 				/* ignore */
@@ -266,7 +265,7 @@ export interface StorageSlice {
 	threadManagementConfig: ThreadManagementConfig;
 	setStorageAdapter: (cfg?: StorageConfig) => void;
 	loadMessages: () => Promise<void>;
-	persistMessages: (messages: Message[]) => Promise<void>;
+	persistMessage: (message: Message) => Promise<void>;
 	loadThreads: () => Promise<void>;
 }
 
@@ -376,16 +375,10 @@ export const createStorageSlice: StateCreator<
 			set({ storageAdapter: adapter, threadManagementConfig });
 
 			const uid = get().userId;
-			const tid = get().currentThreadId;
 
 			// Load threads and messages with the new adapter
 			loadAndSelectThreads(uid);
 			attemptHydrate();
-
-			// Persist current messages to new adapter if we have messages
-			if (tid && get().messages && get().messages.length > 0) {
-				adapter.persistMessages(uid, tid, get().messages ?? []).catch(() => {});
-			}
 		},
 		loadMessages: async () => {
 			if (!adapter) return;
@@ -397,12 +390,12 @@ export const createStorageSlice: StateCreator<
 				get().setMessages(msgs);
 			}
 		},
-		persistMessages: async (messages) => {
+		persistMessage: async (message) => {
 			if (!adapter) return;
 			const uid = get().userId;
 			const tid = get().currentThreadId;
 			const threadToPersist = tid || 'default';
-			await adapter.persistMessages(uid, threadToPersist, messages);
+			await adapter.persistMessage(uid, threadToPersist, message);
 		},
 		loadThreads: async () => {
 			const uid = get().userId;

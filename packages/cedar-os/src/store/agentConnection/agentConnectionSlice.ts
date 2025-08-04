@@ -374,14 +374,15 @@ export const createAgentConnectionSlice: StateCreator<
 		};
 	},
 
-	// Handle LLM response
+	// Handle LLM response with persistence
 	handleLLMResponse: (itemsToProcess: (string | object)[]) => {
 		const state = get();
 
 		itemsToProcess.forEach((item) => {
 			if (typeof item === 'string') {
 				// Handle text content - append to latest message
-				state.appendToLatestMessage(item);
+				const latestMessage = state.appendToLatestMessage(item);
+				state.persistMessage(latestMessage);
 			} else if (item && typeof item === 'object') {
 				// Handle structured objects
 				const structuredResponse = item as Record<string, unknown>;
@@ -426,11 +427,12 @@ export const createAgentConnectionSlice: StateCreator<
 									: JSON.stringify(structuredResponse);
 							// Map system role to assistant if needed
 							const messageRole = role === 'system' ? 'assistant' : role;
-							state.addMessage({
+							const message = {
 								role: messageRole as 'user' | 'assistant' | 'bot',
-								type: 'text',
+								type: 'text' as const,
 								content,
-							});
+							};
+							state.addMessageWithPersist(message);
 							break;
 						}
 						default:
@@ -466,11 +468,12 @@ export const createAgentConnectionSlice: StateCreator<
 			const unifiedMessage = fullContext;
 
 			// Step 3: Add the stringified chatInputContent as a message from the user
-			state.addMessage({
-				role: 'user',
-				type: 'text',
+			const userMessage = {
+				role: 'user' as const,
+				type: 'text' as const,
 				content: editorContent,
-			});
+			};
+			state.addMessageWithPersist(userMessage);
 
 			// Clear the chat specific contextEntries (mentions)
 			state.clearMentions();
@@ -512,7 +515,6 @@ export const createAgentConnectionSlice: StateCreator<
 
 			// Step 5: Make the LLM call (streaming and non-streaming branches)
 			if (stream) {
-				// Streaming approach - process each item as it comes in
 				const streamResponse = state.streamLLM(llmParams, (event) => {
 					switch (event.type) {
 						case 'chunk':
@@ -556,11 +558,12 @@ export const createAgentConnectionSlice: StateCreator<
 			});
 		} catch (error) {
 			console.error('Error sending message:', error);
-			state.addMessage({
-				role: 'assistant',
-				type: 'text',
+			const errorMessage = {
+				role: 'assistant' as const,
+				type: 'text' as const,
 				content: 'An error occurred while sending your message.',
-			});
+			};
+			state.addMessageWithPersist(errorMessage);
 		} finally {
 			state.setIsProcessing(false);
 		}
