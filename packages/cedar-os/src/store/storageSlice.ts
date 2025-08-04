@@ -6,14 +6,6 @@ import { ThreadMeta } from '@/store/historySlice';
 // -------------------------------------------------
 // Type definitions
 // -------------------------------------------------
-
-export interface ThreadManagementConfig {
-	autoLoadThreads?: boolean; // Default: true - automatically load threads when userId changes
-	autoSelectFirstThread?: boolean; // Default: true - select first available thread
-	autoCreateThread?: boolean; // Default: true - create new thread if none exist
-	defaultThreadId?: string; // Default: 'default' - fallback thread ID
-}
-
 export interface BaseStorageAdapter {
 	listThreads(userId?: string | null): Promise<ThreadMeta[]>;
 	loadMessages(
@@ -24,14 +16,6 @@ export interface BaseStorageAdapter {
 		userId: string | null | undefined,
 		threadId: string,
 		message: Message
-	): Promise<void>;
-	createThread?(
-		userId: string | null | undefined,
-		thread: ThreadMeta
-	): Promise<void>;
-	deleteThread?(
-		userId: string | null | undefined,
-		threadId: string
 	): Promise<void>;
 }
 
@@ -73,18 +57,15 @@ export type StorageConfig =
 	| {
 			type: 'local';
 			options?: LocalAdapterOptions;
-			threadManagement?: ThreadManagementConfig;
 	  }
 	| {
 			type: 'remote';
 			options: RemoteAdapterOptions;
-			threadManagement?: ThreadManagementConfig;
 	  }
-	| { type: 'none'; threadManagement?: ThreadManagementConfig }
+	| { type: 'none' }
 	| {
 			type: 'custom';
 			adapter: BaseStorageAdapter;
-			threadManagement?: ThreadManagementConfig;
 	  };
 
 // -------------------------------------------------
@@ -150,18 +131,6 @@ const createLocalAdapter = (
 				/* ignore */
 			}
 		},
-		async createThread(userId, thread) {
-			const list = await listThreads(userId);
-			persistThreadMeta(userId ?? 'default', [...list, thread]);
-		},
-		async deleteThread(userId, threadId) {
-			localStorage.removeItem(threadKey(userId, threadId));
-			const list = await listThreads(userId);
-			persistThreadMeta(
-				userId ?? 'default',
-				list.filter((t) => t.id !== threadId)
-			);
-		},
 	};
 };
 
@@ -222,25 +191,6 @@ const createRemoteAdapter = (
 				/* ignore */
 			}
 		},
-		createThread: async (userId, meta) => {
-			const url = userId
-				? `${opts.baseURL}/threads?userId=${userId}`
-				: `${opts.baseURL}/threads`;
-			await fetch(url, {
-				method: 'POST',
-				headers,
-				body: JSON.stringify(meta),
-			});
-		},
-		deleteThread: async (userId, threadId) => {
-			const url = userId
-				? `${opts.baseURL}/threads/${threadId}?userId=${userId}`
-				: `${opts.baseURL}/threads/${threadId}`;
-			await fetch(url, {
-				method: 'DELETE',
-				headers,
-			});
-		},
 	};
 };
 
@@ -262,7 +212,6 @@ export const createAdapter = (cfg?: StorageConfig): StorageAdapter => {
 
 export interface StorageSlice {
 	storageAdapter: StorageAdapter | undefined;
-	threadManagementConfig: ThreadManagementConfig;
 	setStorageAdapter: (cfg?: StorageConfig) => void;
 	loadMessages: () => Promise<void>;
 	persistMessage: (message: Message) => Promise<void>;
@@ -277,19 +226,9 @@ export const createStorageSlice: StateCreator<
 > = (set, get) => {
 	let adapter: StorageAdapter | undefined = undefined;
 
-	// Default thread management configuration
-	const defaultThreadManagement: ThreadManagementConfig = {
-		autoLoadThreads: true,
-		autoSelectFirstThread: true,
-		autoCreateThread: true,
-		defaultThreadId: 'default',
-	};
-
-	let threadManagementConfig: ThreadManagementConfig = defaultThreadManagement;
-
 	// Function to load threads and handle automatic thread selection
 	const loadAndSelectThreads = async (userId: string | null) => {
-		if (!threadManagementConfig.autoLoadThreads || !adapter) return;
+		if (!adapter) return;
 
 		try {
 			const threads = await adapter.listThreads(userId);
@@ -304,21 +243,12 @@ export const createStorageSlice: StateCreator<
 			if (!state.currentThreadId) {
 				let threadToSelect: string | null = null;
 
-				if (
-					threadManagementConfig.autoSelectFirstThread &&
-					threads.length > 0
-				) {
+				if (threads.length > 0) {
 					// Select first available thread
 					threadToSelect = threads[0].id;
-				} else if (
-					threadManagementConfig.autoCreateThread &&
-					threads.length === 0
-				) {
-					// Create/use default thread if none exist
-					threadToSelect = threadManagementConfig.defaultThreadId || 'default';
 				} else if (threads.length === 0) {
 					// Fallback to default thread
-					threadToSelect = threadManagementConfig.defaultThreadId || 'default';
+					threadToSelect = 'default';
 				}
 
 				if (threadToSelect && state.setCurrentThreadId) {
@@ -359,20 +289,11 @@ export const createStorageSlice: StateCreator<
 
 	return {
 		storageAdapter: adapter,
-		threadManagementConfig,
 		setStorageAdapter: (cfg) => {
 			// Create adapter - fallback to local if cfg is undefined
 			adapter = createAdapter(cfg);
 
-			// Update thread management config if provided
-			if (cfg && cfg.threadManagement) {
-				threadManagementConfig = {
-					...defaultThreadManagement,
-					...cfg.threadManagement,
-				};
-			}
-
-			set({ storageAdapter: adapter, threadManagementConfig });
+			set({ storageAdapter: adapter });
 
 			const uid = get().userId;
 
