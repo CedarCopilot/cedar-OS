@@ -15,11 +15,15 @@ jobs:
         with:
           fetch-depth: 0 # full history for diff
 
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+
       - name: Check for .mdx changes in docs/
         id: docs_check
         run: |
           base_sha="${{ github.event.pull_request.base.sha }}"
           head_sha="${{ github.event.pull_request.head.sha }}"
+          echo "Head SHA: $head_sha"
           changed_files=$(git diff --name-only "$base_sha" "$head_sha" -- 'docs/**/*.mdx' | grep -c '^')
           echo "changed_docs_count=$changed_files" >> $GITHUB_OUTPUT
 
