@@ -114,7 +114,6 @@ export type { SendMessageParams } from '@/store/agentConnection/agentConnectionS
 export type {
 	BaseStorageAdapter,
 	StorageConfig,
-	ThreadManagementConfig,
 	LocalAdapterOptions,
 	RemoteAdapterOptions,
 } from '@/store/storageSlice';
