@@ -11,6 +11,11 @@
 	"navigation": {
 		"groups": [
 			{
+				"group": "Changelog",
+				"icon": "rocket",
+				"pages": ["changelog"]
+			},
+			{
 				"group": "Introduction to Cedar-OS",
 				"icon": "house",
 				"pages": [
