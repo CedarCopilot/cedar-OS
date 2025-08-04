@@ -15,15 +15,22 @@ jobs:
         with:
           fetch-depth: 0 # full history for diff
 
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+
       - name: Check for .mdx changes in docs/
         id: docs_check
         run: |
-          base_sha="${{ github.event.pull_request.base.sha }}"
-          head_sha="${{ github.event.pull_request.head.sha }}"
+          git fetch origin +refs/heads/${{ github.event.pull_request.base.ref }}:refs/remotes/origin/${{ github.event.pull_request.base.ref }}
+          base_sha=$(git merge-base origin/${{ github.event.pull_request.base.ref }} HEAD)
+          head_sha=$(git rev-parse HEAD)
+
           echo "Base SHA: $base_sha"
           echo "Head SHA: $head_sha"
-          changed_files=$(git diff --name-only "$base_sha" "$head_sha" -- 'docs/**/*.mdx' | wc -l)
+
+          changed_files=$(git diff --name-only "$base_sha" "$head_sha" | grep '^docs/.*\.mdx$' | wc -l)
           echo "changed_docs_count=$changed_files" >> $GITHUB_OUTPUT
+
           if [ "$changed_files" -eq 0 ]; then
             echo "❌ PR does not include updates to docs/*.mdx files. Please add or modify documentation." >&2
             exit 1
