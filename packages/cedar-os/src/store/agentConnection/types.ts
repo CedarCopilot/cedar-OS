@@ -13,6 +13,31 @@ export interface LLMResponse {
 	object?: unknown;
 }
 
+// Voice-specific response type
+export interface VoiceLLMResponse extends LLMResponse {
+	// Voice-specific fields
+	transcription?: string;
+	audioData?: string; // Base64 encoded audio
+	audioUrl?: string;
+	audioFormat?: string;
+}
+
+// Voice parameters for LLM calls
+export interface VoiceParams {
+	audioData: Blob;
+	voiceSettings: {
+		language: string;
+		voiceId?: string;
+		pitch?: number;
+		rate?: number;
+		volume?: number;
+		useBrowserTTS?: boolean;
+		autoAddToMessages?: boolean;
+		endpoint?: string;
+	};
+	context?: string;
+}
+
 export type StreamEvent =
 	| { type: 'chunk'; content: string }
 	| { type: 'object'; object: object }
@@ -95,7 +120,13 @@ export type AISDKProviderConfig = {
 export type ProviderConfig =
 	| { provider: 'openai'; apiKey: string }
 	| { provider: 'anthropic'; apiKey: string }
-	| { provider: 'mastra'; apiKey?: string; baseURL: string; chatPath?: string }
+	| {
+			provider: 'mastra';
+			apiKey?: string;
+			baseURL: string;
+			chatPath?: string;
+			voiceRoute?: string;
+	  }
 	| { provider: 'ai-sdk'; providers: AISDKProviderConfig }
 	| { provider: 'custom'; config: Record<string, unknown> };
 
@@ -136,6 +167,7 @@ export interface ProviderImplementation<
 		config: TConfig,
 		handler: StreamHandler
 	) => StreamResponse;
+	voiceLLM: (params: VoiceParams, config: TConfig) => Promise<VoiceLLMResponse>;
 	handleResponse: (response: Response) => Promise<LLMResponse>;
 	handleStreamResponse: (chunk: string) => StreamEvent;
 }

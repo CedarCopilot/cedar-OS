@@ -3,6 +3,8 @@ import type {
 	ProviderImplementation,
 	InferProviderConfig,
 	StructuredParams,
+	VoiceParams,
+	VoiceLLMResponse,
 } from '../types';
 import { handleEventStream } from '../agentUtils';
 
@@ -132,6 +134,74 @@ export const mastraProvider: ProviderImplementation<
 			abort: () => abortController.abort(),
 			completion,
 		};
+	},
+
+	voiceLLM: async (params, config) => {
+		const { audioData, voiceSettings, context } = params;
+
+		const headers: Record<string, string> = {};
+
+		// Only add Authorization header if apiKey is provided
+		if (config.apiKey) {
+			headers.Authorization = `Bearer ${config.apiKey}`;
+		}
+
+		// Use the endpoint from voiceSettings if provided, otherwise use voiceRoute from config
+		const voiceEndpoint =
+			voiceSettings.endpoint || config.voiceRoute || '/voice';
+		const fullUrl = voiceEndpoint.startsWith('http')
+			? voiceEndpoint
+			: `${config.baseURL}${voiceEndpoint}`;
+
+		const formData = new FormData();
+		formData.append('audio', audioData, 'recording.webm');
+		formData.append('settings', JSON.stringify(voiceSettings));
+		if (context) {
+			formData.append('context', context);
+		}
+
+		const response = await fetch(fullUrl, {
+			method: 'POST',
+			headers,
+			body: formData,
+		});
+
+		if (!response.ok) {
+			throw new Error(`Voice endpoint returned ${response.status}`);
+		}
+
+		// Handle different response types
+		const contentType = response.headers.get('content-type');
+
+		if (contentType?.includes('audio')) {
+			// Audio response - return as base64
+			const audioBuffer = await response.arrayBuffer();
+			const base64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+			return {
+				content: '',
+				audioData: base64,
+				audioFormat: contentType,
+			};
+		} else if (contentType?.includes('application/json')) {
+			// JSON response
+			const data = await response.json();
+			return {
+				content: data.text || data.content || '',
+				transcription: data.transcription,
+				audioData: data.audioData,
+				audioUrl: data.audioUrl,
+				audioFormat: data.audioFormat,
+				usage: data.usage,
+				metadata: data.metadata,
+				object: data.object,
+			};
+		} else {
+			// Plain text response
+			const text = await response.text();
+			return {
+				content: text,
+			};
+		}
 	},
 
 	handleResponse: async (response) => {

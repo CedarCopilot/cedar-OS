@@ -5,6 +5,34 @@ description: 'Setting up your backend to handle voice requests and responses'
 
 Cedar's voice system sends audio data to your backend for processing and expects either audio responses or structured JSON responses. This page covers how to implement the backend endpoint to handle voice interactions.
 
+## Endpoint Configuration
+
+### Automatic Configuration with Mastra
+
+When using the Mastra provider, you can automatically configure the voice endpoint through the provider configuration:
+
+```typescript
+<CedarCopilot
+	llmProvider={{
+		provider: 'mastra',
+		baseURL: 'http://localhost:3000/api',
+		voiceRoute: '/chat/voice-execute', // Automatically sets voice endpoint to: http://localhost:3000/api/chat/voice-execute
+	}}>
+	<YourApp />
+</CedarCopilot>
+```
+
+This eliminates the need to manually call `setVoiceEndpoint()` and ensures consistency between your chat and voice endpoints.
+
+### Manual Configuration
+
+For other providers or custom setups, configure the endpoint manually:
+
+```typescript
+const voice = useCedarStore((state) => state.voice);
+voice.setVoiceEndpoint('https://your-backend.com/api/voice');
+```
+
 ## Request Format
 
 The voice system sends a `multipart/form-data` POST request to your configured endpoint with the following fields:
@@ -232,6 +260,8 @@ async def handle_voice(
 
 ### Mastra Agent Integration
 
+When using Cedar-OS with the Mastra provider and `voiceRoute` configuration, your Mastra backend should handle requests at the specified route. Here's how to implement the voice handler:
+
 ```typescript
 import { Agent } from '@mastra/core';
 import { openai } from '@mastra/openai';
@@ -279,6 +309,33 @@ export async function handleVoiceRequest(
 		audioFormat: 'mp3',
 	};
 }
+
+// Example Mastra route setup
+// If you configured voiceRoute: '/chat/voice-execute' in Cedar-OS,
+// your Mastra backend should handle POST requests to this route:
+
+app.post(
+	'/chat/voice-execute',
+	upload.fields([
+		{ name: 'audio', maxCount: 1 },
+		{ name: 'settings', maxCount: 1 },
+		{ name: 'context', maxCount: 1 },
+	]),
+	async (req, res) => {
+		const audioFile = req.files.audio[0];
+		const settings = JSON.parse(req.body.settings);
+		const context = req.body.context;
+
+		const result = await handleVoiceRequest(
+			new Blob([audioFile.buffer]),
+			settings,
+			context
+		);
+
+		// Return the structured response
+		res.json(result);
+	}
+);
 ```
 
 ## Error Handling
@@ -404,7 +461,18 @@ curl -X POST http://localhost:3456/api/chat/voice \
 Or use the Cedar voice system directly for end-to-end testing:
 
 ```typescript
-// In your Cedar app
+// With Mastra provider (automatic configuration)
+<CedarCopilot
+	llmProvider={{
+		provider: 'mastra',
+		baseURL: 'http://localhost:3456/api',
+		voiceRoute: '/chat/voice-execute',
+	}}>
+	<YourApp />
+</CedarCopilot>;
+
+// Or manually configure the endpoint
+const voice = useCedarStore((state) => state.voice);
 voice.setVoiceEndpoint('http://localhost:3456/api/chat/voice');
 await voice.requestVoicePermission();
 voice.startListening();

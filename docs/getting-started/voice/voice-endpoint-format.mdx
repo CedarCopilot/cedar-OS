@@ -1,0 +1,244 @@
+---
+title: Voice Endpoint Format
+description: Learn how to implement voice endpoints for Mastra and custom backends
+---
+
+# Voice Endpoint Format
+
+Cedar OS provides two approaches for handling voice, depending on your provider configuration:
+
+1. **Mastra/Custom backends**: Direct voice endpoint handling
+2. **AI SDK/OpenAI providers**: Automatic transcription and speech generation
+
+## Provider-Specific Voice Handling
+
+### Mastra and Custom Backends
+
+When using Mastra or custom backends, Cedar OS sends voice data directly to your voice endpoint. You have full control over:
+
+- Audio transcription
+- Response generation
+- Text-to-speech synthesis
+- Response format
+
+### AI SDK and OpenAI Providers
+
+When using AI SDK or OpenAI providers, Cedar OS automatically:
+
+1. Transcribes audio using OpenAI's Whisper model
+2. Generates a text response using the configured LLM
+3. Optionally generates speech using OpenAI's TTS model (when `useBrowserTTS` is false)
+
+## Request Format (Mastra/Custom)
+
+Cedar OS sends voice data to your endpoint as a multipart form data request:
+
+```http
+POST /voice
+Content-Type: multipart/form-data
+Authorization: Bearer YOUR_API_KEY (if configured)
+
+FormData:
+- audio: Blob (audio file, typically webm format)
+- settings: JSON string containing voice settings
+- context: String containing additional context
+```
+
+### Voice Settings Structure
+
+The `settings` field contains a JSON object with the following structure:
+
+```json
+{
+	"language": "en-US",
+	"voiceId": "optional-voice-id",
+	"pitch": 1.0,
+	"rate": 1.0,
+	"volume": 1.0,
+	"useBrowserTTS": false,
+	"autoAddToMessages": true
+}
+```
+
+- `language`: Language code for speech recognition/synthesis
+- `voiceId`: Voice identifier for TTS (provider-specific)
+- `pitch`, `rate`, `volume`: Voice modulation parameters
+- `useBrowserTTS`: Whether to use browser's built-in TTS
+- `autoAddToMessages`: Whether to add voice interactions to chat history
+
+### Context
+
+The `context` field contains stringified additional context from the Cedar state, which may include:
+
+- Current chat messages
+- Application state
+- User-defined context
+
+## Response Format (All Providers)
+
+Your endpoint can return different types of responses:
+
+### 1. JSON Response (Recommended)
+
+```json
+{
+	"text": "The assistant's response text",
+	"transcription": "What the user said",
+	"audioData": "base64-encoded-audio-data",
+	"audioUrl": "https://example.com/audio.mp3",
+	"audioFormat": "audio/mpeg",
+	"usage": {
+		"promptTokens": 100,
+		"completionTokens": 50,
+		"totalTokens": 150
+	},
+	"object": {
+		"type": "action",
+		"stateKey": "myState",
+		"setterKey": "updateValue",
+		"args": ["new value"]
+	}
+}
+```
+
+All fields are optional:
+
+- `text`: The text response from the assistant
+- `transcription`: The transcribed user input
+- `audioData`: Base64-encoded audio response
+- `audioUrl`: URL to an audio file
+- `audioFormat`: MIME type of the audio
+- `usage`: Token usage statistics
+- `object`: Structured response for actions
+
+### 2. Audio Response
+
+Return raw audio data with appropriate content type:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: audio/mpeg
+
+[Binary audio data]
+```
+
+### 3. Plain Text Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: text/plain
+
+This is the assistant's response.
+```
+
+## Implementation Example (Mastra)
+
+Here's an example of implementing a voice endpoint in a Mastra backend:
+
+```typescript
+import { Agent } from '@mastra/core';
+
+export async function POST(request: Request) {
+	const formData = await request.formData();
+	const audio = formData.get('audio') as Blob;
+	const settings = JSON.parse(formData.get('settings') as string);
+	const context = formData.get('context') as string;
+
+	// Process audio (transcription)
+	const transcription = await transcribeAudio(audio);
+
+	// Generate response using your agent
+	const agent = new Agent({
+		// ... agent configuration
+	});
+
+	const response = await agent.generate({
+		prompt: transcription,
+		context: context,
+	});
+
+	// Optionally generate speech
+	let audioData;
+	if (!settings.useBrowserTTS) {
+		audioData = await generateSpeech(response.text);
+	}
+
+	// Return JSON response
+	return Response.json({
+		text: response.text,
+		transcription: transcription,
+		audioData: audioData
+			? Buffer.from(audioData).toString('base64')
+			: undefined,
+		usage: response.usage,
+	});
+}
+```
+
+## Voice Response Handling
+
+Cedar OS provides a unified `handleLLMVoice` function that processes voice responses consistently across all providers:
+
+1. **Audio Playback**: Handles base64 audio data, audio URLs, or browser TTS
+2. **Message Integration**: Automatically adds transcriptions and responses to chat history
+3. **Action Execution**: Processes structured responses to trigger state changes
+
+## Structured Responses
+
+Cedar OS supports structured responses that can trigger actions in your application:
+
+### Action Response
+
+To execute a state change:
+
+```json
+{
+	"text": "I've updated the value for you.",
+	"object": {
+		"type": "action",
+		"stateKey": "myCustomState",
+		"setterKey": "setValue",
+		"args": [42]
+	}
+}
+```
+
+This will call `myCustomState.setValue(42)` in your Cedar state.
+
+## Error Handling
+
+Return appropriate HTTP status codes:
+
+- `200 OK`: Successful response
+- `400 Bad Request`: Invalid request format
+- `401 Unauthorized`: Missing or invalid API key
+- `500 Internal Server Error`: Server-side error
+
+## Voice Configuration
+
+Configure voice settings when initializing Cedar:
+
+```typescript
+const store = createCedarStore({
+	voiceSettings: {
+		language: 'en-US',
+		voiceId: 'alloy', // OpenAI voice options: alloy, echo, fable, onyx, nova, shimmer
+		useBrowserTTS: false, // Use provider TTS instead of browser
+		autoAddToMessages: true, // Add voice interactions to chat
+	},
+});
+```
+
+## Provider-Specific Notes
+
+### OpenAI/AI SDK
+
+- Transcription: Uses Whisper model (`whisper-1`)
+- Speech: Uses TTS model (`tts-1`) with configurable voices
+- Audio format: MP3 (audio/mpeg)
+
+### Mastra/Custom
+
+- Full control over transcription and TTS services
+- Can integrate with any speech service (Google, Azure, AWS, etc.)
+- Flexible audio format support

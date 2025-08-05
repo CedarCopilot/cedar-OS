@@ -14,6 +14,8 @@ import type {
 	StreamHandler,
 	StreamResponse,
 	StructuredParams,
+	VoiceParams,
+	VoiceLLMResponse,
 } from './types';
 import { useCedarStore } from '@/store/CedarStore';
 
@@ -75,6 +77,9 @@ export interface AgentConnectionSlice {
 		handler: StreamHandler
 	) => StreamResponse;
 
+	// Voice LLM method
+	voiceLLM: (params: VoiceParams) => Promise<VoiceLLMResponse>;
+
 	// High-level methods that use callLLM/streamLLM
 	sendMessage: (params?: SendMessageParams) => Promise<void>;
 	handleLLMResponse: (items: (string | object)[]) => void;
@@ -93,7 +98,7 @@ export interface AgentConnectionSlice {
 // Create a typed version of the slice that knows about the provider
 export type TypedAgentConnectionSlice<T extends ProviderConfig> = Omit<
 	AgentConnectionSlice,
-	'callLLM' | 'streamLLM' | 'callLLMStructured'
+	'callLLM' | 'streamLLM' | 'callLLMStructured' | 'voiceLLM'
 > & {
 	callLLM: (params: GetParamsForConfig<T>) => Promise<LLMResponse>;
 	callLLMStructured: (
@@ -103,6 +108,7 @@ export type TypedAgentConnectionSlice<T extends ProviderConfig> = Omit<
 		params: GetParamsForConfig<T>,
 		handler: StreamHandler
 	) => StreamResponse;
+	voiceLLM: (params: VoiceParams) => Promise<VoiceLLMResponse>;
 };
 
 export const improvePrompt = async (
@@ -374,6 +380,27 @@ export const createAgentConnectionSlice: StateCreator<
 		};
 	},
 
+	// Voice LLM method
+	voiceLLM: async (params: VoiceParams) => {
+		const config = get().providerConfig;
+		if (!config) {
+			throw new Error('No LLM provider configured');
+		}
+
+		try {
+			const provider = getProviderImplementation(config);
+			// Type assertion is safe after runtime validation
+			const response = await provider.voiceLLM(
+				params as unknown as never,
+				config as never
+			);
+
+			return response;
+		} catch (error) {
+			throw error;
+		}
+	},
+
 	// Handle LLM response
 	handleLLMResponse: (itemsToProcess: (string | object)[]) => {
 		const state = get();
@@ -562,7 +589,15 @@ export const createAgentConnectionSlice: StateCreator<
 	},
 
 	// Configuration methods
-	setProviderConfig: (config) => set({ providerConfig: config }),
+	setProviderConfig: (config) => {
+		set({ providerConfig: config });
+
+		// If it's a Mastra provider with a voiceRoute, update the voice endpoint
+		if (config.provider === 'mastra' && config.voiceRoute) {
+			const voiceEndpoint = `${config.baseURL}${config.voiceRoute}`;
+			get().updateVoiceSettings({ endpoint: voiceEndpoint });
+		}
+	},
 
 	// Connection management
 	connect: async () => {
