@@ -24,14 +24,19 @@ interface ChatRendererProps {
 
 export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 	const { styling } = useStyling();
-	const getMessageRenderer = useCedarStore((state) => state.getMessageRenderer);
+	const getMessageProcessors = useCedarStore(
+		(state) => state.getMessageProcessors
+	);
 	const isDark = styling.darkMode;
 
-	// Check if there's a registered renderer for this message type
-	const entry = getMessageRenderer(message.type);
-	if (entry) {
-		// Use the custom renderer
-		return <>{entry.renderer(message)}</>;
+	// Check if there's a registered processor with render function for this message type
+	const processors = getMessageProcessors(message.type);
+	for (const processor of processors) {
+		if (processor.render) {
+			// Use the processor's render function
+			const Component = processor.render;
+			return <Component message={message} />;
+		}
 	}
 
 	// Gradient mask for ticker edges
@@ -193,7 +198,8 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 				<div className='max-w-[100%]'>
 					<div {...getMessageStyles(message.role)}>
 						<ReactMarkdown components={markdownComponents}>
-							{message.content}
+							{message.content ??
+								` \`\`\`json\n${JSON.stringify(message, null, 2)}\n\`\`\``}
 						</ReactMarkdown>
 					</div>
 				</div>

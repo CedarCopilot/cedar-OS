@@ -24,10 +24,10 @@ export type MastraEventType =
  * Strongly-typed wrapper around a Mastra structured event message.
  * Extends Cedar's `CustomMessage` so it is compatible with the message system.
  */
-export type MastraMessage<T extends MastraEventType> = CustomMessage<
+export type MastraMessage<T extends string = MastraEventType> = CustomMessage<
 	T,
 	{
-		type: string;
+		type: T;
 		runId: string;
 		from: string;
 		// TODO: update once Mastra releases new types

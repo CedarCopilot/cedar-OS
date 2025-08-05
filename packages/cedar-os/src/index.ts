@@ -51,6 +51,9 @@ export {
 	useTypedAgentConnection,
 } from '@/store/agentConnection/useTypedAgentConnection';
 
+// Export message processor hooks
+export { useMessageProcessors } from '@/hooks/useMessageProcessor';
+
 // Types
 export type {
 	AdditionalContext,
@@ -71,11 +74,8 @@ export type {
 	Message,
 	MessageByType,
 	MessageInput,
-	MessageRenderer,
-	MessageRendererConfig,
-	MessageRendererRegistry,
-	MessageRendererEntry,
 	MessageRole,
+	MessageProcessor,
 	MultipleChoiceMessage,
 	ActionMessage,
 	SliderMessage,

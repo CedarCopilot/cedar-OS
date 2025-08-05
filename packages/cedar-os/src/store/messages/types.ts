@@ -35,6 +35,7 @@ export type MessageInput =
 	| (Omit<DialogueOptionsMessage, 'id'> & { id?: string })
 	| (Omit<TickerMessage, 'id'> & { id?: string })
 	| (Omit<SliderMessage, 'id'> & { id?: string })
+	| (Omit<ActionMessage, 'id'> & { id?: string })
 	| (Omit<CustomMessage<string, Record<string, unknown>>, 'id'> & {
 			id?: string;
 	  });
@@ -48,6 +49,8 @@ export type DefaultMessage =
 	| MultipleChoiceMessage
 	| StorylineMessage
 	| SliderMessage
+	| ActionMessage
+	| StageUpdateMessage
 	| CustomMessage<string, Record<string, unknown>>;
 
 // Type helper to extract a specific message by type
@@ -57,7 +60,9 @@ export type MessageByType<T extends string, M = DefaultMessage> = Extract<
 >;
 
 // Keep the old Message type for backwards compatibility
-export type Message = DefaultMessage;
+export type Message =
+	| DefaultMessage
+	| CustomMessage<string, Record<string, unknown>>;
 
 // Message that contains text content
 export type TextMessage = BaseMessage & {
@@ -164,57 +169,50 @@ export interface StageUpdateMessage extends BaseMessage {
 export type CustomMessage<
 	T extends string,
 	P extends Record<string, unknown> = Record<string, never>
-> = BaseMessage & { type: T } & P;
+> = BaseMessage & { type: T } & P & Record<string, unknown>;
 
-// Message handler type – processes structured objects and may add messages
-export type MessageHandler<
-	O extends Record<string, unknown> = Record<string, unknown>
-> = (obj: O, store: CedarStore) => boolean;
+// ============================================================================
+// MESSAGE PROCESSOR SYSTEM - Unified handler/renderer system
+// ============================================================================
 
-/**
- * Configuration object used when registering a message handler – mirrors
- * MessageRendererConfig but swaps `renderer` for `handler`.
- */
-export interface MessageHandlerConfig<
-	O extends Record<string, unknown> = Record<string, unknown>
-> {
-	type: string;
-	handler: MessageHandler<O>;
-	priority?: number;
-	validateMessage?: (obj: Record<string, unknown>) => obj is O;
-}
+// Message processor function types
+export type MessageProcessorExecute<T extends Message = Message> = (
+	obj: T,
+	store: CedarStore
+) => void | Promise<void>;
+export type MessageProcessorRender<T extends Message = Message> =
+	React.ComponentType<{ message: T }>;
 
 /**
- * Entry stored in the registry at runtime – mirrors MessageRendererEntry but
- * contains a `handler` function instead of a `renderer`.
+ * Unified Message Processor - combines handler and renderer functionality
+ * Can execute business logic, provide custom rendering, or both
  */
-export interface MessageHandlerEntry<
-	O extends Record<string, unknown> = Record<string, unknown>
-> {
+export interface MessageProcessor<T extends Message = Message> {
 	type: string;
-	handler: MessageHandler;
-	priority?: number;
-	validateMessage?: (obj: Record<string, unknown>) => obj is O;
+	namespace?: string; // For handling type conflicts
+	priority?: number; // Higher numbers = higher priority (default: 0)
+
+	// Optional: Execute business logic
+	execute?: MessageProcessorExecute<T>;
+
+	// Optional: Provide custom rendering
+	render?: MessageProcessorRender<T>;
+
+	// Optional: Validation
+	validate?: (obj: Message) => obj is T;
 }
 
-// Message renderer function type
-export type MessageRenderer = (message: BaseMessage) => ReactNode;
-
-// Message renderer configuration used when **registering** via hook
-export interface MessageRendererConfig<T extends BaseMessage = BaseMessage> {
-	type: T['type'];
-	renderer: React.ComponentType<{ message: T }>;
-	priority?: number;
-	validateMessage?: (message: BaseMessage) => message is T;
+/**
+ * Entry stored in the processor registry at runtime
+ */
+export interface MessageProcessorEntry<T extends Message = Message> {
+	type: string;
+	namespace?: string;
+	priority: number; // Always has a value (defaults applied)
+	execute?: MessageProcessorExecute<T>;
+	render?: MessageProcessorRender<T>;
+	validate?: (obj: Message) => obj is T;
 }
 
-// Entry stored in the registry at runtime (after wrapping) – includes resolved renderer function
-export interface MessageRendererEntry<T extends BaseMessage = BaseMessage> {
-	type: T['type'];
-	renderer: MessageRenderer; // function (message) => ReactNode
-	priority?: number;
-	validateMessage?: (message: BaseMessage) => message is T;
-}
-
-// Registry for message renderers
-export type MessageRendererRegistry = Record<string, MessageRendererEntry>;
+// Registry for message processors - supports multiple processors per type
+export type MessageProcessorRegistry = Record<string, MessageProcessorEntry[]>;

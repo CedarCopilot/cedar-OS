@@ -3,12 +3,14 @@ import { CedarStore } from '../types';
 import type {
 	Message,
 	MessageInput,
-	MessageRendererEntry,
-	MessageRendererRegistry,
-	MessageHandler,
-	MessageHandlerEntry,
+	MessageProcessor,
+	MessageProcessorEntry,
+	MessageProcessorRegistry,
 } from './types';
-import { defaultHandlers } from '@/store/messages/defaultHandlers';
+import {
+	defaultProcessors,
+	initializeProcessorRegistry,
+} from '@/store/messages/defaultMessageProcessors';
 
 // Define the messages slice
 export interface MessagesSlice {
@@ -17,10 +19,8 @@ export interface MessagesSlice {
 	isProcessing: boolean;
 	showChat: boolean;
 
-	// Message renderer registry
-	messageRenderers: MessageRendererRegistry;
-	// Message handler registry
-	messageHandlers: Record<string, MessageHandlerEntry>;
+	// Message processor registry
+	messageProcessors: MessageProcessorRegistry;
 
 	// Actions
 	setMessages: (messages: Message[]) => void;
@@ -32,28 +32,19 @@ export interface MessagesSlice {
 	setIsProcessing: (isProcessing: boolean) => void;
 	setShowChat: (showChat: boolean) => void;
 
-	// Renderer management
-	registerMessageRenderer: (type: string, entry: MessageRendererEntry) => void;
-	unregisterMessageRenderer: (type: string) => void;
-	getMessageRenderer: (type: string) => MessageRendererEntry | undefined;
-	/** Register many renderer entries at once */
-	registerMessageRenderers: (
-		entries: MessageRendererEntry[] | Record<string, MessageRendererEntry>
-	) => void;
-	// Handler management
-	registerMessageHandler: (
-		type: string,
-		entry: MessageHandler | MessageHandlerEntry
-	) => void;
-	registerMessageHandlers: (
-		handlers: Record<string, MessageHandler | MessageHandlerEntry>
-	) => void;
-	getMessageHandler: (type: string) => MessageHandlerEntry | undefined;
+	// Processor management
+	registerMessageProcessor: (processor: MessageProcessor) => void;
+	registerMessageProcessors: (processors: MessageProcessor[]) => void;
+	unregisterMessageProcessor: (type: string, namespace?: string) => void;
+	getMessageProcessors: (type: string) => MessageProcessorEntry[];
+
 	/**
 	 * Handle a structured response object by validating it against a registered
 	 * message renderer and adding it to chat if valid. Returns true if handled.
 	 */
-	processStructuredMessage: (structured: Record<string, unknown>) => boolean;
+	processStructuredMessage: (
+		structured: Record<string, unknown>
+	) => Promise<boolean>;
 
 	// Utility methods
 	getMessageById: (id: string) => Message | undefined;
@@ -72,8 +63,7 @@ export const createMessagesSlice: StateCreator<
 		messages: [],
 		isProcessing: false,
 		showChat: false,
-		messageRenderers: {},
-		messageHandlers: { ...defaultHandlers },
+		messageProcessors: initializeProcessorRegistry(defaultProcessors),
 
 		// Actions
 		setMessages: (messages: Message[]) => set({ messages }),
@@ -139,63 +129,68 @@ export const createMessagesSlice: StateCreator<
 
 		setIsProcessing: (isProcessing: boolean) => set({ isProcessing }),
 
-		// Renderer management
-		registerMessageRenderer: (type: string, entry: MessageRendererEntry) => {
-			set((state) => ({
-				messageRenderers: {
-					...state.messageRenderers,
-					[type]: entry,
-				},
-			}));
-		},
-		registerMessageRenderers: (entries) => {
+		// Processor management
+		registerMessageProcessor: (processor: MessageProcessor) => {
 			set((state) => {
-				const newEntries = Array.isArray(entries)
-					? Object.fromEntries(entries.map((e) => [e.type, e]))
-					: entries;
+				const type = processor.type;
+				const existingProcessors = state.messageProcessors[type] || [];
+
+				// Create processor entry with defaults
+				const entry: MessageProcessorEntry = {
+					type: processor.type,
+					namespace: processor.namespace,
+					priority: processor.priority ?? 0,
+					execute: processor.execute,
+					render: processor.render,
+					validate: processor.validate,
+				};
+
+				// Add to array and sort by priority (highest first)
+				const updatedProcessors = [...existingProcessors, entry].sort(
+					(a, b) => b.priority - a.priority
+				);
+
 				return {
-					messageRenderers: {
-						...state.messageRenderers,
-						...newEntries,
+					messageProcessors: {
+						...state.messageProcessors,
+						[type]: updatedProcessors,
 					},
 				};
 			});
 		},
 
-		unregisterMessageRenderer: (type: string) => {
-			set((state) => {
-				const { [type]: removed, ...rest } = state.messageRenderers;
-				// Use the variable to avoid linter warning
-				void removed;
-				return { messageRenderers: rest };
+		registerMessageProcessors: (processors: MessageProcessor[]) => {
+			processors.forEach((processor) => {
+				get().registerMessageProcessor(processor);
 			});
 		},
 
-		getMessageRenderer: (type: string) => {
-			return get().messageRenderers[type];
+		unregisterMessageProcessor: (type: string, namespace?: string) => {
+			set((state) => {
+				const processors = state.messageProcessors[type];
+				if (!processors) return state;
+
+				const filtered = namespace
+					? processors.filter((p) => p.namespace !== namespace)
+					: []; // Remove all if no namespace specified
+
+				return {
+					messageProcessors: {
+						...state.messageProcessors,
+						[type]: filtered.length > 0 ? filtered : [],
+					},
+				};
+			});
 		},
 
-		// Handler management
-		registerMessageHandler: (type, entry) => {
-			set((state) => ({
-				messageHandlers: {
-					...state.messageHandlers,
-					[type]: entry as MessageHandlerEntry,
-				},
-			}));
+		getMessageProcessors: (type: string) => {
+			return get().messageProcessors[type] || [];
 		},
-		registerMessageHandlers: (handlers) => {
-			set((state) => ({
-				messageHandlers: {
-					...state.messageHandlers,
-					...(handlers as Record<string, MessageHandlerEntry>),
-				},
-			}));
-		},
-		getMessageHandler: (type) => get().messageHandlers[type],
 
 		// Handle structured message objects from LLM response
-		processStructuredMessage: (structuredResponse: Record<string, unknown>) => {
+		processStructuredMessage: async (
+			structuredResponse: Record<string, unknown>
+		) => {
 			if (
 				!('type' in structuredResponse) ||
 				typeof structuredResponse.type !== 'string'
@@ -203,45 +198,29 @@ export const createMessagesSlice: StateCreator<
 				return false;
 			}
 
-			// 1. Try handler first
-			const handlerEntry = get().getMessageHandler(structuredResponse.type);
-			if (handlerEntry) {
-				const { handler, validateMessage } = handlerEntry;
-				if (validateMessage && !validateMessage(structuredResponse)) {
-					return false;
-				}
-				const handled = handler(structuredResponse, get());
-				if (handled) return true;
-			}
-
-			// Determine role, default assistant, map system -> assistant
-			let role: string = 'assistant';
-			if (
-				'role' in structuredResponse &&
-				typeof structuredResponse.role === 'string'
-			) {
-				role =
-					structuredResponse.role === 'system'
-						? 'assistant'
-						: structuredResponse.role;
-			}
-
-			const content =
-				'content' in structuredResponse &&
-				typeof structuredResponse.content === 'string'
-					? structuredResponse.content
-					: '';
-
-			const messageInput: MessageInput = {
-				role: role as Message['role'],
-				type: structuredResponse.type as Message['type'],
-				content,
-				...(structuredResponse as Record<string, unknown>),
-			} as MessageInput;
-
-			// Add message using existing method
+			const type = structuredResponse.type;
 			const state = get();
-			state.addMessage(messageInput);
+
+			// NEW: Try processors first (priority-based)
+			const processors = state.getMessageProcessors(type);
+			for (const processor of processors) {
+				// Check validation if provided
+				if (
+					processor.validate &&
+					!processor.validate(structuredResponse as Message)
+				) {
+					continue; // Try next processor
+				}
+
+				// Execute business logic if provided
+				if (processor.execute) {
+					await processor.execute(structuredResponse as Message, state);
+					return true;
+				}
+			}
+
+			// DEFAULT: Add as text message with JSON display
+			state.addMessage(structuredResponse);
 
 			return true;
 		},

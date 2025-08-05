@@ -37,7 +37,6 @@ const CaptionMessages: React.FC = () => {
 		return null;
 	}, [messages]);
 
-	console.log('looking at message', latestMessage);
 	if (!latestMessage) return null;
 
 	// Render based on message type
