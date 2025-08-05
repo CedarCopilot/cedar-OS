@@ -46,6 +46,8 @@ export interface AnthropicParams extends BaseParams {
 
 export interface MastraParams extends BaseParams {
 	route: string;
+	threadId?: string;
+	resourceId?: string;
 	// Mastra doesn't require model as a param
 }
 

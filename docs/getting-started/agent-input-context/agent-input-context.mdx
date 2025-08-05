@@ -344,6 +344,13 @@ function CustomContextProcessor() {
 			content: editorContent,
 		});
 
+		// Or add user message to chat with persistence based on configured Storage adapter
+		store.addMessageWithPersist({
+			role: 'user',
+			type: 'text',
+			content: editorContent,
+		});
+
 		// Clear mentions after sending
 		store.clearMentions();
 	};

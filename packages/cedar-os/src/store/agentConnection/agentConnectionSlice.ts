@@ -374,14 +374,18 @@ export const createAgentConnectionSlice: StateCreator<
 		};
 	},
 
-	// Handle LLM response
+	// Handle LLM response with persistence
 	handleLLMResponse: (itemsToProcess: (string | object)[]) => {
 		const state = get();
 
 		itemsToProcess.forEach((item) => {
 			if (typeof item === 'string') {
 				// Handle text content - append to latest message
-				state.appendToLatestMessage(item);
+				const latestMessage = state.appendToLatestMessage(item);
+				// During streaming we defer persistence until stream completion
+				if (!state.isStreaming) {
+					state.persistMessage(latestMessage);
+				}
 			} else if (item && typeof item === 'object') {
 				// Handle structured objects
 				const structuredResponse = item as Record<string, unknown>;
@@ -426,11 +430,16 @@ export const createAgentConnectionSlice: StateCreator<
 									: JSON.stringify(structuredResponse);
 							// Map system role to assistant if needed
 							const messageRole = role === 'system' ? 'assistant' : role;
-							state.addMessage({
+							const message = {
 								role: messageRole as 'user' | 'assistant' | 'bot',
-								type: 'text',
+								type: 'text' as const,
 								content,
-							});
+							};
+							if (state.isStreaming) {
+								state.addMessage(message);
+							} else {
+								state.addMessageWithPersist(message);
+							}
 							break;
 						}
 						default:
@@ -466,11 +475,12 @@ export const createAgentConnectionSlice: StateCreator<
 			const unifiedMessage = fullContext;
 
 			// Step 3: Add the stringified chatInputContent as a message from the user
-			state.addMessage({
-				role: 'user',
-				type: 'text',
+			const userMessage = {
+				role: 'user' as const,
+				type: 'text' as const,
 				content: editorContent,
-			});
+			};
+			state.addMessageWithPersist(userMessage);
 
 			// Clear the chat specific contextEntries (mentions)
 			state.clearMentions();
@@ -498,6 +508,11 @@ export const createAgentConnectionSlice: StateCreator<
 					llmParams = {
 						...llmParams,
 						route: route || `${chatPath}`,
+						// Attach thread and user identifiers when available
+						...(state.currentThreadId
+							? { threadId: state.currentThreadId }
+							: {}),
+						...(state.userId ? { resourceId: state.userId } : {}),
 					};
 					break;
 				case 'ai-sdk':
@@ -507,7 +522,9 @@ export const createAgentConnectionSlice: StateCreator<
 
 			// Step 5: Make the LLM call (streaming and non-streaming branches)
 			if (stream) {
-				// Streaming approach - process each item as it comes in
+				// Capture current message count so we know which ones are new during the stream
+				const startIdx = get().messages.length;
+
 				const streamResponse = state.streamLLM(llmParams, (event) => {
 					switch (event.type) {
 						case 'chunk':
@@ -529,8 +546,14 @@ export const createAgentConnectionSlice: StateCreator<
 
 				// Wait for stream to complete
 				await streamResponse.completion;
+
+				// Persist any new messages added during the stream (from startIdx onwards)
+				const newMessages = get().messages.slice(startIdx);
+				for (const m of newMessages) {
+					await state.persistMessage(m);
+				}
 			} else {
-				// Non-streaming approach – call the LLM and process all items at once
+				// Non-streaming approach – call the LLM and process all items at once
 				const response = await state.callLLM(llmParams);
 
 				// Process response content as array of one
@@ -551,11 +574,12 @@ export const createAgentConnectionSlice: StateCreator<
 			});
 		} catch (error) {
 			console.error('Error sending message:', error);
-			state.addMessage({
-				role: 'assistant',
-				type: 'text',
+			const errorMessage = {
+				role: 'assistant' as const,
+				type: 'text' as const,
 				content: 'An error occurred while sending your message.',
-			});
+			};
+			state.addMessageWithPersist(errorMessage);
 		} finally {
 			state.setIsProcessing(false);
 		}

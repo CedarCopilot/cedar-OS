@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { subscribeWithSelector } from 'zustand/middleware';
+import { createStorageSlice } from './storageSlice';
+import { createIdentitySlice } from './identitySlice';
+import { createHistorySlice } from './historySlice';
 import { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
 import { createStylingSlice } from './stylingSlice';
 import { CedarStore } from './types';
@@ -9,10 +12,11 @@ import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnect
 import { createVoiceSlice } from '@/store/voice/voiceSlice';
 import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
 
-// Create the combined store (default for backwards compatibility)
+// Create the combined store
 export const useCedarStore = create<CedarStore>()(
-	persist(
-		(...a) => ({
+	subscribeWithSelector((...args) => {
+		const a = args;
+		const slices = {
 			...createStylingSlice(...a),
 			...createAgentInputContextSlice(...a),
 			...createStateSlice(...a),
@@ -20,18 +24,31 @@ export const useCedarStore = create<CedarStore>()(
 			...createAgentConnectionSlice(...a),
 			...createVoiceSlice(...a),
 			...createDebuggerSlice(...a),
-		}),
-		{
-			name: 'cedar-store',
-			partialize: (state) => ({
-				// 	styling: state.styling,
-				// 	agentInputContext: state.agentInputContext,
-				// 	state: state.state,
-				messages: state.messages,
-				// agentConnection: state.agentConnection,
-			}),
+			...createIdentitySlice(...a),
+			...createHistorySlice(...a),
+			...createStorageSlice(...a),
+		} as CedarStore;
+
+		return slices;
+	})
+);
+
+// React to userId / threadId changes to hydrate or load threads
+useCedarStore.subscribe(
+	(state) =>
+		state && [state.userId, state.currentThreadId, state.storageAdapter],
+	() => {
+		if (useCedarStore.getState().storageAdapter) {
+			useCedarStore.getState().loadThreads?.();
+			// Hydrate messages for the active thread
+			useCedarStore.getState().loadMessages?.();
 		}
-	)
+	},
+	{
+		equalityFn: (a, b) => {
+			return JSON.stringify(a) === JSON.stringify(b);
+		},
+	}
 );
 
 export const useMessages = () => ({

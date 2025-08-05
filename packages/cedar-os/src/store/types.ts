@@ -5,6 +5,9 @@ import { MessagesSlice } from './messages/messagesSlice';
 import { AgentConnectionSlice } from './agentConnection/agentConnectionSlice';
 import { VoiceSlice } from './voice/voiceSlice';
 import { DebuggerSlice } from './debugger/debuggerSlice';
+import { IdentitySlice } from './identitySlice';
+import { HistorySlice } from './historySlice';
+import { StorageSlice } from './storageSlice';
 
 /**
  * The main Cedar store type that combines all slices
@@ -16,7 +19,10 @@ export interface CedarStore
 		MessagesSlice,
 		AgentConnectionSlice,
 		VoiceSlice,
-		DebuggerSlice {}
+		DebuggerSlice,
+		StorageSlice,
+		IdentitySlice,
+		HistorySlice {}
 
 // Re-export StylingConfig for convenience
 export type { StylingConfig };
