@@ -6,12 +6,16 @@ import type {
 	StreamHandler,
 	StreamResponse,
 	StreamEvent,
+	VoiceParams,
+	VoiceLLMResponse,
 } from '../types';
 import {
 	generateText,
 	streamText,
 	type LanguageModel,
 	generateObject,
+	experimental_transcribe as transcribe,
+	experimental_generateSpeech as generateSpeech,
 } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
@@ -34,6 +38,10 @@ export interface AISDKProviderImplementation {
 		config: AISDKConfig,
 		handler: StreamHandler
 	) => StreamResponse;
+	voiceLLM: (
+		params: VoiceParams,
+		config: AISDKConfig
+	) => Promise<VoiceLLMResponse>;
 	handleResponse: (response: Response) => Promise<LLMResponse>;
 	handleStreamResponse: (chunk: string) => StreamEvent;
 }
@@ -308,6 +316,132 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 		return {
 			abort: () => abortController.abort(),
 			completion,
+		};
+	},
+
+	voiceLLM: async (params, config) => {
+		const { audioData, voiceSettings, context } = params;
+
+		// First, transcribe the audio using AI SDK
+		// Use OpenAI's whisper-1 model for transcription
+		const openaiConfig = config.providers.openai;
+		if (!openaiConfig) {
+			throw new Error('OpenAI provider not configured for transcription');
+		}
+
+		// Create OpenAI provider instance
+		const openai = createOpenAI({ apiKey: openaiConfig.apiKey });
+		const transcriptionModel = openai.transcription('whisper-1');
+
+		// Convert Blob to ArrayBuffer for transcription
+		const audioBuffer = await audioData.arrayBuffer();
+
+		// Transcribe the audio
+		const transcript = await transcribe({
+			model: transcriptionModel,
+			audio: audioBuffer,
+		});
+
+		// Now generate a response based on the transcription
+		const responseModelString = 'openai/gpt-4o-mini'; // Default response model
+		const { provider: responseProviderName, model: responseModel } =
+			parseModelString(responseModelString);
+
+		const responseProviderConfig =
+			config.providers[responseProviderName as keyof typeof config.providers];
+		if (!responseProviderConfig) {
+			throw new Error(`Provider ${responseProviderName} not configured`);
+		}
+
+		const responseProvider =
+			providerImplementations[
+				responseProviderName as keyof typeof providerImplementations
+			];
+		if (!responseProvider) {
+			throw new Error(`Provider ${responseProviderName} not supported`);
+		}
+
+		const responseProviderInstance = responseProvider(
+			responseProviderConfig.apiKey
+		);
+		const modelInstance = responseProviderInstance(
+			responseModel
+		) as LanguageModel;
+
+		// Generate response
+		const systemPrompt = context
+			? `Context: ${context}\n\nRespond naturally to the user's voice input.`
+			: "Respond naturally to the user's voice input.";
+
+		const result = await generateText({
+			model: modelInstance,
+			prompt: transcript.text,
+			system: systemPrompt,
+			temperature: 0.7,
+			maxRetries: 3,
+		});
+
+		// Generate speech if not using browser TTS
+		let generatedAudioData: string | undefined;
+		let audioFormat: string | undefined;
+
+		if (!voiceSettings.useBrowserTTS) {
+			try {
+				// Use OpenAI's TTS model
+				const speechModel = openai.speech('tts-1');
+
+				const speech = await generateSpeech({
+					model: speechModel,
+					text: result.text,
+					voice:
+						(voiceSettings.voiceId as
+							| 'alloy'
+							| 'echo'
+							| 'fable'
+							| 'onyx'
+							| 'nova'
+							| 'shimmer') || 'alloy',
+				});
+
+				// Convert audio data to base64
+				// The speech result contains the audio as a Uint8Array
+				const audioUint8Array = speech as unknown as { audioData: Uint8Array };
+				const base64Audio = btoa(
+					String.fromCharCode(...audioUint8Array.audioData)
+				);
+				generatedAudioData = base64Audio;
+				audioFormat = 'audio/mpeg'; // OpenAI returns MP3 format
+			} catch (error) {
+				console.warn(
+					'Failed to generate speech, falling back to text response:',
+					error
+				);
+			}
+		}
+
+		// Return response with transcription and optionally generated audio
+		return {
+			content: result.text,
+			transcription: transcript.text,
+			audioData: generatedAudioData,
+			audioFormat,
+			usage: result.usage
+				? {
+						promptTokens:
+							(result.usage as { promptTokens?: number }).promptTokens || 0,
+						completionTokens:
+							(result.usage as { completionTokens?: number })
+								.completionTokens || 0,
+						totalTokens: result.usage.totalTokens || 0,
+				  }
+				: undefined,
+			metadata: {
+				model: responseModelString,
+				transcriptionModel: 'openai/whisper-1',
+				language: transcript.language,
+				durationInSeconds: transcript.durationInSeconds,
+				speechModel: generatedAudioData ? 'openai/tts-1' : undefined,
+			},
 		};
 	},
 

@@ -1,7 +1,120 @@
 ---
-title: 'Voice (Beta)'
-description: 'Voice-powered AI interactions with real-time audio streaming and automatic message integration'
+title: Voice Integration (Beta).
+description: Add voice capabilities to your Cedar OS application
 ---
+
+# Voice Integration
+
+Cedar OS provides comprehensive voice support that integrates seamlessly with your agent backend. Voice processing is now handled through the agent connection system, providing a unified approach across different providers.
+
+## Voice Processing Architecture
+
+<Note>
+As of the latest update, voice processing is now integrated with the agent connection system. This means:
+
+- **Mastra/Custom backends**: Voice data is sent directly to your voice endpoint
+- **AI SDK/OpenAI providers**: Voice is transcribed using Whisper, then processed through the LLM
+
+See the [Voice Endpoint Format](/getting-started/voice/voice-endpoint-format) documentation for implementation details.
+
+</Note>
+
+## Quick Start
+
+Initialize Cedar with voice settings:
+
+```tsx
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'openai',
+				apiKey: process.env.OPENAI_API_KEY!,
+			}}
+			voiceSettings={{
+				language: 'en-US',
+				voiceId: 'alloy', // OpenAI voices: alloy, echo, fable, onyx, nova, shimmer
+				useBrowserTTS: false, // Use OpenAI TTS instead of browser
+				autoAddToMessages: true, // Add voice interactions to chat history
+				pitch: 1.0,
+				rate: 1.0,
+				volume: 1.0,
+				endpoint: '/api/voice', // Optional: Custom voice endpoint
+			}}>
+			{/* Your app content */}
+		</CedarCopilot>
+	);
+}
+```
+
+### Voice Settings
+
+| Setting             | Type    | Default     | Description                                    |
+| ------------------- | ------- | ----------- | ---------------------------------------------- |
+| `language`          | string  | `'en-US'`   | Language code for speech recognition/synthesis |
+| `voiceId`           | string  | `undefined` | Voice identifier (provider-specific)           |
+| `pitch`             | number  | `1.0`       | Voice pitch modulation (0.5-2.0)               |
+| `rate`              | number  | `1.0`       | Speech rate (0.5-2.0)                          |
+| `volume`            | number  | `1.0`       | Audio volume (0.0-1.0)                         |
+| `useBrowserTTS`     | boolean | `false`     | Use browser's built-in TTS                     |
+| `autoAddToMessages` | boolean | `true`      | Add voice interactions to chat                 |
+| `endpoint`          | string  | `undefined` | Custom voice endpoint URL                      |
+
+### Provider-Specific Configuration
+
+#### OpenAI / AI SDK
+
+```tsx
+<CedarCopilot
+  llmProvider={{
+    provider: 'ai-sdk',
+    providers: {
+      openai: { apiKey: process.env.OPENAI_API_KEY! },
+    },
+  }}
+  voiceSettings={{
+    voiceId: 'nova', // OpenAI voice selection
+    useBrowserTTS: false, // Use OpenAI TTS
+  }}
+>
+```
+
+#### Mastra
+
+```tsx
+<CedarCopilot
+  llmProvider={{
+    provider: 'mastra',
+    baseURL: 'https://your-mastra-api.com',
+    apiKey: process.env.MASTRA_API_KEY,
+    voiceRoute: '/voice', // Auto-configures voice endpoint
+  }}
+  voiceSettings={{
+    language: 'en-US',
+    autoAddToMessages: true,
+    // endpoint is auto-configured from voiceRoute
+  }}
+>
+```
+
+#### Custom Backend
+
+```tsx
+<CedarCopilot
+  llmProvider={{
+    provider: 'custom',
+    // ... custom provider config
+  }}
+  voiceSettings={{
+    endpoint: 'https://your-api.com/voice',
+    useBrowserTTS: true, // Use browser TTS if backend doesn't provide audio
+  }}
+>
+```
+
+## Overview
 
 Cedar-OS provides a complete voice integration system that enables natural voice conversations with AI agents. The voice system handles audio capture, streaming to backend services, and automatic playback of responses, with seamless integration into the messaging system.
 
@@ -175,6 +288,7 @@ interface VoiceState {
 		volume?: number; // 0.0 to 1.0
 		useBrowserTTS?: boolean; // Use browser TTS instead of backend
 		autoAddToMessages?: boolean; // Automatically add voice interactions to messages
+		endpoint?: string; // Custom voice endpoint URL
 	};
 }
 ```

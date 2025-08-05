@@ -69,6 +69,7 @@
 				"pages": [
 					"getting-started/voice/voice-integration",
 					"getting-started/voice/agentic-backend",
+					"getting-started/voice/voice-endpoint-format",
 					"getting-started/voice/streams",
 					"getting-started/voice/websockets",
 					"getting-started/voice/components"

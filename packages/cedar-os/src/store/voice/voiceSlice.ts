@@ -1,12 +1,12 @@
 import { StateCreator } from 'zustand';
 import type { CedarStore } from '../types';
+import type { VoiceLLMResponse } from '../agentConnection/types';
 
 export interface VoiceState {
 	// Voice state
 	isVoiceEnabled: boolean;
 	isListening: boolean;
 	isSpeaking: boolean;
-	voiceEndpoint: string;
 	voicePermissionStatus: 'granted' | 'denied' | 'prompt' | 'not-supported';
 	audioStream: MediaStream | null;
 	audioContext: AudioContext | null;
@@ -21,7 +21,8 @@ export interface VoiceState {
 		rate?: number;
 		volume?: number;
 		useBrowserTTS?: boolean;
-		autoAddToMessages?: boolean; // New setting to control message integration
+		autoAddToMessages?: boolean;
+		endpoint?: string; // Voice endpoint URL
 	};
 }
 
@@ -37,6 +38,7 @@ export interface VoiceActions {
 
 	// Audio streaming
 	streamAudioToEndpoint: (audioData: Blob) => Promise<void>;
+	handleLLMVoice: (response: VoiceLLMResponse) => Promise<void>;
 	playAudioResponse: (audioUrl: string | ArrayBuffer) => Promise<void>;
 
 	// Settings
@@ -54,7 +56,6 @@ const initialVoiceState: VoiceState = {
 	isVoiceEnabled: false,
 	isListening: false,
 	isSpeaking: false,
-	voiceEndpoint: '', // Default endpoint
 	voicePermissionStatus: 'prompt',
 	audioStream: null,
 	audioContext: null,
@@ -186,131 +187,123 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 	},
 
 	streamAudioToEndpoint: async (audioData: Blob) => {
-		const { voiceEndpoint, voiceSettings } = get();
+		const { voiceSettings } = get();
 
 		try {
 			set({ isSpeaking: false });
 
+			// Check if we have a provider configured
+			const providerConfig = get().providerConfig;
+			if (!providerConfig) {
+				throw new Error('No provider configured for voice');
+			}
+
+			// For Mastra/custom providers with explicit endpoints, check if endpoint is configured
+			if (
+				(providerConfig.provider === 'mastra' ||
+					providerConfig.provider === 'custom') &&
+				!voiceSettings.endpoint
+			) {
+				throw new Error('Voice endpoint not configured');
+			}
+
 			// Get the stringified additional context from the store
 			const contextString = get().stringifyAdditionalContext();
 
-			const formData = new FormData();
-			formData.append('audio', audioData, 'recording.webm');
-			formData.append('settings', JSON.stringify(voiceSettings));
-			// Add the additional context to the form data
-			formData.append('context', contextString);
-
-			const response = await fetch(voiceEndpoint, {
-				method: 'POST',
-				body: formData,
+			// Use the agent connection's voiceLLM method
+			const response = await get().voiceLLM({
+				audioData,
+				voiceSettings,
+				context: contextString,
 			});
 
-			if (!response.ok) {
-				throw new Error(`Voice endpoint returned ${response.status}`);
+			// Handle the response using the new handleLLMVoice function
+			await get().handleLLMVoice(response);
+		} catch (error) {
+			set({
+				voiceError:
+					error instanceof Error ? error.message : 'Failed to process voice',
+			});
+		}
+	},
+
+	handleLLMVoice: async (response: VoiceLLMResponse) => {
+		const { voiceSettings } = get();
+
+		try {
+			set({ isSpeaking: false });
+
+			if (response.audioData && response.audioFormat) {
+				const binaryString = atob(response.audioData);
+				const bytes = new Uint8Array(binaryString.length);
+				for (let i = 0; i < binaryString.length; i++) {
+					bytes[i] = binaryString.charCodeAt(i);
+				}
+				const audioBuffer = bytes.buffer;
+				await get().playAudioResponse(audioBuffer);
+			} else if (response.audioUrl) {
+				await get().playAudioResponse(response.audioUrl);
+			} else if (response.content && voiceSettings.useBrowserTTS) {
+				if ('speechSynthesis' in window) {
+					const utterance = new SpeechSynthesisUtterance(response.content);
+					utterance.lang = voiceSettings.language;
+					utterance.rate = voiceSettings.rate || 1;
+					utterance.pitch = voiceSettings.pitch || 1;
+					utterance.volume = voiceSettings.volume || 1;
+
+					set({ isSpeaking: true });
+					utterance.onend = () => set({ isSpeaking: false });
+
+					speechSynthesis.speak(utterance);
+				}
 			}
 
-			// Handle different response types
-			const contentType = response.headers.get('content-type');
+			if (voiceSettings.autoAddToMessages) {
+				const { addMessage } = get();
 
-			if (contentType?.includes('audio')) {
-				// Audio response - play it
-				const audioData = await response.arrayBuffer();
-				await get().playAudioResponse(audioData);
-			} else if (contentType?.includes('application/json')) {
-				// JSON response - check for audio URL or text
-				const data = await response.json();
-
-				// Add messages to the messages store if enabled
-				if (
-					voiceSettings.autoAddToMessages &&
-					(data.transcription || data.text)
-				) {
-					// Access the messages slice directly from the store
-					const { addMessage } = get();
-
-					// Add user message (transcription)
-					if (data.transcription) {
-						addMessage({
-							type: 'text',
-							role: 'user',
-							content: data.transcription,
-							metadata: {
-								source: 'voice',
-								timestamp: new Date().toISOString(),
-							},
-						});
-					}
-
-					// Add assistant message (response)
-					if (data.text) {
-						addMessage({
-							type: 'text',
-							role: 'assistant',
-							content: data.text,
-							metadata: {
-								source: 'voice',
-								usage: data.usage,
-								timestamp: new Date().toISOString(),
-							},
-						});
-					}
+				if (response.transcription) {
+					addMessage({
+						type: 'text',
+						role: 'user',
+						content: response.transcription,
+						metadata: {
+							source: 'voice',
+							timestamp: new Date().toISOString(),
+						},
+					});
 				}
 
-				// Handle structured object response (similar to handleLLMResult)
-				if (data.object && typeof data.object === 'object') {
-					const structuredResponse = data.object;
+				if (response.content) {
+					addMessage({
+						type: 'text',
+						role: 'assistant',
+						content: response.content,
+						metadata: {
+							source: 'voice',
+							usage: response.usage,
+							timestamp: new Date().toISOString(),
+						},
+					});
+				}
+			}
 
-					// Handle based on the type field in the structured response
-					if (structuredResponse.type) {
-						switch (structuredResponse.type) {
-							case 'action': {
-								// Execute the custom setter with the provided parameters
-								if (
-									structuredResponse.stateKey &&
-									structuredResponse.setterKey
-								) {
-									const args = structuredResponse.args || [];
-									// Access executeCustomSetter from the state slice
-									const { executeCustomSetter } = get();
-									executeCustomSetter(
-										structuredResponse.stateKey,
-										structuredResponse.setterKey,
-										...args
-									);
-								}
-								break;
+			if (response.object && typeof response.object === 'object') {
+				const structuredResponse = response.object as Record<string, unknown>;
+
+				if (structuredResponse.type) {
+					switch (structuredResponse.type) {
+						case 'action': {
+							if (structuredResponse.stateKey && structuredResponse.setterKey) {
+								const args = structuredResponse.args || [];
+								const { executeCustomSetter } = get();
+								executeCustomSetter(
+									structuredResponse.stateKey as string,
+									structuredResponse.setterKey as string,
+									...(args as unknown[])
+								);
 							}
-							// Message type is already handled above in the messages section
+							break;
 						}
-					}
-				}
-
-				// Handle audio playback from different sources
-				if (data.audioData && data.audioFormat) {
-					// Base64 audio data
-					const binaryString = atob(data.audioData);
-					const bytes = new Uint8Array(binaryString.length);
-					for (let i = 0; i < binaryString.length; i++) {
-						bytes[i] = binaryString.charCodeAt(i);
-					}
-					const audioBuffer = bytes.buffer;
-					await get().playAudioResponse(audioBuffer);
-				} else if (data.audioUrl) {
-					// Play audio from URL
-					await get().playAudioResponse(data.audioUrl);
-				} else if (data.text && voiceSettings.useBrowserTTS) {
-					// Text-only response - use browser TTS if enabled
-					if ('speechSynthesis' in window) {
-						const utterance = new SpeechSynthesisUtterance(data.text);
-						utterance.lang = voiceSettings.language;
-						utterance.rate = voiceSettings.rate || 1;
-						utterance.pitch = voiceSettings.pitch || 1;
-						utterance.volume = voiceSettings.volume || 1;
-
-						set({ isSpeaking: true });
-						utterance.onend = () => set({ isSpeaking: false });
-
-						speechSynthesis.speak(utterance);
 					}
 				}
 			}
@@ -353,7 +346,12 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 	},
 
 	setVoiceEndpoint: (endpoint: string) => {
-		set({ voiceEndpoint: endpoint });
+		set((state) => ({
+			voiceSettings: {
+				...state.voiceSettings,
+				endpoint,
+			},
+		}));
 	},
 
 	updateVoiceSettings: (settings: Partial<VoiceState['voiceSettings']>) => {
