@@ -3,9 +3,15 @@ import type {
 	BaseMessage,
 	DefaultMessage,
 	MessageByType,
-	MessageRendererConfig,
+	MessageProcessor,
+	MessageProcessorEntry,
+	MessageProcessorRegistry,
 	MessageRole,
 } from './types';
+import {
+	defaultProcessors,
+	initializeProcessorRegistry,
+} from '@/store/messages/defaultMessageProcessors';
 
 /**
  * Type Safety Note:
@@ -40,8 +46,8 @@ export interface TypedMessagesSlice<M extends BaseMessage = DefaultMessage> {
 	isProcessing: boolean;
 	showChat: boolean;
 
-	// Message renderer registry
-	messageRenderers: Map<string, MessageRendererConfig<any>>;
+	// Message processor registry
+	messageProcessors: MessageProcessorRegistry;
 
 	// Fully typed actions
 	addMessage: <T extends M['type']>(
@@ -61,13 +67,11 @@ export interface TypedMessagesSlice<M extends BaseMessage = DefaultMessage> {
 	setShowChat: (showChat: boolean) => void;
 	setMessages: (messages: M[]) => void;
 
-	// Renderer management
-	registerMessageRenderer: <T extends M['type']>(
-		config: MessageRendererConfig<MessageByType<T, M>>
-	) => void;
-
-	unregisterMessageRenderer: (type: string) => void;
-	getMessageRenderer: (type: string) => MessageRendererConfig | undefined;
+	// Processor management
+	registerMessageProcessor: (processor: MessageProcessor) => void;
+	registerMessageProcessors: (processors: MessageProcessor[]) => void;
+	unregisterMessageProcessor: (type: string, namespace?: string) => void;
+	getMessageProcessors: (type: string) => MessageProcessorEntry[];
 
 	// Utility methods
 	getMessageById: (id: string) => M | undefined;
@@ -82,7 +86,7 @@ export function createTypedMessagesSlice<
 		messages: [],
 		isProcessing: false,
 		showChat: false,
-		messageRenderers: new Map(),
+		messageProcessors: initializeProcessorRegistry(defaultProcessors),
 
 		setMessages: (messages: M[]) => set({ messages }),
 
@@ -156,27 +160,49 @@ export function createTypedMessagesSlice<
 
 		setIsProcessing: (isProcessing: boolean) => set({ isProcessing }),
 
-		// Renderer management
-		registerMessageRenderer: <T extends M['type']>(
-			config: MessageRendererConfig<MessageByType<T, M>>
-		) => {
+		// Processor management
+		registerMessageProcessor: (processor: MessageProcessor) => {
 			set((state: TypedMessagesSlice<M>) => {
-				const newRenderers = new Map(state.messageRenderers);
-				newRenderers.set(config.type, config as MessageRendererConfig<any>);
-				return { messageRenderers: newRenderers };
+				const arr = state.messageProcessors[processor.type] ?? [];
+				const entry: MessageProcessorEntry = {
+					type: processor.type,
+					namespace: processor.namespace,
+					priority: processor.priority ?? 0,
+					execute: processor.execute,
+					render: processor.render,
+					validate: processor.validate,
+				};
+				return {
+					messageProcessors: {
+						...state.messageProcessors,
+						[processor.type]: [...arr, entry].sort(
+							(a, b) => b.priority - a.priority
+						),
+					},
+				};
 			});
 		},
 
-		unregisterMessageRenderer: (type: string) => {
+		registerMessageProcessors: (processors: MessageProcessor[]) => {
+			processors.forEach(get().registerMessageProcessor);
+		},
+
+		unregisterMessageProcessor: (type: string, namespace?: string) => {
 			set((state: TypedMessagesSlice<M>) => {
-				const newRenderers = new Map(state.messageRenderers);
-				newRenderers.delete(type);
-				return { messageRenderers: newRenderers };
+				const list = state.messageProcessors[type] || [];
+				return {
+					messageProcessors: {
+						...state.messageProcessors,
+						[type]: namespace
+							? list.filter((p) => p.namespace !== namespace)
+							: [],
+					},
+				};
 			});
 		},
 
-		getMessageRenderer: (type: string) => {
-			return get().messageRenderers.get(type);
+		getMessageProcessors: (type: string) => {
+			return get().messageProcessors[type] || [];
 		},
 
 		// Utility methods

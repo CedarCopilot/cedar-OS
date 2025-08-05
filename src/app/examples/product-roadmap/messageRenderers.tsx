@@ -10,7 +10,7 @@ import { mastraProcessors } from '@/chatMessages/MastraProcessors';
 
 /* 2 — optionally add / override your own  ------------------ */
 
-import type { CustomMessage, Message } from 'cedar-os';
+import type { CustomMessage, Message, ActionMessage } from 'cedar-os';
 
 /* custom tool-call processor that overrides the default */
 const CustomToolCallRenderer: React.FC<{
@@ -83,6 +83,82 @@ const alertProcessor: MessageProcessor = {
 		typeof msg.text === 'string',
 };
 
+/* ---------------------------------------------------------------------------
+ * Custom processor for "addNode" actions - shows special rendering for node additions
+ * This handles action messages where setterKey is "addNode"
+ * --------------------------------------------------------------------------*/
+
+const AddNodeRenderer: React.FC<{ message: Message }> = ({ message }) => {
+	const actionMsg = message as ActionMessage;
+
+	return (
+		<div className='border-l-4 border-green-500 bg-green-50 p-4 my-2 rounded-r'>
+			<div className='flex items-center gap-3 mb-2'>
+				<span className='text-2xl'>🌳</span>
+				<div>
+					<h4 className='font-semibold text-green-700'>
+						Node Added to Roadmap
+					</h4>
+					<p className='text-sm text-green-600'>New node has been created</p>
+				</div>
+			</div>
+
+			<div className='mt-2 text-xs text-green-600'>
+				✅ State updated: {actionMsg.stateKey}.{actionMsg.setterKey}
+			</div>
+		</div>
+	);
+};
+
+const addNodeProcessor: MessageProcessor = {
+	type: 'action',
+	namespace: 'roadmap',
+	priority: 15, // Higher than default to override default action processor
+
+	// Execute business logic with custom logging
+	execute: (obj, store) => {
+		const actionMsg = obj as ActionMessage;
+
+		// Custom logging for addNode actions
+		console.group('🌳 Add Node Action Processor');
+		console.log('Action received:', {
+			type: actionMsg.type,
+			stateKey: actionMsg.stateKey,
+			setterKey: actionMsg.setterKey,
+			args: actionMsg.args,
+		});
+
+		// Execute the state setter
+		if (actionMsg.stateKey && actionMsg.setterKey) {
+			const args = Array.isArray(actionMsg.args) ? actionMsg.args : [];
+			console.log(
+				'Executing setter:',
+				actionMsg.stateKey,
+				actionMsg.setterKey,
+				args
+			);
+			store.executeCustomSetter(
+				actionMsg.stateKey,
+				actionMsg.setterKey,
+				...args
+			);
+		}
+
+		console.log('Node addition processed successfully');
+		console.groupEnd();
+
+		// Add to chat with custom message
+		store.addMessage(actionMsg);
+	},
+
+	// Custom rendering for addNode actions
+	render: AddNodeRenderer,
+
+	// Only handle action messages where setterKey is "addNode"
+	validate: (msg): msg is ActionMessage =>
+		msg.type === 'action' && (msg as ActionMessage).setterKey === 'addNode',
+};
+
 /* ---------------------------------------------------------- */
 
 export function ProductRoadmapMessageRenderers() {
@@ -101,6 +177,9 @@ export function ProductRoadmapMessageRenderers() {
 		// Register custom alert processor
 		registerProcessors([alertProcessor]);
 
+		// Register custom addNode action processor
+		registerProcessors([addNodeProcessor]);
+
 		return () => {
 			/* tidy up on unmount (hot-reload etc.) */
 			// Unregister Mastra processors
@@ -110,6 +189,7 @@ export function ProductRoadmapMessageRenderers() {
 			// Unregister custom processors
 			unregisterProcessor('tool-call', 'custom');
 			unregisterProcessor('alert', 'custom');
+			unregisterProcessor('action', 'roadmap');
 		};
 	}, [registerProcessors, unregisterProcessor]);
 
