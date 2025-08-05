@@ -3,7 +3,7 @@ title: 'Custom Message Rendering'
 description: 'Create custom message handlers and renderers for structured data'
 ---
 
-Cedar's unified message processor system enables all UI interfaces that come from streamed or sent events from the backend. This system processes structured objects with a `type` field, enabling Generative UI, state mutations, diff applying, and all frontend interactions with structured data from your agents.
+Our unified message processor system enables all UI interfaces that come from streamed or sent events from the backend. This system processes structured objects with a `type` field, enabling Generative UI, state mutations, diff applying, and all frontend interactions with structured data from your agents.
 
 ### Structured Object Shape
 
@@ -20,13 +20,64 @@ When the backend sends structured data, Cedar's `processStructuredMessage()` fun
 
 1. Checks for a `type` field
 2. Finds all registered **processors** for that type
-3. Sorts by priority (highest first) and runs validation
-4. Executes the first valid processor's business logic and/or rendering
-5. Falls back to JSON display if no processors match
+3. Finds the highest `priority` processor for that passes the `validate` function
+4. Executes this processor's business logic and/or rendering
+5. Falls back to JSON display as a text message if no processors match
+
+## MessageProcessor Interface
+
+Understanding the MessageProcessor interface and type system is key to building custom processors:
+
+### Custom Message Type Helper
+
+```typescript
+// Create typed message definitions with exact field specifications
+export type MyCustomMessage = CustomMessage<
+	'my_type', // The 'type' field value
+	{
+		// Additional fields your message expects
+		field1: string;
+		field2: number;
+		optional?: boolean;
+	}
+>;
+```
+
+### MessageProcessor Interface
+
+```typescript
+interface MessageProcessor<T extends Message = Message> {
+	type: string; // Message type to handle (e.g., 'action', 'alert')
+	namespace?: string; // Optional namespace for organization
+	priority?: number; // Higher numbers = higher priority (default: 0)
+
+	// Optional: Execute business logic when structured data arrives
+	execute?: (obj: T, store: CedarStore) => void | Promise<void>;
+
+	// Optional: Provide custom rendering for messages in chat
+	render?: React.ComponentType<{ message: T }>;
+
+	// Optional: Validate that incoming data belongs to this processor
+	validate?: (obj: Message) => obj is T;
+}
+```
+
+### Function Responsibilities
+
+| Function   | **Input**                      | **Output**  | **Purpose**                                                                       |
+| ---------- | ------------------------------ | ----------- | --------------------------------------------------------------------------------- |
+| `validate` | Raw structured object          | `boolean`   | Decides whether incoming object of this type should be handled by this processor. |
+| `execute`  | Validated typed object + store | `void`      | Handle business logic, call `store.addMessage()` if needed                        |
+| `render`   | Typed message from chat        | `ReactNode` | Custom UI rendering for chat messages                                             |
+
+<Info>
+	**Key Principle**: Objects pass through unchanged after validation. The same
+	typed object flows from `execute` → `store.addMessage()` → `render`.
+</Info>
 
 ## Levels of Control
 
-The following examples demonstrate Cedar's Generative UI capabilities - where your agent can send structured data that updates your UI and executes actions in real-time.
+The following examples demonstrate different levels of control you can have over structured data that gets sent to your frontend.
 
 Let's use an action example to show the three different levels of control. When your backend sends this structured object:
 
@@ -40,96 +91,99 @@ Let's use an action example to show the three different levels of control. When 
 }
 ```
 
-### Full Control: Execute + Custom Chat Display
+<AccordionGroup>
+<Accordion title="Full Control: Execute + Custom Chat Display">
 
-Register a processor that handles business logic and controls what appears in chat.
+Register a processor that handles business logic and controls what appears in chat by specifying both `execute` and `render` functions in the same processor.
 
 <Info>
-	Processors never automatically add messages to chat. You must explicitly call
-	`store.addMessage()` if you want something to appear.
+	Specifying an `execute` function overrides the internal business logic we have
+	for handling messages, which includes: adding them to the chat and any
+	frontend action execution. To implement this logic manually, use
+	`store.addMessage()` or `store.executeCustomSetter()`.
 </Info>
 
 ```typescript
-import { useMessageProcessor } from 'cedar-os';
+import { useMessageProcessor, CustomMessage } from 'cedar-os';
 
-// Complete control - execute logic AND control chat display
-useMessageProcessor({
+// Step 1: Define the custom message type
+export type TodoActionMessage = CustomMessage<
+	'action',
+	{
+		stateKey: 'todos';
+		setterKey: string;
+		args: [string, 'high' | 'medium' | 'low'];
+		description?: string;
+	}
+>;
+
+// Step 2: Create the render component
+const TodoActionRenderer: React.FC<{ message: TodoActionMessage }> = ({
+	message,
+}) => {
+	const todoText = message.args[0];
+	const priority = message.args[1];
+
+	return (
+		<div
+			className={`border-l-4 p-4 ${
+				priority === 'high'
+					? 'border-red-500 bg-red-50'
+					: 'border-blue-500 bg-blue-50'
+			}`}>
+			<div className='flex items-center gap-2'>
+				<span className='font-semibold'>🚀 Todo Added</span>
+				{priority === 'high' && (
+					<span className='text-xs px-2 py-1 rounded bg-red-200 text-red-800'>
+						HIGH PRIORITY
+					</span>
+				)}
+			</div>
+			<p className='mt-2'>{todoText}</p>
+			<div className='mt-1 text-xs text-gray-500'>
+				✅ Executed: {message.stateKey}.{message.setterKey}
+			</div>
+		</div>
+	);
+};
+
+// Step 3: Register the processor
+useMessageProcessor<TodoActionMessage>({
 	type: 'action',
-	namespace: 'todos', // Handle only todo actions
+	namespace: 'todos',
 	priority: 10, // Higher priority than defaults
 
-	// Execute business logic
 	execute: (obj, store) => {
-		console.log(
-			'Processing todo action:',
-			obj.stateKey,
-			obj.setterKey,
-			obj.args
-		);
+		console.log('Processing todo action:', {
+			stateKey: obj.stateKey,
+			setterKey: obj.setterKey,
+			todoText: obj.args[0],
+			priority: obj.args[1],
+		});
 
-		// Execute the state setter
-		if (obj.stateKey && obj.setterKey) {
-			const args = Array.isArray(obj.args) ? obj.args : [];
-			store.executeCustomSetter(obj.stateKey, obj.setterKey, ...args);
-		}
+		store.executeCustomSetter(obj.stateKey, obj.setterKey, ...obj.args);
 
-		// Update UI components outside of chat
-		if (obj.args?.[1] === 'high') {
-			// Show notification in notification panel
-			store.executeCustomSetter(
-				'notifications',
-				'show',
-				'High priority todo added!'
-			);
-			// Update dashboard badge count
+		if (obj.args[1] === 'high') {
 			store.executeCustomSetter('dashboard', 'incrementUrgentTasks');
-			// Highlight todo section in sidebar
 			store.executeCustomSetter('sidebar', 'highlightSection', 'todos');
 		}
 
-		// Explicitly add to chat with custom message
-		store.addMessage({
-			role: 'assistant',
-			type: 'custom_todo',
-			content: `Added todo: ${obj.args?.[0]}`,
-			priority: obj.args?.[1],
-			originalAction: obj,
-		});
+		store.addMessage(obj);
 	},
 
-	// Only handle todo actions
-	validate: (obj) => obj.type === 'action' && obj.stateKey === 'todos',
-});
-
-// Register a renderer for the custom message type
-useMessageProcessor({
-	type: 'custom_todo',
-	render: ({ message }) => {
-		const priority = message.priority;
-
-		return (
-			<div
-				className={`border-l-4 p-4 ${
-					priority === 'high'
-						? 'border-red-500 bg-red-50'
-						: 'border-blue-500 bg-blue-50'
-				}`}>
-				<div className='flex items-center gap-2'>
-					<span className='font-semibold'>🚀 Todo Added</span>
-					{priority === 'high' && (
-						<span className='text-xs px-2 py-1 rounded bg-red-200 text-red-800'>
-							HIGH PRIORITY
-						</span>
-					)}
-				</div>
-				<p className='mt-2'>{message.content}</p>
-			</div>
-		);
-	},
+	render: TodoActionRenderer,
+	validate: (obj): obj is TodoActionMessage =>
+		obj.type === 'action' &&
+		obj.stateKey === 'todos' &&
+		Array.isArray(obj.args) &&
+		obj.args.length === 2 &&
+		typeof obj.args[0] === 'string' &&
+		['high', 'medium', 'low'].includes(obj.args[1]),
 });
 ```
 
-### Execute Only: No Chat Display
+</Accordion>
+<Accordion title="Execute Only: No Chat Display">
 
 Register a processor that only executes business logic without adding anything to chat.
 
@@ -142,57 +196,50 @@ useMessageProcessor({
 	namespace: 'silent',
 	priority: 10, // Higher priority than defaults
 
-	// Execute business logic only
 	execute: (obj, store) => {
 		console.log('Silent action execution:', obj.stateKey, obj.setterKey);
 
-		// Execute the state setter
 		if (obj.stateKey && obj.setterKey) {
 			const args = Array.isArray(obj.args) ? obj.args : [];
 			store.executeCustomSetter(obj.stateKey, obj.setterKey, ...args);
 		}
 
-		// Update other UI components
 		store.executeCustomSetter(
 			'notifications',
 			'show',
 			'Action completed silently'
 		);
-
-		// NO addMessage call = nothing appears in chat
 	},
 
 	validate: (obj) => obj.type === 'action' && obj.silent === true,
 });
 ```
 
-### No Control: Cedar Defaults
+</Accordion>
+
+<Accordion title="No Control: Cedar Defaults">
 
 Don't register any custom processors - Cedar's built-in default processors will handle everything automatically:
 
 ```tsx
-// No registration needed - Cedar's default action processor:
+// Cedar's default action processor automatically:
 // 1. Executes: store.executeCustomSetter('todos', 'addTodo', 'Review pull request #123', 'high')
-// 2. Adds action message to chat with default rendering:
-
-{
-  "type": "action",
-  "stateKey": "todos",
-  "setterKey": "addTodo",
-  "args": ["Review pull request #123", "high"],
-  "description": "Add high priority todo item"
-}
+// 2. Adds to chat with default rendering
 ```
 
 This approach requires no code - the action gets executed and displayed automatically using Cedar's default processors (located in `packages/cedar-os/src/store/messages/defaultHandlers.ts`).
 
+</Accordion>
+</AccordionGroup>
 ## Default Registered Object Types
 
 Cedar includes three built-in processors that are automatically registered with `namespace: 'default'` and `priority: 0`:
 
-### `message`
+<AccordionGroup>
 
-Handles basic text messages with optional role specification.
+<Accordion title="message - Basic Text Messages">
+
+Handles basic text messages with optional role specification. This is the most common message type for simple text communication.
 
 ```typescript
 // Handled automatically when backend sends:
@@ -203,9 +250,17 @@ Handles basic text messages with optional role specification.
 }
 ```
 
-### `action`
+**Behavior:**
 
-Executes state setters and renders action data.
+- Converts structured message to a text message
+- Adds to chat with the specified role (defaults to 'assistant')
+- Uses default text rendering (markdown support)
+
+</Accordion>
+
+<Accordion title="action - State Management & Execution">
+
+Executes state setters and renders action data. Use this when your agent needs to trigger frontend state changes or execute custom functions.
 
 ```typescript
 // Handled automatically when backend sends:
@@ -218,9 +273,17 @@ Executes state setters and renders action data.
 }
 ```
 
-### `stage_update`
+**Behavior:**
 
-Shows agent progress with status indicators.
+- Executes `store.executeCustomSetter(stateKey, setterKey, ...args)`
+- Adds the action message to chat for visibility
+- Renders with action-specific styling showing completion status
+
+</Accordion>
+
+<Accordion title="stage_update - Progress Indicators">
+
+Shows agent progress with status indicators. Perfect for keeping users informed about long-running operations or multi-step processes.
 
 ```typescript
 // Handled automatically when backend sends:
@@ -231,6 +294,23 @@ Shows agent progress with status indicators.
 }
 ```
 
+**Behavior:**
+
+- Adds stage update message to chat
+- Renders with animated status indicators based on the status
+- Provides visual feedback for agent workflow progress
+
+**Available Status Types:**
+
+- `in_progress` - Shows loading animation
+- `complete` - Shows checkmark with completion styling
+- `error` - Shows error indicator with error styling
+- `thinking` - Shows thinking animation
+
+</Accordion>
+
+</AccordionGroup>
+
 ## Mastra Renderers
 
 Mastra agents stream real-time events during execution. Cedar provides automatic renderers for all Mastra event types to visualize agent workflows as they happen.
@@ -239,19 +319,19 @@ Mastra agents stream real-time events during execution. Cedar provides automatic
 
 When a Mastra agent runs, it streams these structured events:
 
-- `start` - Agent execution begins
-- `step-start` - Individual step starts
-- `tool-call` - Agent calls a tool
-- `tool-result` - Tool returns result
-- `step-finish` - Individual step completes
-- `tool-output` - Tool produces output
-- `step-result` - Step produces result
-- `step-output` - Step produces output
-- `finish` - Agent execution completes
+- `start`
+- `step-start`
+- `tool-call`
+- `tool-result`
+- `step-finish`
+- `tool-output`
+- `step-result`
+- `step-output`
+- `finish`
 
 #### Automatic Usage
 
-Cedar provides pre-built processors for all Mastra events (downloaded with Cedar components). Simply register them to automatically visualize agent workflows:
+Cedar provides pre-built processors for all Mastra events. These processors are downloaded locally with Cedar components in `cedar-os-components/chatMessages/MastraProcessors.tsx` so you can examine and modify them as needed. Simply register them to automatically visualize agent workflows:
 
 ```tsx
 import { mastraProcessors } from 'cedar-os-components/chatMessages/MastraProcessors';
@@ -263,77 +343,213 @@ function MyComponent() {
 }
 ```
 
-#### Overriding Specific Processors
+## Creating Custom Message Types
 
-You can override any Mastra processor while keeping the rest. Here's how to customize the `tool-call` processor:
+Cedar's type system ensures full type safety from backend to frontend. Follow these three steps to create custom message types:
 
-```tsx
-import { useMessageProcessor, useMessageProcessors } from 'cedar-os';
-import { mastraProcessors } from 'cedar-os-components/chatMessages/MastraProcessors';
-import type { MastraMessage } from 'cedar-os';
+<Info>
+	**Important**: No transformations are applied to structured objects other than
+	validation. The object you define is exactly what your execute and render
+	functions receive.
+</Info>
 
-function CustomMastraProcessors() {
-	// Register all default Mastra processors
-	useMessageProcessors(mastraProcessors);
+<AccordionGroup>
 
-	// Override the tool-call processor with higher priority
-	useMessageProcessor({
-		type: 'tool-call',
-		namespace: 'custom',
-		priority: 10, // Higher than default (0)
+<Accordion title="Example 1: Alert Message Type (Render Only)">
 
-		// Custom rendering for tool calls
-		render: ({ message }) => {
-			const toolMsg = message as MastraMessage<'tool-call'>;
-			const { toolName, args } = toolMsg.payload as {
-				toolName?: string;
-				args?: unknown;
-			};
+This example shows a simple custom message type that only provides custom rendering without any execute logic. The backend would send structured data like `{ type: 'alert', level: 'error', text: 'Something went wrong!' }`.
 
-			return (
-				<div className='border-l-4 border-blue-500 pl-3 py-2 my-2 bg-blue-50'>
-					<div className='flex items-center gap-2'>
-						<span className='text-blue-700 font-semibold'>
-							🔧 {toolName ?? 'tool'}
-						</span>
-						<span className='text-xs text-blue-600 bg-blue-200 px-2 py-1 rounded'>
-							Tool Call
-						</span>
-					</div>
-					{args && (
-						<pre className='mt-2 text-xs text-blue-800 bg-white p-2 rounded'>
-							{JSON.stringify(args, null, 2)}
-						</pre>
-					)}
-				</div>
-			);
-		},
+### Step 1: Define the Custom Message Type
 
-		validate: (msg) => msg.type === 'tool-call',
-	});
+First, define exactly what fields your structured object should expect:
 
-	return null;
-}
+```typescript
+import { useMessageProcessor, CustomMessage } from 'cedar-os';
+
+// Define the custom message type with the exact shape expected
+type AlertLevel = 'info' | 'warning' | 'error';
+export type AlertMessage = CustomMessage<
+	'alert',
+	{ level: AlertLevel; text: string }
+>;
 ```
 
-This pattern allows you to selectively enhance specific Mastra events while maintaining the default behavior for others. The higher priority ensures your custom processor takes precedence.
+### Step 2: Create the Render Component
+
+```typescript
+const AlertRendererComponent: React.FC<{ message: AlertMessage }> = ({
+	message,
+}) => {
+	const colour =
+		message.level === 'error'
+			? 'border-red-500 text-red-600 bg-red-50'
+			: message.level === 'warning'
+			? 'border-yellow-500 text-yellow-600 bg-yellow-50'
+			: 'border-blue-500 text-blue-600 bg-blue-50';
+
+	const icon =
+		message.level === 'error'
+			? '🚨'
+			: message.level === 'warning'
+			? '⚠️'
+			: 'ℹ️';
+
+	return (
+		<div className={`border-l-4 p-3 my-2 rounded-r ${colour}`}>
+			<div className='flex items-center gap-2'>
+				<span className='text-lg'>{icon}</span>
+				<span className='font-semibold uppercase text-xs'>{message.level}</span>
+			</div>
+			<p className='mt-1'>{message.text}</p>
+		</div>
+	);
+};
+```
+
+### Step 3: Register the Processor
+
+```typescript
+useMessageProcessor<AlertMessage>({
+	type: 'alert',
+	namespace: 'custom',
+	priority: 0,
+	render: AlertRendererComponent,
+	validate: (msg): msg is AlertMessage =>
+		msg.type === 'alert' &&
+		typeof (msg as any).level === 'string' &&
+		typeof (msg as any).text === 'string',
+});
+```
+
+</Accordion>
+
+<Accordion title="Example 2: Task Progress Message (Execute + Render)">
+
+This example shows a more complex custom message type that handles both business logic and custom rendering. The backend sends task progress updates like `{ type: 'task_progress', taskId: 'abc123', progress: 75, status: 'running', title: 'Processing data...' }`.
+
+### Step 1: Define the Custom Message Type
+
+Define the exact structure expected from your backend:
+
+```typescript
+import { useMessageProcessor, CustomMessage } from 'cedar-os';
+
+// Define the custom message type with precise typing
+type TaskStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type TaskProgressMessage = CustomMessage<
+	'task_progress',
+	{
+		taskId: string;
+		progress: number; // 0-100
+		status: TaskStatus;
+		title: string;
+		details?: string;
+	}
+>;
+```
+
+### Step 2: Create the Render Component
+
+```typescript
+const TaskProgressRenderer: React.FC<{ message: TaskProgressMessage }> = ({
+	message,
+}) => {
+	const getStatusColor = (status: TaskStatus) => {
+		switch (status) {
+			case 'pending':
+				return 'bg-gray-200 text-gray-600';
+			case 'running':
+				return 'bg-blue-200 text-blue-600';
+			case 'completed':
+				return 'bg-green-200 text-green-600';
+			case 'failed':
+				return 'bg-red-200 text-red-600';
+		}
+	};
+
+	return (
+		<div className='border rounded-lg p-4 my-2 bg-white shadow-sm'>
+			<div className='flex items-center justify-between mb-2'>
+				<h4 className='font-semibold'>{message.title}</h4>
+				<span
+					className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
+						message.status
+					)}`}>
+					{message.status.toUpperCase()}
+				</span>
+			</div>
+
+			<div className='w-full bg-gray-200 rounded-full h-2 mb-2'>
+				<div
+					className='bg-blue-500 h-2 rounded-full transition-all duration-300'
+					style={{ width: `${message.progress}%` }}
+				/>
+			</div>
+
+			<div className='flex justify-between items-center text-sm text-gray-600'>
+				<span>{message.progress}% complete</span>
+				<span>Task: {message.taskId}</span>
+			</div>
+		</div>
+	);
+};
+```
+
+### Step 3: Register with Execute and Render Functions
+
+```typescript
+useMessageProcessor<TaskProgressMessage>({
+	type: 'task_progress',
+	namespace: 'custom',
+	priority: 5,
+
+	execute: (obj, store) => {
+		store.executeCustomSetter('tasks', 'updateProgress', {
+			taskId: obj.taskId,
+			progress: obj.progress,
+			status: obj.status,
+		});
+
+		if (obj.status === 'completed' || obj.status === 'failed') {
+			store.executeCustomSetter('notifications', 'show', {
+				title: obj.status === 'completed' ? 'Task Completed!' : 'Task Failed',
+				message: obj.title,
+				type: obj.status === 'completed' ? 'success' : 'error',
+			});
+		}
+
+		store.addMessage(obj);
+	},
+
+	render: TaskProgressRenderer,
+	validate: (msg): msg is TaskProgressMessage =>
+		msg.type === 'task_progress' &&
+		typeof (msg as any).taskId === 'string' &&
+		typeof (msg as any).progress === 'number' &&
+		typeof (msg as any).status === 'string' &&
+		typeof (msg as any).title === 'string',
+});
+```
+
+</Accordion>
+
+</AccordionGroup>
 
 ## Advanced Usage Examples
 
-### Conditional Rendering
+<AccordionGroup>
+
+<Accordion title="Conditional Rendering">
 
 Create processors that render different components based on message fields:
 
 ```tsx
 import { useMessageProcessor } from 'cedar-os';
-
-// Processor for conditional message rendering
 useMessageProcessor({
 	type: 'conditional_message',
 	priority: 0,
 
 	render: ({ message }) => {
-		// Different rendering based on message properties
 		if (message.priority === 'urgent') {
 			return (
 				<div className='bg-red-100 border-red-500 border-l-4 p-4'>
@@ -358,7 +574,6 @@ useMessageProcessor({
 			);
 		}
 
-		// Default rendering
 		return <div className='p-2'>{message.content}</div>;
 	},
 
@@ -366,7 +581,9 @@ useMessageProcessor({
 });
 ```
 
-### Rendering events beyond the chat
+</Accordion>
+
+<Accordion title="Rendering events beyond the chat">
 
 Cedar is built on the principle that **chat is not the only place your agent should live**. The message system is designed to work across different UI contexts.
 
@@ -379,19 +596,15 @@ useMessageProcessor({
 	namespace: 'analytics',
 	priority: 5,
 
-	// Execute business logic - no chat rendering
 	execute: (obj, store) => {
-		// Could trigger UI updates, logs, analytics, etc.
 		console.log('Agent called prompt:', obj.promptName);
 
-		// Update some UI state
 		store.executeCustomSetter(
 			'agentStatus',
 			'setCurrentPrompt',
 			obj.promptName
 		);
 
-		// Optionally add to chat if in chat context
 		if (store.showChat) {
 			store.addMessage({
 				role: 'assistant',
@@ -403,14 +616,55 @@ useMessageProcessor({
 		}
 	},
 
-	// No render function = doesn't add to chat by default
-
 	validate: (obj) =>
 		obj.type === 'prompt_called' && typeof obj.promptName === 'string',
 });
 ```
 
+</Accordion>
+</AccordionGroup>
+
 This system enables agents to communicate with your application through structured data, whether in chat interfaces, dashboards, or any other UI component that needs to respond to agent events.
+
+## Best Practices
+
+### Organizing Your Processors
+
+Cedar recommends keeping all your message processors in a single file for better organization and maintainability:
+
+```typescript
+// messageProcessors.tsx
+import { useMessageProcessor, useMessageProcessors } from 'cedar-os';
+import { mastraProcessors } from 'cedar-os-components/chatMessages/MastraProcessors';
+
+const customAlertProcessor = {
+	type: 'alert',
+	render: AlertRenderer,
+};
+
+const customActionProcessor = {
+	type: 'action',
+	execute: customActionLogic,
+	render: CustomActionRenderer,
+};
+
+export function useAllMessageProcessors() {
+	useMessageProcessors(mastraProcessors);
+	useMessageProcessor(customAlertProcessor);
+	useMessageProcessor(customActionProcessor);
+}
+```
+
+Then import and use in your components:
+
+```typescript
+import { useAllMessageProcessors } from './messageProcessors';
+
+function MyComponent() {
+	useAllMessageProcessors();
+	return <div>My component with all processors registered</div>;
+}
+```
 
 ## Next Steps
 
