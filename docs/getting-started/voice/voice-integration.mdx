@@ -1,5 +1,5 @@
 ---
-title: Voice Integration (Beta).
+title: Voice Integration (Beta)
 description: Add voice capabilities to your Cedar OS application
 ---
 
@@ -10,18 +10,20 @@ Cedar OS provides comprehensive voice support that integrates seamlessly with yo
 ## Voice Processing Architecture
 
 <Note>
-As of the latest update, voice processing is now integrated with the agent connection system. This means:
+As of the latest update, voice processing now works out of the box for Mastra, AI SDK, and custom backends.
 
 - **Mastra/Custom backends**: Voice data is sent directly to your voice endpoint
-- **AI SDK/OpenAI providers**: Voice is transcribed using Whisper, then processed through the LLM
+- **AI SDK/OpenAI providers**: Voice is transcribed using Whisper, then processed through the LLM.
 
 See the [Voice Endpoint Format](/getting-started/voice/voice-endpoint-format) documentation for implementation details.
+
+This is still in beta. If you want more details please check out the repo, book a call at https://calendly.com/jesse-cedarcopilot/30min or join our discord.
 
 </Note>
 
 ## Quick Start
 
-Initialize Cedar with voice settings:
+Initialize Cedar with voice settings (already configured with the built in Cedar chat input):
 
 ```tsx
 import { CedarCopilot } from 'cedar-os';
@@ -50,6 +52,26 @@ function App() {
 ```
 
 ### Voice Settings
+
+The `voiceSettings` prop accepts a partial configuration object with the following TypeScript interface:
+
+```typescript
+interface VoiceSettings {
+	language: string;                // Required - Language code for speech recognition/synthesis
+	voiceId?: string;               // Optional - Voice identifier (provider-specific)
+	pitch?: number;                 // Optional - Voice pitch modulation (0.5-2.0)
+	rate?: number;                  // Optional - Speech rate (0.5-2.0)
+	volume?: number;                // Optional - Audio volume (0.0-1.0)
+	useBrowserTTS?: boolean;        // Optional - Use browser's built-in TTS
+	autoAddToMessages?: boolean;    // Optional - Add voice interactions to chat
+	endpoint?: string;              // Optional - Custom voice endpoint URL
+}
+
+// Usage: All properties except 'language' are optional
+voiceSettings?: Partial<VoiceSettings>
+```
+
+#### Default Values
 
 | Setting             | Type    | Default     | Description                                    |
 | ------------------- | ------- | ----------- | ---------------------------------------------- |
@@ -128,6 +150,168 @@ Cedar-OS provides a complete voice integration system that enables natural voice
 - 💬 **Message Integration**: Automatic addition of voice interactions to chat history
 - 🛡️ **Error Handling**: Comprehensive error states and recovery
 - 🎨 **Visual Indicators**: Animated voice status indicators
+
+## ChatInput Component with Built-in Voice
+
+The `ChatInput` component from `cedar-os-components` comes with voice functionality built-in, providing a seamless voice experience out of the box. When you use this component, voice capabilities are automatically available without additional configuration.
+
+### How It Works
+
+The ChatInput component integrates voice through the following key features:
+
+<CodeGroup>
+
+```tsx useVoice Hook
+import { useVoice } from 'cedar-os';
+
+// The useVoice hook provides complete access to voice state and controls
+const voice = useVoice();
+
+// Available properties
+voice.isListening; // Is currently recording audio
+voice.isSpeaking; // Is playing audio response
+voice.voicePermissionStatus; // 'granted' | 'denied' | 'prompt' | 'not-supported'
+voice.voiceError; // Error message if any
+voice.voiceSettings; // Current voice configuration
+
+// Available methods
+voice.checkVoiceSupport(); // Check browser compatibility
+voice.requestVoicePermission(); // Request microphone access
+voice.toggleVoice(); // Start/stop recording
+voice.startListening(); // Start recording
+voice.stopListening(); // Stop recording
+voice.updateVoiceSettings(); // Update configuration
+voice.resetVoiceState(); // Clean up resources
+```
+
+```tsx VoiceIndicator Component
+import { VoiceIndicator } from 'cedar-os';
+
+// Visual feedback component for voice status
+<VoiceIndicator
+	voiceState={{
+		isListening: voice.isListening,
+		isSpeaking: voice.isSpeaking,
+		voiceError: voice.voiceError,
+		voicePermissionStatus: voice.voicePermissionStatus,
+	}}
+/>;
+
+// The indicator shows:
+// - Animated bars when listening (red)
+// - Pulsing circle when speaking (green)
+// - Error messages with alert icon
+// - Automatically hides when inactive
+```
+
+```tsx Voice Toggle Implementation
+// Handle voice toggle with permission management
+const handleVoiceToggle = async () => {
+	// Check browser support
+	if (!voice.checkVoiceSupport()) {
+		console.error('Voice not supported');
+		return;
+	}
+
+	// Request permission if needed
+	if (voice.voicePermissionStatus === 'prompt') {
+		await voice.requestVoicePermission();
+	}
+
+	// Toggle voice if permitted
+	if (voice.voicePermissionStatus === 'granted') {
+		voice.toggleVoice();
+	}
+};
+```
+
+</CodeGroup>
+
+### ChatInput Implementation Details
+
+The ChatInput component automatically:
+
+1. **Displays a microphone button** that changes appearance based on voice state
+2. **Shows the VoiceIndicator** when voice is active (listening or speaking)
+3. **Handles keyboard shortcuts** - Press 'M' to toggle voice (when not typing)
+4. **Manages permissions** - Automatically requests microphone access when needed
+5. **Provides visual feedback** - Button animations and color changes for different states
+
+<CodeGroup>
+
+```tsx Microphone Button States
+// The mic button automatically changes appearance
+getMicButtonClass() {
+  if (voice.isListening) {
+    // Red pulsing animation when recording
+    return 'text-red-500 animate-pulse';
+  }
+  if (voice.isSpeaking) {
+    // Green when playing response
+    return 'text-green-500';
+  }
+  if (voice.voicePermissionStatus === 'denied') {
+    // Grayed out if permission denied
+    return 'text-gray-400 cursor-not-allowed';
+  }
+  // Default state
+  return 'text-gray-600 hover:text-black';
+}
+```
+
+```tsx Keyboard Shortcut
+// Global keyboard shortcut for voice
+useEffect(() => {
+	const handleKeyDown = (e: KeyboardEvent) => {
+		// Press 'M' to toggle voice
+		if (e.key === 'm' || e.key === 'M') {
+			// Only when not typing in input fields
+			if (!isTypingInInput) {
+				e.preventDefault();
+				handleVoiceToggle();
+			}
+		}
+	};
+
+	window.addEventListener('keydown', handleKeyDown);
+	return () => window.removeEventListener('keydown', handleKeyDown);
+}, [handleVoiceToggle]);
+```
+
+```tsx Complete ChatInput Usage
+import { ChatInput } from 'cedar-os-components';
+
+// Simply use the ChatInput component - voice is included!
+<ChatInput
+	stream={true}
+	className='custom-styles'
+	handleFocus={() => console.log('Focused')}
+	handleBlur={() => console.log('Blurred')}
+/>;
+
+// Voice features are automatically available:
+// - Mic button in the input
+// - Voice indicator when active
+// - Keyboard shortcut (M key)
+// - Permission handling
+// - Visual feedback
+```
+
+</CodeGroup>
+
+### Exported Components and Hooks
+
+All voice-related functionality is exported from the main `cedar-os` package:
+
+```typescript
+// Main exports from 'cedar-os'
+export { useVoice } from 'cedar-os'; // Voice control hook
+export { VoiceIndicator } from 'cedar-os'; // Voice status component
+export { cn } from 'cedar-os'; // Utility for className merging
+
+// The ChatInput component is in cedar-os-components
+import { ChatInput } from 'cedar-os-components';
+```
 
 ## Quick Start
 
@@ -281,14 +465,14 @@ interface VoiceState {
 
 	// Voice settings
 	voiceSettings: {
-		language: string; // e.g., 'en-US'
-		voiceId?: string; // Optional voice ID for TTS
-		pitch?: number; // 0.5 to 2.0
-		rate?: number; // 0.5 to 2.0
-		volume?: number; // 0.0 to 1.0
-		useBrowserTTS?: boolean; // Use browser TTS instead of backend
-		autoAddToMessages?: boolean; // Automatically add voice interactions to messages
-		endpoint?: string; // Custom voice endpoint URL
+		language: string; // Required - Language code (e.g., 'en-US')
+		voiceId?: string; // Optional - Voice ID for TTS (provider-specific)
+		pitch?: number; // Optional - Voice pitch (0.5 to 2.0)
+		rate?: number; // Optional - Speech rate (0.5 to 2.0)
+		volume?: number; // Optional - Audio volume (0.0 to 1.0)
+		useBrowserTTS?: boolean; // Optional - Use browser TTS instead of backend
+		autoAddToMessages?: boolean; // Optional - Add voice interactions to messages
+		endpoint?: string; // Optional - Custom voice endpoint URL
 	};
 }
 ```

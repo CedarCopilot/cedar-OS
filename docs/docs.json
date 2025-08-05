@@ -68,11 +68,9 @@
 				"icon": "microphone",
 				"pages": [
 					"getting-started/voice/voice-integration",
+					"getting-started/voice/components",
 					"getting-started/voice/agentic-backend",
-					"getting-started/voice/voice-endpoint-format",
-					"getting-started/voice/streams",
-					"getting-started/voice/websockets",
-					"getting-started/voice/components"
+					"getting-started/voice/voice-endpoint-format"
 				]
 			},
 			{
@@ -111,7 +109,13 @@
 		"links": [
 			{
 				"label": "GitHub",
-				"href": "https://github.com/CedarCopilot/cedar-OS"
+				"href": "https://github.com/CedarCopilot/cedar-OS",
+				"icon": "github"
+			},
+			{
+				"label": "Discord",
+				"href": "https://discord.gg/k97ygzPD",
+				"icon": "discord"
 			}
 		]
 	},
