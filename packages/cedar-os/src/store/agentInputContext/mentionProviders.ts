@@ -101,11 +101,11 @@ export function useStateBasedMentionProvider(
 			},
 
 			toContextEntry: (item: MentionItem): ContextEntry => ({
-				id: item.id,
+				id: item.id!,
 				source: 'mention',
 				data: item.data,
 				metadata: {
-					label: item.label,
+					label: item.label!,
 					...item.metadata,
 					// Ensure icon and color are passed through
 					icon: item.metadata?.icon || config.icon,
