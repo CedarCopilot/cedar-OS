@@ -239,6 +239,7 @@ export interface LLMResponse {
 
     **`type: "message"`** - Processes and adds content as a message in the chat
     - Automatically renders the object content as a new chat message
+    - Note: if you return an object with this type AND a content field, both will be rendered as chat messages in the order the are received
 
     Other `type` values can be used for custom handling (such as generative UI).
 

@@ -106,7 +106,7 @@ export function useStateBasedMentionProvider(
 				source: 'mention',
 				data: item.data,
 				metadata: {
-					label: item.label || undefined,
+					label: item.label!,
 					...item.metadata,
 					// Ensure icon and color are passed through
 					icon: item.metadata?.icon || config.icon,

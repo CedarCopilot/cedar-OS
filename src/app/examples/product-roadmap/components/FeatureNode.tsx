@@ -17,8 +17,6 @@ import {
 	Lightbulb,
 	Component,
 	Wrench,
-	Check,
-	X,
 	Bot,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -30,6 +28,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { DiffContainer } from '@//diffs';
 
 // -----------------------------------------------------------------------------
 // Types
@@ -412,51 +411,17 @@ function FeatureNodeComponent({
 		});
 	};
 
-	// Diff overlay colors
-	const diffOverlayColor: Record<DiffType, string> = {
-		added: 'bg-green-200/50 dark:bg-green-700/30',
-		removed: 'bg-red-200/50 dark:bg-red-700/30',
-		changed: 'bg-yellow-200/50 dark:bg-yellow-700/30',
-	};
-
 	// When selected, add an outer ring highlight without affecting inner layout
 	const borderClass = selected
 		? 'border border-gray-200 dark:border-gray-700 ring-4 ring-indigo-600 dark:ring-indigo-400'
 		: 'border border-gray-200 dark:border-gray-700';
 
 	return (
-		<>
-			{/* Diff action buttons - positioned outside/above the node */}
-			{diff && (
-				<div
-					className='absolute flex gap-1 text-sm'
-					style={{
-						top: '-40px',
-						left: '50%',
-						transform: 'translateX(-50%)',
-						zIndex: 10,
-					}}>
-					<Button
-						variant='ghost'
-						size='sm'
-						className='h-8  hover:bg-green-100 shadow-sm border bg-green-300'
-						onClick={handleAcceptDiff}
-						aria-label='Accept change'>
-						<Check className='h-4 w-4  mr-1' />
-						Accept
-					</Button>
-					<Button
-						variant='ghost'
-						size='sm'
-						className='h-8  hover:bg-red-100 shadow-sm border bg-red-300'
-						onClick={handleRejectDiff}
-						aria-label='Reject change'>
-						<X className='h-4 w-4  mr-1' />
-						Reject
-					</Button>
-				</div>
-			)}
-
+		<DiffContainer
+			showDiffActions={!!diff}
+			onAccept={handleAcceptDiff}
+			onReject={handleRejectDiff}
+			diffType={diff || 'neutral'}>
 			<div
 				className={`relative rounded-lg p-4 shadow-sm dark:shadow-gray-900/50 ${borderClass} ${
 					statusBackgroundColor[status] ? statusBackgroundColor[status] : ''
@@ -467,14 +432,6 @@ function FeatureNodeComponent({
 					minWidth: '200px',
 					minHeight: '150px',
 				}}>
-				{/* Diff overlay - covers entire node with higher z-index */}
-				{diff && (
-					<div
-						className={`absolute inset-0 rounded-lg pointer-events-none ${diffOverlayColor[diff]}`}
-						style={{ zIndex: 10 }}
-					/>
-				)}
-
 				{/* All content wrapped in a div with relative positioning */}
 				<div className='relative' style={{ zIndex: 1 }}>
 					<div className='mb-2 flex-none'>
@@ -741,7 +698,7 @@ function FeatureNodeComponent({
 					aria-label='Resize node'
 				/>
 			</div>
-		</>
+		</DiffContainer>
 	);
 }
 

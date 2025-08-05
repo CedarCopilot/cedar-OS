@@ -100,7 +100,9 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
 				return (
 					<div
 						key={item.id}
-						ref={(el) => (itemRefs.current[index] = el)}
+						ref={(el) => {
+							itemRefs.current[index] = el;
+						}}
 						className={cn(
 							'text-left px-3 py-1 hover:bg-gray-200 cursor-pointer',
 							index === selectedIndex && 'bg-gray-200'
@@ -124,7 +126,9 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>(
 			return (
 				<button
 					key={item.id}
-					ref={(el) => (itemRefs.current[index] = el)}
+					ref={(el) => {
+						itemRefs.current[index] = el;
+					}}
 					type='button'
 					className={cn(
 						'w-full text-left px-2 py-1.5 cursor-pointer text-black text-sm transition-colors',
