@@ -28,7 +28,7 @@ const GenericMastraRenderer: React.FC<{
 };
 
 // ============================================================================
-// NEW MESSAGE PROCESSOR SYSTEM - Mastra processors
+// MESSAGE PROCESSOR SYSTEM - Mastra processors
 // ============================================================================
 
 const buildProcessor = (type: MastraEventType): MessageProcessor => ({
