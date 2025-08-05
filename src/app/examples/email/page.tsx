@@ -6,6 +6,7 @@ import { Sidebar } from './components/Sidebar';
 import { EmailList } from './components/EmailList';
 import { EmailView } from './components/EmailView';
 import { ComposeEmail } from './components/ComposeEmail';
+import { GmailConnect } from './components/GmailConnect';
 import { useEmailStore } from './store/emailStore';
 
 export default function EmailPage() {
@@ -24,15 +25,19 @@ export default function EmailPage() {
 			<div className='flex-1 flex overflow-hidden'>
 				<Sidebar isOpen={sidebarOpen} />
 
-				<main className='flex-1 flex bg-gray-50 dark:bg-gray-950 p-2'>
-					{selectedEmail ? (
-						<EmailView
-							email={selectedEmail}
-							onClose={() => useEmailStore.getState().clearSelection()}
-						/>
-					) : (
-						<EmailList />
-					)}
+				<main className='flex-1 flex flex-col bg-gray-50 dark:bg-gray-950 p-2'>
+					<GmailConnect />
+
+					<div className='flex-1 flex'>
+						{selectedEmail ? (
+							<EmailView
+								email={selectedEmail}
+								onClose={() => useEmailStore.getState().clearSelection()}
+							/>
+						) : (
+							<EmailList />
+						)}
+					</div>
 				</main>
 			</div>
 

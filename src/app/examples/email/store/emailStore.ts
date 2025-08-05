@@ -29,6 +29,11 @@ interface EmailStore {
 	// Settings
 	settings: EmailSettings;
 
+	// Gmail integration
+	isGmailConnected: boolean;
+	isLoading: boolean;
+	error: string | null;
+
 	// Actions
 	setEmails: (emails: Email[]) => void;
 	addEmail: (email: Email) => void;
@@ -204,6 +209,9 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 		previewPane: true,
 		readingPane: 'right',
 	},
+	isGmailConnected: false,
+	isLoading: false,
+	error: null,
 
 	// Actions
 	setEmails: (emails) => set({ emails }),

@@ -41,12 +41,46 @@ export function ComposeEmail() {
 
 	if (!isComposeOpen) return null;
 
-	const handleSend = () => {
+	const handleSend = async () => {
 		if (!composeData.to?.length || !composeData.subject) {
 			alert('Please add recipients and a subject');
 			return;
 		}
-		sendEmail();
+
+		// Check if Gmail is connected
+		const { isGmailConnected } = useEmailStore.getState();
+
+		if (isGmailConnected) {
+			try {
+				// Send via Gmail API
+				const response = await fetch('/examples/email/api/gmail/send', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						to: composeData.to,
+						subject: composeData.subject,
+						body: composeData.body || '',
+						cc: composeData.cc,
+						bcc: composeData.bcc,
+					}),
+				});
+
+				if (!response.ok) {
+					throw new Error('Failed to send email');
+				}
+
+				alert('Email sent successfully via Gmail!');
+				closeCompose();
+			} catch (error) {
+				console.error('Error sending email:', error);
+				alert('Failed to send email. Please try again.');
+			}
+		} else {
+			// Use mock send for demo
+			sendEmail();
+		}
 	};
 
 	const handleAddRecipient = (field: 'to' | 'cc' | 'bcc', email: string) => {

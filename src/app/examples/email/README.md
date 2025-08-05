@@ -1,8 +1,16 @@
-# Gmail-like Email App
+# Gmail-like Email App with Real Gmail Integration
 
-A fully functional email application built with Next.js, TypeScript, and Tailwind CSS that replicates Gmail's user interface and functionality.
+A fully functional email application built with Next.js, TypeScript, and Tailwind CSS that replicates Gmail's user interface and functionality. Now with **real Gmail integration** - connect your Gmail account to read and send actual emails!
 
 ## Features
+
+### 🆕 Gmail Integration
+
+- **OAuth Authentication**: Secure Google sign-in
+- **Read Real Emails**: Fetch emails from your Gmail inbox
+- **Send Emails**: Compose and send emails through Gmail
+- **Labels Support**: Access your Gmail labels
+- **Secure Token Storage**: OAuth tokens stored securely
 
 ### Core Functionality
 
@@ -59,6 +67,8 @@ email/
 
 ## Getting Started
 
+### Basic Setup (Mock Data)
+
 1. Navigate to the email app:
 
    ```bash
@@ -70,9 +80,40 @@ email/
 3. Try these features:
    - Click "Compose" to write a new email
    - Click on any email to view it
-   - Use the search bar to find emails
-   - Star important emails
-   - Switch between different views (Inbox, Sent, Drafts, etc.)
+
+### Gmail Integration Setup
+
+To connect your real Gmail account:
+
+1. **Set up Google Cloud Project**
+
+   - Follow the detailed instructions in [GMAIL_SETUP.md](./GMAIL_SETUP.md)
+   - Create OAuth 2.0 credentials
+   - Enable Gmail API
+
+2. **Configure Environment Variables**
+
+   - Copy `env.example` to `.env.local` in the project root
+   - Add your Google Client ID and Secret
+
+   ```bash
+   cp src/app/examples/email/env.example .env.local
+   # Edit .env.local with your credentials
+   ```
+
+3. **Connect Your Gmail**
+   - Click "Connect Gmail Account" in the app
+   - Authorize the app to access your Gmail
+   - Your real emails will appear!
+
+### Security Note
+
+- Never commit your `.env.local` file
+- In production, use secure token storage (database)
+- Implement token refresh for long sessions
+  - Use the search bar to find emails
+  - Star important emails
+  - Switch between different views (Inbox, Sent, Drafts, etc.)
 
 ## Mock Data
 
