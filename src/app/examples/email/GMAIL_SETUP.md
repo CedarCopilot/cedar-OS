@@ -44,7 +44,7 @@ This guide will help you set up Gmail integration for the email app.
      - `http://localhost:3000`
      - Your production URL (if applicable)
    - Authorized redirect URIs:
-     - `http://localhost:3000/api/auth/google/callback`
+     - `http://localhost:3000/examples/email/api/auth/google/callback`
      - Your production callback URL (if applicable)
 
 5. Copy the Client ID and Client Secret
@@ -57,10 +57,10 @@ Create a `.env.local` file in your project root:
 # Google OAuth
 GOOGLE_CLIENT_ID=your-client-id-here
 GOOGLE_CLIENT_SECRET=your-client-secret-here
-GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
+GOOGLE_REDIRECT_URI=http://localhost:3000/examples/email/api/auth/google/callback
 
 # For production, update the redirect URI
-# GOOGLE_REDIRECT_URI=https://yourdomain.com/api/auth/google/callback
+# GOOGLE_REDIRECT_URI=https://yourdomain.com/examples/email/api/auth/google/callback
 ```
 
 ## Step 5: Test the Integration

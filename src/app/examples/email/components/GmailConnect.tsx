@@ -39,6 +39,8 @@ export function GmailConnect() {
 				return 'Security check failed. Please try again';
 			case 'token_exchange_failed':
 				return 'Failed to exchange authorization code';
+			case 'config_missing':
+				return 'Google OAuth credentials are not configured. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file';
 			default:
 				return 'An unknown error occurred';
 		}
