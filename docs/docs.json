@@ -104,6 +104,11 @@
 					"getting-started/customising/styling",
 					"getting-started/customising/customising-cedar"
 				]
+			},
+			{
+				"group": "Learn more about Cedar ❤️🌳",
+				"icon": "pen",
+				"pages": ["blog/index"]
 			}
 		]
 	},
