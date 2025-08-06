@@ -52,9 +52,11 @@ export {
 } from '@/store/agentConnection/useTypedAgentConnection';
 
 // Export message processor hooks
-export { useMessageProcessors } from '@/store/messages/useMessageProcessor';
-export { useActionMessageProcessor } from '@/store/messages/useMessageProcessor';
-export { createActionMessageProcessor } from '@/store/messages/createActionMessageProcessor';
+export {
+	useMessageProcessors,
+	useActionMessageProcessor,
+	createActionMessageProcessor,
+} from '@/store/messages/useMessageProcessor';
 
 // Types
 export type {
