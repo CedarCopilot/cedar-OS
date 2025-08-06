@@ -5,7 +5,6 @@ import type {
 	MastraEventType,
 	MastraMessage,
 	MessageProcessor,
-	BaseMessage,
 } from 'cedar-os';
 
 const GenericMastraRenderer: React.FC<{
@@ -31,11 +30,13 @@ const GenericMastraRenderer: React.FC<{
 // MESSAGE PROCESSOR SYSTEM - Mastra processors
 // ============================================================================
 
-const buildProcessor = (type: MastraEventType): MessageProcessor => ({
+const buildProcessor = (
+	type: MastraEventType
+): MessageProcessor<MastraMessage<MastraEventType>> => ({
 	type,
 	namespace: 'mastra',
 	priority: 0,
-	render: ({ message }: { message: BaseMessage }) => {
+	render: ({ message }) => {
 		return (
 			<GenericMastraRenderer
 				message={message as MastraMessage<MastraEventType>}
@@ -45,7 +46,9 @@ const buildProcessor = (type: MastraEventType): MessageProcessor => ({
 	// Processor-specific validation not required here
 });
 
-export const mastraProcessors: MessageProcessor[] = [
+export const mastraProcessors: MessageProcessor<
+	MastraMessage<MastraEventType>
+>[] = [
 	buildProcessor('start'),
 	buildProcessor('step-start'),
 	buildProcessor('tool-call'),

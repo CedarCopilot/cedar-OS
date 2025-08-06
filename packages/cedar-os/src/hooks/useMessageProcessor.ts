@@ -24,7 +24,7 @@ export function useMessageProcessor<T extends Message>(
 
 	useEffect(() => {
 		// Register the processor
-		registerMessageProcessor(processor as MessageProcessor<Message>);
+		registerMessageProcessor(processor);
 
 		// Cleanup on unmount
 		return () => {
@@ -37,7 +37,9 @@ export function useMessageProcessor<T extends Message>(
  * Hook to register multiple message processors at once
  * @param configs - Array of message processor configurations
  */
-export function useMessageProcessors(configs: MessageProcessor<Message>[]) {
+export function useMessageProcessors<T extends Message>(
+	configs: MessageProcessor<T>[]
+) {
 	const registerMessageProcessors = useCedarStore(
 		(s) => s.registerMessageProcessors
 	);
@@ -46,7 +48,7 @@ export function useMessageProcessors(configs: MessageProcessor<Message>[]) {
 	);
 
 	// Memoize the processors to prevent unnecessary re-registrations
-	const processors = useMemo<MessageProcessor<Message>[]>(() => {
+	const processors = useMemo<MessageProcessor<T>[]>(() => {
 		return configs.map((config) => ({ ...config }));
 	}, [configs]);
 

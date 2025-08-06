@@ -6,17 +6,15 @@ import { useCedarStore } from 'cedar-os';
 import { MastraMessage, MessageProcessor } from 'cedar-os';
 
 import { mastraProcessors } from '@/chatMessages/MastraProcessors';
-/* 1 — all default Mastra processors */
 
-/* 2 — optionally add / override your own  ------------------ */
-
-import type { CustomMessage, Message, ActionMessage } from 'cedar-os';
+import type { CustomMessage, ActionMessage, MastraEventType } from 'cedar-os';
+import { MessageProcessorRender } from '@/store/messages/types';
 
 /* custom tool-call processor that overrides the default */
-const CustomToolCallRenderer: React.FC<{
-	message: Message;
-}> = ({ message }) => {
-	const toolMsg = message as MastraMessage<'tool-call'>;
+const CustomToolCallRenderer: MessageProcessorRender<
+	MastraMessage<'tool-call'>
+> = ({ message }) => {
+	const toolMsg = message;
 	const { toolName } = toolMsg.payload as {
 		toolName?: string;
 	};
@@ -35,7 +33,7 @@ const CustomToolCallRenderer: React.FC<{
 	);
 };
 
-const customToolCallProcessor: MessageProcessor = {
+const customToolCallProcessor: MessageProcessor<MastraMessage<'tool-call'>> = {
 	type: 'tool-call',
 	namespace: 'custom',
 	priority: 10, // Higher than default (0)
@@ -55,10 +53,10 @@ export type AlertMessage = CustomMessage<
 	{ level: AlertLevel; text: string }
 >;
 
-const AlertRendererComponent: React.FC<{ message: Message }> = ({
+const AlertRendererComponent: MessageProcessorRender<AlertMessage> = ({
 	message,
 }) => {
-	const alertMessage = message as AlertMessage;
+	const alertMessage = message;
 	const colour =
 		alertMessage.level === 'error'
 			? 'border-red-500 text-red-600'
@@ -72,7 +70,7 @@ const AlertRendererComponent: React.FC<{ message: Message }> = ({
 	);
 };
 
-const alertProcessor: MessageProcessor = {
+const alertProcessor: MessageProcessor<AlertMessage> = {
 	type: 'alert',
 	namespace: 'custom',
 	priority: 0,
@@ -88,9 +86,9 @@ const alertProcessor: MessageProcessor = {
  * This handles action messages where setterKey is "addNode"
  * --------------------------------------------------------------------------*/
 
-const AddNodeRenderer: React.FC<{ message: Message }> = ({ message }) => {
-	const actionMsg = message as ActionMessage;
-
+const AddNodeRenderer: MessageProcessorRender<ActionMessage> = ({
+	message,
+}) => {
 	return (
 		<div className='border-l-4 border-green-500 bg-green-50 p-4 my-2 rounded-r'>
 			<div className='flex items-center gap-3 mb-2'>
@@ -104,20 +102,20 @@ const AddNodeRenderer: React.FC<{ message: Message }> = ({ message }) => {
 			</div>
 
 			<div className='mt-2 text-xs text-green-600'>
-				✅ State updated: {actionMsg.stateKey}.{actionMsg.setterKey}
+				✅ State updated: {message.stateKey}.{message.setterKey}
 			</div>
 		</div>
 	);
 };
 
-const addNodeProcessor: MessageProcessor = {
+const addNodeProcessor: MessageProcessor<ActionMessage> = {
 	type: 'action',
 	namespace: 'roadmap',
 	priority: 15, // Higher than default to override default action processor
 
 	// Execute business logic with custom logging
 	execute: (obj, store) => {
-		const actionMsg = obj as ActionMessage;
+		const actionMsg = obj;
 
 		// Custom logging for addNode actions
 		console.group('🌳 Add Node Action Processor');
@@ -169,16 +167,16 @@ export function ProductRoadmapMessageRenderers() {
 
 	useEffect(() => {
 		// Register all Mastra processors
-		registerProcessors(mastraProcessors);
+		registerProcessors<MastraMessage<MastraEventType>>(mastraProcessors);
 
 		// Register custom tool-call processor (higher priority overrides default)
-		registerProcessors([customToolCallProcessor]);
+		registerProcessors<MastraMessage<'tool-call'>>([customToolCallProcessor]);
 
 		// Register custom alert processor
-		registerProcessors([alertProcessor]);
+		registerProcessors<AlertMessage>([alertProcessor]);
 
 		// Register custom addNode action processor
-		registerProcessors([addNodeProcessor]);
+		registerProcessors<ActionMessage>([addNodeProcessor]);
 
 		return () => {
 			/* tidy up on unmount (hot-reload etc.) */

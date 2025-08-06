@@ -33,10 +33,16 @@ export interface MessagesSlice {
 	setShowChat: (showChat: boolean) => void;
 
 	// Processor management
-	registerMessageProcessor: (processor: MessageProcessor) => void;
-	registerMessageProcessors: (processors: MessageProcessor[]) => void;
+	registerMessageProcessor: <T extends Message = Message>(
+		processor: MessageProcessor<T>
+	) => void;
+	registerMessageProcessors: <T extends Message = Message>(
+		processors: MessageProcessor<T>[]
+	) => void;
 	unregisterMessageProcessor: (type: string, namespace?: string) => void;
-	getMessageProcessors: (type: string) => MessageProcessorEntry[];
+	getMessageProcessors: <T extends Message = Message>(
+		type: string
+	) => MessageProcessorEntry<T>[];
 
 	/**
 	 * Handle a structured response object by validating it against a registered
@@ -130,20 +136,23 @@ export const createMessagesSlice: StateCreator<
 		setIsProcessing: (isProcessing: boolean) => set({ isProcessing }),
 
 		// Processor management
-		registerMessageProcessor: (processor: MessageProcessor) => {
+		registerMessageProcessor: <T extends Message = Message>(
+			processor: MessageProcessor<T>
+		) => {
 			set((state) => {
 				const type = processor.type;
-				const existingProcessors = state.messageProcessors[type] || [];
+				const existingProcessors = (state.messageProcessors[type] ||
+					[]) as MessageProcessorEntry<T>[];
 
 				// Create processor entry with defaults
-				const entry: MessageProcessorEntry = {
+				const entry = {
 					type: processor.type,
 					namespace: processor.namespace,
 					priority: processor.priority ?? 0,
 					execute: processor.execute,
 					render: processor.render,
 					validate: processor.validate,
-				};
+				} as MessageProcessorEntry<T>;
 
 				// Add to array and sort by priority (highest first)
 				const updatedProcessors = [...existingProcessors, entry].sort(
@@ -153,13 +162,15 @@ export const createMessagesSlice: StateCreator<
 				return {
 					messageProcessors: {
 						...state.messageProcessors,
-						[type]: updatedProcessors,
+						[type]: updatedProcessors as MessageProcessorEntry<Message>[],
 					},
 				};
 			});
 		},
 
-		registerMessageProcessors: (processors: MessageProcessor[]) => {
+		registerMessageProcessors: <T extends Message = Message>(
+			processors: MessageProcessor<T>[]
+		) => {
 			processors.forEach((processor) => {
 				get().registerMessageProcessor(processor);
 			});
@@ -183,8 +194,9 @@ export const createMessagesSlice: StateCreator<
 			});
 		},
 
-		getMessageProcessors: (type: string) => {
-			return get().messageProcessors[type] || [];
+		getMessageProcessors: <T extends Message = Message>(type: string) => {
+			return (get().messageProcessors[type] ||
+				[]) as MessageProcessorEntry<T>[];
 		},
 
 		// Handle structured message objects from LLM response
