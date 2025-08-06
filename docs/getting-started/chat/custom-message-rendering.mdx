@@ -64,11 +64,11 @@ interface MessageProcessor<T extends Message = Message> {
 
 ### Function Responsibilities
 
-| Function   | **Input**                      | **Output**  | **Purpose**                                                                       |
-| ---------- | ------------------------------ | ----------- | --------------------------------------------------------------------------------- |
-| `validate` | Raw structured object          | `boolean`   | Decides whether incoming object of this type should be handled by this processor. |
-| `execute`  | Validated typed object + store | `void`      | Handle business logic, call `store.addMessage()` if needed                        |
-| `render`   | Typed message from chat        | `ReactNode` | Custom UI rendering for chat messages                                             |
+| Function   | **Input**                                   | **Output**  | **Purpose**                                                                       |
+| ---------- | ------------------------------------------- | ----------- | --------------------------------------------------------------------------------- |
+| `validate` | Structured object of broader type `Message` | `boolean`   | Decides whether incoming object of this type should be handled by this processor. |
+| `execute`  | Validated typed object + store              | `void`      | Handle business logic, call `store.addMessage()` if needed                        |
+| `render`   | Typed message from chat                     | `ReactNode` | Custom UI rendering for chat messages                                             |
 
 <Info>
 	**Key Principle**: Objects pass through unchanged after validation. The same
@@ -104,17 +104,13 @@ Register a processor that handles business logic and controls what appears in ch
 </Info>
 
 ```typescript
-import { useMessageProcessor, CustomMessage } from 'cedar-os';
+import { useActionMessageProcessor, ActionMessageFor } from 'cedar-os';
 
-// Step 1: Define the custom message type
-export type TodoActionMessage = CustomMessage<
-	'action',
-	{
-		stateKey: 'todos';
-		setterKey: string;
-		args: [string, 'high' | 'medium' | 'low'];
-		description?: string;
-	}
+// Step 1: Define the custom message type using the helper
+type TodoActionMessage = ActionMessageFor<
+	'todos', // state key
+	'addTodo', // setter key
+	[string, 'high' | 'medium' | 'low'] // args tuple
 >;
 
 // Step 2: Create the render component
@@ -147,11 +143,11 @@ const TodoActionRenderer: React.FC<{ message: TodoActionMessage }> = ({
 	);
 };
 
-// Step 3: Register the processor
-useMessageProcessor<TodoActionMessage>({
-	type: 'action',
+// Step 3: Register the processor with full control
+useActionMessageProcessor<TodoActionMessage>({
 	namespace: 'todos',
 	priority: 10, // Higher priority than defaults
+	setterKey: 'addTodo',
 
 	execute: (obj, store) => {
 		console.log('Processing todo action:', {

@@ -171,6 +171,7 @@ const addNodeActionProcessor = createActionMessageProcessor<AddNodeMessage>({
 
 export function ProductRoadmapMessageRenderers() {
 	const registerProcessors = useCedarStore((s) => s.registerMessageProcessors);
+	const registerProcessor = useCedarStore((s) => s.registerMessageProcessor);
 	const unregisterProcessor = useCedarStore(
 		(s) => s.unregisterMessageProcessor
 	);
@@ -180,13 +181,13 @@ export function ProductRoadmapMessageRenderers() {
 		registerProcessors<MastraMessage<MastraEventType>>(mastraProcessors);
 
 		// Register custom tool-call processor (higher priority overrides default)
-		registerProcessors<MastraMessage<'tool-call'>>([customToolCallProcessor]);
+		registerProcessor<MastraMessage<'tool-call'>>(customToolCallProcessor);
 
 		// Register custom alert processor
-		registerProcessors<AlertMessage>([alertProcessor]);
+		registerProcessor<AlertMessage>(alertProcessor);
 
 		// Register custom addNode action processor
-		registerProcessors<AddNodeMessage>([addNodeActionProcessor]);
+		registerProcessor<AddNodeMessage>(addNodeActionProcessor);
 
 		return () => {
 			/* tidy up on unmount (hot-reload etc.) */
@@ -199,7 +200,7 @@ export function ProductRoadmapMessageRenderers() {
 			unregisterProcessor('alert', 'custom');
 			unregisterProcessor('action', 'roadmap');
 		};
-	}, [registerProcessors, unregisterProcessor]);
+	}, [registerProcessor, unregisterProcessor, registerProcessors]);
 
 	return null; // this component only performs registration
 }
