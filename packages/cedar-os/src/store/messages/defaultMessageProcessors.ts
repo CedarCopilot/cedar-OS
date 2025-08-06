@@ -2,18 +2,23 @@ import type {
 	StageUpdateMessage,
 	ActionMessage,
 	MessageProcessor,
-	Message,
 	MessageProcessorRegistry,
 	MessageProcessorEntry,
+	CustomMessage,
 } from './types';
+import type { Message } from './types';
 import { BaseMessage } from './types';
 
-// ============================================================================
-// NEW MESSAGE PROCESSOR SYSTEM - Default processors
-// ============================================================================
-
 // Message processor for 'message' type - execute logic + use default text renderer
-export const messageProcessor: MessageProcessor = {
+export type BackendMessage = CustomMessage<
+	'message',
+	{
+		type: 'message';
+		content: string;
+	}
+>;
+
+export const messageProcessor: MessageProcessor<BackendMessage> = {
 	type: 'message',
 	namespace: 'default',
 	priority: 0,
@@ -30,8 +35,9 @@ export const messageProcessor: MessageProcessor = {
 			content: obj.content as string,
 		});
 	},
-	validate: (obj): obj is Message =>
-		obj.type === 'message' && typeof obj.content === 'string',
+	validate: (obj): obj is BackendMessage =>
+		obj.type === 'message' &&
+		typeof (obj as BackendMessage).content === 'string',
 };
 
 // Action processor for 'action' type - execute state setters + add to chat

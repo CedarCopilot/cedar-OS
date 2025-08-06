@@ -77,6 +77,24 @@ export type ActionMessage = BaseMessage & {
 	args?: unknown[];
 };
 
+/**
+ * Helper type to build a strongly-typed ActionMessage for a particular
+ * state + setter combination.
+ *
+ * @example
+ * type AddNodeMessage = ActionMessageFor<'roadmap', 'addNode', [NewNode]>;
+ */
+export type ActionMessageFor<
+	StateKey extends string,
+	SetterKey extends string,
+	Args extends unknown[] = []
+> = BaseMessage & {
+	type: 'action';
+	stateKey: StateKey;
+	setterKey: SetterKey;
+	args: Args;
+};
+
 export type StorylineMessage = BaseMessage & {
 	type: 'storyline';
 	sections: StorylineSection[];

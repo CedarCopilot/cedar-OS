@@ -52,7 +52,9 @@ export {
 } from '@/store/agentConnection/useTypedAgentConnection';
 
 // Export message processor hooks
-export { useMessageProcessors } from '@/hooks/useMessageProcessor';
+export { useMessageProcessors } from '@/store/messages/useMessageProcessor';
+export { useActionMessageProcessor } from '@/store/messages/useMessageProcessor';
+export { createActionMessageProcessor } from '@/store/messages/createActionMessageProcessor';
 
 // Types
 export type {
@@ -78,6 +80,7 @@ export type {
 	MessageProcessor,
 	MultipleChoiceMessage,
 	ActionMessage,
+	ActionMessageFor,
 	SliderMessage,
 	StorylineMessage,
 	StorylineSection,
@@ -92,7 +95,10 @@ export type {
 } from '@/store/messages/types';
 
 // Export Mastra renderer entries and types
-export type { MastraEventType, MastraMessage } from '@/store/messages/mastra';
+export type {
+	MastraEventType,
+	MastraMessage,
+} from '@/store/messages/providers/mastra';
 
 // Export types
 export type { StylingSlice } from '@/store/stylingSlice';

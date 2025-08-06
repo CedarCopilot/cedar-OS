@@ -2,12 +2,16 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useCedarStore } from 'cedar-os';
+import { createActionMessageProcessor, useCedarStore } from 'cedar-os';
 import { MastraMessage, MessageProcessor } from 'cedar-os';
 
 import { mastraProcessors } from '@/chatMessages/MastraProcessors';
 
-import type { CustomMessage, ActionMessage, MastraEventType } from 'cedar-os';
+import type {
+	CustomMessage,
+	MastraEventType,
+	ActionMessageFor,
+} from 'cedar-os';
 import { MessageProcessorRender } from '@/store/messages/types';
 
 /* custom tool-call processor that overrides the default */
@@ -86,7 +90,7 @@ const alertProcessor: MessageProcessor<AlertMessage> = {
  * This handles action messages where setterKey is "addNode"
  * --------------------------------------------------------------------------*/
 
-const AddNodeRenderer: MessageProcessorRender<ActionMessage> = ({
+const AddNodeRenderer: MessageProcessorRender<AddNodeMessage> = ({
 	message,
 }) => {
 	return (
@@ -108,12 +112,18 @@ const AddNodeRenderer: MessageProcessorRender<ActionMessage> = ({
 	);
 };
 
-const addNodeProcessor: MessageProcessor<ActionMessage> = {
-	type: 'action',
-	namespace: 'roadmap',
-	priority: 15, // Higher than default to override default action processor
+// the payload the setter expects
+type NewNode = { id: string; title: string };
 
-	// Execute business logic with custom logging
+type AddNodeMessage = ActionMessageFor<
+	'roadmap', // stateKey  ──┐
+	'addNode', // setterKey ──┤  fixed literals
+	[NewNode] // args       ──┘  tuple-typed
+>;
+
+const addNodeActionProcessor = createActionMessageProcessor<AddNodeMessage>({
+	namespace: 'roadmap',
+	priority: 15,
 	execute: (obj, store) => {
 		const actionMsg = obj;
 
@@ -153,9 +163,9 @@ const addNodeProcessor: MessageProcessor<ActionMessage> = {
 	render: AddNodeRenderer,
 
 	// Only handle action messages where setterKey is "addNode"
-	validate: (msg): msg is ActionMessage =>
-		msg.type === 'action' && (msg as ActionMessage).setterKey === 'addNode',
-};
+	validate: (msg): msg is AddNodeMessage =>
+		msg.type === 'action' && (msg as AddNodeMessage).setterKey === 'addNode',
+});
 
 /* ---------------------------------------------------------- */
 
@@ -176,7 +186,7 @@ export function ProductRoadmapMessageRenderers() {
 		registerProcessors<AlertMessage>([alertProcessor]);
 
 		// Register custom addNode action processor
-		registerProcessors<ActionMessage>([addNodeProcessor]);
+		registerProcessors<AddNodeMessage>([addNodeActionProcessor]);
 
 		return () => {
 			/* tidy up on unmount (hot-reload etc.) */

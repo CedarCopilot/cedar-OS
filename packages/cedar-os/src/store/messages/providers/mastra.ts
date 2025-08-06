@@ -1,6 +1,6 @@
 'use client';
 
-import type { CustomMessage } from './types';
+import type { CustomMessage } from '../types';
 
 // ----------------------------------------------------------------------------------
 // Shared Mastra message types
