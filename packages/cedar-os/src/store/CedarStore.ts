@@ -93,7 +93,6 @@ export type {
 	DefaultMessage,
 	TypedMessage,
 	MessageByType,
-	MessageRendererConfig,
 } from './messages/types';
 
 // Export voice slice and utilities

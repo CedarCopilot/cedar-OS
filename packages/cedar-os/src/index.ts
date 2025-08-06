@@ -51,6 +51,13 @@ export {
 	useTypedAgentConnection,
 } from '@/store/agentConnection/useTypedAgentConnection';
 
+// Export message processor hooks
+export {
+	useMessageProcessors,
+	useActionMessageProcessor,
+	createActionMessageProcessor,
+} from '@/store/messages/useMessageProcessor';
+
 // Types
 export type {
 	AdditionalContext,
@@ -71,11 +78,11 @@ export type {
 	Message,
 	MessageByType,
 	MessageInput,
-	MessageRenderer,
-	MessageRendererConfig,
-	MessageRendererRegistry,
 	MessageRole,
+	MessageProcessor,
 	MultipleChoiceMessage,
+	ActionMessage,
+	ActionMessageFor,
 	SliderMessage,
 	StorylineMessage,
 	StorylineSection,
@@ -84,8 +91,16 @@ export type {
 	TickerMessage,
 	TodoListItem,
 	TodoListMessage,
+	StageUpdateStatus,
+	StageUpdateMessage,
 	TypedMessage,
 } from '@/store/messages/types';
+
+// Export Mastra renderer entries and types
+export type {
+	MastraEventType,
+	MastraMessage,
+} from '@/store/messages/providers/mastra';
 
 // Export types
 export type { StylingSlice } from '@/store/stylingSlice';

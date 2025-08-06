@@ -8,6 +8,8 @@ import {
 	DialogueOptionsMessage,
 	MultipleChoiceMessage,
 	SliderMessage,
+	ActionMessage,
+	StageUpdateStatus,
 } from 'cedar-os';
 import Flat3dButton from '@/containers/Flat3dButton';
 import Flat3dContainer from '@/containers/Flat3dContainer';
@@ -16,13 +18,7 @@ import KeyboardShortcut from '@/ui/KeyboardShortcut';
 import Slider from '@/ui/Slider3D';
 import { TypewriterText } from '@/text/TypewriterText';
 
-interface CaptionMessagesProps {
-	showThinking?: boolean;
-}
-
-const CaptionMessages: React.FC<CaptionMessagesProps> = ({
-	showThinking = true,
-}) => {
+const CaptionMessages: React.FC = () => {
 	const { messages } = useMessages();
 
 	const { isProcessing } = useMessages();
@@ -30,21 +26,16 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 	const store = useCedarStore((state) => state);
 	const styling = useCedarStore((state) => state.styling);
 
-	// Get the appropriate message based on showThinking prop
+	// Get the appropriate message
 	const latestMessage = React.useMemo(() => {
-		if (showThinking) {
-			// Show the latest message regardless of role
-			return messages[messages.length - 1];
-		} else {
-			// Find the last non-user message
-			for (let i = messages.length - 1; i >= 0; i--) {
-				if (messages[i].role !== 'user') {
-					return messages[i];
-				}
+		// Find the last non-user message
+		for (let i = messages.length - 1; i >= 0; i--) {
+			if (messages[i].role !== 'user' && messages[i].type === 'text') {
+				return messages[i];
 			}
-			return null;
 		}
-	}, [messages, showThinking]);
+		return null;
+	}, [messages]);
 
 	if (!latestMessage) return null;
 
@@ -194,6 +185,27 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 					/>
 				</div>
 			);
+
+		case 'stage_update': {
+			return (
+				<div className='font-semibold text-lg'>
+					<ShimmerText
+						text={latestMessage.message as string}
+						state={latestMessage.status as StageUpdateStatus}
+					/>
+				</div>
+			);
+		}
+
+		case 'action': {
+			const actionMsg = latestMessage as ActionMessage;
+			const label = actionMsg.setterKey || actionMsg.content || 'Action';
+			return (
+				<div className='font-semibold text-lg'>
+					<ShimmerText text={`⚙️ ${label}`} state='in_progress' />
+				</div>
+			);
+		}
 
 		default:
 			return null;

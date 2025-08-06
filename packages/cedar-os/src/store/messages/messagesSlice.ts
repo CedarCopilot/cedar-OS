@@ -3,9 +3,14 @@ import { CedarStore } from '../types';
 import type {
 	Message,
 	MessageInput,
-	MessageRenderer,
-	MessageRendererRegistry,
+	MessageProcessor,
+	MessageProcessorEntry,
+	MessageProcessorRegistry,
 } from './types';
+import {
+	defaultProcessors,
+	initializeProcessorRegistry,
+} from '@/store/messages/defaultMessageProcessors';
 
 // Define the messages slice
 export interface MessagesSlice {
@@ -14,8 +19,8 @@ export interface MessagesSlice {
 	isProcessing: boolean;
 	showChat: boolean;
 
-	// Message renderer registry
-	messageRenderers: MessageRendererRegistry;
+	// Message processor registry
+	messageProcessors: MessageProcessorRegistry;
 
 	// Actions
 	setMessages: (messages: Message[]) => void;
@@ -27,10 +32,25 @@ export interface MessagesSlice {
 	setIsProcessing: (isProcessing: boolean) => void;
 	setShowChat: (showChat: boolean) => void;
 
-	// Renderer management
-	registerMessageRenderer: (type: string, renderer: MessageRenderer) => void;
-	unregisterMessageRenderer: (type: string) => void;
-	getMessageRenderer: (type: string) => MessageRenderer | undefined;
+	// Processor management
+	registerMessageProcessor: <T extends Message = Message>(
+		processor: MessageProcessor<T>
+	) => void;
+	registerMessageProcessors: <T extends Message = Message>(
+		processors: MessageProcessor<T>[]
+	) => void;
+	unregisterMessageProcessor: (type: string, namespace?: string) => void;
+	getMessageProcessors: <T extends Message = Message>(
+		type: string
+	) => MessageProcessorEntry<T>[];
+
+	/**
+	 * Handle a structured response object by validating it against a registered
+	 * message renderer and adding it to chat if valid. Returns true if handled.
+	 */
+	processStructuredMessage: (
+		structured: Record<string, unknown>
+	) => Promise<boolean>;
 
 	// Utility methods
 	getMessageById: (id: string) => Message | undefined;
@@ -49,7 +69,7 @@ export const createMessagesSlice: StateCreator<
 		messages: [],
 		isProcessing: false,
 		showChat: false,
-		messageRenderers: {},
+		messageProcessors: initializeProcessorRegistry(defaultProcessors),
 
 		// Actions
 		setMessages: (messages: Message[]) => set({ messages }),
@@ -78,7 +98,11 @@ export const createMessagesSlice: StateCreator<
 			const latestMessage = messages[messages.length - 1];
 
 			// Check if latest message is assistant type
-			if (latestMessage && latestMessage.role === 'assistant') {
+			if (
+				latestMessage &&
+				latestMessage.role === 'assistant' &&
+				latestMessage.type === 'text'
+			) {
 				// Append to existing assistant message (content is already processed)
 				state.updateMessage(latestMessage.id, {
 					content: latestMessage.content + content,
@@ -111,27 +135,106 @@ export const createMessagesSlice: StateCreator<
 
 		setIsProcessing: (isProcessing: boolean) => set({ isProcessing }),
 
-		// Renderer management
-		registerMessageRenderer: (type: string, renderer: MessageRenderer) => {
-			set((state) => ({
-				messageRenderers: {
-					...state.messageRenderers,
-					[type]: renderer,
-				},
-			}));
-		},
-
-		unregisterMessageRenderer: (type: string) => {
+		// Processor management
+		registerMessageProcessor: <T extends Message = Message>(
+			processor: MessageProcessor<T>
+		) => {
 			set((state) => {
-				const { [type]: removed, ...rest } = state.messageRenderers;
-				// Use the variable to avoid linter warning
-				void removed;
-				return { messageRenderers: rest };
+				const type = processor.type;
+				const existingProcessors = (state.messageProcessors[type] ||
+					[]) as MessageProcessorEntry<T>[];
+
+				// Create processor entry with defaults
+				const entry = {
+					type: processor.type,
+					namespace: processor.namespace,
+					priority: processor.priority ?? 0,
+					execute: processor.execute,
+					render: processor.render,
+					validate: processor.validate,
+				} as MessageProcessorEntry<T>;
+
+				// Add to array and sort by priority (highest first)
+				const updatedProcessors = [...existingProcessors, entry].sort(
+					(a, b) => b.priority - a.priority
+				);
+
+				return {
+					messageProcessors: {
+						...state.messageProcessors,
+						[type]: updatedProcessors as MessageProcessorEntry<Message>[],
+					},
+				};
 			});
 		},
 
-		getMessageRenderer: (type: string) => {
-			return get().messageRenderers[type];
+		registerMessageProcessors: <T extends Message = Message>(
+			processors: MessageProcessor<T>[]
+		) => {
+			processors.forEach((processor) => {
+				get().registerMessageProcessor(processor);
+			});
+		},
+
+		unregisterMessageProcessor: (type: string, namespace?: string) => {
+			set((state) => {
+				const processors = state.messageProcessors[type];
+				if (!processors) return state;
+
+				const filtered = namespace
+					? processors.filter((p) => p.namespace !== namespace)
+					: []; // Remove all if no namespace specified
+
+				return {
+					messageProcessors: {
+						...state.messageProcessors,
+						[type]: filtered.length > 0 ? filtered : [],
+					},
+				};
+			});
+		},
+
+		getMessageProcessors: <T extends Message = Message>(type: string) => {
+			return (get().messageProcessors[type] ||
+				[]) as MessageProcessorEntry<T>[];
+		},
+
+		// Handle structured message objects from LLM response
+		processStructuredMessage: async (
+			structuredResponse: Record<string, unknown>
+		) => {
+			if (
+				!('type' in structuredResponse) ||
+				typeof structuredResponse.type !== 'string'
+			) {
+				return false;
+			}
+
+			const type = structuredResponse.type;
+			const state = get();
+
+			// NEW: Try processors first (priority-based)
+			const processors = state.getMessageProcessors(type);
+			for (const processor of processors) {
+				// Check validation if provided
+				if (
+					processor.validate &&
+					!processor.validate(structuredResponse as Message)
+				) {
+					continue; // Try next processor
+				}
+
+				// Execute business logic if provided
+				if (processor.execute) {
+					await processor.execute(structuredResponse as Message, state);
+					return true;
+				}
+			}
+
+			// DEFAULT: Add as text message with JSON display
+			state.addMessage(structuredResponse);
+
+			return true;
 		},
 
 		// Utility methods

@@ -1,4 +1,14 @@
-import { useCedarStore, useStyling, Message, TickerMessage } from 'cedar-os';
+import {
+	useCedarStore,
+	useStyling,
+	Message,
+	TickerMessage,
+	ActionMessage,
+	DialogueOptionsMessage,
+	MultipleChoiceMessage,
+	TodoListMessage,
+	StageUpdateStatus,
+} from 'cedar-os';
 import { Ticker } from 'motion-plus-react';
 import React from 'react';
 import ReactMarkdown, { Components } from 'react-markdown';
@@ -6,6 +16,7 @@ import DialogueOptions from '@/chatMessages/DialogueOptions';
 import MultipleChoice from '@/chatMessages/MultipleChoice';
 import TodoList from '@/chatMessages/TodoList';
 import Flat3dContainer from '@/containers/Flat3dContainer';
+import { ShimmerText } from '@/text/ShimmerText';
 
 interface ChatRendererProps {
 	message: Message;
@@ -13,14 +24,19 @@ interface ChatRendererProps {
 
 export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 	const { styling } = useStyling();
-	const getMessageRenderer = useCedarStore((state) => state.getMessageRenderer);
+	const getMessageProcessors = useCedarStore(
+		(state) => state.getMessageProcessors
+	);
 	const isDark = styling.darkMode;
 
-	// Check if there's a registered renderer for this message type
-	const customRenderer = getMessageRenderer(message.type);
-	if (customRenderer) {
-		// Use the custom renderer
-		return <>{customRenderer(message)}</>;
+	// Check if there's a registered processor with render function for this message type
+	const processors = getMessageProcessors(message.type);
+	for (const processor of processors) {
+		if (processor.render) {
+			// Use the processor's render function
+			const Component = processor.render;
+			return <Component message={message} />;
+		}
 	}
 
 	// Gradient mask for ticker edges
@@ -94,7 +110,7 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 					<div
 						{...getMessageStyles(message.role)}
 						className={`${getMessageStyles(message.role).className} w-full`}>
-						<DialogueOptions message={message} />
+						<DialogueOptions message={message as DialogueOptionsMessage} />
 					</div>
 				</div>
 			);
@@ -105,7 +121,7 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 					<div
 						{...getMessageStyles(message.role)}
 						className={`${getMessageStyles(message.role).className} w-full`}>
-						<MultipleChoice message={message} />
+						<MultipleChoice message={message as MultipleChoiceMessage} />
 					</div>
 				</div>
 			);
@@ -117,7 +133,7 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 					<div
 						{...messageStyles.style}
 						className={`${messageStyles.className} w-full`}>
-						<TodoList message={message} />
+						<TodoList message={message as TodoListMessage} />
 					</div>
 				</div>
 			);
@@ -152,12 +168,38 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 			);
 		}
 
+		case 'stage_update': {
+			return (
+				<div className='max-w-[100%]'>
+					<div {...getMessageStyles(message.role)}>
+						<ShimmerText
+							text={message.message as string}
+							state={message.status as StageUpdateStatus}
+						/>
+					</div>
+				</div>
+			);
+		}
+
+		case 'action': {
+			const actionMsg = message as ActionMessage;
+			const label = actionMsg.setterKey || 'Action';
+			return (
+				<div className='max-w-[100%]'>
+					<div {...getMessageStyles(actionMsg.role)}>
+						<ShimmerText text={`Completed action ${label}`} state='complete' />
+					</div>
+				</div>
+			);
+		}
+
 		default:
 			return (
 				<div className='max-w-[100%]'>
 					<div {...getMessageStyles(message.role)}>
 						<ReactMarkdown components={markdownComponents}>
-							{message.content}
+							{message.content ??
+								` \`\`\`json\n${JSON.stringify(message, null, 2)}\n\`\`\``}
 						</ReactMarkdown>
 					</div>
 				</div>
