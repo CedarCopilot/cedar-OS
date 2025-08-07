@@ -11,11 +11,6 @@
 	"navigation": {
 		"groups": [
 			{
-				"group": "Changelog",
-				"icon": "rocket",
-				"pages": ["changelog"]
-			},
-			{
 				"group": "Introduction to Cedar-OS",
 				"icon": "house",
 				"pages": [
@@ -28,86 +23,85 @@
 			{
 				"group": "Getting Started",
 				"icon": "play",
-				"pages": ["getting-started/getting-started"]
+				"pages": ["getting-started"]
 			},
 			{
 				"group": "Connecting to an Agent",
 				"icon": "plug",
 				"pages": [
-					"getting-started/agent-backend-connection/agent-backend-connection",
-					"getting-started/agent-backend-connection/mastra",
-					"getting-started/agent-backend-connection/custom"
+					"agent-backend-connection/agent-backend-connection",
+					"agent-backend-connection/mastra",
+					"agent-backend-connection/custom"
 				]
 			},
 			{
 				"group": "Chat",
 				"icon": "message",
 				"pages": [
-					"getting-started/chat/chat-overview",
-					"getting-started/chat/streaming",
-					"getting-started/chat/custom-message-rendering",
-					"getting-started/chat/chat-components",
-					"getting-started/chat/configuring-cedar-editor"
+					"chat/chat-overview",
+					"chat/streaming",
+					"chat/custom-message-rendering",
+					"chat/chat-components",
+					"chat/configuring-cedar-editor"
 				]
 			},
 			{
 				"group": "Agent Input Context",
 				"icon": "at",
 				"pages": [
-					"getting-started/agent-input-context/agent-input-context",
-					"getting-started/agent-input-context/mentions",
-					"getting-started/agent-input-context/subscribing-state"
+					"agent-input-context/agent-input-context",
+					"agent-input-context/mentions",
+					"agent-input-context/subscribing-state"
 				]
 			},
 			{
 				"group": "Agentic State",
 				"icon": "database",
 				"pages": [
-					"getting-started/state-access/agentic-state-access",
-					"getting-started/state-access/agentic-actions",
-					"getting-started/state-access/diff-history-manager"
+					"state-access/agentic-state-access",
+					"state-access/agentic-actions",
+					"state-access/diff-history-manager"
 				]
 			},
 			{
 				"group": "Voice (Beta)",
 				"icon": "microphone",
 				"pages": [
-					"getting-started/voice/voice-integration",
-					"getting-started/voice/components",
-					"getting-started/voice/agentic-backend",
-					"getting-started/voice/voice-endpoint-format"
+					"voice/voice-integration",
+					"voice/components",
+					"voice/agentic-backend",
+					"voice/voice-endpoint-format"
 				]
 			},
 			{
 				"group": "Spells (Coming Soon)",
 				"icon": "wand-magic-sparkles",
-				"pages": [
-					"getting-started/spells/spells",
-					"getting-started/spells/radial-menu"
-				]
+				"pages": ["spells/spells", "spells/radial-menu"]
 			},
 			{
 				"group": "External Integrations (Coming Soon)",
 				"icon": "puzzle-piece",
 				"pages": [
-					"getting-started/external-integrations/external-integrations",
-					"getting-started/external-integrations/text",
-					"getting-started/external-integrations/email",
-					"getting-started/external-integrations/application-triggers"
+					"external-integrations/external-integrations",
+					"external-integrations/text",
+					"external-integrations/email",
+					"external-integrations/application-triggers"
 				]
 			},
 			{
 				"group": "Customising Cedar",
 				"icon": "palette",
-				"pages": [
-					"getting-started/customising/styling",
-					"getting-started/customising/customising-cedar"
-				]
+				"pages": ["customising/styling", "customising/customising-cedar"]
 			},
 			{
 				"group": "Learn more about Cedar ❤️🌳",
 				"icon": "pen",
 				"pages": ["blog/index"]
+			},
+			{
+				"group": "Changelog",
+				"icon": "rocket",
+				"pages": ["changelog"]
 			}
 		]
 	},

@@ -61,6 +61,7 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 							<TypewriterText
 								text={latestMessage.content}
 								className='break-words'
+								renderAsMarkdown={true}
 							/>
 						</>
 					)}
