@@ -8,6 +8,7 @@ import Mention from '@tiptap/extension-mention';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { MentionNodeView } from '@/components/chatInput/ChatMention';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
+import { AddedText, RemovedText } from '@/components/chatInput/DiffExtension';
 
 import { useEffect, useState } from 'react';
 import mentionSuggestion from '@/components/chatInput/mentionSuggestion';
@@ -58,6 +59,8 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 				showOnlyWhenEditable: true,
 				showOnlyCurrent: true,
 			}),
+			AddedText,
+			RemovedText,
 			Mention.extend({
 				addAttributes() {
 					return {
