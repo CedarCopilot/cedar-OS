@@ -1,8 +1,19 @@
-# Gmail-like Email App with Real Gmail Integration
+# Gmail-like Email App with Real Gmail Integration & Mastra AI Assistant
 
-A fully functional email application built with Next.js, TypeScript, and Tailwind CSS that replicates Gmail's user interface and functionality. Now with **real Gmail integration** - connect your Gmail account to read and send actual emails!
+A fully functional email application built with Next.js, TypeScript, and Tailwind CSS that replicates Gmail's user interface and functionality. Now with **real Gmail integration** and **Mastra-powered AI Assistant** - connect your Gmail account to read and send actual emails, with an intelligent AI assistant to help you manage your inbox!
 
 ## Features
+
+### 🤖 Mastra AI Assistant (NEW!)
+
+- **Intelligent Email Agent**: Powered by Mastra framework with specialized email tools
+- **Email Composition**: AI helps write professional, clear emails
+- **Smart Summarization**: Get concise summaries of long email threads
+- **Reply Generation**: Generate contextual responses with adjustable tone
+- **Email Organization**: AI-powered labeling and archiving suggestions
+- **Pattern Analysis**: Insights into your email habits and communication patterns
+- **Streaming Responses**: Real-time AI responses with streaming support
+- **Tool-Enhanced**: Uses specialized tools for email operations
 
 ### 🆕 Gmail Integration
 
@@ -27,6 +38,7 @@ A fully functional email application built with Next.js, TypeScript, and Tailwin
 - **Dark Mode Support**: Full dark mode theme
 - **Responsive Design**: Works on desktop and tablet sizes
 - **Density Settings**: Choose between comfortable, cozy, or compact view
+- **AI Assistant Panel**: Collapsible side panel for AI assistance
 - **Keyboard Shortcuts**: (Coming soon)
 - **Drag & Drop**: (Coming soon)
 
@@ -47,6 +59,9 @@ A fully functional email application built with Next.js, TypeScript, and Tailwin
 - **State Management**: Zustand
 - **Icons**: Lucide React
 - **UI Components**: Custom components with shadcn/ui
+- **AI Integration**: Cedar OS with Mastra Agent
+- **AI Framework**: Mastra (agent orchestration)
+- **Animation**: Motion (Framer Motion)
 
 ## Project Structure
 
@@ -56,13 +71,22 @@ email/
 │   ├── Header.tsx        # Top navigation bar with search
 │   ├── Sidebar.tsx       # Left sidebar with navigation
 │   ├── EmailList.tsx     # Main email list view
-│   └── ComposeEmail.tsx  # Compose email modal
+│   ├── ComposeEmail.tsx  # Compose email modal
+│   └── GmailConnect.tsx  # Gmail connection component
 ├── store/
 │   └── emailStore.ts     # Zustand store for state management
 ├── types/
 │   └── index.ts          # TypeScript type definitions
+├── email-agent/          # Mastra AI agent
+│   ├── src/
+│   │   └── mastra/
+│   │       ├── agents/   # Email assistant agent
+│   │       ├── tools/    # Email-specific tools
+│   │       └── index.ts  # Agent configuration
+│   ├── package.json
+│   └── README.md
 ├── layout.tsx            # Root layout
-└── page.tsx              # Main page component
+└── page.tsx              # Main page with Cedar integration
 ```
 
 ## Getting Started
@@ -80,6 +104,77 @@ email/
 3. Try these features:
    - Click "Compose" to write a new email
    - Click on any email to view it
+   - Click the chat icon (right side) to open the AI assistant
+
+### Mastra AI Assistant Setup
+
+The email assistant uses a Mastra agent with specialized email tools.
+
+#### Step 1: Set up the Mastra Agent
+
+1. **Navigate to the agent directory**:
+
+   ```bash
+   cd src/app/examples/email/email-agent
+   ```
+
+2. **Install dependencies**:
+
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment**:
+
+   ```bash
+   cp env.example .env
+   # Edit .env and add your OpenAI API key
+   ```
+
+   Add to `.env`:
+
+   ```env
+   OPENAI_API_KEY=sk-your-openai-api-key-here
+   ```
+
+4. **Start the agent**:
+
+   ```bash
+   npm run dev
+   ```
+
+   The agent will run on `http://localhost:4112`
+
+#### Step 2: Configure the Email App
+
+1. **Update environment variables** in the project root:
+
+   ```bash
+   cp src/app/examples/email/env.example .env.local
+   # Edit .env.local
+   ```
+
+   Add to `.env.local`:
+
+   ```env
+   NEXT_PUBLIC_MASTRA_URL=http://localhost:4112
+   ```
+
+2. **Restart the Next.js app**:
+   ```bash
+   npm run dev
+   ```
+
+#### Step 3: Use the AI Assistant
+
+- Click the chat button on the right side of the screen
+- Ask for help with your emails
+- The agent has specialized tools for:
+  - Composing emails
+  - Summarizing threads
+  - Generating replies
+  - Organizing inbox
+  - Analyzing patterns
 
 ### Gmail Integration Setup
 
@@ -93,13 +188,7 @@ To connect your real Gmail account:
 
 2. **Configure Environment Variables**
 
-   - Copy `env.example` to `.env.local` in the project root
-   - Add your Google Client ID and Secret
-
-   ```bash
-   cp src/app/examples/email/env.example .env.local
-   # Edit .env.local with your credentials
-   ```
+   - Add your Google Client ID and Secret to `.env.local`
 
 3. **Connect Your Gmail**
    - Click "Connect Gmail Account" in the app
@@ -108,12 +197,69 @@ To connect your real Gmail account:
 
 ### Security Note
 
-- Never commit your `.env.local` file
+- Never commit your `.env.local` or `.env` files
+- Keep your API keys secret
 - In production, use secure token storage (database)
 - Implement token refresh for long sessions
-  - Use the search bar to find emails
-  - Star important emails
-  - Switch between different views (Inbox, Sent, Drafts, etc.)
+
+## Mastra Agent Features
+
+The email assistant agent includes specialized tools:
+
+### Available Tools
+
+1. **composeEmailTool**: Compose new emails with AI assistance
+2. **summarizeEmailTool**: Get concise summaries of email threads
+3. **searchEmailsTool**: Find specific emails with natural language
+4. **generateReplyTool**: Generate contextual email replies
+5. **organizeEmailTool**: Organize emails with labels and folders
+6. **analyzeEmailPatternsTool**: Analyze email habits and patterns
+
+### Example Interactions
+
+```
+User: "Help me write a professional email to decline a meeting"
+Agent: [Uses composeEmailTool to draft a polite decline email]
+
+User: "Summarize this email thread about the project"
+Agent: [Uses summarizeEmailTool to provide key points and action items]
+
+User: "Generate a friendly reply saying I'll review it by Friday"
+Agent: [Uses generateReplyTool with 'friendly' tone]
+
+User: "Analyze my email patterns this week"
+Agent: [Uses analyzeEmailPatternsTool to provide insights]
+```
+
+## Development
+
+### Extending the Mastra Agent
+
+To add new capabilities to the email assistant:
+
+1. **Add new tools** in `email-agent/src/mastra/tools/email-tools.ts`
+2. **Update agent instructions** in `email-agent/src/mastra/agents/email-agent.ts`
+3. **Restart the agent** to apply changes
+
+### Custom Email Tools
+
+Example of adding a custom tool:
+
+```typescript
+export const customEmailTool = createTool({
+	id: 'custom-tool',
+	description: 'Description of the tool',
+	inputSchema: z.object({
+		// Define inputs
+	}),
+	outputSchema: z.object({
+		// Define outputs
+	}),
+	execute: async ({ context }) => {
+		// Implementation
+	},
+});
+```
 
 ## Mock Data
 
@@ -134,5 +280,7 @@ The app includes 50 mock emails with realistic data including:
 - Drag and drop to apply labels
 - Multiple email selection with shift+click
 - Email filters and rules
-- Integration with real email APIs
+- Advanced AI features (auto-categorization, smart replies)
+- Voice commands for email management
+- Real-time Gmail sync with Mastra tools
 - Progressive Web App (PWA) support
