@@ -14,7 +14,7 @@
 				"group": "Introduction to Cedar-OS",
 				"icon": "house",
 				"pages": [
-					"index",
+					"introduction/overview",
 					"introduction/philosophy",
 					"introduction/architecture",
 					"introduction/ai-native-experiences"
@@ -23,7 +23,7 @@
 			{
 				"group": "Getting Started",
 				"icon": "play",
-				"pages": ["getting-started"]
+				"pages": ["getting-started/getting-started"]
 			},
 			{
 				"group": "Connecting to an Agent",

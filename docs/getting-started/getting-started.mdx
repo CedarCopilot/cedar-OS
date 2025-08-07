@@ -213,117 +213,117 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     **Choose your next feature:**
 
     - **[Configuring a Chat](/chat/chat-overview)** - Set up chat interfaces with `ChatInput` and `ChatBubbles` components for seamless AI conversations
+    - **[Adding State Access](/state-access/agentic-state-access)** - Enable AI agents to read and modify your application state using `useCedarState`
+    - **[Using Spells](/spells/spells)** - Create interactive radial menus and quick actions for enhanced user experience
 
-- **[Adding State Access](/state-access/agentic-state-access)** - Enable AI agents to read and modify your application state using `useCedarState`
-- **[Using Spells](/spells/spells)** - Create interactive radial menus and quick actions for enhanced user experience
+    **Quick start examples:**
 
-        **Quick start examples:**
+    <CodeGroup>
 
-        <CodeGroup>
+    ```tsx Chat Setup
+    import { FloatingCedarChat } from 'cedar-os';
 
-        ```tsx Chat Setup
-        import { FloatingCedarChat } from 'cedar-os';
+    function ChatApp() {
+      return (
+        <div className="h-screen">
+          {/* This automatically works */}
+          <FloatingCedarChat />
+        </div>
+      );
+    }
+    ```
 
-        function ChatApp() {
-          return (
-            <div className="h-screen">
-              {/* This automatically works */}
-              <FloatingCedarChat />
-            </div>
-          );
-        }
-        ```
+    ```tsx State Access
+    import { useRegisterState } from 'cedar-os';
+    import { useState } from 'react';
 
-            ```tsx State Access
-        import { useRegisterState } from 'cedar-os';
-        import { useState } from 'react';
+    function TodoApp() {
+      const [todos, setTodos] = useState([]);
 
-        function TodoApp() {
-          const [todos, setTodos] = useState([]);
-
-          useRegisterState({
-              key: 'todos',
-              value: todos,
-              setValue: setTodos,
-              description: 'User todo list manageable by AI',
-              customSetters: {
-                addTodo: {
-                  name: 'addTodo',
-                  description: 'Add a new todo item',
-                  parameters: [
-                    { name: 'text', type: 'string', description: 'Todo text' }
-                  ],
-                  execute: (currentTodos, text) => {
-                    setTodos([...currentTodos, {
-                      id: Date.now(),
-                      text,
-                      completed: false
-                    }]);
-                  }
-                },
-                toggleTodo: {
-                  name: 'toggleTodo',
-                  description: 'Toggle todo completion status',
-                  parameters: [
-                    { name: 'id', type: 'number', description: 'Todo ID' }
-                  ],
-                  execute: (currentTodos, id) => {
-                    setTodos(currentTodos.map(t =>
-                      t.id === id ? { ...t, completed: !t.completed } : t
-                    ));
-                  }
-                }
+      useRegisterState({
+          key: 'todos',
+          value: todos,
+          setValue: setTodos,
+          description: 'User todo list manageable by AI',
+          customSetters: {
+            addTodo: {
+              name: 'addTodo',
+              description: 'Add a new todo item',
+              parameters: [
+                { name: 'text', type: 'string', description: 'Todo text' }
+              ],
+              execute: (currentTodos, text) => {
+                setTodos([...currentTodos, {
+                  id: Date.now(),
+                  text,
+                  completed: false
+                }]);
+              }
+            },
+            toggleTodo: {
+              name: 'toggleTodo',
+              description: 'Toggle todo completion status',
+              parameters: [
+                { name: 'id', type: 'number', description: 'Todo ID' }
+              ],
+              execute: (currentTodos, id) => {
+                setTodos(currentTodos.map(t =>
+                  t.id === id ? { ...t, completed: !t.completed } : t
+                ));
+              }
             }
-          });
-
-          return (
-            <div>
-              {todos.map(todo => (
-                <div key={todo.id}>
-                  <input
-                    type="checkbox"
-                    checked={todo.completed}
-                    onChange={() => setTodos(todos.map(t =>
-                      t.id === todo.id ? { ...t, completed: !t.completed } : t
-                    ))}
-                  />
-                  {todo.text}
-                </div>
-              ))}
-            </div>
-          );
         }
-        ```
+      });
 
-        ```tsx Spells Integration
-        import { useSpells } from 'cedar-os';
-
-        function SpellsApp() {
-          const { registerSpell } = useSpells();
-
-          useEffect(() => {
-            registerSpell({
-              id: 'quick-action',
-              name: 'Quick Action',
-              icon: '⚡',
-              action: () => console.log('Spell activated!'),
-              trigger: 'cmd+k'
-            });
-          }, []);
-
-          return (
-            <div>
-              <p>Press Cmd+K to activate spells</p>
+      return (
+        <div>
+          {todos.map(todo => (
+            <div key={todo.id}>
+              <input
+                type="checkbox"
+                checked={todo.completed}
+                onChange={() => setTodos(todos.map(t =>
+                  t.id === todo.id ? { ...t, completed: !t.completed } : t
+                ))}
+              />
+              {todo.text}
             </div>
-          );
-        }
-        ```
+          ))}
+        </div>
+      );
+    }
+    ```
 
-        </CodeGroup>
+    ```tsx Spells Integration
+    import { useSpells } from 'cedar-os';
+    import { useEffect } from 'react';
 
-      </Step>
+    function SpellsApp() {
+      const { registerSpell } = useSpells();
 
-  </Steps>
+      useEffect(() => {
+        registerSpell({
+          id: 'quick-action',
+          name: 'Quick Action',
+          icon: '⚡',
+          action: () => console.log('Spell activated!'),
+          trigger: 'cmd+k'
+        });
+      }, []);
+
+      return (
+        <div>
+          <p>Press Cmd+K to activate spells</p>
+        </div>
+      );
+    }
+    ```
+
+    </CodeGroup>
+
+  </Step>
+
+</Steps>
 
 ## Next Steps
 
