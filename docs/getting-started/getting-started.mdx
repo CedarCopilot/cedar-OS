@@ -79,7 +79,7 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     - Use `OPENAI_API_KEY` if you're routing calls through your backend/API routes
     - You can include both if you need access from both client and server
 
-    This will be based on your agent configuration, see [Agent Backend Connection](/getting-started/agent-backend-connection/overview) for detailed configuration options.
+    This will be based on your agent configuration, see [Agent Backend Connection](/agent-backend-connection/agent-backend-connection) for detailed configuration options.
 
   </Step>
 
@@ -203,7 +203,7 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
 
     </CodeGroup>
 
-    See [Agent Backend Connection](/getting-started/agent-backend-connection/overview) for more details. Now you're ready to add a chat!
+    See [Agent Backend Connection](/agent-backend-connection/agent-backend-connection) for more details. Now you're ready to add a chat!
 
   </Step>
 
@@ -212,9 +212,9 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
 
     **Choose your next feature:**
 
-    - **[Configuring a Chat](/getting-started/messages/messages)** - Set up chat interfaces with `ChatInput` and `ChatBubbles` components for seamless AI conversations
-    - **[Adding State Access](/getting-started/state-access/agentic-state-access)** - Enable AI agents to read and modify your application state using `useCedarState`
-    - **[Using Spells](/getting-started/spells/spells)** - Create interactive radial menus and quick actions for enhanced user experience
+    - **[Configuring a Chat](/chat/chat-overview)** - Set up chat interfaces with `ChatInput` and `ChatBubbles` components for seamless AI conversations
+    - **[Adding State Access](/state-access/agentic-state-access)** - Enable AI agents to read and modify your application state using `useCedarState`
+    - **[Using Spells](/spells/spells)** - Create interactive radial menus and quick actions for enhanced user experience
 
     **Quick start examples:**
 
@@ -233,7 +233,7 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     }
     ```
 
-        ```tsx State Access
+    ```tsx State Access
     import { useRegisterState } from 'cedar-os';
     import { useState } from 'react';
 
@@ -296,6 +296,7 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
 
     ```tsx Spells Integration
     import { useSpells } from 'cedar-os';
+    import { useEffect } from 'react';
 
     function SpellsApp() {
       const { registerSpell } = useSpells();
@@ -321,17 +322,18 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
     </CodeGroup>
 
   </Step>
+
 </Steps>
 
 ## Next Steps
 
 Now that you have Cedar-OS set up with basic functionality:
 
-1. **Explore Advanced Features**: Check out [Voice Integration](/getting-started/voice), [Custom Message Types](/getting-started/messages), and [Advanced State Management](/getting-started/state-access).
+1. **Explore Advanced Features**: Check out [Voice Integration](/voice/voice-integration), [Custom Message Types](/chat/custom-message-rendering), and [Advanced State Management](/state-access/agentic-state-access).
 
-2. **Try Different Providers**: Experiment with [Mastra](/getting-started/agent-backend-connection/mastra) for full-featured agents or [Direct Provider Integration](/getting-started/agent-backend-connection/openai).
+2. **Try Different Providers**: Experiment with [Mastra](/agent-backend-connection/mastra) for full-featured agents or [Direct Provider Integration](/agent-backend-connection/custom).
 
-3. **Customize the UI**: Learn about [Styling and Theming](/getting-started/customising) to match your brand.
+3. **Customize the UI**: Learn about [Styling and Theming](/customising/styling) to match your brand.
 
 4. **Build Complex Workflows**: Explore our [Examples](/examples) to see Cedar-OS in action with real applications.
 
@@ -404,7 +406,7 @@ If all CLI commands are failing, you can manually install Cedar-OS:
 
 **Components missing ALL styling**: If Cedar-OS components are missing all styling (we promise they are beautiful!), make sure you have [Tailwind CSS configured](https://tailwindcss.com/docs/installation) in your project.
 
-**Don't see the chat?**: Make sure you add the correct chat component inside the `<CedarCopilot>` boundary. See [Chat Overview](/getting-started/chat/chat-overview) for setup instructions.
+**Don't see the chat?**: Make sure you add the correct chat component inside the `<CedarCopilot>` boundary. See [Chat Overview](/chat/chat-overview) for setup instructions.
 
 **AI calls failing**: Check that your API keys are correctly set in environment variables and accessible in your client code.
 

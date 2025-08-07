@@ -235,7 +235,7 @@ export interface LLMResponse {
     When returning structured data in the `object` field of `LLMResponse`, objects with a `type` field have special meanings in Cedar-OS:
 
     **`type: "action"`** - Defers to frontend action execution (state manipulation)
-    - Learn more: [Agentic State Access](/getting-started/state-access/agentic-state-access)
+    - Learn more: [Agentic State Access](/state-access/agentic-state-access)
 
     **`type: "message"`** - Processes and adds content as a message in the chat
     - Automatically renders the object content as a new chat message
@@ -601,13 +601,13 @@ console.log(reportResponse.object.recommendations); // string[]
 
 For more advanced usage, see our guides on:
 
-- [Chat Input](/getting-started/chat-input/overview) - Building rich chat interfaces
-- [Messages](/getting-started/messages/overview) - Handling AI responses
-- [State Access](/getting-started/state-access/overview) - Managing application state
+- [Chat Input](/agent-input-context/agent-input-context) - Building rich chat interfaces
+- [Messages](/chat/chat-overview) - Handling AI responses
+- [State Access](/state-access/agentic-state-access) - Managing application state
 
 ## Detailed Provider Guides
 
 For more advanced configuration and usage patterns:
 
-- [Extending Mastra](/getting-started/agent-backend-connection/mastra) - Full agent framework with backend extension guides
-- [Custom Backend](/getting-started/agent-backend-connection/custom) - Build your own integration through API
+- [Extending Mastra](/agent-backend-connection/mastra) - Full agent framework with backend extension guides
+- [Custom Backend](/agent-backend-connection/custom) - Build your own integration through API
