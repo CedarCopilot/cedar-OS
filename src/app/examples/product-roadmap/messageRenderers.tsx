@@ -2,7 +2,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { createActionMessageProcessor, useCedarStore } from 'cedar-os';
+import {
+	createActionMessageProcessor,
+	useCedarStore,
+	useMessageProcessors,
+} from 'cedar-os';
 import { MastraMessage, MessageProcessor } from 'cedar-os';
 
 import { mastraProcessors } from '@/chatMessages/MastraProcessors';
@@ -176,10 +180,9 @@ export function ProductRoadmapMessageRenderers() {
 		(s) => s.unregisterMessageProcessor
 	);
 
-	useEffect(() => {
-		// Register all Mastra processors
-		registerProcessors<MastraMessage<MastraEventType>>(mastraProcessors);
+	useMessageProcessors<MastraMessage<MastraEventType>>(mastraProcessors);
 
+	useEffect(() => {
 		// Register custom tool-call processor (higher priority overrides default)
 		registerProcessor<MastraMessage<'tool-call'>>(customToolCallProcessor);
 
@@ -191,10 +194,6 @@ export function ProductRoadmapMessageRenderers() {
 
 		return () => {
 			/* tidy up on unmount (hot-reload etc.) */
-			// Unregister Mastra processors
-			mastraProcessors.forEach((processor) => {
-				unregisterProcessor(processor.type, 'mastra');
-			});
 			// Unregister custom processors
 			unregisterProcessor('tool-call', 'custom');
 			unregisterProcessor('alert', 'custom');

@@ -45,6 +45,7 @@ import {
 import { ArrowRight, Box, CheckCircle, Loader } from 'lucide-react';
 import { motion } from 'motion/react';
 import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
+import { ProductRoadmapMessageRenderers } from '@/app/examples/product-roadmap/messageRenderers';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)
@@ -572,6 +573,7 @@ export default function ProductMapPage() {
 
 	const renderContent = () => (
 		<ReactFlowProvider>
+			<ProductRoadmapMessageRenderers />
 			<div className='relative h-screen w-full'>
 				<FlowCanvas />
 				<SelectedNodesPanel />
