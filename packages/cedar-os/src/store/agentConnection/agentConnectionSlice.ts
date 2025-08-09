@@ -16,6 +16,7 @@ import type {
 	StructuredParams,
 } from './types';
 import { useCedarStore } from '@/store/CedarStore';
+import { getCedarState } from '@/store/CedarStore';
 
 // Parameters for sending a message
 export interface SendMessageParams {
@@ -384,7 +385,7 @@ export const createAgentConnectionSlice: StateCreator<
 				const latestMessage = state.appendToLatestMessage(item);
 				// During streaming we defer persistence until stream completion
 				if (!state.isStreaming) {
-					state.persistMessage(latestMessage);
+					state.persistMessageStorageMessage(latestMessage);
 				}
 			} else if (item && typeof item === 'object') {
 				// Handle structured objects
@@ -495,6 +496,8 @@ export const createAgentConnectionSlice: StateCreator<
 				prompt: unifiedMessage,
 				systemPrompt,
 				temperature,
+				threadId: state.messageCurrentThreadId || undefined,
+				userId: (getCedarState('userId') as string) || undefined,
 			};
 
 			// Add provider-specific params
@@ -508,11 +511,6 @@ export const createAgentConnectionSlice: StateCreator<
 					llmParams = {
 						...llmParams,
 						route: route || `${chatPath}`,
-						// Attach thread and user identifiers when available
-						...(state.currentThreadId
-							? { threadId: state.currentThreadId }
-							: {}),
-						...(state.userId ? { resourceId: state.userId } : {}),
 					};
 					break;
 				case 'ai-sdk':
@@ -550,7 +548,7 @@ export const createAgentConnectionSlice: StateCreator<
 				// Persist any new messages added during the stream (from startIdx onwards)
 				const newMessages = get().messages.slice(startIdx);
 				for (const m of newMessages) {
-					await state.persistMessage(m);
+					await state.persistMessageStorageMessage(m);
 				}
 			} else {
 				// Non-streaming approach – call the LLM and process all items at once

@@ -1,8 +1,5 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { createStorageSlice } from './storageSlice';
-import { createIdentitySlice } from './identitySlice';
-import { createHistorySlice } from './historySlice';
 import { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
 import { createStylingSlice } from './stylingSlice';
 import { CedarStore } from './types';
@@ -24,9 +21,6 @@ export const useCedarStore = create<CedarStore>()(
 			...createAgentConnectionSlice(...a),
 			...createVoiceSlice(...a),
 			...createDebuggerSlice(...a),
-			...createIdentitySlice(...a),
-			...createHistorySlice(...a),
-			...createStorageSlice(...a),
 		} as CedarStore;
 
 		return slices;
@@ -35,13 +29,12 @@ export const useCedarStore = create<CedarStore>()(
 
 // React to userId / threadId changes to hydrate or load threads
 useCedarStore.subscribe(
-	(state) =>
-		state && [state.userId, state.currentThreadId, state.storageAdapter],
+	(state) => state && [useCedarStore.getState().messageStorageAdapter],
 	() => {
-		if (useCedarStore.getState().storageAdapter) {
-			useCedarStore.getState().loadThreads?.();
+		if (useCedarStore.getState().messageStorageAdapter) {
+			useCedarStore.getState().loadMessageStorageThreads?.();
 			// Hydrate messages for the active thread
-			useCedarStore.getState().loadMessages?.();
+			useCedarStore.getState().loadMessageStorageMessages?.();
 		}
 	},
 	{

@@ -3,14 +3,15 @@
 import React, { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
 import type { ProviderConfig } from '@/store/agentConnection/types';
-import type { StorageConfig } from '@/store/storageSlice';
+import { useCedarState } from '@/store/stateSlice/useCedarState';
+import { MessageStorageConfig } from '@/store/messages/messageStorage';
 
 export interface CedarCopilotProps {
 	children: React.ReactNode;
 	productId?: string | null;
 	userId?: string | null;
 	llmProvider?: ProviderConfig;
-	storage?: StorageConfig;
+	messageStorage?: MessageStorageConfig;
 }
 
 // Client-side component with useEffect
@@ -18,29 +19,29 @@ export function CedarCopilotClient({
 	children,
 	userId = null,
 	llmProvider,
-	storage,
+	messageStorage,
 }: CedarCopilotProps) {
 	const setProviderConfig = useCedarStore((state) => state.setProviderConfig);
-
-	const setUserId = useCedarStore((state) => state.setUserId);
-
+	const [, setCedarUserId] = useCedarState<string>('userId', userId ?? '');
 	useEffect(() => {
 		if (llmProvider) {
 			setProviderConfig(llmProvider);
 		}
 	}, [llmProvider, setProviderConfig]);
 
+	const setMessageStorageAdapter = useCedarStore(
+		(state) => state.setMessageStorageAdapter
+	);
+
+	useEffect(() => {
+		setMessageStorageAdapter(messageStorage);
+	}, [messageStorage, setMessageStorageAdapter]);
+
 	useEffect(() => {
 		if (userId !== null) {
-			setUserId(userId);
+			setCedarUserId(userId);
 		}
-	}, [userId, setUserId]);
-
-	const setStorageAdapter = useCedarStore((state) => state.setStorageAdapter);
-
-	useEffect(() => {
-		setStorageAdapter(storage);
-	}, [storage, setStorageAdapter]);
+	}, [userId, setCedarUserId]);
 
 	console.log('CedarCopilot', { userId, llmProvider });
 
