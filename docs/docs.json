@@ -43,7 +43,7 @@
 					"chat/custom-message-rendering",
 					"chat/chat-components",
 					"chat/configuring-cedar-editor",
-					"chat/storage-configuration"
+					"chat/message-storage-configuration"
 				]
 			},
 			{

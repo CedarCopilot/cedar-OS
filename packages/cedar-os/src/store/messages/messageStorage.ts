@@ -235,15 +235,17 @@ const createMessageStorageRemoteAdapter = (
 	opts: RemoteAdapterOptions
 ): MessageStorageRemoteAdapter => {
 	const headers = opts.headers ?? {};
+	const baseURL = opts.baseURL ?? '';
+	const prefix = `${baseURL}/chat`;
 	return {
 		type: 'remote',
-		baseURL: opts.baseURL,
+		baseURL: prefix,
 		headers,
 		listThreads: async (userId) => {
 			try {
 				const url = userId
-					? `${opts.baseURL}/threads?userId=${userId}`
-					: `${opts.baseURL}/threads`;
+					? `${prefix}/threads?userId=${userId}`
+					: `${prefix}/threads`;
 				const res = await fetch(url, { headers });
 				if (!res.ok) throw new Error('Fetch threads failed');
 				return (await res.json()) as MessageThreadMeta[];
@@ -254,8 +256,8 @@ const createMessageStorageRemoteAdapter = (
 		async loadMessages(userId, threadId) {
 			try {
 				const url = userId
-					? `${opts.baseURL}/threads/${threadId}?userId=${userId}`
-					: `${opts.baseURL}/threads/${threadId}`;
+					? `${prefix}/threads/${threadId}?userId=${userId}`
+					: `${prefix}/threads/${threadId}`;
 				const res = await fetch(url, { headers });
 				if (!res.ok) throw new Error('Fetch failed');
 				return (await res.json()) as Message[];
@@ -266,8 +268,8 @@ const createMessageStorageRemoteAdapter = (
 		async persistMessage(userId, threadId, message) {
 			try {
 				const url = userId
-					? `${opts.baseURL}/threads/${threadId}/messages?userId=${userId}`
-					: `${opts.baseURL}/threads/${threadId}/messages`;
+					? `${prefix}/threads/${threadId}/messages?userId=${userId}`
+					: `${prefix}/threads/${threadId}/messages`;
 				await fetch(url, {
 					method: 'POST',
 					headers: { ...headers, 'Content-Type': 'application/json' },
@@ -281,8 +283,8 @@ const createMessageStorageRemoteAdapter = (
 		async createThread(userId, threadId, meta) {
 			try {
 				const url = userId
-					? `${opts.baseURL}/threads?userId=${userId}`
-					: `${opts.baseURL}/threads`;
+					? `${prefix}/threads?userId=${userId}`
+					: `${prefix}/threads`;
 				await fetch(url, {
 					method: 'POST',
 					headers: { ...headers, 'Content-Type': 'application/json' },
@@ -296,8 +298,8 @@ const createMessageStorageRemoteAdapter = (
 		async updateThread(userId, threadId, meta) {
 			try {
 				const url = userId
-					? `${opts.baseURL}/threads/${threadId}?userId=${userId}`
-					: `${opts.baseURL}/threads/${threadId}`;
+					? `${prefix}/threads/${threadId}?userId=${userId}`
+					: `${prefix}/threads/${threadId}`;
 				await fetch(url, {
 					method: 'PUT',
 					headers: { ...headers, 'Content-Type': 'application/json' },
@@ -311,8 +313,8 @@ const createMessageStorageRemoteAdapter = (
 		async deleteThread(userId, threadId) {
 			try {
 				const url = userId
-					? `${opts.baseURL}/threads/${threadId}?userId=${userId}`
-					: `${opts.baseURL}/threads/${threadId}`;
+					? `${prefix}/threads/${threadId}?userId=${userId}`
+					: `${prefix}/threads/${threadId}`;
 				await fetch(url, {
 					method: 'DELETE',
 					headers,
@@ -325,8 +327,8 @@ const createMessageStorageRemoteAdapter = (
 		async updateMessage(userId, threadId, message) {
 			try {
 				const url = userId
-					? `${opts.baseURL}/threads/${threadId}/messages/${message.id}?userId=${userId}`
-					: `${opts.baseURL}/threads/${threadId}/messages/${message.id}`;
+					? `${prefix}/threads/${threadId}/messages/${message.id}?userId=${userId}`
+					: `${prefix}/threads/${threadId}/messages/${message.id}`;
 				await fetch(url, {
 					method: 'PUT',
 					headers: { ...headers, 'Content-Type': 'application/json' },
@@ -340,8 +342,8 @@ const createMessageStorageRemoteAdapter = (
 		async deleteMessage(userId, threadId, messageId) {
 			try {
 				const url = userId
-					? `${opts.baseURL}/threads/${threadId}/messages/${messageId}?userId=${userId}`
-					: `${opts.baseURL}/threads/${threadId}/messages/${messageId}`;
+					? `${prefix}/threads/${threadId}/messages/${messageId}?userId=${userId}`
+					: `${prefix}/threads/${threadId}/messages/${messageId}`;
 				await fetch(url, { method: 'DELETE', headers });
 			} catch {
 				/* ignore */

@@ -1,5 +1,5 @@
 ---
-title: 'Storage Configuration'
+title: 'Message Storage Configuration'
 description: 'Configure how Cedar persists chat messages and manages threads'
 ---
 
@@ -12,9 +12,9 @@ Cedar works out of the box with browser localStorage - no setup needed. Optional
 With no configured storage adapter, Cedar will:
 
 - Use local storage with 'cedar' prefix
-- Use 'default' as the user ID (no userId needed)
+- Use 'defaultUser' as the user ID
 - Load any existing threads for the default user
-- Select the first thread or creates a 'default' thread
+- Select the first thread or creates a 'defaultThread' thread
 - Persist messages as they're added
 
 # Storage Options
@@ -26,7 +26,7 @@ Cedar supports four storage adapters:
 3. **No Storage** - Disables persistence
 4. **Custom Storage** - Your own implementation
 
-Configure storage by passing the `storage` prop to CedarCopilot:
+Configure storage by passing the `messageStorage` prop to CedarCopilot:
 
 <CodeGroup>
 
@@ -51,7 +51,7 @@ import { CedarCopilot } from 'cedar-os';
 function App() {
 	return (
 		<CedarCopilot
-			storage={{
+			messageStorage={{
 				type: 'local',
 				options: {
 					key: 'my-app', // Optional: defaults to 'cedar'
@@ -70,8 +70,9 @@ import { CedarCopilot } from 'cedar-os';
 function App() {
 	return (
 		<CedarCopilot
-			storage={{
+			messageStorage={{
 				type: 'remote',
+				// All endpoints are prefixed with '/chat' (e.g., {baseURL}/chat/threads)
 				options: {
 					baseURL: 'https://api.myapp.com',
 					headers: {
@@ -93,7 +94,7 @@ import { CedarCopilot } from 'cedar-os';
 
 function App() {
 	return (
-		<CedarCopilot storage={{ type: 'none' }} userId='user-123'>
+		<CedarCopilot messageStorage={{ type: 'none' }} userId='user-123'>
 			<YourChatComponent />
 		</CedarCopilot>
 	);
@@ -118,7 +119,7 @@ const myCustomAdapter = {
 function App() {
 	return (
 		<CedarCopilot
-			storage={{
+			messageStorage={{
 				type: 'custom',
 				adapter: myCustomAdapter,
 			}}
@@ -139,6 +140,8 @@ function App() {
 
 ### Remote Storage
 
+- All endpoints are prefixed with `/chat` (e.g., `{baseUrl}/chat/threads`).
+
 You can implement any or all of the following routes. **If an endpoint is not implemented, Cedar will gracefully skip that functionality.**
 For example:
 
@@ -148,30 +151,30 @@ For example:
 **Single-User or Backend-Handled User Context:**
 If your backend handles user context through authentication headers, implement these routes:
 
-| Method | Endpoint                                   | Purpose                       | Request Body         | Response       |
-| ------ | ------------------------------------------ | ----------------------------- | -------------------- | -------------- |
-| GET    | `/threads`                                 | List threads (optional)       | -                    | `ThreadMeta[]` |
-| POST   | `/threads`                                 | Create new thread (optional)  | `{threadId, meta}`   | -              |
-| GET    | `/threads/{threadId}`                      | Get thread messages           | -                    | `Message[]`    |
-| PUT    | `/threads/{threadId}`                      | Update thread meta (optional) | `{meta: ThreadMeta}` | -              |
-| DELETE | `/threads/{threadId}`                      | Delete thread (optional)      | -                    | -              |
-| POST   | `/threads/{threadId}/messages`             | Add single message            | `{message: Message}` | -              |
-| PUT    | `/threads/{threadId}/messages/{messageId}` | Update message (optional)     | `{message: Message}` | -              |
-| DELETE | `/threads/{threadId}/messages/{messageId}` | Delete message (optional)     | -                    | -              |
+| Method | Endpoint                                                 | Purpose                       | Request Body         | Response       |
+| ------ | -------------------------------------------------------- | ----------------------------- | -------------------- | -------------- |
+| GET    | `{baseUrl}/chat/threads`                                 | List threads (optional)       | -                    | `ThreadMeta[]` |
+| POST   | `{baseUrl}/chat/threads`                                 | Create new thread (optional)  | `{threadId, meta}`   | -              |
+| GET    | `{baseUrl}/chat/threads/{threadId}`                      | Get thread messages           | -                    | `Message[]`    |
+| PUT    | `{baseUrl}/chat/threads/{threadId}`                      | Update thread meta (optional) | `{meta: ThreadMeta}` | -              |
+| DELETE | `{baseUrl}/chat/threads/{threadId}`                      | Delete thread (optional)      | -                    | -              |
+| POST   | `{baseUrl}/chat/threads/{threadId}/messages`             | Add single message            | `{message: Message}` | -              |
+| PUT    | `{baseUrl}/chat/threads/{threadId}/messages/{messageId}` | Update message (optional)     | `{message: Message}` | -              |
+| DELETE | `{baseUrl}/chat/threads/{threadId}/messages/{messageId}` | Delete message (optional)     | -                    | -              |
 
 **Multi-User with URL-Based User Context:**
 If your app has multiple users and you want to pass the user ID in the URL, implement these routes:
 
-| Method | Endpoint                                               | Purpose                       | Request Body         | Response       |
-| ------ | ------------------------------------------------------ | ----------------------------- | -------------------- | -------------- |
-| GET    | `/threads?userId={id}`                                 | List threads (optional)       | -                    | `ThreadMeta[]` |
-| POST   | `/threads?userId={id}`                                 | Create new thread (optional)  | `{threadId, meta}`   | -              |
-| GET    | `/threads/{threadId}?userId={id}`                      | Get user's thread messages    | -                    | `Message[]`    |
-| PUT    | `/threads/{threadId}?userId={id}`                      | Update thread meta (optional) | `{meta: ThreadMeta}` | -              |
-| DELETE | `/threads/{threadId}?userId={id}`                      | Delete thread (optional)      | -                    | -              |
-| POST   | `/threads/{threadId}/messages?userId={id}`             | Add message to user's thread  | `{message: Message}` | -              |
-| PUT    | `/threads/{threadId}/messages/{messageId}?userId={id}` | Update message (optional)     | `{message: Message}` | -              |
-| DELETE | `/threads/{threadId}/messages/{messageId}?userId={id}` | Delete message (optional)     | -                    | -              |
+| Method | Endpoint                                                             | Purpose                       | Request Body         | Response       |
+| ------ | -------------------------------------------------------------------- | ----------------------------- | -------------------- | -------------- |
+| GET    | `{baseUrl}/chat/threads?userId={id}`                                 | List threads (optional)       | -                    | `ThreadMeta[]` |
+| POST   | `{baseUrl}/chat/threads?userId={id}`                                 | Create new thread (optional)  | `{threadId, meta}`   | -              |
+| GET    | `{baseUrl}/chat/threads/{threadId}?userId={id}`                      | Get user's thread messages    | -                    | `Message[]`    |
+| PUT    | `{baseUrl}/chat/threads/{threadId}?userId={id}`                      | Update thread meta (optional) | `{meta: ThreadMeta}` | -              |
+| DELETE | `{baseUrl}/chat/threads/{threadId}?userId={id}`                      | Delete thread (optional)      | -                    | -              |
+| POST   | `{baseUrl}/chat/threads/{threadId}/messages?userId={id}`             | Add message to user's thread  | `{message: Message}` | -              |
+| PUT    | `{baseUrl}/chat/threads/{threadId}/messages/{messageId}?userId={id}` | Update message (optional)     | `{message: Message}` | -              |
+| DELETE | `{baseUrl}/chat/threads/{threadId}/messages/{messageId}?userId={id}` | Delete message (optional)     | -                    | -              |
 
 ### Custom Storage
 
@@ -246,7 +249,7 @@ const myCustomAdapter = {
 function App() {
 	return (
 		<CedarCopilot
-			storage={{
+			messageStorage={{
 				type: 'custom',
 				adapter: myCustomAdapter,
 			}}
@@ -278,38 +281,10 @@ Cedar automatically handles message storage operations in the following way:
   - **Streaming**: Buffered during streaming and persisted once when the stream ends.
 - **Automatic thread meta update**: Every persisted message refreshes the thread’s `updatedAt` and `lastMessage` fields. The thread title is **always** the very first message in the thread and is never overwritten.
 
-## Manual Storage Access
-
-You can manually trigger storage operations from anywhere in your app:
-
-```typescript
-import { useCedarStore } from 'cedar-os';
-
-function MyComponent() {
-	const store = useCedarStore();
-
-	const manualStorageOperations = async () => {
-		// Manually load messages for current thread
-		await store.getState().loadMessages();
-
-		// Manually load threads for current user
-		await store.getState().loadThreads();
-
-		// Manually persist a single message (autoCreateThread optional)
-		const message = {
-			role: 'user',
-			type: 'text',
-			content: 'Hello world',
-		};
-		await store.getState().persistMessage(message); // autoCreateThread defaults to true
-		await store.getState().persistMessage(message, false); // skip creating a new thread
-	};
-}
-```
-
 # User and Thread Management
 
 **Setting User ID:**
+User ID is treated internally as just another Cedar State.
 
 <CodeGroup>
 
@@ -320,7 +295,7 @@ function LoginHandler({ userId }: { userId: string }) {
 	const store = useCedarStore();
 
 	// Set user context - Cedar will load this user's threads
-	store.getState().setUserId(userId);
+	store.getState().setCedarState('userId', userId);
 
 	return <YourChatComponent />;
 }
@@ -333,7 +308,7 @@ function App({ userId }: { userId: string }) {
 	return (
 		<CedarCopilot
 			userId={userId} // Set user ID in initial configuration
-			storage={{
+			messageStorage={{
 				type: 'local', // or 'remote', 'none', 'custom'
 			}}>
 			<YourChatComponent />
@@ -345,6 +320,7 @@ function App({ userId }: { userId: string }) {
 </CodeGroup>
 
 **Setting Thread ID:**
+By default, Cedar will use the thread ID stored in the store. If at runtime you want to override the thread ID when using `callLLM`, it is also available on the `SendMessageParams` type
 
 ```typescript
 import { useCedarStore } from 'cedar-os';
