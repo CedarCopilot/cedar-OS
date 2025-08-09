@@ -58,8 +58,6 @@ export interface BaseParams {
 	systemPrompt?: string;
 	temperature?: number;
 	maxTokens?: number;
-	threadId?: string;
-	userId?: string;
 	[key: string]: unknown;
 }
 
@@ -73,6 +71,7 @@ export interface AnthropicParams extends BaseParams {
 
 export interface MastraParams extends BaseParams {
 	route: string;
+	resourceId?: string; // Only for mastra
 	// Mastra doesn't require model as a param
 }
 
@@ -81,6 +80,7 @@ export interface AISDKParams extends BaseParams {
 }
 
 export interface CustomParams extends BaseParams {
+	userId?: string; // Only for custom
 	[key: string]: unknown;
 }
 

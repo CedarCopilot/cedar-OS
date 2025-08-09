@@ -58,7 +58,12 @@ export function CedarCopilotClient({
 		}
 	}, [messageStorage]);
 
-	console.log('CedarCopilot', { userId, llmProvider, voiceSettings });
+	console.log('CedarCopilot', {
+		userId,
+		llmProvider,
+		voiceSettings,
+		messageStorage,
+	});
 
 	return <>{children}</>;
 }

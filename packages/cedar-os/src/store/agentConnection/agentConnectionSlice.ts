@@ -28,6 +28,7 @@ export interface SendMessageParams {
 	temperature?: number;
 	// Optional conversation/thread ID
 	conversationId?: string;
+	threadId?: string;
 	// Enable streaming responses
 	stream?: boolean;
 }
@@ -523,8 +524,6 @@ export const createAgentConnectionSlice: StateCreator<
 				prompt: unifiedMessage,
 				systemPrompt,
 				temperature,
-				threadId: state.messageCurrentThreadId || undefined,
-				userId: (getCedarState('userId') as string) || undefined,
 			};
 
 			// Add provider-specific params
@@ -538,10 +537,17 @@ export const createAgentConnectionSlice: StateCreator<
 					llmParams = {
 						...llmParams,
 						route: route || `${chatPath}`,
+						resourceId: (getCedarState('userId') as string) || undefined,
 					};
 					break;
 				case 'ai-sdk':
 					llmParams = { ...llmParams, model: model || 'openai/gpt-4o-mini' };
+					break;
+				case 'custom':
+					llmParams = {
+						...llmParams,
+						userId: (getCedarState('userId') as string) || undefined,
+					};
 					break;
 			}
 

@@ -98,16 +98,18 @@ export type MessageStorageConfig =
 // Adapter factories
 // -------------------------------------------------
 
+const defaultUser = 'defaultUser';
+const defaultThread = 'defaultThread';
+
 const createMessageStorageLocalAdapter = (
 	opts: LocalAdapterOptions = {}
 ): MessageStorageLocalAdapter => {
 	const prefix = opts.key ?? 'cedar';
-
-	const uidOrDefault = (uid?: string | null) => uid ?? 'default';
+	const uidOrDefault = (uid?: string | null) => uid || defaultUser;
 	const threadsKey = (userId?: string | null) =>
 		`${prefix}-threads-${uidOrDefault(userId)}`;
 	const threadKey = (userId: string | null | undefined, threadId: string) =>
-		`${prefix}-thread-${uidOrDefault(userId)}-${threadId}`;
+		`${prefix}-thread-${uidOrDefault(userId)}-${threadId || defaultThread}`;
 
 	const persistThreadMeta = (userId: string, list: MessageThreadMeta[]) => {
 		localStorage.setItem(threadsKey(userId), JSON.stringify(list));
@@ -145,7 +147,7 @@ const createMessageStorageLocalAdapter = (
 				const metaList = await this.listThreads?.(userId);
 				if (metaList && !metaList.some((m) => m.id === threadId)) {
 					metaList.push(meta);
-					persistThreadMeta(userId ?? 'default', metaList);
+					persistThreadMeta(userId ?? defaultUser, metaList);
 				}
 			} catch {
 				/* ignore */
@@ -159,7 +161,7 @@ const createMessageStorageLocalAdapter = (
 					const idx = metaList.findIndex((m) => m.id === threadId);
 					if (idx === -1) metaList.push(meta);
 					else metaList[idx] = { ...metaList[idx], ...meta };
-					persistThreadMeta(userId ?? 'default', metaList);
+					persistThreadMeta(userId ?? defaultUser, metaList);
 				}
 			} catch {
 				/* ignore */
@@ -174,7 +176,7 @@ const createMessageStorageLocalAdapter = (
 					const idx = metaList.findIndex((m) => m.id === threadId);
 					if (idx !== -1) removed = metaList[idx];
 					const newList = metaList.filter((m) => m.id !== threadId);
-					persistThreadMeta(userId ?? 'default', newList);
+					persistThreadMeta(userId ?? defaultUser, newList);
 					localStorage.removeItem(threadKey(userId, threadId));
 				}
 			} catch {
@@ -428,7 +430,7 @@ export function getMessageStorageState(
 					threadToSelect = threads[0].id;
 				} else if (threads.length === 0) {
 					// Fallback to default thread
-					threadToSelect = 'default';
+					threadToSelect = defaultThread;
 				}
 
 				if (threadToSelect && state.setMessageCurrentThreadId) {
@@ -446,11 +448,10 @@ export function getMessageStorageState(
 		try {
 			const state = get();
 			const uid = getCedarState('userId') as string | null;
+			console.log('uid', uid);
 			const tid = state.messageCurrentThreadId;
 
-			// For backwards compatibility, load from default thread if no thread is set
-			// This matches the original localStorage behavior
-			const threadToLoad = tid || 'default';
+			const threadToLoad = tid || defaultThread;
 
 			adapter
 				.loadMessages(uid, threadToLoad)
@@ -485,7 +486,7 @@ export function getMessageStorageState(
 			if (!adapter) return;
 			const uid = getCedarState('userId') as string | null;
 			const tid = get().messageCurrentThreadId;
-			const threadToLoad = tid || 'default';
+			const threadToLoad = tid || defaultThread;
 			const msgs = await adapter.loadMessages(uid, threadToLoad);
 			if (msgs.length) {
 				useCedarStore.getState().setMessages(msgs);
@@ -499,7 +500,7 @@ export function getMessageStorageState(
 
 			const state = get();
 			const uid = getCedarState('userId') as string | null;
-			const tid = state.messageCurrentThreadId || 'default';
+			const tid = state.messageCurrentThreadId || defaultThread;
 
 			// Optionally create thread if it doesn't exist
 			if (autoCreateThread && adapter.listThreads) {
