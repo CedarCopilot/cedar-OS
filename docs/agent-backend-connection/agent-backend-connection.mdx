@@ -126,6 +126,7 @@ type MastraConfig = {
 	baseURL: string;
 	apiKey?: string; // Optional: only if your backend requires auth
 	chatPath?: string; // Optional: base chat path (defaults to '/chat')
+	voiceRoute?: string; // Optional: voice endpoint route (auto-configures voice endpoint)
 };
 
 function App() {
@@ -136,6 +137,7 @@ function App() {
 				baseURL: 'http://localhost:3000/api', // Your Mastra backend URL
 				apiKey: process.env.MASTRA_API_KEY, // Optional: only if your backend requires auth
 				chatPath: '/chat', // Optional: base chat path (defaults to '/chat')
+				voiceRoute: '/chat/voice-execute', // Optional: voice endpoint route
 			}}>
 			<YourApp />
 		</CedarCopilot>
@@ -180,11 +182,17 @@ When using the Mastra provider, you have additional configuration options:
 - **baseURL**: The base URL of your Mastra backend (required)
 - **apiKey**: Optional API key if your backend requires authentication
 - **chatPath**: Optional base path for chat endpoints (defaults to `/chat`)
+- **voiceRoute**: Optional route for voice endpoints (automatically configures voice endpoint)
 
 The `chatPath` parameter is particularly useful if your Mastra backend uses a different base path for chat endpoints. For example:
 
 - With default `chatPath: '/chat'`: Routes become `/chat/execute-function`, `/chat/init`, etc.
 - With custom `chatPath: '/api/v1/chat'`: Routes become `/api/v1/chat/execute-function`, `/api/v1/chat/init`, etc.
+
+The `voiceRoute` parameter automatically configures the voice endpoint by combining it with the `baseURL`. For example:
+
+- With `baseURL: 'http://localhost:3000/api'` and `voiceRoute: '/chat/voice-execute'`: Voice endpoint becomes `http://localhost:3000/api/chat/voice-execute`
+- If not specified, the voice endpoint remains at the default value and must be configured manually
 
 The high-level `sendMessage()` function (that handles sending the chat), calls by default:
 
@@ -227,7 +235,7 @@ export interface LLMResponse {
     When returning structured data in the `object` field of `LLMResponse`, objects with a `type` field have special meanings in Cedar-OS:
 
     **`type: "action"`** - Defers to frontend action execution (state manipulation)
-    - Learn more: [Agentic State Access](/getting-started/state-access/agentic-state-access)
+    - Learn more: [Agentic State Access](/state-access/agentic-state-access)
 
     **`type: "message"`** - Processes and adds content as a message in the chat
     - Automatically renders the object content as a new chat message
@@ -595,13 +603,13 @@ console.log(reportResponse.object.recommendations); // string[]
 
 For more advanced usage, see our guides on:
 
-- [Chat Input](/getting-started/chat-input/overview) - Building rich chat interfaces
-- [Messages](/getting-started/messages/overview) - Handling AI responses
-- [State Access](/getting-started/state-access/overview) - Managing application state
+- [Chat Input](/agent-input-context/agent-input-context) - Building rich chat interfaces
+- [Messages](/chat/chat-overview) - Handling AI responses
+- [State Access](/state-access/agentic-state-access) - Managing application state
 
 ## Detailed Provider Guides
 
 For more advanced configuration and usage patterns:
 
-- [Extending Mastra](/getting-started/agent-backend-connection/mastra) - Full agent framework with backend extension guides
-- [Custom Backend](/getting-started/agent-backend-connection/custom) - Build your own integration through API
+- [Extending Mastra](/agent-backend-connection/mastra) - Full agent framework with backend extension guides
+- [Custom Backend](/agent-backend-connection/custom) - Build your own integration through API

@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
+import { ReactNode, useEffect } from 'react';
+import { v4 } from 'uuid';
 import type {
+	ContextEntry,
+	MentionItem,
 	MentionProvider,
 	StateBasedMentionProviderConfig,
-	MentionItem,
-	ContextEntry,
 } from './types';
 
 /**
@@ -64,7 +65,7 @@ export function useStateBasedMentionProvider(
 	);
 
 	useEffect(() => {
-		const provider: MentionProvider & { icon?: any; color?: string } = {
+		const provider: MentionProvider & { icon?: ReactNode; color?: string } = {
 			id: config.stateKey, // Use stateKey as provider ID
 			trigger: config.trigger || '@',
 			label: config.description || `${config.stateKey} items`,
@@ -101,11 +102,11 @@ export function useStateBasedMentionProvider(
 			},
 
 			toContextEntry: (item: MentionItem): ContextEntry => ({
-				id: item.id || '',
+				id: item.id || v4(),
 				source: 'mention',
 				data: item.data,
 				metadata: {
-					label: item.label || '',
+					label: item.label!,
 					...item.metadata,
 					// Ensure icon and color are passed through
 					icon: item.metadata?.icon || config.icon,

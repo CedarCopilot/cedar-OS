@@ -1,0 +1,167 @@
+---
+title: 'How we became obsessed with AI interfaces'
+description: ''
+---
+
+{' '}
+
+<img
+	src='https://vrhlhwfhghqbpdpfnpdq.supabase.co/storage/v1/object/public/logos//document_final.gif'
+	alt='opening demo'
+/>
+---
+
+## The Prologue
+
+Until relatively recently, in-product AI that the user could interface with existed exclusively in the form of a chatbot with a static knowledge base. This works fine for traditional SaaS products: figuring out where the hell that one setting is is the most advanced skill you need to use the software effectively (we all _love_ AWS… right?).
+
+Intelligence to manage static knowledge could be productized for companies in a relatively scalable way using techniques like RAG (ex. any docs chatbot). Thus it could be outsourced.
+
+But most user interactions aren’t searching for UI elements and navigating – they are multi-step processes (or workflows) that require intelligence at every step. Examples are endless –building a CAD diagram, designing an electric system, debugging code.
+
+Take coding for example. If you want to fix a bug, you must: 1. find the problematic code, 2. fix it, 3. make sure it is no longer problematic.
+
+Now that AI isn’t “Stupid Chat in the Bottom Right Corner” anymore (and is smarter than a concerning # of people with college degrees), we are delegating more and more of these workflows to it.
+
+After building full-stack copilots for customers for a while, we were stuck with this question: how can we productize such highly complex, hyper business-specific workflows? We can’t. This is now the most important piece for _companies to build themselves_.
+
+But there is a common denominator – at the interface level, even highly intelligent workflows are still largely trapped in chat form.
+
+Cursor changed the game for coding by introducing an additional dimension – literally breaking out of chat (and they’re doing ~ alright ~ I guess). It executes multi-step tasks and interacts with the system itself by searching for files (system awareness), applying diffs that the user can accept/reject (reliability and safety), executing tools (boosting accuracy) ….
+
+There is something so incredibly powerful about embedded AI – that’s why Cursor can 10x your productivity whereas copy/pasting code into ChatGPT can only 2x it. That’s why people began using Cursor even before it was better than ChatGPT at actually writing the code [1].
+
+---
+
+## The transformation of agent IQ
+
+Looking at the transformation of AI capabilities in products since their dawn, we see some distinct phases:
+
+**Phase 1 – The AI chatbot**: “Chat with your [docs, database, CRM, analytics, the internet, etc.]”
+
+Features:
+
+- Understand and respond to the user in natural language
+- The user is expected to act upon the response
+- It’s turn-based and user-initiated. It is stateless or has session-limited memory.
+- Example: ChatGPT
+
+**Phase 2 – The AI copilot**: “Use your tools with AI’s help”
+
+Features:
+
+- Controls external tools and systems following the user’s commands
+- The user is expected to understand how the tools must be configured to fit their needs
+- Example: Cursor chat – A good prompt is still strictly necessary unless all the stars align in your favor.
+
+**Phase 3 –The AI brain**:
+
+- It’s aware of the user, studies the user, and defines the task with the user
+- All the user is expected to know is _their own needs._
+- The v0 experience (but this has various problems that make it difficult to apply to anything other than coding). Or tab-complete that actually works. [Or Fermat’s collaborative fashion design canvas](https://liveblocks.io/blog/how-fermat-enabled-real-time-collaboration-in-their-ai-powered-whiteboard). [Or these TLDraw experiments with AI on an infinite canvas.](https://www.youtube.com/watch?v=1C2TdPkj6aQ&t=241s) [Or using voice AI to teach a student piano.](https://link.springer.com/chapter/10.1007/978-3-031-97254-6_18)
+
+---
+
+## The transformation of UI & UX for different agent IQs
+
+1. **AI chatbot** → a chat (duh): natural language in, natural language out. We have this one pretty much figured out.
+
+2. **AI copilot** → we don’t yet have tools to build interfaces that can manipulate state in a reliable, safe way that makes it feel like the software and the user are collaborating to achieve a common goal. We don’t even have the basic primitives to communicate what the agent is doing [2]. These interfaces have been propelled forward in the coding space because of the git primitive of diffs that already existed. Document-based copilots are copying this pattern as well.
+
+3. **AI Brain** → And that doesn’t even touch category 3. Category 3 requires us to fully break out of the chat. An AI brain knows both the product and the user inside out– it will know when to offer its own help, integrated in the UI itself.
+
+---
+
+Ok, so what does this magical interface entail? The short answer is no one really knows, but here are our three starting bets based on our experiences so far with building full-stack copilots:
+
+**1. Agent outputs embedded into the UI, like git diffs or Google Docs suggestions [3]**
+
+<img
+	src='https://vrhlhwfhghqbpdpfnpdq.supabase.co/storage/v1/object/public/logos//frontend_demo.gif'
+	alt='State diff demo'
+/>
+
+[Docs](/state-access/diff-history-manager)
+
+**2. Interfacing via voice like you would talk to an EA**
+
+<img
+	src='https://vrhlhwfhghqbpdpfnpdq.supabase.co/storage/v1/object/public/logos//voice_final.gif'
+	alt='Voice demo'
+/>
+[Docs](/voice/voice-integration)
+
+**3. Inputs outside from just chat**
+
+It's helpful to ground this in a few instances that already exist:
+
+- Cmd K interface (Cursor, Linear)
+- Hover overlays (Notion AI)
+  <img
+  	src='https://vrhlhwfhghqbpdpfnpdq.supabase.co/storage/v1/object/public/logos//notion%20AI.png'
+  	alt='Notion overlays'
+  />
+
+Here are a few of our ideas.
+
+- **Radial menus:**
+
+<img
+	src='https://vrhlhwfhghqbpdpfnpdq.supabase.co/storage/v1/object/public/logos//radial_menu_final.gif'
+	alt='Radial Menu demo'
+/>
+
+[Docs](/spells/spells)
+
+- **Inputting state via mentions [4]**
+
+<img
+	src='https://vrhlhwfhghqbpdpfnpdq.supabase.co/storage/v1/object/public/logos//mention_final.gif'
+	alt='Mention demo'
+/>
+
+[Docs](/agent-input-context/agent-input-context)
+
+---
+
+By defining new primitives such as these, we accomplish the following:
+
+1. We can surface AI right when the user needs it
+2. We give users easier ways to share their needs
+3. We can give the AI the context it needs to make changes for the user
+4. We can show them in a safe, reliable way that the user can iterate on
+
+That’s a _truly_ AI native experience. And it doesn’t even need to involve a chat at all. I might be a bit too nerdy about this, but that makes me pretty excited.
+
+Chat is only one interface. Cedar-OS is built around the fact that AI can be interfaced with in many more ways that none of us can even imagine yet. And that’s partially why we wanted to open source: there’s no way we can think of them alone, but we want to build a more comfortable vehicle with a powerful engine that people can use to fly into the future quicker and faster ❤️
+
+[Join our Discord](https://discord.gg/4AWawRjNdZ) to chat more. It would be lovely to hear from all of you who made it all the way here :-D
+
+---
+
+## Footnotes
+
+<a id='1'></a>**[1]** The most powerful copilots in software today actually don’t
+do too many things (think of Cursor – it really has 2 features). But copilots that
+perform 1-5 multi-step tasks super well, with the right interfaces, deliver a magical
+and transformative experience for users.
+
+The best existing AI native products:
+
+1. Identify repeatable high leverage tasks
+2. Limit scope and add constraints to deliver trust, reliability, and iteration
+
+I would go as so far as to say that for most products, the intelligence is less of a problem than the interface through which the user can interact with it. A good interface makes imperfect intelligence 1) feel smarter and 2) feel safer.
+
+<a id='2'></a>**[2]** Chat Messages are a visual primitive to reveal to the intelligence
+primitive of an LLM response. We have since moved from LLM’s → agents. Agents now
+have way more primitives: memory, tools, steps (in larger tasks), even evals. Where
+are the native interfaces for these?
+
+<a id='3'></a>**[3]** Being able to visually see changes that the AI makes as it
+executes complex workflows will remain a problem as long we agree on two things:
+1. UI will continue to exist alongside AI (betting against the V0 experience for
+all apps) 2. Human auditing and approval is important (Andrew Karpathy’s software
+3.0 talk).
+
+**[4]** We are all familiar with the concept of Garbage in, Garbage out for LLM’s. Chances are your agents would increase significantly in intelligence if users had an easier time giving them the relevant context (Context engineering is the new hot thing these days I hear).
