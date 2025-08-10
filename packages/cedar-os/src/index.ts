@@ -112,8 +112,12 @@ export type { SendMessageParams } from '@/store/agentConnection/agentConnectionS
 
 // Export storage configuration types
 export type {
-	MessageStorageBaseAdapter,
 	MessageStorageConfig,
+	MessageThreadMeta,
+	MessageStorageCustomAdapter,
+	MessageStorageLocalAdapter,
+	MessageStorageNoopAdapter,
+	MessageStorageAdapter,
 } from '@/store/messages/messageStorage';
 
 // Export voice components and types
