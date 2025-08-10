@@ -46,10 +46,6 @@ export const FloatingContainer: React.FC<FloatingContainerProps> = ({
 
 	// Calculate default dimensions based on viewport and position
 	const getDefaultDimensions = () => {
-		if (typeof window === 'undefined') {
-			return { width: 400, height: 500 };
-		}
-
 		// For bottom-center, use ChatInputContainer defaults
 		if (effectivePosition === 'bottom-center') {
 			return {
