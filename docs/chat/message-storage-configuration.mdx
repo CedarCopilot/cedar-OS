@@ -201,6 +201,14 @@ Cedar automatically handles message storage operations in the following way:
 - **When storage adapter changes**: Loads threads from the new storage system
 - **When the thread ID changes**: Automatically loads in all messages for that thread
 
+<Info>
+	Best practice: make your **load** endpoints idempotent. Implementations of
+	`listThreads` or `loadMessages`should **NOT** perform any mutations such as
+	creating threads or messages. Cedar may call these functions multiple times
+	during normal operation; if they create data each time you could end up with
+	duplicated threads or messages.
+</Info>
+
 **Message Persistence & Thread Updates:**
 
 - **User messages**: Persisted immediately when sent via `sendMessage()` (internally calls `store.persistMessage`).
