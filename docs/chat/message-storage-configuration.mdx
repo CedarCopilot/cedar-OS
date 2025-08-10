@@ -19,12 +19,11 @@ With no configured storage adapter, Cedar will:
 
 # Storage Options
 
-Cedar supports four storage adapters:
+Cedar supports three storage adapters:
 
 1. **Local Storage** (default) - Browser localStorage
-2. **Remote Storage** - HTTP API endpoints
-3. **No Storage** - Disables persistence
-4. **Custom Storage** - Your own implementation
+2. **No Storage** - Disables persistence
+3. **Custom Storage** - Your own implementation
 
 Configure storage by passing the `messageStorage` prop to CedarCopilot:
 
@@ -55,31 +54,6 @@ function App() {
 				type: 'local',
 				options: {
 					key: 'my-app', // Optional: defaults to 'cedar'
-				},
-			}}
-			userId='user-123'>
-			<YourChatComponent />
-		</CedarCopilot>
-	);
-}
-```
-
-```typescript Remote Storage
-import { CedarCopilot } from 'cedar-os';
-
-function App() {
-	return (
-		<CedarCopilot
-			messageStorage={{
-				type: 'remote',
-				// All endpoints are prefixed with '/chat' (e.g., {baseURL}/chat/threads)
-				options: {
-					baseURL: 'https://api.myapp.com',
-					headers: {
-						// Optional
-						Authorization: 'Bearer your-token',
-						'X-Custom-Header': 'value',
-					},
 				},
 			}}
 			userId='user-123'>
@@ -137,44 +111,6 @@ function App() {
 ### Local Storage & No Storage
 
 **No additional configuration needed** - these options work out of the box.
-
-### Remote Storage
-
-- All endpoints are prefixed with `/chat` (e.g., `{baseUrl}/chat/threads`).
-
-You can implement any or all of the following routes. **If an endpoint is not implemented, Cedar will gracefully skip that functionality.**
-For example:
-
-- If you don't implement the save messages endpoints, Cedar assumes you handle persistence elsewhere
-- If you don't implement the list threads endpoints, Cedar will work with just one thread
-
-**Single-User or Backend-Handled User Context:**
-If your backend handles user context through authentication headers, implement these routes:
-
-| Method | Endpoint                                                 | Purpose                       | Request Body         | Response       |
-| ------ | -------------------------------------------------------- | ----------------------------- | -------------------- | -------------- |
-| GET    | `{baseUrl}/chat/threads`                                 | List threads (optional)       | -                    | `ThreadMeta[]` |
-| POST   | `{baseUrl}/chat/threads`                                 | Create new thread (optional)  | `{threadId, meta}`   | -              |
-| GET    | `{baseUrl}/chat/threads/{threadId}`                      | Get thread messages           | -                    | `Message[]`    |
-| PUT    | `{baseUrl}/chat/threads/{threadId}`                      | Update thread meta (optional) | `{meta: ThreadMeta}` | -              |
-| DELETE | `{baseUrl}/chat/threads/{threadId}`                      | Delete thread (optional)      | -                    | -              |
-| POST   | `{baseUrl}/chat/threads/{threadId}/messages`             | Add single message            | `{message: Message}` | -              |
-| PUT    | `{baseUrl}/chat/threads/{threadId}/messages/{messageId}` | Update message (optional)     | `{message: Message}` | -              |
-| DELETE | `{baseUrl}/chat/threads/{threadId}/messages/{messageId}` | Delete message (optional)     | -                    | -              |
-
-**Multi-User with URL-Based User Context:**
-If your app has multiple users and you want to pass the user ID in the URL, implement these routes:
-
-| Method | Endpoint                                                             | Purpose                       | Request Body         | Response       |
-| ------ | -------------------------------------------------------------------- | ----------------------------- | -------------------- | -------------- |
-| GET    | `{baseUrl}/chat/threads?userId={id}`                                 | List threads (optional)       | -                    | `ThreadMeta[]` |
-| POST   | `{baseUrl}/chat/threads?userId={id}`                                 | Create new thread (optional)  | `{threadId, meta}`   | -              |
-| GET    | `{baseUrl}/chat/threads/{threadId}?userId={id}`                      | Get user's thread messages    | -                    | `Message[]`    |
-| PUT    | `{baseUrl}/chat/threads/{threadId}?userId={id}`                      | Update thread meta (optional) | `{meta: ThreadMeta}` | -              |
-| DELETE | `{baseUrl}/chat/threads/{threadId}?userId={id}`                      | Delete thread (optional)      | -                    | -              |
-| POST   | `{baseUrl}/chat/threads/{threadId}/messages?userId={id}`             | Add message to user's thread  | `{message: Message}` | -              |
-| PUT    | `{baseUrl}/chat/threads/{threadId}/messages/{messageId}?userId={id}` | Update message (optional)     | `{message: Message}` | -              |
-| DELETE | `{baseUrl}/chat/threads/{threadId}/messages/{messageId}?userId={id}` | Delete message (optional)     | -                    | -              |
 
 ### Custom Storage
 
@@ -309,7 +245,7 @@ function App({ userId }: { userId: string }) {
 		<CedarCopilot
 			userId={userId} // Set user ID in initial configuration
 			messageStorage={{
-				type: 'local', // or 'remote', 'none', 'custom'
+				type: 'local', // or 'none', 'custom'
 			}}>
 			<YourChatComponent />
 		</CedarCopilot>
@@ -352,7 +288,6 @@ Cedar's storage system is designed to fail gracefully:
 
 - **Storage failures** are silently caught to prevent UI crashes
 - **Failed loads** return empty arrays rather than throwing errors
-- **Network timeouts** (for remote storage) don't break the interface
 - **Malformed data** is handled with safe fallbacks
 
 ## Next Steps

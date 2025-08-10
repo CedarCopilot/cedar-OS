@@ -465,9 +465,9 @@ export const createAgentConnectionSlice: StateCreator<
 								content,
 							};
 							if (state.isStreaming) {
-								state.addMessage(message);
+								state.addMessage(message, false);
 							} else {
-								state.addMessageWithPersist(message);
+								state.addMessage(message);
 							}
 							break;
 						}
@@ -509,7 +509,7 @@ export const createAgentConnectionSlice: StateCreator<
 				type: 'text' as const,
 				content: editorContent,
 			};
-			state.addMessageWithPersist(userMessage);
+			state.addMessage(userMessage);
 
 			// Clear the chat specific contextEntries (mentions)
 			state.clearMentions();
@@ -610,7 +610,7 @@ export const createAgentConnectionSlice: StateCreator<
 				type: 'text' as const,
 				content: 'An error occurred while sending your message.',
 			};
-			state.addMessageWithPersist(errorMessage);
+			state.addMessage(errorMessage);
 		} finally {
 			state.setIsProcessing(false);
 		}

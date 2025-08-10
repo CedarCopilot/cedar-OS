@@ -53,17 +53,6 @@ export type MessageStorageLocalAdapter = MessageStorageBaseAdapter & {
 	type: 'local';
 };
 
-export interface RemoteAdapterOptions {
-	baseURL: string;
-	headers?: Record<string, string>;
-}
-
-export type MessageStorageRemoteAdapter = MessageStorageBaseAdapter & {
-	type: 'remote';
-	baseURL: string;
-	headers: Record<string, string>;
-};
-
 export type MessageStorageNoopAdapter = MessageStorageBaseAdapter & {
 	type: 'none';
 };
@@ -74,7 +63,6 @@ export type MessageStorageCustomAdapter = MessageStorageBaseAdapter & {
 
 export type MessageStorageAdapter =
 	| MessageStorageLocalAdapter
-	| MessageStorageRemoteAdapter
 	| MessageStorageNoopAdapter
 	| MessageStorageCustomAdapter;
 
@@ -83,10 +71,6 @@ export type MessageStorageConfig =
 	| {
 			type: 'local';
 			options?: LocalAdapterOptions;
-	  }
-	| {
-			type: 'remote';
-			options: RemoteAdapterOptions;
 	  }
 	| { type: 'none' }
 	| {
@@ -231,128 +215,6 @@ const createMessageStorageNoopAdapter = (): MessageStorageNoopAdapter => ({
 	},
 });
 
-const createMessageStorageRemoteAdapter = (
-	opts: RemoteAdapterOptions
-): MessageStorageRemoteAdapter => {
-	const headers = opts.headers ?? {};
-	const baseURL = opts.baseURL ?? '';
-	const prefix = `${baseURL}/chat`;
-	return {
-		type: 'remote',
-		baseURL: prefix,
-		headers,
-		listThreads: async (userId) => {
-			try {
-				const url = userId
-					? `${prefix}/threads?userId=${userId}`
-					: `${prefix}/threads`;
-				const res = await fetch(url, { headers });
-				if (!res.ok) throw new Error('Fetch threads failed');
-				return (await res.json()) as MessageThreadMeta[];
-			} catch {
-				return [];
-			}
-		},
-		async loadMessages(userId, threadId) {
-			try {
-				const url = userId
-					? `${prefix}/threads/${threadId}?userId=${userId}`
-					: `${prefix}/threads/${threadId}`;
-				const res = await fetch(url, { headers });
-				if (!res.ok) throw new Error('Fetch failed');
-				return (await res.json()) as Message[];
-			} catch {
-				return [];
-			}
-		},
-		async persistMessage(userId, threadId, message) {
-			try {
-				const url = userId
-					? `${prefix}/threads/${threadId}/messages?userId=${userId}`
-					: `${prefix}/threads/${threadId}/messages`;
-				await fetch(url, {
-					method: 'POST',
-					headers: { ...headers, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ message }),
-				});
-			} catch {
-				/* ignore */
-			}
-			return message;
-		},
-		async createThread(userId, threadId, meta) {
-			try {
-				const url = userId
-					? `${prefix}/threads?userId=${userId}`
-					: `${prefix}/threads`;
-				await fetch(url, {
-					method: 'POST',
-					headers: { ...headers, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ threadId, meta }),
-				});
-			} catch {
-				/* ignore */
-			}
-			return meta;
-		},
-		async updateThread(userId, threadId, meta) {
-			try {
-				const url = userId
-					? `${prefix}/threads/${threadId}?userId=${userId}`
-					: `${prefix}/threads/${threadId}`;
-				await fetch(url, {
-					method: 'PUT',
-					headers: { ...headers, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ meta }),
-				});
-			} catch {
-				/* ignore */
-			}
-			return meta;
-		},
-		async deleteThread(userId, threadId) {
-			try {
-				const url = userId
-					? `${prefix}/threads/${threadId}?userId=${userId}`
-					: `${prefix}/threads/${threadId}`;
-				await fetch(url, {
-					method: 'DELETE',
-					headers,
-				});
-			} catch {
-				/* ignore */
-			}
-			return undefined;
-		},
-		async updateMessage(userId, threadId, message) {
-			try {
-				const url = userId
-					? `${prefix}/threads/${threadId}/messages/${message.id}?userId=${userId}`
-					: `${prefix}/threads/${threadId}/messages/${message.id}`;
-				await fetch(url, {
-					method: 'PUT',
-					headers: { ...headers, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ message }),
-				});
-			} catch {
-				/* ignore */
-			}
-			return message;
-		},
-		async deleteMessage(userId, threadId, messageId) {
-			try {
-				const url = userId
-					? `${prefix}/threads/${threadId}/messages/${messageId}?userId=${userId}`
-					: `${prefix}/threads/${threadId}/messages/${messageId}`;
-				await fetch(url, { method: 'DELETE', headers });
-			} catch {
-				/* ignore */
-			}
-			return undefined;
-		},
-	};
-};
-
 export const createMessageStorageAdapter = (
 	cfg?: MessageStorageConfig
 ): MessageStorageAdapter => {
@@ -362,9 +224,6 @@ export const createMessageStorageAdapter = (
 	if (cfg.type === 'none') return createMessageStorageNoopAdapter();
 	if (cfg.type === 'custom')
 		return { type: 'custom', ...cfg.adapter } as MessageStorageCustomAdapter;
-	if (cfg.type === 'remote')
-		return createMessageStorageRemoteAdapter(cfg.options);
-	// fallback
 	return createMessageStorageLocalAdapter();
 };
 

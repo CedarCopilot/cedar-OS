@@ -12,7 +12,7 @@ import {
 } from '@/store/messages/messageStorage';
 
 // Define the messages slice
-export interface MessagesSlice extends MessageStorageState {
+export type MessagesSlice = MessageStorageState & {
 	// State
 	messages: Message[];
 	isProcessing: boolean;
@@ -23,8 +23,7 @@ export interface MessagesSlice extends MessageStorageState {
 
 	// Actions
 	setMessages: (messages: Message[]) => void;
-	addMessage: (message: MessageInput) => Message;
-	addMessageWithPersist: (message: MessageInput) => Message;
+	addMessage: (message: MessageInput, isComplete?: boolean) => Message;
 	appendToLatestMessage: (content: string) => Message;
 	updateMessage: (id: string, updates: Partial<Message>) => void;
 	deleteMessage: (id: string) => void;
@@ -40,7 +39,7 @@ export interface MessagesSlice extends MessageStorageState {
 	// Utility methods
 	getMessageById: (id: string) => Message | undefined;
 	getMessagesByRole: (role: Message['role']) => Message[];
-}
+};
 
 // Create the messages slice
 export const createMessagesSlice: StateCreator<
@@ -59,7 +58,10 @@ export const createMessagesSlice: StateCreator<
 		// Actions
 		setMessages: (messages: Message[]) => set({ messages }),
 		setShowChat: (showChat: boolean) => set({ showChat }),
-		addMessage: (messageData: MessageInput): Message => {
+		addMessage: (
+			messageData: MessageInput,
+			isComplete: boolean = true
+		): Message => {
 			const newMessage: Message = {
 				...messageData,
 				id: `message-${Date.now()}-${Math.random()
@@ -70,14 +72,13 @@ export const createMessagesSlice: StateCreator<
 			set((state) => ({
 				messages: [...state.messages, newMessage],
 			}));
-			return newMessage;
-		},
-		addMessageWithPersist: (messageData: MessageInput): Message => {
-			const newMessage = get().addMessage(messageData);
-			try {
-				get().persistMessageStorageMessage(newMessage);
-			} catch (error) {
-				console.error('Error persisting message:', error);
+
+			if (isComplete) {
+				try {
+					get().persistMessageStorageMessage(newMessage);
+				} catch (error) {
+					console.error('Error persisting message:', error);
+				}
 			}
 			return newMessage;
 		},

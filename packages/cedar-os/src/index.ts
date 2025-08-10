@@ -115,7 +115,6 @@ export type {
 	MessageStorageBaseAdapter,
 	MessageStorageConfig,
 	LocalAdapterOptions,
-	RemoteAdapterOptions,
 } from '@/store/messages/messageStorage';
 
 // Export voice components and types
