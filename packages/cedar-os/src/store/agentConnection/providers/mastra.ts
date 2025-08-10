@@ -228,37 +228,3 @@ export const mastraProvider: ProviderImplementation<
 		return { type: 'chunk', content: chunk };
 	},
 };
-
-// Helper function to initialise a chat session with Mastra
-export const initialiseChat = async (
-	config: MastraConfig,
-	params?: {
-		conversationId?: string;
-		metadata?: Record<string, unknown>;
-	}
-): Promise<{ conversationId: string; metadata?: Record<string, unknown> }> => {
-	const headers: Record<string, string> = {
-		'Content-Type': 'application/json',
-	};
-
-	if (config.apiKey) {
-		headers.Authorization = `Bearer ${config.apiKey}`;
-	}
-
-	// Isabelle check how to initialise
-	const chatPath = config.chatPath || '/chat';
-	const response = await fetch(`${config.baseURL}${chatPath}/init`, {
-		method: 'POST',
-		headers,
-		body: JSON.stringify({
-			conversationId: params?.conversationId,
-			metadata: params?.metadata,
-		}),
-	});
-
-	if (!response.ok) {
-		throw new Error(`Failed to initialise chat: ${response.status}`);
-	}
-
-	return response.json();
-};

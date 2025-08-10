@@ -42,7 +42,8 @@
 					"chat/streaming",
 					"chat/custom-message-rendering",
 					"chat/chat-components",
-					"chat/configuring-cedar-editor"
+					"chat/configuring-cedar-editor",
+					"chat/message-storage-configuration"
 				]
 			},
 			{

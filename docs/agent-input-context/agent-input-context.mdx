@@ -337,7 +337,7 @@ function CustomContextProcessor() {
 		// Handle response
 		store.handleLLMResult(response);
 
-		// Add user message to chat
+		// Add user message to chat (persists by default if message storage is configured)
 		store.addMessage({
 			role: 'user',
 			type: 'text',

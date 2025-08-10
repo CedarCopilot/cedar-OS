@@ -1,7 +1,7 @@
 'use client';
 
 import { CedarCopilot } from 'cedar-os';
-import type { ProviderConfig } from 'cedar-os';
+import type { MessageStorageConfig, ProviderConfig } from 'cedar-os';
 import { ReactNode } from 'react';
 
 export default function ProductRoadmapLayout({
@@ -38,8 +38,16 @@ export default function ProductRoadmapLayout({
 		useBrowserTTS: true,
 	};
 
+	const localStorageConfig: MessageStorageConfig = {
+		type: 'local',
+		options: { key: 'cedar-test' },
+	};
+
 	return (
-		<CedarCopilot llmProvider={llmProvider} voiceSettings={voiceSettings}>
+		<CedarCopilot
+			llmProvider={llmProvider}
+			voiceSettings={voiceSettings}
+			messageStorage={localStorageConfig}>
 			{children}
 		</CedarCopilot>
 	);

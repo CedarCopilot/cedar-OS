@@ -3,8 +3,6 @@ import type {
 	ProviderImplementation,
 	InferProviderConfig,
 	StructuredParams,
-	VoiceParams,
-	VoiceLLMResponse,
 } from '../types';
 import { handleEventStream } from '../agentUtils';
 
