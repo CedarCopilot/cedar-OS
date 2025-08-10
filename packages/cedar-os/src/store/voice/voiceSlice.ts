@@ -192,6 +192,9 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 		try {
 			set({ isSpeaking: false });
 
+			// Set processing state to true when starting voice processing
+			get().setIsProcessing(true);
+
 			// Check if we have a provider configured
 			const providerConfig = get().providerConfig;
 			if (!providerConfig) {
@@ -224,6 +227,8 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 				voiceError:
 					error instanceof Error ? error.message : 'Failed to process voice',
 			});
+			// Set processing state to false on error
+			get().setIsProcessing(false);
 		}
 	},
 
@@ -307,11 +312,16 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 					}
 				}
 			}
+
+			// Set processing state to false when voice processing completes successfully
+			get().setIsProcessing(false);
 		} catch (error) {
 			set({
 				voiceError:
 					error instanceof Error ? error.message : 'Failed to process voice',
 			});
+			// Set processing state to false on error
+			get().setIsProcessing(false);
 		}
 	},
 
