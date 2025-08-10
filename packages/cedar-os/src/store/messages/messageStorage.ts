@@ -232,7 +232,6 @@ export interface MessageThreadMeta {
 	id: string;
 	title: string;
 	updatedAt: string;
-	lastMessage: string;
 }
 
 export interface MessageStorageState {
@@ -373,7 +372,6 @@ export function getMessageStorageState(
 							id: tid,
 							title: (message.content ?? 'Chat').slice(0, 40),
 							updatedAt: new Date().toISOString(),
-							lastMessage: message.content ?? '',
 						};
 						await adapter.createThread(uid, tid, meta);
 					}
@@ -395,7 +393,6 @@ export function getMessageStorageState(
 					title:
 						existingMeta?.title ?? (message.content ?? 'Chat').slice(0, 40),
 					updatedAt: new Date().toISOString(),
-					lastMessage: message.content ?? '',
 				};
 				await adapter.updateThread(uid, tid, meta);
 			}
