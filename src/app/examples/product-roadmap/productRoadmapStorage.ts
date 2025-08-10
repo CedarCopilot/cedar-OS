@@ -1,6 +1,6 @@
 'use client';
 
-import type { StorageConfig, DefaultMessage, Message } from 'cedar-os';
+import type { MessageStorageConfig, DefaultMessage, Message } from 'cedar-os';
 
 // --------------------
 // Types & helpers
@@ -114,18 +114,18 @@ export const transformMastraMessages = (
 // --------------------
 
 // No storage adapter
-export const noStorageAdapter: StorageConfig = {
+export const noStorageAdapter: MessageStorageConfig = {
 	type: 'none',
 };
 
-export const localStorageAdapter: StorageConfig = {
+export const localStorageAdapter: MessageStorageConfig = {
 	type: 'local',
 	options: {
 		key: 'product-roadmap',
 	},
 };
 
-export const customStorageAdapter: StorageConfig = {
+export const customStorageAdapter: MessageStorageConfig = {
 	type: 'custom',
 	adapter: {
 		listThreads: async (userId?: string | null) => {
