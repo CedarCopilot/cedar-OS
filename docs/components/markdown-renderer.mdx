@@ -1,0 +1,265 @@
+# MarkdownRenderer Component
+
+The `MarkdownRenderer` component provides consistent markdown rendering across Cedar OS with advanced features like code syntax highlighting, copy functionality, and prefix processing for chat interfaces.
+
+## Features
+
+- **GitHub Flavored Markdown**: Full GFM support including tables, strikethrough, and more
+- **Code Highlighting**: Syntax highlighting with copy-to-clipboard functionality
+- **Prefix Processing**: Special handling for prefixed content (useful in chat)
+- **Cedar OS Integration**: Automatic theming and styling consistency
+- **Inline/Block Modes**: Flexible rendering for different contexts
+- **Interactive Elements**: Copy buttons, hover effects, and edit placeholders
+
+## Import
+
+```tsx
+import { MarkdownRenderer } from 'cedar-os-components/chatMessages/MarkdownRenderer';
+```
+
+## Basic Usage
+
+```tsx
+<MarkdownRenderer content='# Hello World\n\nThis is **bold** and *italic* text.' />
+```
+
+## Props
+
+| Prop            | Type      | Default | Description                                           |
+| --------------- | --------- | ------- | ----------------------------------------------------- |
+| `content`       | `string`  | -       | The markdown content to render (required)             |
+| `processPrefix` | `boolean` | `false` | Whether to process prefix markers for special styling |
+| `className`     | `string`  | `''`    | Additional CSS classes                                |
+| `inline`        | `boolean` | `false` | Whether to render in inline mode                      |
+
+## Supported Markdown Elements
+
+### Headers
+
+```markdown
+# H1 Header
+
+## H2 Header
+
+### H3 Header
+
+#### H4 Header
+
+##### H5 Header
+
+###### H6 Header
+```
+
+### Text Formatting
+
+```markdown
+**Bold text**
+_Italic text_
+~~Strikethrough~~
+`Inline code`
+```
+
+### Links
+
+```markdown
+[Link text](https://example.com)
+```
+
+- Opens in new tab automatically
+- `noopener noreferrer` for security
+
+### Code Blocks
+
+````markdown
+```javascript
+function hello() {
+	console.log('Hello World!');
+}
+```
+````
+
+Features:
+
+- Language detection and display
+- Copy to clipboard button
+- Edit placeholder button
+- Syntax highlighting
+- Horizontal scrolling for long lines
+
+### Lists
+
+```markdown
+- Unordered list item 1
+- Unordered list item 2
+
+1. Ordered list item 1
+2. Ordered list item 2
+```
+
+### Blockquotes
+
+```markdown
+> This is a blockquote
+> It can span multiple lines
+```
+
+### Tables
+
+```markdown
+| Column 1 | Column 2 | Column 3 |
+| -------- | -------- | -------- |
+| Row 1    | Data     | More     |
+| Row 2    | Data     | More     |
+```
+
+## Inline Mode
+
+Perfect for rendering markdown within text flows:
+
+```tsx
+<MarkdownRenderer content='This is **bold** text inline' inline={true} />
+```
+
+In inline mode:
+
+- Paragraphs render as `<span>` instead of `<p>`
+- Maintains text flow
+- Preserves inline formatting
+
+## Prefix Processing
+
+For chat interfaces where you need special styling for prefixes:
+
+```tsx
+<MarkdownRenderer
+	content="@@PREFIX@@Assistant: @@ENDPREFIX@@Here's my response with **markdown**!"
+	processPrefix={true}
+/>
+```
+
+The prefix markers (`@@PREFIX@@` and `@@ENDPREFIX@@`) are automatically:
+
+- Styled with the accent color
+- Processed recursively in nested elements
+- Removed from final output
+
+## Code Block Features
+
+### Copy Functionality
+
+- Hover over code blocks to see copy button
+- Visual feedback when copied
+- Automatic timeout after 2 seconds
+
+### Language Support
+
+```tsx
+<MarkdownRenderer
+	content={`
+\`\`\`typescript
+interface User {
+  name: string;
+  email: string;
+}
+\`\`\`
+`}
+/>
+```
+
+### Inline Code
+
+```tsx
+<MarkdownRenderer content='Use the `useState` hook for state management.' />
+```
+
+## Styling Integration
+
+The component automatically integrates with Cedar OS theming:
+
+```tsx
+// Uses current styling context
+const { styling } = useStyling();
+
+// Applied to:
+// - Accent colors for borders and highlights
+// - Text colors for consistency
+// - Background colors for code blocks
+// - Table styling and borders
+```
+
+## Advanced Examples
+
+### Chat Message Rendering
+
+````tsx
+<MarkdownRenderer
+	content="@@PREFIX@@System: @@ENDPREFIX@@**Task completed!** Here's your code:\n\n```javascript\nconsole.log('Done!');\n```"
+	processPrefix={true}
+	className='chat-message'
+/>
+````
+
+### Documentation Content
+
+```tsx
+<MarkdownRenderer
+	content={`
+# API Documentation
+
+## Overview
+This API provides **powerful** functionality.
+
+### Example Request
+\`\`\`bash
+curl -X POST https://api.example.com/data
+\`\`\`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| \`name\` | string | User name |
+| \`email\` | string | User email |
+  `}
+/>
+```
+
+### Inline Rich Text
+
+```tsx
+<p>
+	Welcome to our platform!
+	<MarkdownRenderer
+		content='Read our **documentation** and try the `API`'
+		inline={true}
+	/>
+	to get started.
+</p>
+```
+
+## Accessibility
+
+- Proper semantic HTML structure
+- Keyboard navigation support
+- Screen reader friendly
+- High contrast code blocks
+- Focus indicators on interactive elements
+
+## Performance
+
+- Efficient re-rendering with React.memo patterns
+- Lazy loading for complex content
+- Optimized regex processing
+- Minimal DOM updates
+
+## Browser Support
+
+- Modern browsers with ES6+ support
+- Clipboard API for copy functionality
+- CSS Grid/Flexbox for layout
+- Graceful degradation for older browsers
+
+## Integration Notes
+
+- Works seamlessly with TypewriterText component
+- Consistent with other Cedar OS components
+- Supports dark/light theme switching
+- Responsive design for all screen sizes
