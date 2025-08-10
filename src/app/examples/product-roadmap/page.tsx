@@ -596,9 +596,10 @@ export default function ProductMapPage() {
 					onChatModeChange={setChatMode}
 					currentChatMode={chatMode}
 				/>
-				{chatMode === 'caption' && <CedarCaptionChat />}
+				{chatMode === 'caption' && <CedarCaptionChat stream={false} />}
 				{chatMode === 'floating' && (
 					<FloatingCedarChat
+						stream={false}
 						side='right'
 						title='Product Roadmap Assistant'
 						collapsedLabel='Need help with your roadmap?'
@@ -614,7 +615,8 @@ export default function ProductMapPage() {
 				side='right'
 				title='Product Roadmap Assistant'
 				collapsedLabel='Need help with your roadmap?'
-				showCollapsedButton={true}>
+				showCollapsedButton={true}
+				stream={false}>
 				{renderContent()}
 			</SidePanelCedarChat>
 		);

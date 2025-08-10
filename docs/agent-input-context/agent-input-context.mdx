@@ -97,30 +97,104 @@ This is for advanced understanding. Move on to [Agentic State Access](/state-acc
 
 ## Default Context Tokenization
 
-Cedar automatically manages sending this additional context to the LLM. However, if you're interested in how it does it, here's a breakdown. Cedar's `sendMessage` function automatically tokenizes context using these steps:
+Cedar's `sendMessage` function automatically handles context based on your provider configuration:
 
-1. **Extract Editor Content**: `stringifyEditor()` converts the rich text editor content to plain text
-2. **Combine with Context**: `stringifyInputContext()` merges the editor content with additional context
-3. **Send to AI**: The combined string is sent as the prompt to your AI provider
-
-Here's how the default process works:
+### For Structured Providers (Mastra, Custom)
 
 ```tsx
-// Inside sendMessage (simplified)
+// Inside sendMessage for Mastra/Custom providers
 const editorContent = state.stringifyEditor(); // "Update @task-123 status"
-const fullContext = state.stringifyInputContext(); // Full context with mentions data
+const structuredContext = sanitizeJson(state.additionalContext); // Raw object
 
-// fullContext contains:
-// User Text: Update @task-123 status
-//
-// Additional Context: {
-//   "tasks": [{
-//     "id": "task-123",
-//     "source": "mention",
-//     "data": { "title": "Fix login bug", "status": "in-progress" },
-//     "metadata": { "label": "Fix login bug" }
-//   }]
-// }
+// Sent as separate fields:
+const llmParams = {
+	prompt: editorContent, // Clean user text
+	additionalContext: structuredContext, // Structured data object
+	route: '/chat',
+	userId: 'user-123',
+};
+```
+
+### For Text-Based Providers (OpenAI, Anthropic, AI-SDK)
+
+```tsx
+// Inside sendMessage for direct LLM providers
+const editorContent = state.stringifyEditor(); // "Update @task-123 status"
+const fullContext = state.stringifyInputContext(); // Combined string
+
+// Sent as unified prompt:
+const llmParams = {
+	prompt: fullContext, // Contains: "User Text: ... \n\nAdditional Context: {...}"
+	model: 'gpt-4o-mini',
+};
+```
+
+## Backend Integration Examples
+
+### Mastra Backend Example
+
+```typescript
+// Your Mastra agent receives structured data
+export const chatAgent = {
+	name: 'Chat Agent',
+	instructions: 'You are a helpful assistant',
+	model: 'gpt-4o-mini',
+
+	async execute(input: { prompt: string; additionalContext?: any }) {
+		const { prompt, additionalContext } = input;
+
+		// Process user intent from clean prompt
+		console.log('User wants:', prompt);
+
+		// Access structured context programmatically
+		if (additionalContext?.tasks) {
+			const mentionedTasks = additionalContext.tasks
+				.filter((entry) => entry.source === 'mention')
+				.map((entry) => entry.data);
+
+			console.log('Referenced tasks:', mentionedTasks);
+		}
+
+		// Your custom logic here...
+	},
+};
+```
+
+### Custom Provider Backend Example
+
+```typescript
+// Your custom endpoint receives both fields
+app.post('/api/chat', async (req, res) => {
+	const { prompt, additionalContext, userId } = req.body;
+
+	// Clean user message for intent processing
+	const userIntent = await processIntent(prompt);
+
+	// Structured context for data operations
+	const contextualData = {
+		mentions: additionalContext?.tasks || [],
+		userState: additionalContext?.['user-state'] || [],
+		documents: additionalContext?.documents || [],
+	};
+
+	// Combine for LLM call
+	const systemPrompt = `
+    User Intent: ${userIntent}
+    Available Context: ${JSON.stringify(contextualData)}
+    
+    Respond helpfully using the provided context.
+  `;
+
+	const response = await openai.chat.completions.create({
+		model: 'gpt-4o-mini',
+		messages: [
+			{ role: 'system', content: systemPrompt },
+			{ role: 'user', content: prompt },
+		],
+	});
+
+	res.json({ content: response.choices[0].message.content });
+});
 ```
 
 ## Accessing Additional Context

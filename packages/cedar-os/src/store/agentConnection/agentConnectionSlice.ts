@@ -19,6 +19,7 @@ import type {
 } from './types';
 import { useCedarStore } from '@/store/CedarStore';
 import { getCedarState } from '@/store/CedarStore';
+import { sanitizeJson } from '@/utils/sanitizeJson';
 
 // Parameters for sending a message
 export interface SendMessageParams {
@@ -532,7 +533,7 @@ export const createAgentConnectionSlice: StateCreator<
 						...llmParams,
 						// we're overriding the prompt since we pass in additionalContext as a raw object.
 						prompt: editorContent,
-						additionalContext: state.additionalContext,
+						additionalContext: sanitizeJson(state.additionalContext),
 						route: route || `${chatPath}`,
 						resourceId: (params?.userId || getCedarState('userId')) as string,
 					};
@@ -544,7 +545,7 @@ export const createAgentConnectionSlice: StateCreator<
 					llmParams = {
 						...llmParams,
 						prompt: editorContent,
-						additionalContext: state.additionalContext,
+						additionalContext: sanitizeJson(state.additionalContext),
 						userId: (params?.userId || getCedarState('userId')) as string,
 					};
 					break;
