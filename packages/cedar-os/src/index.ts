@@ -110,6 +110,12 @@ export type {
 // Export SendMessageParams from the slice
 export type { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
 
+// Export storage configuration types
+export type {
+	MessageStorageBaseAdapter,
+	MessageStorageConfig,
+} from '@/store/messages/messageStorage';
+
 // Export voice components and types
 export { VoiceIndicator } from '@/store/voice/VoiceIndicator';
 export type { VoiceState } from '@/store/voice/voiceSlice';

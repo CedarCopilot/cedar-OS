@@ -1,12 +1,12 @@
-import { ReactNode, useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
+import { ReactNode, useEffect } from 'react';
+import { v4 } from 'uuid';
 import type {
+	ContextEntry,
+	MentionItem,
 	MentionProvider,
 	StateBasedMentionProviderConfig,
-	MentionItem,
-	ContextEntry,
 } from './types';
-import { v4 } from 'uuid';
 
 /**
  * Helper to extract label from an item
@@ -107,7 +107,7 @@ export function useStateBasedMentionProvider(
 				source: 'mention',
 				data: item.data,
 				metadata: {
-					label: item.label,
+					label: item.label!,
 					...item.metadata,
 					// Ensure icon, color, and order are passed through
 					icon: item.metadata?.icon || config.icon,

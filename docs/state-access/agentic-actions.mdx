@@ -1,0 +1,380 @@
+---
+title: 'Agentic Actions'
+description: 'Set up structured responses and interpret them as actions'
+---
+
+Cedar enables your agent to not only read state but also execute actions through structured responses. This guide shows you how to set up an end-to-end flow where your agent can understand your application state and perform actions on it.
+
+## Overview
+
+The agentic actions flow consists of three main parts:
+
+1. **Register State with Custom Setters** - Define what actions can be performed
+2. **Configure Structured Responses** - Set up your agent to return structured data
+3. **Handle LLM Results** - Process the structured responses and execute actions
+
+## Complete Example: Product Roadmap
+
+Let's walk through a complete example using a product roadmap application where the agent can add features, remove nodes, and manage diffs.
+
+### Step 1: Register State with Custom Setters
+
+First, register your state with custom setters that define the available actions:
+
+```tsx
+import { useRegisterState } from 'cedar-os';
+import { Node } from 'reactflow';
+
+// Register nodes state with custom setters
+useRegisterState({
+	key: 'nodes',
+	value: nodes,
+	setValue: setNodes,
+	description: 'Product roadmap nodes',
+	customSetters: {
+		addNode: {
+			name: 'addNode',
+			description: 'Add a new node to the roadmap',
+			parameters: [
+				{
+					name: 'node',
+					type: 'Node<FeatureNodeData>',
+					description: 'The node to add',
+				},
+			],
+			execute: (currentNodes, node) => {
+				const newNode = {
+					...node,
+					id: node.id || uuidv4(),
+					type: 'featureNode',
+					position: { x: Math.random() * 400, y: Math.random() * 400 },
+					data: {
+						...node.data,
+						nodeType: node.data.nodeType || 'feature',
+						status: node.data.status || 'planned',
+						upvotes: node.data.upvotes || 0,
+						comments: node.data.comments || [],
+						diff: 'added' as const,
+					},
+				};
+				setNodes([...currentNodes, newNode]);
+			},
+		},
+		removeNode: {
+			name: 'removeNode',
+			description: 'Remove a node from the roadmap',
+			parameters: [
+				{
+					name: 'id',
+					type: 'string',
+					description: 'The ID of the node to remove',
+				},
+			],
+			execute: async (currentNodes, id) => {
+				// Mark as removed with diff instead of immediate deletion
+				setNodes(
+					currentNodes.map((node) =>
+						node.id === id
+							? { ...node, data: { ...node.data, diff: 'removed' } }
+							: node
+					)
+				);
+			},
+		},
+		acceptAllDiffs: {
+			name: 'acceptAllDiffs',
+			description: 'Accept all pending diffs',
+			parameters: [],
+			execute: async (currentNodes) => {
+				const nodesWithDiffs = currentNodes.filter((n) => n.data.diff);
+
+				// Process removals
+				const removedNodeIds = nodesWithDiffs
+					.filter((n) => n.data.diff === 'removed')
+					.map((n) => n.id);
+
+				for (const nodeId of removedNodeIds) {
+					await deleteNode(nodeId);
+				}
+
+				// Update remaining nodes
+				const remainingNodes = currentNodes.filter(
+					(n) => !removedNodeIds.includes(n.id)
+				);
+				setNodes(
+					remainingNodes.map((n) => ({
+						...n,
+						data: { ...n.data, diff: undefined },
+					}))
+				);
+			},
+		},
+	},
+});
+```
+
+### Step 2: Configure Your Agent for Structured Responses
+
+Configure your agent backend to return structured responses. Here's an example using Mastra:
+
+```typescript
+// In your Mastra agent configuration
+import { createTool } from '@mastra/core/tools';
+import { z } from 'zod';
+
+export const addFeatureTool = createTool({
+	id: 'add-feature',
+	description: 'Add a new feature to the product roadmap',
+	inputSchema: z.object({
+		title: z.string().describe('Title of the feature'),
+		description: z.string().describe('Description of the feature'),
+		status: z.enum(['done', 'planned', 'backlog', 'in progress']),
+		nodeType: z.literal('feature').default('feature'),
+	}),
+	outputSchema: z.object({
+		type: z.literal('action'),
+		stateKey: z.literal('nodes'),
+		setterKey: z.literal('addNode'),
+		args: z.array(z.any()),
+	}),
+	execute: async ({ context }) => {
+		// Return structured response for Cedar to interpret
+		return {
+			type: 'action',
+			stateKey: 'nodes',
+			setterKey: 'addNode',
+			args: [
+				{
+					data: {
+						title: context.title,
+						description: context.description,
+						status: context.status,
+						nodeType: context.nodeType,
+					},
+				},
+			],
+		};
+	},
+});
+```
+
+### Step 3: Handle LLM Results
+
+Cedar's `handleLLMResult` function automatically processes structured responses:
+
+```typescript
+// This is built into Cedar - showing for understanding
+handleLLMResult: (response: LLMResponse) => {
+	const state = get();
+
+	// Check for structured output
+	if (response.object && typeof response.object === 'object') {
+		const structuredResponse = response.object;
+
+		// Handle action type responses
+		if (structuredResponse.type === 'action') {
+			// Execute the custom setter with provided parameters
+			state.executeCustomSetter(
+				structuredResponse.stateKey,
+				structuredResponse.setterKey,
+				...structuredResponse.args
+			);
+			return; // Action executed, no message needed
+		}
+	}
+
+	// Default: add response as message
+	if (response.content) {
+		state.addMessage({
+			role: 'assistant',
+			type: 'text',
+			content: response.content,
+		});
+	}
+};
+```
+
+## Structured Response Types
+
+Cedar supports different types of structured responses:
+
+### Action Type
+
+Execute a custom setter on registered state:
+
+```json
+{
+	"type": "action",
+	"stateKey": "nodes",
+	"setterKey": "addNode",
+	"args": [
+		{
+			/* node data */
+		}
+	]
+}
+```
+
+### Message Type
+
+Add a custom message with specific role/content:
+
+```json
+{
+	"type": "message",
+	"role": "assistant",
+	"content": "I've added the new feature to your roadmap."
+}
+```
+
+## Using Actions in Your UI
+
+You can trigger actions directly from your UI components:
+
+```tsx
+import { useCedarStore } from 'cedar-os';
+
+function ActionButtons() {
+	const executeCustomSetter = useCedarStore(
+		(state) => state.executeCustomSetter
+	);
+
+	const handleAddFeature = () => {
+		executeCustomSetter('nodes', 'addNode', {
+			data: {
+				title: 'New Feature',
+				description: 'Describe your feature here',
+				status: 'planned',
+				nodeType: 'feature',
+			},
+		});
+	};
+
+	const handleAcceptAllDiffs = () => {
+		executeCustomSetter('nodes', 'acceptAllDiffs');
+	};
+
+	return (
+		<div className='flex gap-2'>
+			<button onClick={handleAddFeature}>Add Feature</button>
+			<button onClick={handleAcceptAllDiffs}>Accept All Changes</button>
+		</div>
+	);
+}
+```
+
+## Best Practices
+
+### 1. Use Descriptive Action Names
+
+Make your setter names clear and action-oriented:
+
+```tsx
+// Good
+customSetters: {
+  addTodo: { /* ... */ },
+  toggleTodoComplete: { /* ... */ },
+  deleteTodo: { /* ... */ }
+}
+
+// Avoid
+customSetters: {
+  setter1: { /* ... */ },
+  update: { /* ... */ },
+  change: { /* ... */ }
+}
+```
+
+### 2. Include Parameter Descriptions
+
+Help your agent understand what parameters to provide:
+
+```tsx
+parameters: [
+	{
+		name: 'priority',
+		type: 'string',
+		description: 'Priority level: low, medium, high, or critical',
+	},
+];
+```
+
+### 3. Handle Errors Gracefully
+
+Add error handling in your custom setters:
+
+```tsx
+execute: async (currentState, id) => {
+	try {
+		const item = currentState.find((item) => item.id === id);
+		if (!item) {
+			console.error(`Item with id ${id} not found`);
+			return;
+		}
+		// Perform action
+	} catch (error) {
+		console.error('Failed to execute action:', error);
+	}
+};
+```
+
+### 4. Use Diff Patterns for Reversible Actions
+
+Implement diff patterns for actions that users might want to review:
+
+```tsx
+execute: (currentNodes, nodeData) => {
+	// Add with diff marker
+	const newNode = {
+		...nodeData,
+		data: { ...nodeData.data, diff: 'added' },
+	};
+	setNodes([...currentNodes, newNode]);
+};
+```
+
+## Advanced: Multi-Step Actions
+
+For complex workflows, you can chain multiple actions:
+
+```typescript
+// Agent returns multiple actions
+{
+  "type": "multi-action",
+  "actions": [
+    {
+      "type": "action",
+      "stateKey": "nodes",
+      "setterKey": "addNode",
+      "args": [/* node 1 */]
+    },
+    {
+      "type": "action",
+      "stateKey": "edges",
+      "setterKey": "connectNodes",
+      "args": ["node1", "node2"]
+    }
+  ]
+}
+```
+
+## Debugging Actions
+
+Use Cedar's built-in debugging tools to monitor action execution:
+
+```tsx
+import { useCedarStore } from 'cedar-os';
+
+// Enable debug mode to see all state changes
+const debugMode = useCedarStore((state) => state.debugMode);
+
+// View registered states and their setters
+const registeredStates = useCedarStore((state) => state.registeredStates);
+console.log('Available actions:', registeredStates);
+```
+
+## Next Steps
+
+- Learn about [State Access](/state-access/agentic-state-access) for more state management patterns
+- Explore [Agent Input Context](/agent-input-context/agent-input-context) to provide context for actions
+- See [Custom Message Rendering](/chat/custom-message-rendering) to display action results

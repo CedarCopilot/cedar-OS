@@ -1,0 +1,289 @@
+---
+title: 'Message Storage Configuration'
+description: 'Configure how Cedar persists chat messages and manages threads'
+---
+
+Cedar provides a flexible storage system for managing chat messages with automatic persistence and **automatic thread management**. By default, Cedar uses **no storage** - no persistence unless you configure a storage adapter.
+
+# Quick Start
+
+Cedar works out of the box with no storage (no persistence). To enable persistence, configure a storage adapter.
+
+# Storage Options
+
+Cedar supports three storage adapters:
+
+1. **Local Storage** (default) - Browser localStorage
+2. **No Storage** - Disables persistence
+3. **Custom Storage** - Your own implementation
+
+Configure storage by passing the `messageStorage` prop to CedarCopilot:
+
+<CodeGroup>
+
+```typescript Local Storage (Default)
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	return (
+		<CedarCopilot
+			// No storage prop needed - uses local storage by default.
+			// Optionally pass in user ID
+			userId='user-123'>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+```typescript Local Storage (Custom Key)
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	return (
+		<CedarCopilot
+			messageStorage={{
+				type: 'local',
+				options: {
+					key: 'my-app', // Optional: defaults to 'cedar'
+				},
+			}}
+			userId='user-123'>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+```typescript No Storage
+import { CedarCopilot } from 'cedar-os';
+
+function App() {
+	return (
+		<CedarCopilot messageStorage={{ type: 'none' }} userId='user-123'>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+```typescript Custom Storage
+import { CedarCopilot } from 'cedar-os';
+
+const myCustomAdapter = {
+	async listThreads(userId) {
+		return await myDatabase.getThreads(userId);
+	},
+	async loadMessages(userId, threadId) {
+		return await myDatabase.getMessages(userId, threadId);
+	},
+	async persistMessage(userId, threadId, message) {
+		await myDatabase.appendMessage(userId, threadId, message);
+	},
+};
+
+function App() {
+	return (
+		<CedarCopilot
+			messageStorage={{
+				type: 'custom',
+				adapter: myCustomAdapter,
+			}}
+			userId='user-123'>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+</CodeGroup>
+
+# Additional Configuration Requirements by Storage Type
+
+### Local Storage & No Storage
+
+**No additional configuration needed** - these options work out of the box.
+
+### Custom Storage
+
+Implement your own storage solution by providing a custom adapter:
+
+<CodeGroup>
+
+```typescript Interface
+interface BaseStorageAdapter {
+	// Required methods
+	loadMessages(
+		userId: string | null | undefined,
+		threadId: string
+	): Promise<Message[]>;
+	persistMessage(
+		userId: string | null | undefined,
+		threadId: string,
+		message: Message
+	): Promise<Message>; // returns the saved message
+
+	// Optional thread methods
+	listThreads?(userId?: string | null): Promise<ThreadMeta[]>;
+	createThread?(
+		userId: string | null | undefined,
+		threadId: string,
+		meta: ThreadMeta
+	): Promise<ThreadMeta>; // returns new meta
+	updateThread?(
+		userId: string | null | undefined,
+		threadId: string,
+		meta: ThreadMeta
+	): Promise<ThreadMeta>; // returns updated meta
+	deleteThread?(
+		userId: string | null | undefined,
+		threadId: string
+	): Promise<ThreadMeta | undefined>; // returns deleted meta (optional)
+
+	// Optional message methods
+	updateMessage?(
+		userId: string | null | undefined,
+		threadId: string,
+		message: Message
+	): Promise<Message>; // returns updated message
+	deleteMessage?(
+		userId: string | null | undefined,
+		threadId: string,
+		messageId: string
+	): Promise<Message | undefined>; // returns deleted message (optional)
+}
+```
+
+All mutator/creator functions return the object they operate on, making it easy to work with the freshly-persisted data (IDs, timestamps, etc.).
+
+```typescript Example Implementation
+import { CedarCopilot } from 'cedar-os';
+
+// Your custom storage implementation
+const myCustomAdapter = {
+	async listThreads(userId) {
+		return await myDatabase.getThreads(userId);
+	},
+
+	async loadMessages(userId, threadId) {
+		return await myDatabase.getMessages(userId, threadId);
+	},
+
+	async persistMessage(userId, threadId, message) {
+		await myDatabase.appendMessage(userId, threadId, message);
+	},
+};
+
+function App() {
+	return (
+		<CedarCopilot
+			messageStorage={{
+				type: 'custom',
+				adapter: myCustomAdapter,
+			}}
+			userId='user-123' // User ID passed in initial configuration
+		>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+</CodeGroup>
+
+## How Default Message Storage Works
+
+Cedar automatically handles message storage operations in the following way:
+
+**Thread & Message Loading:**
+
+- **When user ID changes**: Automatically loads all threads for that user
+- **When storage adapter changes**: Loads threads from the new storage system
+- **When the thread ID changes**: Automatically loads in all messages for that thread
+
+**Message Persistence & Thread Updates:**
+
+- **User messages**: Persisted immediately when sent via `sendMessage()` (internally calls `store.persistMessage`).
+- **Assistant responses**:
+  - **Non-streaming**: Persisted right after the LLM reply finishes.
+  - **Streaming**: Buffered during streaming and persisted once when the stream ends.
+- **Automatic thread meta update**: Every persisted message refreshes the thread’s `updatedAt` and `lastMessage` fields. The thread title is **always** the very first message in the thread and is never overwritten.
+
+# User and Thread Management
+
+**Setting User ID:**
+User ID is treated internally as just another Cedar State. If at runtime you want to override the user ID when using `callLLM`, it is also available on the `SendMessageParams` type
+
+<CodeGroup>
+
+```typescript Using Store
+import { useCedarStore } from 'cedar-os';
+
+function LoginHandler({ userId }: { userId: string }) {
+	const store = useCedarStore();
+
+	// Set user context - Cedar will load this user's threads
+	store.getState().setCedarState('userId', userId);
+
+	return <YourChatComponent />;
+}
+```
+
+```typescript Initial Configuration
+import { CedarCopilot } from 'cedar-os';
+
+function App({ userId }: { userId: string }) {
+	return (
+		<CedarCopilot
+			userId={userId} // Set user ID in initial configuration
+			messageStorage={{
+				type: 'local', // or 'none', 'custom'
+			}}>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+</CodeGroup>
+
+**Setting Thread ID:**
+By default, Cedar will use the thread ID stored in the store. If at runtime you want to override the thread ID when using `callLLM`, it is also available on the `SendMessageParams` type
+
+```typescript
+import { useCedarStore } from 'cedar-os';
+
+function ConversationSwitcher() {
+	const store = useCedarStore();
+
+	const switchToThread = (threadId: string) => {
+		// Cedar will save current thread and load the new one
+		store.getState().setCurrentThreadId(threadId);
+	};
+
+	return (
+		<div>
+			<button onClick={() => switchToThread('project-discussion')}>
+				Project Discussion
+			</button>
+			<button onClick={() => switchToThread('support-ticket')}>
+				Support Ticket
+			</button>
+		</div>
+	);
+}
+```
+
+## Error Handling
+
+Cedar's storage system is designed to fail gracefully:
+
+- **Storage failures** are silently caught to prevent UI crashes
+- **Failed loads** return empty arrays rather than throwing errors
+- **Malformed data** is handled with safe fallbacks
+
+## Next Steps
+
+- Learn about [custom message rendering](/getting-started/chat/custom-message-rendering) for rich content
+- Explore [streaming responses](/getting-started/chat/streaming) for real-time interactions
+- Set up [agent backend connections](/getting-started/agent-backend-connection/agent-backend-connection) for AI responses

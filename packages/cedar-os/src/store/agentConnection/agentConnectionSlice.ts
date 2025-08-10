@@ -14,8 +14,11 @@ import type {
 	StreamHandler,
 	StreamResponse,
 	StructuredParams,
+	VoiceParams,
+	VoiceLLMResponse,
 } from './types';
 import { useCedarStore } from '@/store/CedarStore';
+import { getCedarState } from '@/store/CedarStore';
 
 // Parameters for sending a message
 export interface SendMessageParams {
@@ -25,8 +28,11 @@ export interface SendMessageParams {
 	temperature?: number;
 	// Optional conversation/thread ID
 	conversationId?: string;
+	threadId?: string;
+	userId?: string;
 	// Enable streaming responses
 	stream?: boolean;
+	[key: string]: any;
 }
 
 // Helper type to get params based on provider config
@@ -75,6 +81,9 @@ export interface AgentConnectionSlice {
 		handler: StreamHandler
 	) => StreamResponse;
 
+	// Voice LLM method
+	voiceLLM: (params: VoiceParams) => Promise<VoiceLLMResponse>;
+
 	// High-level methods that use callLLM/streamLLM
 	sendMessage: (params?: SendMessageParams) => Promise<void>;
 	handleLLMResponse: (items: (string | object)[]) => void;
@@ -93,7 +102,7 @@ export interface AgentConnectionSlice {
 // Create a typed version of the slice that knows about the provider
 export type TypedAgentConnectionSlice<T extends ProviderConfig> = Omit<
 	AgentConnectionSlice,
-	'callLLM' | 'streamLLM' | 'callLLMStructured'
+	'callLLM' | 'streamLLM' | 'callLLMStructured' | 'voiceLLM'
 > & {
 	callLLM: (params: GetParamsForConfig<T>) => Promise<LLMResponse>;
 	callLLMStructured: (
@@ -103,6 +112,7 @@ export type TypedAgentConnectionSlice<T extends ProviderConfig> = Omit<
 		params: GetParamsForConfig<T>,
 		handler: StreamHandler
 	) => StreamResponse;
+	voiceLLM: (params: VoiceParams) => Promise<VoiceLLMResponse>;
 };
 
 export const improvePrompt = async (
@@ -374,6 +384,27 @@ export const createAgentConnectionSlice: StateCreator<
 		};
 	},
 
+	// Voice LLM method
+	voiceLLM: async (params: VoiceParams) => {
+		const config = get().providerConfig;
+		if (!config) {
+			throw new Error('No LLM provider configured');
+		}
+
+		try {
+			const provider = getProviderImplementation(config);
+			// Type assertion is safe after runtime validation
+			const response = await provider.voiceLLM(
+				params as unknown as never,
+				config as never
+			);
+
+			return response;
+		} catch (error) {
+			throw error;
+		}
+	},
+
 	// Handle LLM response
 	handleLLMResponse: (itemsToProcess: (string | object)[]) => {
 		const state = get();
@@ -381,7 +412,7 @@ export const createAgentConnectionSlice: StateCreator<
 		itemsToProcess.forEach((item) => {
 			if (typeof item === 'string') {
 				// Handle text content - append to latest message
-				state.appendToLatestMessage(item);
+				state.appendToLatestMessage(item, !state.isStreaming);
 			} else if (item && typeof item === 'object') {
 				// Handle structured objects
 				const structuredResponse = item as Record<string, unknown>;
@@ -426,11 +457,12 @@ export const createAgentConnectionSlice: StateCreator<
 									: JSON.stringify(structuredResponse);
 							// Map system role to assistant if needed
 							const messageRole = role === 'system' ? 'assistant' : role;
-							state.addMessage({
+							const message = {
 								role: messageRole as 'user' | 'assistant' | 'bot',
-								type: 'text',
+								type: 'text' as const,
 								content,
-							});
+							};
+							state.addMessage(message, !state.isStreaming);
 							break;
 						}
 						default:
@@ -467,8 +499,8 @@ export const createAgentConnectionSlice: StateCreator<
 
 			// Step 3: Add the stringified chatInputContent as a message from the user
 			state.addMessage({
-				role: 'user',
-				type: 'text',
+				role: 'user' as const,
+				type: 'text' as const,
 				content: editorContent,
 			});
 
@@ -495,19 +527,34 @@ export const createAgentConnectionSlice: StateCreator<
 					break;
 				case 'mastra':
 					const chatPath = config.chatPath || '/chat';
+
 					llmParams = {
 						...llmParams,
+						// we're overriding the prompt since we pass in additionalContext as a raw object.
+						prompt: editorContent,
+						additionalContext: state.additionalContext,
 						route: route || `${chatPath}`,
+						resourceId: (params?.userId || getCedarState('userId')) as string,
 					};
 					break;
 				case 'ai-sdk':
 					llmParams = { ...llmParams, model: model || 'openai/gpt-4o-mini' };
 					break;
+				case 'custom':
+					llmParams = {
+						...llmParams,
+						prompt: editorContent,
+						additionalContext: state.additionalContext,
+						userId: (params?.userId || getCedarState('userId')) as string,
+					};
+					break;
 			}
 
 			// Step 5: Make the LLM call (streaming and non-streaming branches)
 			if (stream) {
-				// Streaming approach - process each item as it comes in
+				// Capture current message count so we know which ones are new during the stream
+				const startIdx = get().messages.length;
+
 				const streamResponse = state.streamLLM(llmParams, (event) => {
 					switch (event.type) {
 						case 'chunk':
@@ -529,8 +576,14 @@ export const createAgentConnectionSlice: StateCreator<
 
 				// Wait for stream to complete
 				await streamResponse.completion;
+
+				// Persist any new messages added during the stream (from startIdx onwards)
+				const newMessages = get().messages.slice(startIdx);
+				for (const m of newMessages) {
+					await state.persistMessageStorageMessage(m);
+				}
 			} else {
-				// Non-streaming approach – call the LLM and process all items at once
+				// Non-streaming approach – call the LLM and process all items at once
 				const response = await state.callLLM(llmParams);
 
 				// Process response content as array of one
@@ -552,8 +605,8 @@ export const createAgentConnectionSlice: StateCreator<
 		} catch (error) {
 			console.error('Error sending message:', error);
 			state.addMessage({
-				role: 'assistant',
-				type: 'text',
+				role: 'assistant' as const,
+				type: 'text' as const,
 				content: 'An error occurred while sending your message.',
 			});
 		} finally {
@@ -562,7 +615,15 @@ export const createAgentConnectionSlice: StateCreator<
 	},
 
 	// Configuration methods
-	setProviderConfig: (config) => set({ providerConfig: config }),
+	setProviderConfig: (config) => {
+		set({ providerConfig: config });
+
+		// If it's a Mastra provider with a voiceRoute, update the voice endpoint
+		if (config.provider === 'mastra' && config.voiceRoute) {
+			const voiceEndpoint = `${config.baseURL}${config.voiceRoute}`;
+			get().updateVoiceSettings({ endpoint: voiceEndpoint });
+		}
+	},
 
 	// Connection management
 	connect: async () => {

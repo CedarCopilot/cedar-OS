@@ -6,9 +6,13 @@ import type {
 	MessageRenderer,
 	MessageRendererRegistry,
 } from './types';
+import {
+	getMessageStorageState,
+	MessageStorageState,
+} from '@/store/messages/messageStorage';
 
 // Define the messages slice
-export interface MessagesSlice {
+export type MessagesSlice = MessageStorageState & {
 	// State
 	messages: Message[];
 	isProcessing: boolean;
@@ -19,8 +23,8 @@ export interface MessagesSlice {
 
 	// Actions
 	setMessages: (messages: Message[]) => void;
-	addMessage: (message: MessageInput) => Message;
-	appendToLatestMessage: (content: string) => void;
+	addMessage: (message: MessageInput, isComplete?: boolean) => Message;
+	appendToLatestMessage: (content: string, isComplete?: boolean) => Message;
 	updateMessage: (id: string, updates: Partial<Message>) => void;
 	deleteMessage: (id: string) => void;
 	clearMessages: () => void;
@@ -35,7 +39,7 @@ export interface MessagesSlice {
 	// Utility methods
 	getMessageById: (id: string) => Message | undefined;
 	getMessagesByRole: (role: Message['role']) => Message[];
-}
+};
 
 // Create the messages slice
 export const createMessagesSlice: StateCreator<
@@ -45,18 +49,19 @@ export const createMessagesSlice: StateCreator<
 	MessagesSlice
 > = (set, get) => {
 	return {
+		...getMessageStorageState(set, get),
 		// Default state
 		messages: [],
 		isProcessing: false,
 		showChat: false,
 		messageRenderers: {},
-
 		// Actions
 		setMessages: (messages: Message[]) => set({ messages }),
-
 		setShowChat: (showChat: boolean) => set({ showChat }),
-
-		addMessage: (messageData: MessageInput): Message => {
+		addMessage: (
+			messageData: MessageInput,
+			isComplete: boolean = true
+		): Message => {
 			const newMessage: Message = {
 				...messageData,
 				id: `message-${Date.now()}-${Math.random()
@@ -64,35 +69,44 @@ export const createMessagesSlice: StateCreator<
 					.substring(2, 9)}`,
 				createdAt: new Date().toISOString(),
 			} as unknown as Message;
-
 			set((state) => ({
 				messages: [...state.messages, newMessage],
 			}));
 
+			if (isComplete) {
+				try {
+					get().persistMessageStorageMessage(newMessage);
+				} catch (error) {
+					console.error('Error persisting message:', error);
+				}
+			}
 			return newMessage;
 		},
-
-		appendToLatestMessage: (content: string) => {
+		appendToLatestMessage: (
+			content: string,
+			isComplete: boolean = true
+		): Message => {
 			const state = get();
 			const messages = state.messages;
 			const latestMessage = messages[messages.length - 1];
-
-			// Check if latest message is assistant type
+			const updatedLatestMessage = {
+				...latestMessage,
+				content: latestMessage.content + content,
+			};
 			if (latestMessage && latestMessage.role === 'assistant') {
-				// Append to existing assistant message (content is already processed)
-				state.updateMessage(latestMessage.id, {
-					content: latestMessage.content + content,
-				});
+				state.updateMessage(latestMessage.id, updatedLatestMessage);
 			} else {
-				// Create new assistant message
-				state.addMessage({
-					role: 'assistant',
-					type: 'text',
-					content: content,
-				});
+				return state.addMessage(
+					{
+						role: 'assistant',
+						type: 'text',
+						content: content,
+					},
+					isComplete
+				);
 			}
+			return updatedLatestMessage;
 		},
-
 		updateMessage: (id: string, updates: Partial<Message>) => {
 			set((state) => ({
 				messages: state.messages.map((msg) =>
@@ -100,18 +114,13 @@ export const createMessagesSlice: StateCreator<
 				),
 			}));
 		},
-
 		deleteMessage: (id: string) => {
 			set((state) => ({
 				messages: state.messages.filter((msg) => msg.id !== id),
 			}));
 		},
-
 		clearMessages: () => set({ messages: [] }),
-
 		setIsProcessing: (isProcessing: boolean) => set({ isProcessing }),
-
-		// Renderer management
 		registerMessageRenderer: (type: string, renderer: MessageRenderer) => {
 			set((state) => ({
 				messageRenderers: {
@@ -120,25 +129,19 @@ export const createMessagesSlice: StateCreator<
 				},
 			}));
 		},
-
 		unregisterMessageRenderer: (type: string) => {
 			set((state) => {
 				const { [type]: removed, ...rest } = state.messageRenderers;
-				// Use the variable to avoid linter warning
 				void removed;
 				return { messageRenderers: rest };
 			});
 		},
-
 		getMessageRenderer: (type: string) => {
 			return get().messageRenderers[type];
 		},
-
-		// Utility methods
 		getMessageById: (id: string) => {
 			return get().messages.find((msg) => msg.id === id);
 		},
-
 		getMessagesByRole: (role: Message['role']) => {
 			return get().messages.filter((msg) => msg.role === role);
 		},

@@ -1,0 +1,420 @@
+---
+title: 'Radial Menu'
+description: 'Using the Radial Menu for spell interactions'
+---
+
+The **Radial Menu** is Cedar's flagship spell interface that enables instant AI command execution through an intuitive circular menu system. It provides users with lightning-fast access to complex queries and context-dependent actions with sub-100ms response times.
+
+<img
+	src='https://vrhlhwfhghqbpdpfnpdq.supabase.co/storage/v1/object/public/logos//radialMenu.gif'
+	alt='Radial Menu Demo'
+/>
+
+## What is the Radial Menu?
+
+The Radial Menu is a **context-aware command palette** that appears as a circular interface around your cursor. It's designed to give users magical control over AI interactions without requiring text input - you simply right-click or use a hotkey to instantly access powerful AI commands.
+
+### Key Features
+
+1. **Instant Activation**: Right-click or hotkey activation
+2. **Complex Query Support**: Pre-configured prompts for sophisticated AI interactions at the users fingertips
+3. **Context-Dependent Commands**: Menu options can change based on your current application state
+4. **Sub-100ms Execution**: Commands execute immediately without delay
+5. **State-Aware**: Automatically includes relevant application context
+
+## How It Works
+
+### 1. Activation Methods
+
+The Radial Menu can be triggered through multiple methods:
+
+```tsx
+import { useRadialMenu } from 'cedar-os';
+
+function MyComponent() {
+	const { openRadialMenu, registerHotkey } = useRadialMenu();
+
+	// Method 1: Right-click activation
+	const handleContextMenu = (e: React.MouseEvent) => {
+		e.preventDefault();
+		openRadialMenu({
+			x: e.clientX,
+			y: e.clientY,
+			context: getCurrentContext(),
+		});
+	};
+
+	// Method 2: Hotkey activation
+	useEffect(() => {
+		registerHotkey('cmd+k', () => {
+			openRadialMenu({
+				x: window.innerWidth / 2,
+				y: window.innerHeight / 2,
+				context: getCurrentContext(),
+			});
+		});
+	}, []);
+
+	return <div onContextMenu={handleContextMenu}>{/* Your content */}</div>;
+}
+```
+
+### 2. Context-Dependent Commands
+
+The Radial Menu automatically adapts its available commands based on your current context:
+
+```tsx
+import { useRadialMenuProvider } from 'cedar-os';
+
+function DocumentEditor() {
+	const [selectedText, setSelectedText] = useState('');
+	const [currentDocument, setCurrentDocument] = useState(null);
+
+	// Register context-dependent commands
+	useRadialMenuProvider({
+		id: 'document-editor',
+		getCommands: (context) => {
+			const commands = [];
+
+			// Text selection commands
+			if (context.selectedText) {
+				commands.push(
+					{
+						id: 'explain-selection',
+						label: 'Explain This',
+						icon: '🤔',
+						prompt: `Explain the following text in simple terms: "${context.selectedText}"`,
+						color: '#3b82f6',
+					},
+					{
+						id: 'improve-writing',
+						label: 'Improve Writing',
+						icon: '✨',
+						prompt: `Improve the writing and clarity of: "${context.selectedText}"`,
+						color: '#10b981',
+					}
+				);
+			}
+
+			// Document-level commands
+			if (context.document) {
+				commands.push(
+					{
+						id: 'summarize-doc',
+						label: 'Summarize Document',
+						icon: '📝',
+						prompt: `Summarize the key points of this document: ${context.document.content}`,
+						color: '#f59e0b',
+					},
+					{
+						id: 'find-issues',
+						label: 'Find Issues',
+						icon: '🔍',
+						prompt: `Review this document for potential issues, inconsistencies, or improvements: ${context.document.content}`,
+						color: '#ef4444',
+					}
+				);
+			}
+
+			return commands;
+		},
+	});
+
+	return <div>{/* Document editor content */}</div>;
+}
+```
+
+### 3. Instant Execution
+
+Commands execute immediately when selected, with results appearing in your preferred chat interface:
+
+```tsx
+import { useRadialMenu, useCedarStore } from 'cedar-os';
+
+function QuickActions() {
+	const { addMessage, sendMessage } = useCedarStore();
+	const { registerCommand } = useRadialMenu();
+
+	useEffect(() => {
+		// Register instant-execution commands
+		registerCommand({
+			id: 'quick-note',
+			label: 'Quick Note',
+			icon: '📋',
+			execute: async (context) => {
+				// Immediate execution - no text input required
+				const prompt = `Create a quick note about: ${context.selectedContent}`;
+
+				addMessage({
+					role: 'user',
+					type: 'text',
+					content: prompt,
+				});
+
+				// Execute within 100ms
+				await sendMessage({
+					route: '/quick-actions',
+					systemPrompt: 'You are a helpful note-taking assistant.',
+				});
+			},
+		});
+	}, []);
+}
+```
+
+## Implementation Guide
+
+### Basic Setup
+
+1. **Install the Radial Menu Provider**:
+
+```tsx
+import { RadialMenuProvider } from 'cedar-os';
+
+function App() {
+	return (
+		<RadialMenuProvider>
+			<YourAppContent />
+		</RadialMenuProvider>
+	);
+}
+```
+
+2. **Configure Default Commands**:
+
+```tsx
+import { useRadialMenuConfig } from 'cedar-os';
+
+function AppConfig() {
+	useRadialMenuConfig({
+		// Global hotkey
+		hotkey: 'cmd+k',
+
+		// Default commands available everywhere
+		defaultCommands: [
+			{
+				id: 'ask-anything',
+				label: 'Ask Anything',
+				icon: '💬',
+				prompt: 'I have a question about: ',
+				requiresInput: true,
+			},
+			{
+				id: 'explain-page',
+				label: 'Explain This Page',
+				icon: '📖',
+				execute: async (context) => {
+					const pageContent = extractPageContent();
+					return `Explain what this page is about: ${pageContent}`;
+				},
+			},
+		],
+
+		// Appearance settings
+		appearance: {
+			radius: 120,
+			itemSize: 60,
+			animationDuration: 200,
+			theme: 'auto', // 'light' | 'dark' | 'auto'
+		},
+	});
+}
+```
+
+### Advanced Context Integration
+
+Integrate with Cedar's state system for powerful context-aware commands:
+
+```tsx
+import { useCedarState, useRadialMenuProvider } from 'cedar-os';
+
+function TodoApp() {
+	const [todos, setTodos] = useCedarState('todos', []);
+	const [selectedTodo, setSelectedTodo] = useCedarState('selectedTodo', null);
+
+	useRadialMenuProvider({
+		id: 'todo-app',
+		getCommands: (context) => {
+			const commands = [];
+
+			// Context: Todo selected
+			if (selectedTodo) {
+				commands.push(
+					{
+						id: 'analyze-todo',
+						label: 'Analyze Task',
+						icon: '🔍',
+						prompt: `Analyze this task and suggest improvements: ${selectedTodo.title} - ${selectedTodo.description}`,
+						color: '#8b5cf6',
+					},
+					{
+						id: 'break-down-todo',
+						label: 'Break Down',
+						icon: '📋',
+						execute: async () => {
+							const prompt = `Break down this task into smaller subtasks: ${selectedTodo.title}`;
+							// Execute immediately
+							return prompt;
+						},
+					}
+				);
+			}
+
+			// Context: Multiple todos
+			if (todos.length > 0) {
+				commands.push({
+					id: 'prioritize-todos',
+					label: 'Prioritize All',
+					icon: '⚡',
+					prompt: `Help me prioritize these tasks: ${todos
+						.map((t) => t.title)
+						.join(', ')}`,
+				});
+			}
+
+			return commands;
+		},
+	});
+
+	return <div>{/* Todo app content */}</div>;
+}
+```
+
+### Custom Command Types
+
+Create different types of commands for various use cases:
+
+```tsx
+import { RadialCommand } from 'cedar-os';
+
+// Instant execution command
+const instantCommand: RadialCommand = {
+	id: 'format-code',
+	label: 'Format Code',
+	icon: '🎨',
+	execute: async (context) => {
+		const code = context.selectedText;
+		// Process immediately
+		return formatCode(code);
+	},
+	executionTime: 'instant', // <100ms
+};
+
+// Streaming command
+const streamingCommand: RadialCommand = {
+	id: 'explain-complex',
+	label: 'Deep Explanation',
+	icon: '🧠',
+	prompt: (context) =>
+		`Provide a detailed explanation of: ${context.selectedText}`,
+	executionType: 'streaming', // Shows results as they come in
+	estimatedTime: '5-10s',
+};
+
+// Interactive command
+const interactiveCommand: RadialCommand = {
+	id: 'custom-query',
+	label: 'Custom Query',
+	icon: '💭',
+	requiresInput: true,
+	inputPlaceholder: 'What would you like to know?',
+	execute: async (context, userInput) => {
+		return `${userInput} Context: ${context.selectedText}`;
+	},
+};
+```
+
+## Integration with Cedar Features
+
+### With Mentions System
+
+```tsx
+import { useStateBasedMentionProvider, useRadialMenuProvider } from 'cedar-os';
+
+function IntegratedApp() {
+	const [documents] = useCedarState('documents', []);
+
+	// Enable @mentions for documents
+	useStateBasedMentionProvider({
+		stateKey: 'documents',
+		trigger: '@',
+		labelField: 'title',
+	});
+
+	// Radial menu can reference mentioned items
+	useRadialMenuProvider({
+		id: 'document-actions',
+		getCommands: (context) => [
+			{
+				id: 'compare-docs',
+				label: 'Compare Documents',
+				icon: '⚖️',
+				condition: () => context.mentions?.length >= 2,
+				prompt: `Compare these documents: ${context.mentions
+					.map((m) => m.label)
+					.join(' vs ')}`,
+			},
+		],
+	});
+}
+```
+
+### With Voice Integration
+
+```tsx
+import { useVoiceCommands, useRadialMenu } from 'cedar-os';
+
+function VoiceEnabledRadialMenu() {
+	const { registerVoiceCommand } = useVoiceCommands();
+	const { openRadialMenu } = useRadialMenu();
+
+	useEffect(() => {
+		// Voice activation
+		registerVoiceCommand('open menu', () => {
+			openRadialMenu({
+				x: window.innerWidth / 2,
+				y: window.innerHeight / 2,
+				activationMethod: 'voice',
+			});
+		});
+
+		// Voice command execution
+		registerVoiceCommand('explain this', async () => {
+			const context = getCurrentContext();
+			return `Explain: ${context.selectedText}`;
+		});
+	}, []);
+}
+```
+
+## Best Practices
+
+### 1. Command Organization
+
+- **Group related commands** by color and position
+- **Limit to 8-12 commands** per context to avoid cognitive overload
+- **Use clear, action-oriented labels** (e.g., "Explain This" not "Explanation")
+
+### 2. Context Sensitivity
+
+- **Always check context availability** before showing commands
+- **Provide fallback commands** when no specific context is available
+- **Use progressive disclosure** - show more options for power users
+
+### 3. Performance Optimization
+
+- **Cache command generation** for frequently accessed contexts
+- **Preload common prompts** to ensure sub-100ms execution
+- **Use lazy loading** for complex command calculations
+
+### 4. User Experience
+
+- **Provide visual feedback** during command execution
+- **Show keyboard shortcuts** in command labels when available
+- **Animate menu appearance** for smooth interactions
+
+## Next Steps
+
+- Learn about [other spell types](/spells/spells)
+- Explore [agent input context](/agent-input-context/agent-input-context) for advanced context handling
+- Check out [voice integration](/voice/voice-integration) for hands-free operation

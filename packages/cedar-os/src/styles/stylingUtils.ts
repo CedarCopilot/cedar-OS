@@ -1,6 +1,11 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { cloneElement, isValidElement, type ReactNode } from 'react';
+import {
+	cloneElement,
+	isValidElement,
+	type ReactNode,
+	type ReactElement,
+} from 'react';
 
 export const luminanceThreshold = 0.412;
 
@@ -113,9 +118,11 @@ export const getTextColorForBackground = (
  */
 export function withClassName(node: ReactNode, className: string): ReactNode {
 	if (isValidElement(node)) {
-		return cloneElement(node, {
-			className: cn(node.props.className, className),
-		} as any);
+		const element = node as ReactElement<Record<string, unknown>>;
+		const existingClass = (element.props as { className?: string }).className;
+		return cloneElement(element, {
+			className: cn(existingClass, className),
+		});
 	}
 	return node;
 }
