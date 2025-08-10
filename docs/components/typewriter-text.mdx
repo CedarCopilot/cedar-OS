@@ -1,0 +1,139 @@
+# TypewriterText Component
+
+The `TypewriterText` component provides an animated typing effect with adaptive speed based on text length. It supports markdown rendering, customizable delays, and optional prefix styling.
+
+## Features
+
+- **Adaptive Speed**: Automatically adjusts typing speed based on text length
+- **Markdown Support**: Built-in markdown rendering with prefix support
+- **Customizable Cursor**: Optional blinking cursor with styling
+- **Prefix Support**: Special styling for prefixed content
+- **Performance Optimized**: Uses Framer Motion for smooth animations
+
+## Import
+
+```tsx
+import { TypewriterText } from 'cedar-os-components/text/TypewriterText';
+```
+
+## Basic Usage
+
+```tsx
+<TypewriterText text='Hello, this text will type out automatically!' />
+```
+
+## Props
+
+| Prop               | Type         | Default | Description                                                         |
+| ------------------ | ------------ | ------- | ------------------------------------------------------------------- |
+| `text`             | `string`     | -       | The text to be typed out (required)                                 |
+| `className`        | `string`     | `''`    | Additional CSS classes                                              |
+| `charDelay`        | `number`     | `0.025` | Base character delay in seconds. If default, adaptive speed is used |
+| `minCharDelay`     | `number`     | `0.002` | Minimum delay for very long texts (fastest speed)                   |
+| `maxCharDelay`     | `number`     | `0.04`  | Maximum delay for short texts (slowest speed)                       |
+| `showCursor`       | `boolean`    | `true`  | Whether to show the typing cursor                                   |
+| `onTypingStart`    | `() => void` | -       | Callback when typing animation starts                               |
+| `onTypingComplete` | `() => void` | -       | Callback when typing animation completes                            |
+| `blinking`         | `boolean`    | `false` | Whether the cursor should blink                                     |
+| `renderAsMarkdown` | `boolean`    | `true`  | Whether to render content as markdown                               |
+| `prefix`           | `string`     | `''`    | Optional prefix text with special styling                           |
+
+## Adaptive Speed
+
+The component automatically adjusts typing speed based on text length:
+
+- **Short texts** (≤30 words): Use `maxCharDelay` (slower)
+- **Long texts** (≥400 characters): Use `minCharDelay` (faster)
+- **Medium texts**: Exponential interpolation between min and max
+
+```tsx
+// Short text - types slowly
+<TypewriterText text="Hi!" />
+
+// Long text - types faster automatically
+<TypewriterText text="This is a very long piece of text that will type out much faster than shorter text because the component automatically adjusts the speed based on content length..." />
+```
+
+## Custom Speed
+
+Override adaptive speed by setting a custom `charDelay`:
+
+```tsx
+<TypewriterText
+	text='Custom speed text'
+	charDelay={0.05} // Fixed delay of 50ms per character
+/>
+```
+
+## Prefix Styling
+
+Use prefixes for special highlighting (useful for chat interfaces):
+
+```tsx
+<TypewriterText
+	text='This is the main message content'
+	prefix='Assistant: '
+	renderAsMarkdown={true}
+/>
+```
+
+## Callbacks
+
+```tsx
+<TypewriterText
+	text='Watch the console!'
+	onTypingStart={() => console.log('Started typing')}
+	onTypingComplete={() => console.log('Finished typing')}
+/>
+```
+
+## Markdown Support
+
+The component supports full markdown rendering when `renderAsMarkdown` is true:
+
+```tsx
+<TypewriterText
+	text='**Bold text**, *italic text*, and `code blocks` all work!'
+	renderAsMarkdown={true}
+/>
+```
+
+## Custom Cursor
+
+```tsx
+<TypewriterText
+	text='Blinking cursor example'
+	showCursor={true}
+	blinking={true}
+/>
+```
+
+## Advanced Example
+
+```tsx
+<TypewriterText
+	text='# Welcome to Cedar OS\n\nThis is a **powerful** component with `adaptive speed`!'
+	prefix='System: '
+	className='text-lg font-medium'
+	minCharDelay={0.001}
+	maxCharDelay={0.06}
+	blinking={true}
+	onTypingComplete={() => setShowNextSection(true)}
+/>
+```
+
+## Integration with Cedar OS
+
+The component automatically integrates with Cedar OS styling system:
+
+- Uses `useStyling()` hook for consistent theming
+- Cursor color matches the current color scheme
+- Prefix styling uses accent colors
+- Markdown rendering follows Cedar OS design patterns
+
+## Performance Notes
+
+- Uses Framer Motion's `animate` function for optimal performance
+- Automatically cleans up animations on unmount
+- Efficient re-rendering with dependency tracking
+- Smooth 60fps animations with hardware acceleration

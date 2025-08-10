@@ -2,32 +2,91 @@
 
 import React, { useEffect, useState } from 'react';
 import { animate, motion } from 'motion/react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { useStyling } from 'cedar-os';
+import MarkdownRenderer from '../chatMessages/MarkdownRenderer';
 
 interface TypewriterTextProps {
 	text: string;
 	className?: string;
+	/**
+	 * Base character delay in seconds. If set to default (0.025), adaptive speed will be used.
+	 * @default 0.025
+	 */
 	charDelay?: number;
+	/**
+	 * Minimum character delay for very long texts (fastest typing speed)
+	 * @default 0.002
+	 */
+	minCharDelay?: number;
+	/**
+	 * Maximum character delay for short texts (slowest typing speed)
+	 * @default 0.04
+	 */
+	maxCharDelay?: number;
 	showCursor?: boolean;
 	onTypingStart?: () => void;
 	onTypingComplete?: () => void;
 	blinking?: boolean;
 	renderAsMarkdown?: boolean;
+	prefix?: string;
 }
 
 export const TypewriterText: React.FC<TypewriterTextProps> = ({
 	text,
 	className = '',
-	charDelay = 0.03,
+	charDelay = 0.025,
+	minCharDelay = 0.002,
+	maxCharDelay = 0.04,
 	showCursor = true,
 	onTypingStart,
 	onTypingComplete,
 	blinking = false,
 	renderAsMarkdown = true,
+	prefix = '',
 }) => {
-	const totalDuration = charDelay * text.length;
+	const fullText = prefix ? `${prefix}${text}` : text;
+
+	// Calculate adaptive character delay based on text length
+	// Longer texts type faster, but respect min/max limits
+	const calculateAdaptiveDelay = () => {
+		const textLength = fullText.length;
+
+		// Use provided charDelay if it's explicitly set different from default
+		if (charDelay !== 0.03) {
+			return charDelay;
+		}
+
+		// Use an exponential decay function for smooth speed transition
+		// This creates a natural feeling acceleration for longer texts
+		const minLength = 30; // Texts shorter than this use max delay
+		const maxLength = 400; // Texts longer than this use min delay
+
+		if (textLength <= minLength) {
+			return maxCharDelay;
+		}
+
+		if (textLength >= maxLength) {
+			return minCharDelay;
+		}
+
+		// Exponential decay between min and max length
+		// This gives us a smooth curve that starts slow and speeds up naturally
+		const normalizedPosition =
+			(textLength - minLength) / (maxLength - minLength);
+
+		// Use exponential function for more natural feeling
+		// Using a lower exponent (1.2) for more aggressive speed increase
+		const speedFactor = Math.pow(normalizedPosition, 1.2);
+
+		// Interpolate between max and min delay
+		const adaptiveDelay =
+			maxCharDelay - (maxCharDelay - minCharDelay) * speedFactor;
+
+		return adaptiveDelay;
+	};
+
+	const effectiveCharDelay = calculateAdaptiveDelay();
+	const totalDuration = effectiveCharDelay * fullText.length;
 	const [displayedText, setDisplayedText] = useState('');
 	const [isTypingComplete, setIsTypingComplete] = useState(false);
 
@@ -37,11 +96,11 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
 		setIsTypingComplete(false);
 		setDisplayedText('');
 		onTypingStart?.();
-		const animation = animate(0, text.length, {
+		const animation = animate(0, fullText.length, {
 			duration: totalDuration,
 			ease: 'linear',
 			onUpdate: (latest) => {
-				setDisplayedText(text.slice(0, Math.ceil(latest)));
+				setDisplayedText(fullText.slice(0, Math.ceil(latest)));
 			},
 			onComplete: () => {
 				setIsTypingComplete(true);
@@ -50,87 +109,39 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
 		});
 
 		return () => animation.stop();
-	}, [text, charDelay]);
+	}, [fullText, effectiveCharDelay]);
+
+	// Process the displayed text to handle prefix
+	let processedText = displayedText;
+
+	// If we have a prefix and it's being displayed, wrap it in a special marker for the markdown processor
+	if (prefix && displayedText.length > 0) {
+		const prefixLength = prefix.length;
+		if (displayedText.length <= prefixLength) {
+			// Still typing the prefix
+			processedText = `@@PREFIX@@${displayedText}@@ENDPREFIX@@`;
+		} else {
+			// Prefix is complete, show rest of content
+			processedText = `@@PREFIX@@${prefix}@@ENDPREFIX@@${displayedText.slice(
+				prefixLength
+			)}`;
+		}
+	}
 
 	const content = renderAsMarkdown ? (
-		<ReactMarkdown
-			remarkPlugins={[remarkGfm]}
-			components={{
-				// Force all block elements to be inline
-				p: ({ children }) => <>{children}</>,
-				div: ({ children }) => <>{children}</>,
-				h1: ({ children }) => (
-					<span className='text-2xl font-bold'>{children}</span>
-				),
-				h2: ({ children }) => (
-					<span className='text-xl font-bold'>{children}</span>
-				),
-				h3: ({ children }) => (
-					<span className='text-lg font-bold'>{children}</span>
-				),
-				h4: ({ children }) => (
-					<span className='text-base font-bold'>{children}</span>
-				),
-				h5: ({ children }) => (
-					<span className='text-sm font-bold'>{children}</span>
-				),
-				h6: ({ children }) => (
-					<span className='text-xs font-bold'>{children}</span>
-				),
-				a: ({ children, href }) => (
-					<a
-						href={href}
-						target='_blank'
-						rel='noopener noreferrer'
-						className='text-blue-500 hover:underline inline break-words cursor-pointer'>
-						{children}
-					</a>
-				),
-				img: ({ src, alt }) => (
-					<img
-						src={src}
-						alt={alt || 'Image'}
-						className='inline-block max-w-full h-auto rounded my-1'
-						style={{ maxHeight: '200px' }}
-						onError={(e) => {
-							e.currentTarget.style.display = 'none';
-						}}
-					/>
-				),
-				code: ({ children, className }) => {
-					const isInline = !className;
-					return isInline ? (
-						<code className='px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-sm inline break-words'>
-							{children}
-						</code>
-					) : (
-						<pre className='inline overflow-x-auto'>
-							<code className={`${className} break-words`}>{children}</code>
-						</pre>
-					);
-				},
-				pre: ({ children }) => (
-					<span className='inline block overflow-x-auto'>{children}</span>
-				),
-				strong: ({ children }) => (
-					<strong className='font-bold inline'>{children}</strong>
-				),
-				em: ({ children }) => <em className='italic inline'>{children}</em>,
-				ul: ({ children }) => <span className='inline'>{children}</span>,
-				ol: ({ children }) => <span className='inline'>{children}</span>,
-				li: ({ children }) => <span className='inline'>• {children} </span>,
-				br: () => <span> </span>,
-			}}>
-			{displayedText}
-		</ReactMarkdown>
+		<MarkdownRenderer
+			content={processedText}
+			processPrefix={!!prefix}
+			inline={true}
+		/>
 	) : (
-		displayedText
+		processedText
 	);
 
 	return (
-		<span className={`inline max-w-full break-words ${className}`}>
-			<motion.span className='inline whitespace-normal break-words'>
-				<span className='inline break-words'>{content}</span>
+		<span className={`max-w-full ${className}`}>
+			<motion.span className='whitespace-normal inline'>
+				{content}
 				{showCursor && !isTypingComplete && (
 					<motion.span
 						className='inline-block w-[2px] h-[1em] align-middle'
