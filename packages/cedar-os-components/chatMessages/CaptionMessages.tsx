@@ -46,6 +46,14 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 		}
 	}, [messages, showThinking]);
 
+	if (isProcessing) {
+		return (
+			<div className='font-semibold text-lg'>
+				<ShimmerText text='Thinking...' state='thinking' />
+			</div>
+		);
+	}
+
 	if (!latestMessage) return null;
 
 	// Render based on message type
@@ -53,17 +61,14 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 		case 'text':
 			return (
 				<div className='font-semibold text-lg'>
-					{isProcessing && latestMessage.role === 'user' ? (
-						<ShimmerText text='Thinking...' state='thinking' />
-					) : (
-						<>
-							<span style={{ color: styling.accentColor }}>Cedar: </span>
-							<TypewriterText
-								text={latestMessage.content}
-								className='break-words'
-							/>
-						</>
-					)}
+					<>
+						<span style={{ color: styling.accentColor }}>Cedar: </span>
+						<TypewriterText
+							text={latestMessage.content}
+							className='break-words'
+							renderAsMarkdown={true}
+						/>
+					</>
 				</div>
 			);
 

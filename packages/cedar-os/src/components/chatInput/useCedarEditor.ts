@@ -8,6 +8,7 @@ import Mention from '@tiptap/extension-mention';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { MentionNodeView } from '@/components/chatInput/ChatMention';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
+import { AddedText, RemovedText } from '@/components/chatInput/DiffExtension';
 
 import { useEffect, useState } from 'react';
 import mentionSuggestion from '@/components/chatInput/mentionSuggestion';
@@ -17,6 +18,7 @@ interface UseCedarEditorOptions {
 	onSubmit?: (text: string) => void;
 	onFocus?: () => void;
 	onBlur?: () => void;
+	stream?: boolean;
 }
 
 export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
@@ -25,6 +27,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 		onSubmit,
 		onFocus,
 		onBlur,
+		stream = true,
 	} = options;
 
 	const sendMessage = useCedarStore((state: CedarStore) => state.sendMessage);
@@ -56,6 +59,8 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 				showOnlyWhenEditable: true,
 				showOnlyCurrent: true,
 			}),
+			AddedText,
+			RemovedText,
 			Mention.extend({
 				addAttributes() {
 					return {
@@ -230,7 +235,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 		return resultText;
 	};
 
-	const handleSubmit = async ({ stream = true }: { stream?: boolean } = {}) => {
+	const handleSubmit = async () => {
 		if (!editor || isEditorEmpty) return;
 
 		const textContent = getEditorTextWithChoices();

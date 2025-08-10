@@ -19,6 +19,7 @@ const ChatRequestSchema = z.object({
 	temperature: z.number().optional(),
 	maxTokens: z.number().optional(),
 	systemPrompt: z.string().optional(),
+	additionalContext: z.any().optional(),
 	// For structured output
 	output: z.any().optional(),
 });
@@ -97,7 +98,7 @@ const ExecuteFunctionResponseSchema = z.union([
 async function handleExecuteFunction(c: Context) {
 	try {
 		const body = await c.req.json();
-		const { prompt, temperature, maxTokens, systemPrompt } =
+		const { prompt, temperature, maxTokens, systemPrompt, additionalContext } =
 			ChatRequestSchema.parse(body);
 
 		const agent = c.get('mastra').getAgent('productRoadmapAgent') as Agent;
@@ -137,7 +138,12 @@ If the user is just asking a question or making a comment, return:
 		// Convert prompt to messages format for the agent
 		const messages = [
 			{ role: 'system' as const, content: enhancedSystemPrompt },
-			{ role: 'user' as const, content: prompt },
+			{
+				role: 'user' as const,
+				content: `prompt: ${prompt}
+
+				additionalContext: ${JSON.stringify(additionalContext)}`,
+			},
 		];
 
 		const response = await agent.generate(messages, {
@@ -146,6 +152,8 @@ If the user is just asking a question or making a comment, return:
 			// maxSteps: 3, // Allow tool usage
 			experimental_output: ExecuteFunctionResponseSchema, // Use experimental_output for structured output with tools
 		});
+
+		console.log(messages);
 
 		// Return the structured response
 		return c.json({

@@ -33,8 +33,8 @@ export { useCedarState } from '@/store/stateSlice/useCedarState';
 
 // Export context management
 export {
-	renderAdditionalContext,
-	subscribeInputContext,
+	useRenderAdditionalContext,
+	useSubscribeInputContext,
 } from '@/store/agentInputContext/agentInputContextSlice';
 
 // Export mention provider functionality
@@ -109,6 +109,12 @@ export type {
 
 // Export SendMessageParams from the slice
 export type { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
+
+// Export storage configuration types
+export type {
+	MessageStorageBaseAdapter,
+	MessageStorageConfig,
+} from '@/store/messages/messageStorage';
 
 // Export voice components and types
 export { VoiceIndicator } from '@/store/voice/VoiceIndicator';

@@ -1,7 +1,7 @@
 import React from 'react';
 import {
 	useCedarStore,
-	renderAdditionalContext,
+	useRenderAdditionalContext,
 	ContextEntry,
 	withClassName,
 } from 'cedar-os';
@@ -26,11 +26,8 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 			return provider.renderContextBadge(entry);
 		}
 
-		// Get the label - for selectedNodes, use the title from data
-		const label =
-			key === 'selectedNodes' && entry.data?.data?.title
-				? entry.data.data.title
-				: entry.metadata?.label || entry.id;
+		// Get the label from metadata or fall back to id
+		const label = entry.metadata?.label || entry.id;
 
 		// Get color from metadata and apply 20% opacity
 		const color = entry.metadata?.color;
@@ -91,28 +88,39 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 	};
 
 	// Build renderers dynamically from all registered mention providers
+	// and sort entries by order metadata
 	const contextRenderers = React.useMemo(() => {
 		const renderers: Record<string, (entry: ContextEntry) => React.ReactNode> =
 			{};
 
-		// Add a renderer for each registered mention provider
-		mentionProviders.forEach((provider, providerId) => {
-			renderers[providerId] = (entry: ContextEntry) =>
-				renderContextBadge(providerId, entry);
+		// Create a sorted list of context keys based on their entries' order metadata
+		const contextKeysWithOrder = Object.keys(additionalContext).map((key) => {
+			const entries = additionalContext[key];
+			// Get the minimum order value from entries for this key (or MAX if none)
+			const minOrder = entries.reduce((min, entry) => {
+				const order = entry.metadata?.order;
+				return order !== undefined ? Math.min(min, order) : min;
+			}, Number.MAX_SAFE_INTEGER);
+
+			return { key, order: minOrder };
 		});
 
-		// Also include any legacy hardcoded keys that might not have providers yet
-		Object.keys(additionalContext).forEach((key) => {
-			if (!renderers[key]) {
+		// Sort keys by their order
+		contextKeysWithOrder.sort((a, b) => a.order - b.order);
+
+		// Add a renderer for each key in sorted order
+		contextKeysWithOrder.forEach(({ key }) => {
+			const provider = mentionProviders.get(key);
+			if (provider || additionalContext[key]) {
 				renderers[key] = (entry: ContextEntry) =>
 					renderContextBadge(key, entry);
 			}
 		});
 
 		return renderers;
-	}, [mentionProviders, additionalContext]);
+	}, [mentionProviders, additionalContext, renderContextBadge]);
 
-	const contextElements = renderAdditionalContext(contextRenderers);
+	const contextElements = useRenderAdditionalContext(contextRenderers);
 
 	const isDarkMode = useCedarStore((s) => s.styling.darkMode);
 

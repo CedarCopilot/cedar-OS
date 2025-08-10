@@ -1,0 +1,529 @@
+---
+title: 'Subscribing State to Input'
+description: 'Automatically add state to the agent input context'
+---
+
+Cedar's `useSubscribeInputContext` function allows you to automatically make any part of your application state available to AI agents as context. This enables agents to understand your app's current state and provide more relevant, contextual responses.
+
+## useSubscribeInputContext Overview
+
+The `useSubscribeInputContext` function subscribes to local state changes and automatically updates the agent's input context whenever the state changes. This means your AI agent always has access to the most up-to-date information from your application.
+
+### Function Signature
+
+```typescript
+function useSubscribeInputContext<T>(
+	localState: T,
+	mapFn: (state: T) => Record<string, any>,
+	options?: {
+		icon?: ReactNode;
+		color?: string;
+		labelField?: string | ((item: unknown) => string);
+		order?: number;
+	}
+): void;
+```
+
+### Parameters
+
+- **`localState: T`** - The local state to subscribe to (any type including single values or arrays)
+- **`mapFn: (state: T) => Record<string, any>`** - Function that maps your state to context entries
+- **`options`** (optional) - Configuration for visual representation and label extraction:
+  - `icon?: ReactNode` - Icon to display for this context
+  - `color?: string` - Hex color for visual styling
+  - `labelField?: string | ((item: unknown) => string)` - How to extract labels from your data
+  - `order?: number` - Display order for context badges (lower numbers appear first)
+
+## Basic Usage Example
+
+Here's a simple example with a todo list:
+
+```tsx
+import React, { useState } from 'react';
+import { useSubscribeInputContext } from 'cedar-os';
+import { CheckCircle } from 'lucide-react';
+
+function TodoApp() {
+	const [todos, setTodos] = useState([
+		{ id: 1, text: 'Buy groceries', completed: false },
+		{ id: 2, text: 'Walk the dog', completed: true },
+	]);
+
+	// Subscribe todos to input context
+	useSubscribeInputContext(
+		todos,
+		(todoList) => ({
+			todos: todoList, // Key 'todos' will be available to the agent
+		}),
+		{
+			icon: <CheckCircle />,
+			color: '#10B981', // Green color
+			labelField: 'text', // Use the 'text' field as label for each todo
+		}
+	);
+
+	return (
+		<div>
+			<TodoList todos={todos} onToggle={setTodos} />
+			<ChatInput /> {/* Agent can now see todos in context */}
+		</div>
+	);
+}
+```
+
+## Complex State Example
+
+Here's a more advanced example from the Product Roadmap demo:
+
+```tsx
+import { useSubscribeInputContext } from 'cedar-os';
+import { Box } from 'lucide-react';
+import { Node } from 'reactflow';
+
+interface FeatureNodeData {
+	title: string;
+	status: 'planned' | 'in-progress' | 'completed';
+	priority: 'low' | 'medium' | 'high';
+	description?: string;
+}
+
+function SelectedNodesPanel() {
+	const [selected, setSelected] = useState<Node<FeatureNodeData>[]>([]);
+
+	// Subscribe selected nodes to input context
+	useSubscribeInputContext(
+		selected,
+		(nodes: Node<FeatureNodeData>[]) => ({
+			selectedNodes: nodes.map((node) => ({
+				id: node.id,
+				title: node.data.title,
+				status: node.data.status,
+				priority: node.data.priority,
+				description: node.data.description,
+			})),
+		}),
+		{
+			icon: <Box />,
+			color: '#8B5CF6', // Purple color for selected nodes
+			labelField: 'title', // Use title field for labels
+		}
+	);
+
+	// Update selection when user selects nodes
+	useOnSelectionChange({
+		onChange: ({ nodes }) => setSelected(nodes),
+	});
+
+	return (
+		<div>
+			<h4>Selected Nodes</h4>
+			{selected.map((node) => (
+				<div key={node.id}>{node.data.title}</div>
+			))}
+		</div>
+	);
+}
+```
+
+## Using the labelField Option
+
+The `labelField` option allows you to specify how labels should be extracted from your data. This is especially useful when your data has custom field names or when you need custom label logic.
+
+### labelField as a String
+
+Specify which field to use as the label:
+
+```tsx
+const [users, setUsers] = useState([
+	{ userId: 'u1', fullName: 'John Doe', email: 'john@example.com' },
+	{ userId: 'u2', fullName: 'Jane Smith', email: 'jane@example.com' },
+]);
+
+useSubscribeInputContext(users, (userList) => ({ activeUsers: userList }), {
+	labelField: 'fullName', // Will use fullName as the label
+	icon: <User />,
+	color: '#3B82F6',
+});
+```
+
+### labelField as a Function
+
+Use a function for custom label generation:
+
+```tsx
+const [products, setProducts] = useState([
+	{ sku: 'P001', name: 'Laptop', price: 999, inStock: true },
+	{ sku: 'P002', name: 'Mouse', price: 29, inStock: false },
+]);
+
+useSubscribeInputContext(
+	products,
+	(productList) => ({ inventory: productList }),
+	{
+		labelField: (product) =>
+			`${product.name} (${product.inStock ? 'In Stock' : 'Out of Stock'})`,
+		icon: <Package />,
+		color: '#10B981',
+	}
+);
+```
+
+### Single Values Support
+
+`useSubscribeInputContext` now supports single values (not just arrays):
+
+```tsx
+const [count, setCount] = useState(42);
+const [isEnabled, setIsEnabled] = useState(true);
+const [userName, setUserName] = useState('Alice');
+
+// Subscribe a number
+useSubscribeInputContext(count, (value) => ({ itemCount: value }), {
+	icon: <Hash />,
+	color: '#F59E0B',
+});
+
+// Subscribe a boolean
+useSubscribeInputContext(isEnabled, (value) => ({ featureEnabled: value }), {
+	icon: <ToggleLeft />,
+	color: '#10B981',
+});
+
+// Subscribe a string with custom label
+useSubscribeInputContext(userName, (value) => ({ currentUser: value }), {
+	labelField: (name) => `User: ${name}`,
+	icon: <User />,
+	color: '#8B5CF6',
+});
+```
+
+## Controlling Display Order
+
+The `order` property allows you to control the display order of context badges in the UI. This is useful when you have multiple context subscriptions and want to prioritize their visibility.
+
+### How Order Works
+
+- **Lower numbers appear first**: `order: 1` will appear before `order: 10`
+- **Default behavior**: Items without an order are treated as having the maximum order value
+- **Stable sorting**: Items with the same order maintain their original relative position
+
+### Basic Order Example
+
+```tsx
+function PrioritizedContext() {
+	const [criticalAlerts, setCriticalAlerts] = useState([]);
+	const [normalTasks, setNormalTasks] = useState([]);
+	const [archivedItems, setArchivedItems] = useState([]);
+
+	// Critical alerts appear first (order: 1)
+	useSubscribeInputContext(
+		criticalAlerts,
+		(alerts) => ({ criticalAlerts: alerts }),
+		{
+			icon: <AlertCircle />,
+			color: '#EF4444',
+			order: 1, // Highest priority - appears first
+		}
+	);
+
+	// Normal tasks appear second (order: 10)
+	useSubscribeInputContext(normalTasks, (tasks) => ({ activeTasks: tasks }), {
+		icon: <CheckCircle />,
+		color: '#3B82F6',
+		order: 10, // Medium priority
+	});
+
+	// Archived items appear last (order: 100)
+	useSubscribeInputContext(
+		archivedItems,
+		(items) => ({ archivedItems: items }),
+		{
+			icon: <Archive />,
+			color: '#6B7280',
+			order: 100, // Low priority - appears last
+		}
+	);
+
+	return <ChatInput />;
+}
+```
+
+### Complex Order Example with Mention Providers
+
+When combining `useSubscribeInputContext` with mention providers, you can create a well-organized context display:
+
+```tsx
+import { useStateBasedMentionProvider } from 'cedar-os';
+
+function OrganizedWorkspace() {
+	const [selectedNodes, setSelectedNodes] = useState([]);
+	const [user, setUser] = useState(null);
+
+	// User context appears first (order: 1)
+	useSubscribeInputContext(user, (userData) => ({ currentUser: userData }), {
+		icon: <User />,
+		color: '#8B5CF6',
+		labelField: 'name',
+		order: 1, // User info always visible first
+	});
+
+	// Selected items appear second (order: 5)
+	useSubscribeInputContext(
+		selectedNodes,
+		(nodes) => ({ selectedNodes: nodes }),
+		{
+			icon: <Box />,
+			color: '#F59E0B',
+			labelField: 'title',
+			order: 5, // Selection context after user
+		}
+	);
+
+	// Mention provider for all nodes (order: 10)
+	useStateBasedMentionProvider({
+		stateKey: 'nodes',
+		trigger: '@',
+		labelField: 'title',
+		description: 'All nodes',
+		icon: <Box />,
+		color: '#3B82F6',
+		order: 10, // Available nodes after selections
+	});
+
+	// Mention provider for connections (order: 20)
+	useStateBasedMentionProvider({
+		stateKey: 'edges',
+		trigger: '@',
+		labelField: (edge) => `${edge.source} → ${edge.target}`,
+		description: 'Connections',
+		icon: <ArrowRight />,
+		color: '#10B981',
+		order: 20, // Connections appear last
+	});
+
+	return <ChatInput />;
+}
+```
+
+### Order Best Practices
+
+1. **Use consistent spacing**: Leave gaps between order values (1, 10, 20) to allow for future insertions
+2. **Group related contexts**: Give similar contexts adjacent order values
+3. **Prioritize by importance**: Most relevant context should have lower order values
+4. **Document your ordering**: Comment why certain items have specific orders
+
+```tsx
+// Order schema for our app:
+// 1-9: User and session data (critical context)
+// 10-19: Current selections and active state
+// 20-49: General application state
+// 50-99: Historical or computed data
+// 100+: Low priority or debug information
+
+useSubscribeInputContext(sessionData, mapper, { order: 1 }); // Critical
+useSubscribeInputContext(selectedItems, mapper, { order: 10 }); // Active
+useSubscribeInputContext(appState, mapper, { order: 20 }); // General
+useSubscribeInputContext(history, mapper, { order: 50 }); // Historical
+useSubscribeInputContext(debugInfo, mapper, { order: 100 }); // Debug
+```
+
+### Default Label Extraction
+
+When no `labelField` is specified, the function looks for labels in this order:
+
+1. `title` field
+2. `label` field
+3. `name` field
+4. `id` field
+5. String representation of the value
+
+## How It Works Automatically
+
+When you use `useSubscribeInputContext`, here's what happens automatically:
+
+1. **State Monitoring**: The function uses React's `useEffect` to monitor changes to your `localState`
+2. **Context Mapping**: When state changes, your `mapFn` transforms the state into context entries
+3. **Store Update**: The mapped context is automatically added to Cedar's internal store
+4. **Agent Access**: When the user sends a message, the agent receives this context along with the message
+
+### Context Structure
+
+The context entries follow this structure:
+
+```typescript
+interface ContextEntry {
+	id: string;
+	source: 'mention' | 'subscription' | 'manual';
+	data: any;
+	metadata?: {
+		label?: string;
+		icon?: ReactNode;
+		color?: string;
+		[key: string]: any;
+	};
+}
+```
+
+When using `useSubscribeInputContext`, entries are automatically marked with `source: 'subscription'`.
+
+## Multiple State Subscriptions
+
+You can subscribe multiple pieces of state:
+
+```tsx
+function MyApp() {
+	const [user, setUser] = useState(null);
+	const [preferences, setPreferences] = useState({});
+	const [currentPage, setCurrentPage] = useState('/dashboard');
+
+	// Subscribe user data
+	useSubscribeInputContext(
+		user,
+		(userData) => ({
+			currentUser: userData
+				? {
+						id: userData.id,
+						name: userData.name,
+						role: userData.role,
+				  }
+				: null,
+		}),
+		{
+			icon: <User />,
+			color: '#3B82F6',
+		}
+	);
+
+	// Subscribe preferences
+	useSubscribeInputContext(
+		preferences,
+		(prefs) => ({
+			userPreferences: prefs,
+		}),
+		{
+			icon: <Settings />,
+			color: '#6B7280',
+		}
+	);
+
+	// Subscribe navigation state
+	useSubscribeInputContext(
+		currentPage,
+		(page) => ({
+			currentPage: {
+				path: page,
+				timestamp: new Date().toISOString(),
+			},
+		}),
+		{
+			icon: <Navigation />,
+			color: '#F59E0B',
+		}
+	);
+
+	return <YourAppContent />;
+}
+```
+
+## Best Practices
+
+### 1. Transform Sensitive Data
+
+Don't expose sensitive information to the agent:
+
+```tsx
+useSubscribeInputContext(userProfile, (profile) => ({
+	user: {
+		name: profile.name,
+		tier: profile.subscriptionTier,
+		preferences: profile.preferences,
+		// Don't include: email, password, tokens, etc.
+	},
+}));
+```
+
+### 2. Use Meaningful Keys
+
+Choose descriptive keys for your context:
+
+```tsx
+useSubscribeInputContext(shoppingCart, (cart) => ({
+	shoppingCart: cart.items, // Clear and descriptive
+	cartTotal: cart.total,
+	cartItemCount: cart.items.length,
+}));
+```
+
+### 3. Optimize Large Data Sets
+
+For large data sets, consider filtering or summarizing:
+
+```tsx
+useSubscribeInputContext(allTransactions, (transactions) => ({
+	recentTransactions: transactions
+		.slice(0, 10) // Only last 10 transactions
+		.map((t) => ({
+			id: t.id,
+			amount: t.amount,
+			date: t.date,
+			// Exclude detailed metadata
+		})),
+	transactionSummary: {
+		total: transactions.length,
+		totalAmount: transactions.reduce((sum, t) => sum + t.amount, 0),
+	},
+}));
+```
+
+## Visual Customization
+
+The `options` parameter allows you to customize how the context appears in the UI:
+
+```tsx
+import { Star, AlertCircle, CheckCircle } from 'lucide-react';
+
+// Different colors and icons for different priorities
+useSubscribeInputContext(
+	highPriorityTasks,
+	(tasks) => ({ highPriorityTasks: tasks }),
+	{
+		icon: <AlertCircle />,
+		color: '#EF4444', // Red for high priority
+	}
+);
+
+useSubscribeInputContext(
+	completedTasks,
+	(tasks) => ({ completedTasks: tasks }),
+	{
+		icon: <CheckCircle />,
+		color: '#10B981', // Green for completed
+	}
+);
+
+useSubscribeInputContext(starredItems, (items) => ({ starredItems: items }), {
+	icon: <Star />,
+	color: '#F59E0B', // Yellow for starred
+});
+```
+
+## Integration with Chat Input
+
+The subscribed context automatically becomes available to your AI agent when using Cedar's chat components:
+
+```tsx
+import { ChatInput } from 'cedar-os-components';
+
+function MyChat() {
+	// Your useSubscribeInputContext calls here...
+
+	return (
+		<div>
+			{/* Context is automatically included when user sends messages */}
+			<ChatInput placeholder='Ask me about your todos, selected nodes, or anything else...' />
+		</div>
+	);
+}
+```
+
+The agent will receive the context in a structured format and can reference it when generating responses, making the conversation more contextual and relevant to your application's current state.

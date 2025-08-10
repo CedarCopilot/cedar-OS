@@ -1,0 +1,147 @@
+---
+title: 'Extending Mastra'
+description: 'Connecting Cedar-OS with Mastra'
+---
+
+Mastra is a full-featured typescript framework to build agents. It provides memory, tool calls, knowledge base, and more. It's our personal recommended choice when building complex agents. Our features are designed to integrate most seamlessly with a backend server configured in Mastra.
+
+<Info>
+	{' '}
+	**Note:** Cedar-OS is not currently compatible with Mastra's client SDK. To use
+	Cedar-OS with Mastra, run a Mastra server and point Cedar-OS at it.{' '}
+</Info>
+
+**Want to skip the docs?** Clone the [cedar-mastra-starter](https://github.com/CedarCopilot/cedar-mastra-starter) starter repository and to interactively explore the possible interactions between Mastra and Cedar.
+
+## Initial Configuration
+
+<Steps>
+<Step title="Spin up a Mastra backend">
+Follow the official guide: [Install using the `create-mastra` CLI](https://mastra.ai/en/docs/getting-started/installation#install-using-the-create-mastra-cli).
+</Step>
+
+<Step title='Understand Cedar-Backend Communication'>
+	Understand how Cedar speaks to your backend, including default API routes,
+	return types, etc. - [Agent Backend
+	Connection](https://docs.cedarcopilot.com/agent-backend-connection/agent-backend-connection)
+</Step>
+
+<Step title="Point Cedar-OS at your backend">
+```tsx
+import { CedarCopilot } from 'cedar-os';
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+					provider: 'mastra',
+					baseURL: 'http://localhost:4111', // default dev port for Mastra
+					apiKey: process.env.NEXT_PUBLIC_MASTRA_API_KEY, // optional — only for backend auth
+				}}>
+			<YourApp />
+		</CedarCopilot>
+	); 
+}
+````
+</Step>
+
+<Step title="Backend Configuration">
+[Register API routes](https://mastra.ai/en/examples/deployment/custom-api-route) in your Mastra server so Cedar's chat components have something to talk to:
+
+```ts mastra/src/index.ts
+import { registerApiRoute } from '@mastra/core/server';
+
+// POST /chat
+// The chat's non-streaming default endpoint
+registerApiRoute('/chat', {
+	method: 'POST',
+	// …validate input w/ zod
+	handler: async (c) => {
+		/* your agent.generate() logic */
+	},
+});
+
+// POST /chat/stream (SSE)
+// The chat's streaming default endpoint
+registerApiRoute('/chat/stream', {
+	method: 'POST',
+	handler: async (c) => {
+		/* stream agent output in SSE format */
+	},
+});
+```
+
+</Step>
+
+<Step title="Add Cedar Chat">
+Drop a Cedar chat component into your frontend – see [Chat Overview](https://docs.cedarcopilot.com/chat/chat-overview).
+Your backend and frontend are now linked! You're ready to start bringing the power of your Mastra agentic workflows to your UI.
+</Step>
+</Steps>
+
+## Features to explore
+
+Now that you have Cedar-OS connected to Mastra, explore these powerful features:
+
+- **[State Access & Manipulation](https://docs.cedarcopilot.com/state-access/agentic-state-access#useregisterstate-hook)** - Use the `useRegisterState` hook for communicating frontend state and letting agents manipulate your frontend state
+- **[Mentions & Context](https://docs.cedarcopilot.com/agent-input-context/mentions#usementionprovider)** - Send @ mentions to your backend using the `useMentionProvider`
+
+## New to Mastra? Here are a few primitives to understand
+
+<Tabs>
+<Tab title="Agent">
+```ts
+// Agents encapsulate instructions, model, memory and tools
+export const roadmap = new Agent({
+  name: 'Roadmap',
+  model: openai('gpt-4o-mini'),
+  tools: { upvoteTool },
+  instructions: `You are …`,
+});
+// Docs: https://mastra.ai/en/docs/agents/overview
+```
+</Tab>
+<Tab title="Tool">
+```ts
+// Tools expose type-safe side effects
+export const upvoteTool = createTool({
+  id: 'upvote-feature',
+  inputSchema: z.object({ id: z.string() }),
+  execute: async ({ context }) => { /* … */ },
+});
+// Docs: https://mastra.ai/en/docs/tools-mcp/overview
+```
+</Tab>
+<Tab title="Workflow">
+```ts
+// Orchestrate multi-step logic
+const roadmapWorkflow = createWorkflow({ id: 'roadmap-analysis' })
+  .then(step1)
+  .then(step2);
+roadmapWorkflow.commit();
+// Docs: https://mastra.ai/en/docs/workflows/overview
+```
+</Tab>
+<Tab title="index.ts">
+```ts
+// Register all your Mastra primitives here, and configure agent memory, message storage, etc.
+export const mastra = new Mastra({
+  agents: { roadmap },
+  server: { apiRoutes },
+  workflows: { roadmapWorkflow }
+  storage: new LibSQLStore({ url: ':memory:' }),
+});
+```
+</Tab>
+</Tabs>
+
+## Deployment
+
+The recommended deployment setup is:
+
+- **Frontend**: Deploy to [Vercel](https://vercel.com) for optimal performance and seamless integration
+- **Backend**: Use [Mastra Cloud](https://mastra.ai/cloud) for hosting your Mastra server
+
+## Next Steps
+
+- Clone & run the [cedar-mastra-starter](https://github.com/CedarCopilot/cedar-mastra-starter) to see everything in action.
+- Explore the official Mastra docs for further customisation.

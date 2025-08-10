@@ -1,7 +1,7 @@
 'use client';
 
 import { CedarCopilot } from 'cedar-os';
-import type { ProviderConfig } from 'cedar-os';
+import type { MessageStorageConfig, ProviderConfig } from 'cedar-os';
 import { ReactNode } from 'react';
 
 export default function ProductRoadmapLayout({
@@ -15,11 +15,9 @@ export default function ProductRoadmapLayout({
 	const llmProvider: ProviderConfig = {
 		provider: 'mastra',
 		apiKey: 'not-needed-for-local', // API key is not needed for local Mastra agent
-		baseURL:
-			process.env.NODE_ENV === 'development'
-				? 'http://localhost:4111'
-				: 'https://modern-lemon-whale.mastra.cloud', // Mastra dev server default port
+		baseURL: 'http://localhost:4111',
 		chatPath: '/chat/execute-function',
+		voiceRoute: '/chat/voice-execute',
 	};
 
 	// const llmProvider: ProviderConfig = {
@@ -31,5 +29,21 @@ export default function ProductRoadmapLayout({
 	// 	},
 	// };
 
-	return <CedarCopilot llmProvider={llmProvider}>{children}</CedarCopilot>;
+	const voiceSettings = {
+		useBrowserTTS: true,
+	};
+
+	const localStorageConfig: MessageStorageConfig = {
+		type: 'local',
+		options: { key: 'cedar-test' },
+	};
+
+	return (
+		<CedarCopilot
+			llmProvider={llmProvider}
+			voiceSettings={voiceSettings}
+			messageStorage={localStorageConfig}>
+			{children}
+		</CedarCopilot>
+	);
 }

@@ -5,6 +5,7 @@ import type { AdditionalContext, ContextEntry, MentionProvider } from './types';
 import { ReactNode, useMemo } from 'react';
 import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
+import { sanitizeJson } from '@/utils/sanitizeJson';
 export type ChatInput = JSONContent;
 
 // Define the agent input context slice
@@ -15,8 +16,8 @@ export interface AgentInputContextSlice {
 	setChatInputContent: (content: ChatInput) => void;
 
 	// Optional manual override content for the editor
-	overrideInputContent: { input: string | any[] | null };
-	setOverrideInputContent: (content: string | any[] | null) => void;
+	overrideInputContent: { input: string | JSONContent[] | null };
+	setOverrideInputContent: (content: string | JSONContent[] | null) => void;
 
 	// Enhanced context management
 	additionalContext: AdditionalContext;
@@ -199,48 +200,8 @@ export const createAgentInputContextSlice: StateCreator<
 	stringifyAdditionalContext: () => {
 		const context = get().additionalContext;
 
-		// Helper function to sanitize context data for JSON serialization
-		const sanitizeForJSON = (obj: any): any => {
-			if (obj === null || obj === undefined) {
-				return obj;
-			}
-
-			// Handle arrays
-			if (Array.isArray(obj)) {
-				return obj.map(sanitizeForJSON);
-			}
-
-			// Handle objects
-			if (typeof obj === 'object') {
-				// Check if it's a React element (has $$typeof property)
-				if ('$$typeof' in obj) {
-					return '[React Component]';
-				}
-
-				// Check if it's a DOM element
-				if (obj instanceof Element) {
-					return '[DOM Element]';
-				}
-
-				// Recursively sanitize object properties
-				const sanitized: any = {};
-				for (const [key, value] of Object.entries(obj)) {
-					// Skip functions
-					if (typeof value === 'function') {
-						sanitized[key] = '[Function]';
-					} else {
-						sanitized[key] = sanitizeForJSON(value);
-					}
-				}
-				return sanitized;
-			}
-
-			// Return primitives as-is
-			return obj;
-		};
-
 		// Sanitize context before stringifying
-		const sanitizedContext = sanitizeForJSON(context);
+		const sanitizedContext = sanitizeJson(context);
 		return JSON.stringify(sanitizedContext, null, 2);
 	},
 
@@ -256,54 +217,123 @@ export const createAgentInputContextSlice: StateCreator<
 	},
 });
 
+// Type helper to extract element type from arrays
+type ElementType<T> = T extends readonly (infer E)[] ? E : T;
+
 /**
  * Subscribe to local state changes and update additional context
  * @param localState - The local state to subscribe to
  * @param mapFn - Function to map local state to context entries
- * @param options - Optional configuration for icon and color
+ * @param options - Optional configuration for icon, color, and label extraction
  */
-export function subscribeInputContext<T>(
+export function useSubscribeInputContext<T>(
 	localState: T,
-	mapFn: (state: T) => Record<string, any>,
+	mapFn: (state: T) => Record<string, unknown>,
 	options?: {
 		icon?: ReactNode;
 		color?: string;
+		labelField?: string | ((item: ElementType<T>) => string);
+		order?: number;
 	}
 ): void {
 	const updateAdditionalContext = useCedarStore(
 		(s) => s.updateAdditionalContext
 	);
+
+	// Helper to extract label from an item
+	const getLabel = (item: unknown): string => {
+		const { labelField } = options || {};
+
+		if (typeof labelField === 'function') {
+			return labelField(item as ElementType<T>);
+		}
+
+		// For objects, try to extract label from field
+		if (typeof item === 'object' && item !== null) {
+			const obj = item as Record<string, unknown>;
+
+			if (typeof labelField === 'string' && labelField in obj) {
+				return String(obj[labelField]);
+			}
+
+			// Default label extraction for objects
+			return String(obj.title || obj.label || obj.name || obj.id || item);
+		}
+
+		// For primitives, convert to string
+		return String(item);
+	};
+
 	useEffect(() => {
 		const mapped = mapFn(localState);
+		const normalized: Record<string, unknown> = {};
 
-		// If options are provided, enhance the mapped data with metadata
-		if (options && (options.icon || options.color)) {
-			const enhanced: Record<string, any> = {};
-			for (const [key, value] of Object.entries(mapped)) {
+		// Normalize all values to arrays for consistent handling
+		for (const [key, value] of Object.entries(mapped)) {
+			if (Array.isArray(value)) {
+				// Already an array, use as is
+				normalized[key] = value;
+			} else if (value !== null && value !== undefined) {
+				// Single value - wrap in array with proper structure
+				const label = getLabel(value);
+				normalized[key] = [
+					{
+						id: `${key}-single`,
+						value: value,
+						// Use extracted label
+						label: label,
+						title: label,
+						name: label,
+					},
+				];
+			} else {
+				// Null or undefined - create empty array
+				normalized[key] = [];
+			}
+		}
+
+		// If options are provided, enhance the normalized data with metadata and labels
+		if (
+			options &&
+			(options.icon ||
+				options.color ||
+				options.labelField ||
+				options.order !== undefined)
+		) {
+			const enhanced: Record<string, unknown> = {};
+			for (const [key, value] of Object.entries(normalized)) {
 				if (Array.isArray(value)) {
-					// For arrays, add metadata to each item
-					enhanced[key] = value.map((item) => ({
-						...item,
-						metadata: {
-							...item.metadata,
-							icon: options.icon,
-							color: options.color,
-						},
-					}));
-				} else {
-					// For non-arrays, keep as is
-					enhanced[key] = value;
+					// Add metadata and update labels for each item
+					enhanced[key] = value.map((item) => {
+						const label = getLabel(
+							item.value !== undefined ? item.value : item
+						);
+						return {
+							...item,
+							// Update label fields if labelField is specified
+							label: options.labelField ? label : item.label,
+							title: options.labelField ? label : item.title,
+							name: options.labelField ? label : item.name,
+							metadata: {
+								...item.metadata,
+								label: options.labelField ? label : item.metadata?.label,
+								icon: options.icon,
+								color: options.color,
+								order: options.order,
+							},
+						};
+					});
 				}
 			}
 			updateAdditionalContext(enhanced);
 		} else {
-			updateAdditionalContext(mapped);
+			updateAdditionalContext(normalized);
 		}
 	}, [localState, mapFn, updateAdditionalContext, options]);
 }
 
 // Enhanced hook to render additionalContext entries
-export function renderAdditionalContext(
+export function useRenderAdditionalContext(
 	renderers: Record<string, (entry: ContextEntry) => ReactNode>
 ): ReactNode[] {
 	const additionalContext = useCedarStore((s) => s.additionalContext);

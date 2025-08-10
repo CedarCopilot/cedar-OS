@@ -1,0 +1,613 @@
+---
+title: 'Agent Backend Connection'
+description: 'Overview of connecting AI agents to Cedar-OS'
+---
+
+Before we get to the juicy interactions like speaking to your AI for it to do work inside your applications, we have to connect to the agent!
+
+Cedar-OS has working configurations with every major backend. We support:
+
+- **Mastra** - Full-featured agent framework with memory, tools, and knowledge base
+- **AI SDK** - Vercel's unified AI SDK supporting multiple providers
+- **OpenAI** - Direct OpenAI API integration
+- **Anthropic** - Direct Anthropic API integration
+- **Custom Backend** - Build your own integration
+
+## How to choose your provider
+
+- **You want a full-featured agent: Mastra** - When you need memory across sessions (conversation history), tool calls, knowledge base, and more complex agent capabilities.
+- **Simplicity: AI SDK** - One interface, multiple providers. Perfect for getting started quickly.
+- **You only have one API Key: Anthropic/OpenAI** - Direct integration with a single provider.
+- **You already have a custom backend (e.g Langchain): Custom Backend** - glad I could help :^)
+
+## Initial Configuration
+
+Choose your provider and configure it with the CedarCopilot component. By default, this will make your chat and all other functions to the backend work
+
+<CodeGroup>
+
+```tsx AI SDK
+import { CedarCopilot } from 'cedar-os';
+
+// TypeScript Type
+type AISDKConfig = {
+	provider: 'ai-sdk';
+	providers: {
+		openai?: { apiKey: string };
+		anthropic?: { apiKey: string };
+		google?: { apiKey: string };
+		mistral?: { apiKey: string };
+		groq?: { apiKey: string };
+		xai?: { apiKey: string };
+	};
+};
+
+function App() {
+	return (
+		// You don't need to put every model,
+		// but if you try to use a model without a key it will fail
+		<CedarCopilot
+			llmProvider={{
+				provider: 'ai-sdk',
+				providers: {
+					openai: {
+						apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+					},
+					anthropic: {
+						apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY,
+					},
+					google: {
+						apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
+					},
+					groq: {
+						apiKey: process.env.GROQ_API_KEY,
+					},
+					xai: {
+						apiKey: process.env.XAI_API_KEY,
+					},
+				},
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
+
+```tsx OpenAI
+import { CedarCopilot } from 'cedar-os';
+
+// TypeScript Type
+type OpenAIConfig = {
+	provider: 'openai';
+	apiKey: string;
+};
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'openai',
+				apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
+
+```tsx Anthropic
+import { CedarCopilot } from 'cedar-os';
+
+// TypeScript Type
+type AnthropicConfig = {
+	provider: 'anthropic';
+	apiKey: string;
+};
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'anthropic',
+				apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY,
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
+
+```tsx Mastra
+import { CedarCopilot } from 'cedar-os';
+
+// TypeScript Type
+type MastraConfig = {
+	provider: 'mastra';
+	baseURL: string;
+	apiKey?: string; // Optional: only if your backend requires auth
+	chatPath?: string; // Optional: base chat path (defaults to '/chat')
+	voiceRoute?: string; // Optional: voice endpoint route (auto-configures voice endpoint)
+};
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'mastra',
+				baseURL: 'http://localhost:3000/api', // Your Mastra backend URL
+				apiKey: process.env.MASTRA_API_KEY, // Optional: only if your backend requires auth
+				chatPath: '/chat', // Optional: base chat path (defaults to '/chat')
+				voiceRoute: '/chat/voice-execute', // Optional: voice endpoint route
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
+
+```tsx Custom Backend
+import { CedarCopilot } from 'cedar-os';
+
+// TypeScript Type
+type CustomConfig = {
+	provider: 'custom';
+	config: Record<string, unknown>; // Flexible config object for any custom backend needs
+};
+
+function App() {
+	return (
+		<CedarCopilot
+			llmProvider={{
+				provider: 'custom',
+				config: {
+					baseURL: 'https://your-api.com',
+					apiKey: 'your-api-key',
+					// Any additional config your backend needs
+					organizationId: 'org-123',
+					projectId: 'project-456',
+				},
+			}}>
+			<YourApp />
+		</CedarCopilot>
+	);
+}
+```
+
+</CodeGroup>
+
+### Mastra Configuration Options
+
+When using the Mastra provider, you have additional configuration options:
+
+- **baseURL**: The base URL of your Mastra backend (required)
+- **apiKey**: Optional API key if your backend requires authentication
+- **chatPath**: Optional base path for chat endpoints (defaults to `/chat`)
+- **voiceRoute**: Optional route for voice endpoints (automatically configures voice endpoint)
+
+The `chatPath` parameter is particularly useful if your Mastra backend uses a different base path for chat endpoints. For example:
+
+- With default `chatPath: '/chat'`: Routes become `/chat/execute-function`, `/chat/init`, etc.
+- With custom `chatPath: '/api/v1/chat'`: Routes become `/api/v1/chat/execute-function`, `/api/v1/chat/init`, etc.
+
+The `voiceRoute` parameter automatically configures the voice endpoint by combining it with the `baseURL`. For example:
+
+- With `baseURL: 'http://localhost:3000/api'` and `voiceRoute: '/chat/voice-execute'`: Voice endpoint becomes `http://localhost:3000/api/chat/voice-execute`
+- If not specified, the voice endpoint remains at the default value and must be configured manually
+
+The high-level `sendMessage()` function (that handles sending the chat), calls by default:
+
+- `${chatPath}` (on message send, non-streaming)
+- `${chatPath}/stream` (on message send, streaming).
+
+You can still override this by passing a custom `route` parameter to `sendMessage()`.
+
+### Typed Provider Connection
+
+Cedar-OS provides full TypeScript support. When you configure a provider, all methods are properly typed:
+
+```typescript
+// Types can be found in cedar-os/types.ts
+
+// Base params sent to all providers
+export interface BaseParams {
+	prompt: string; // Compiled frontend context and user message
+	systemPrompt?: string;
+	temperature?: number;
+	maxTokens?: number;
+	[key: string]: unknown;
+}
+
+// What the frontend expects in return
+export interface LLMResponse {
+	content: string; // In the chat sendMessage() flow, this is the message added to the chat
+	usage?: {
+		promptTokens: number;
+		completionTokens: number;
+		totalTokens: number;
+	};
+	metadata?: Record<string, unknown>;
+	object?: unknown; // The object field contains structured output that is parsed for state execution, generative UI, etc.
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Reserved object shapes in the Cedar chat">
+    When returning structured data in the `object` field of `LLMResponse`, objects with a `type` field have special meanings in Cedar-OS:
+
+    **`type: "action"`** - Defers to frontend action execution (state manipulation)
+    - Learn more: [Agentic State Access](/state-access/agentic-state-access)
+
+    **`type: "message"`** - Processes and adds content as a message in the chat
+    - Automatically renders the object content as a new chat message
+    - Note: if you return an object with this type AND a content field, both will be rendered as chat messages in the order the are received
+
+    Other `type` values can be used for custom handling (such as generative UI).
+
+  </Accordion>
+</AccordionGroup>
+
+When designing agentic workflows, the best practice for working with Cedar-OS is to create typed functions with hardcoded system prompts in a single file. This approach ensures consistency, type safety, and reusability across your application.
+
+<CodeGroup>
+
+```tsx AI SDK
+import { useTypedAgentConnection } from 'cedar-os';
+import { z } from 'zod';
+
+// Get a typed connection for AI SDK
+const { callLLM, streamLLM, callLLMStructured } =
+	useTypedAgentConnection('ai-sdk');
+
+interface AISDKParams extends BaseParams {
+	model: string; // Format: "provider/model" e.g., "openai/gpt-4o", "anthropic/claude-3-sonnet"
+}
+
+// Example with OpenAI model through AI SDK
+const openaiResponse = await callLLM({
+	model: 'openai/gpt-4o',
+	prompt: 'Hello, AI!',
+	systemPrompt: 'You are a helpful assistant.',
+});
+
+// Example with Anthropic model through AI SDK
+const anthropicResponse = await callLLM({
+	model: 'anthropic/claude-3-sonnet',
+	prompt: 'Hello, AI!',
+	systemPrompt: 'You are a helpful assistant.',
+});
+
+// Example with xAI Grok model through AI SDK
+const grokResponse = await callLLM({
+	model: 'xai/grok-beta',
+	prompt: 'Hello, AI!',
+	systemPrompt: 'You are a helpful assistant.',
+});
+
+// Structured response example with Zod schema
+const ProductSchema = z.object({
+	name: z.string(),
+	price: z.number(),
+	category: z.string(),
+	inStock: z.boolean(),
+	description: z.string(),
+});
+
+type Product = z.infer<typeof ProductSchema>;
+
+const structuredResponse: Product = await callLLMStructured({
+	model: 'openai/gpt-4o',
+	prompt: 'Generate a product for a tech store',
+	systemPrompt: 'You are a product generator for an electronics store.',
+	schema: ProductSchema,
+});
+
+// structuredResponse.object is now fully typed as Product
+console.log(structuredResponse.object.name); // string
+console.log(structuredResponse.object.price); // number
+console.log(structuredResponse.object.inStock); // boolean
+```
+
+```tsx OpenAI
+import { useTypedAgentConnection } from 'cedar-os';
+import { z } from 'zod';
+
+// Get a typed connection for OpenAI
+const { callLLM, streamLLM, callLLMStructured } =
+	useTypedAgentConnection('openai');
+
+interface OpenAIParams extends BaseParams {
+	model: string;
+}
+
+// Example usage
+const response = await callLLM({
+	model: 'gpt-4o',
+	prompt: 'Generate a product description for a new product',
+	systemPrompt:
+		'You are a product description generator. You are given a product name and you need to generate a product description for it.',
+});
+
+// Streaming example
+const stream = await streamLLM({
+	model: 'gpt-4o',
+	prompt: 'Tell me a story',
+	systemPrompt: 'You are a creative storyteller.',
+});
+
+// Structured response example
+const UserAnalysisSchema = z.object({
+	sentiment: z.enum(['positive', 'negative', 'neutral']),
+	confidence: z.number().min(0).max(1),
+	keyTopics: z.array(z.string()),
+	actionItems: z.array(
+		z.object({
+			task: z.string(),
+			priority: z.enum(['low', 'medium', 'high']),
+			dueDate: z.string().optional(),
+		})
+	),
+});
+
+type UserAnalysis = z.infer<typeof UserAnalysisSchema>;
+
+const analysisResponse: UserAnalysis = await callLLMStructured({
+	model: 'gpt-4o',
+	prompt:
+		'Analyze this user feedback: "The app is great but loading times are slow"',
+	systemPrompt:
+		'You are a user feedback analyzer. Extract sentiment, topics, and action items.',
+	schema: UserAnalysisSchema,
+});
+
+// analysisResponse.object is fully typed as UserAnalysis
+console.log(analysisResponse.object.sentiment); // 'positive' | 'negative' | 'neutral'
+console.log(analysisResponse.object.confidence); // number
+console.log(analysisResponse.object.actionItems[0].priority); // 'low' | 'medium' | 'high'
+```
+
+```tsx Anthropic
+import { useTypedAgentConnection } from 'cedar-os';
+import { z } from 'zod';
+
+// Get a typed connection for Anthropic
+const { callLLM, streamLLM, callLLMStructured } =
+	useTypedAgentConnection('anthropic');
+
+interface AnthropicParams extends BaseParams {
+	model: string;
+}
+
+// Example usage
+const response = await callLLM({
+	model: 'claude-3-sonnet-20240229',
+	prompt: 'Hello, AI!',
+	systemPrompt: 'You are a helpful assistant.',
+});
+
+// System prompts example
+const analysisResponse = await callLLM({
+	model: 'claude-3-opus-20240229',
+	prompt: 'Analyze this data...',
+	systemPrompt:
+		'You are a data analyst with expertise in statistical analysis.',
+});
+
+// Structured response example with complex schema
+const CodeReviewSchema = z.object({
+	overallScore: z.number().min(1).max(10),
+	issues: z.array(
+		z.object({
+			type: z.enum([
+				'bug',
+				'performance',
+				'security',
+				'style',
+				'maintainability',
+			]),
+			severity: z.enum(['low', 'medium', 'high', 'critical']),
+			line: z.number().optional(),
+			description: z.string(),
+			suggestion: z.string(),
+		})
+	),
+	strengths: z.array(z.string()),
+	recommendations: z.array(
+		z.object({
+			category: z.string(),
+			action: z.string(),
+			impact: z.enum(['low', 'medium', 'high']),
+		})
+	),
+});
+
+type CodeReview = z.infer<typeof CodeReviewSchema>;
+
+const codeReviewResponse: CodeReview = await callLLMStructured({
+	model: 'claude-3-opus-20240229',
+	prompt: 'Review this React component code: [code here]',
+	systemPrompt:
+		'You are a senior software engineer conducting a thorough code review.',
+	schema: CodeReviewSchema,
+});
+
+// codeReviewResponse.object is fully typed as CodeReview
+console.log(codeReviewResponse.object.overallScore); // number (1-10)
+console.log(codeReviewResponse.object.issues[0].severity); // 'low' | 'medium' | 'high' | 'critical'
+console.log(codeReviewResponse.object.recommendations[0].impact); // 'low' | 'medium' | 'high'
+```
+
+```tsx Mastra
+import { useTypedAgentConnection } from 'cedar-os';
+import { z } from 'zod';
+
+// Get a typed connection for Mastra
+const { callLLM, streamLLM, callLLMStructured } =
+	useTypedAgentConnection('mastra');
+
+interface MastraParams extends BaseParams {
+	route: string;
+}
+
+// Example usage
+const response = await callLLM({
+	route: '/chat/completions', // Full route path
+	prompt: 'Hello, AI!',
+});
+
+// Response is fully typed as LLMResponse
+console.log(response.content); // string
+console.log(response.usage?.totalTokens); // number | undefined
+console.log(response.object); // unknown (for structured responses)
+
+// Example with additional Mastra features
+// Note: When using sendMessage(), the default route is automatically constructed
+// as `${chatPath}` (e.g., '/chat')
+const advancedResponse = await callLLM({
+	route: '/chat', // This would be the default for sendMessage()
+	prompt: 'Remember my name is John',
+	// Additional Mastra-specific parameters can be added
+	sessionId: 'user-123',
+	tools: ['web_search', 'calculator'],
+	knowledgeBaseId: 'kb-456',
+});
+
+// Structured response example with Mastra
+const TaskPlanSchema = z.object({
+	title: z.string(),
+	steps: z.array(
+		z.object({
+			id: z.number(),
+			description: z.string(),
+			estimatedTime: z.string(),
+			dependencies: z.array(z.number()).optional(),
+			toolsRequired: z.array(z.string()).optional(),
+		})
+	),
+	totalEstimatedTime: z.string(),
+	complexity: z.enum(['simple', 'moderate', 'complex']),
+	requiredTools: z.array(z.string()),
+});
+
+type TaskPlan = z.infer<typeof TaskPlanSchema>;
+
+const taskPlanResponse: TaskPlan = await callLLMStructured({
+	route: '/chat/structured',
+	prompt: 'Create a plan to build a todo app with user authentication',
+	schema: TaskPlanSchema,
+	// Mastra-specific parameters
+	sessionId: 'user-123',
+	tools: ['web_search', 'code_generator'],
+	knowledgeBaseId: 'development-kb',
+});
+
+// taskPlanResponse.object is fully typed as TaskPlan
+console.log(taskPlanResponse.object.title); // string
+console.log(taskPlanResponse.object.steps[0].estimatedTime); // string
+console.log(taskPlanResponse.object.complexity); // 'simple' | 'moderate' | 'complex'
+console.log(taskPlanResponse.object.requiredTools); // string[]
+```
+
+```tsx Custom Backend
+import { useTypedAgentConnection } from 'cedar-os';
+import { z } from 'zod';
+
+// Get a typed connection for Custom Backend
+const { callLLM, streamLLM, callLLMStructured } =
+	useTypedAgentConnection('custom');
+
+interface CustomParams extends BaseParams {
+	[key: string]: unknown;
+}
+
+// Example usage with custom parameters
+const response = await callLLM({
+	prompt: 'Hello, AI!',
+	systemPrompt: 'You are a helpful assistant.',
+	// Custom backend specific parameters
+	organizationId: 'org-123',
+	projectId: 'project-456',
+	customParameter: 'custom-value',
+});
+
+// Streaming example with custom parameters
+const stream = await streamLLM({
+	prompt: 'Generate a report',
+	systemPrompt: 'You are a report generator.',
+	organizationId: 'org-123',
+	projectId: 'project-456',
+	streamOptions: {
+		bufferSize: 1024,
+		timeout: 30000,
+	},
+});
+
+// Custom authentication example
+const authenticatedResponse = await callLLM({
+	prompt: 'Secure request',
+	systemPrompt: 'You are a secure assistant.',
+	headers: {
+		'X-Custom-Auth': 'bearer-token',
+		'X-Request-ID': 'req-789',
+	},
+	organizationId: 'org-123',
+});
+
+// Structured response example with custom backend
+const ReportSchema = z.object({
+	summary: z.string(),
+	metrics: z.object({
+		totalUsers: z.number(),
+		activeUsers: z.number(),
+		conversionRate: z.number().min(0).max(1),
+		revenue: z.number(),
+	}),
+	insights: z.array(
+		z.object({
+			category: z.string(),
+			finding: z.string(),
+			impact: z.enum(['positive', 'negative', 'neutral']),
+			confidence: z.number().min(0).max(1),
+		})
+	),
+	recommendations: z.array(z.string()),
+	generatedAt: z.string(),
+});
+
+type Report = z.infer<typeof ReportSchema>;
+
+const reportResponse: Report = await callLLMStructured({
+	prompt: 'Generate a business analytics report based on the provided data',
+	systemPrompt: 'You are a business analyst creating comprehensive reports.',
+	schema: ReportSchema,
+	// Custom backend parameters
+	organizationId: 'org-123',
+	projectId: 'project-456',
+	dataSource: 'analytics-db',
+	reportType: 'monthly',
+	headers: {
+		'X-Custom-Auth': 'bearer-token',
+		'X-Report-Format': 'structured',
+	},
+});
+
+// reportResponse.object is fully typed as Report
+console.log(reportResponse.object.summary); // string
+console.log(reportResponse.object.metrics.conversionRate); // number (0-1)
+console.log(reportResponse.object.insights[0].impact); // 'positive' | 'negative' | 'neutral'
+console.log(reportResponse.object.recommendations); // string[]
+```
+
+</CodeGroup>
+
+For more advanced usage, see our guides on:
+
+- [Chat Input](/agent-input-context/agent-input-context) - Building rich chat interfaces
+- [Messages](/chat/chat-overview) - Handling AI responses
+- [State Access](/state-access/agentic-state-access) - Managing application state
+
+## Detailed Provider Guides
+
+For more advanced configuration and usage patterns:
+
+- [Extending Mastra](/agent-backend-connection/mastra) - Full agent framework with backend extension guides
+- [Custom Backend](/agent-backend-connection/custom) - Build your own integration through API
