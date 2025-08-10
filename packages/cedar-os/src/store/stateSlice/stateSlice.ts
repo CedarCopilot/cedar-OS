@@ -126,16 +126,26 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		}) => {
 			const stateExists = Boolean(get().registeredStates[config.key]);
 			if (stateExists) {
-				// Update only the stored value
-				set((state) => ({
-					registeredStates: {
-						...state.registeredStates,
-						[config.key]: {
-							...state.registeredStates[config.key],
-							value: config.value,
+				// Update the entire registration to ensure fresh closures
+				set((state) => {
+					// Create a properly typed updated state
+					const updatedState: registeredState<T> = {
+						key: config.key,
+						value: config.value,
+						// Update ALL fields to ensure fresh closures after remount
+						setValue: config.setValue,
+						customSetters: config.customSetters,
+						description: config.description,
+						schema: config.schema,
+					};
+
+					return {
+						registeredStates: {
+							...state.registeredStates,
+							[config.key]: updatedState,
 						},
-					},
-				}));
+					} as Partial<CedarStore>;
+				});
 				return;
 			}
 
