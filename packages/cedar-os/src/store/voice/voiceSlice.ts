@@ -238,6 +238,7 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 		try {
 			set({ isSpeaking: false });
 
+			// Handle audio playback (voice-specific)
 			if (response.audioData && response.audioFormat) {
 				const binaryString = atob(response.audioData);
 				const bytes = new Uint8Array(binaryString.length);
@@ -263,54 +264,39 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 				}
 			}
 
-			if (voiceSettings.autoAddToMessages) {
+			// Handle transcription (voice-specific)
+			if (voiceSettings.autoAddToMessages && response.transcription) {
 				const { addMessage } = get();
-
-				if (response.transcription) {
-					addMessage({
-						type: 'text',
-						role: 'user',
-						content: response.transcription,
-						metadata: {
-							source: 'voice',
-							timestamp: new Date().toISOString(),
-						},
-					});
-				}
-
-				if (response.content) {
-					addMessage({
-						type: 'text',
-						role: 'assistant',
-						content: response.content,
-						metadata: {
-							source: 'voice',
-							usage: response.usage,
-							timestamp: new Date().toISOString(),
-						},
-					});
-				}
+				addMessage({
+					type: 'text',
+					role: 'user',
+					content: response.transcription,
+					metadata: {
+						source: 'voice',
+						timestamp: new Date().toISOString(),
+					},
+				});
 			}
 
-			if (response.object && typeof response.object === 'object') {
-				const structuredResponse = response.object as Record<string, unknown>;
+			// Build items array for handleLLMResponse
+			const items: (string | object)[] = [];
 
-				if (structuredResponse.type) {
-					switch (structuredResponse.type) {
-						case 'action': {
-							if (structuredResponse.stateKey && structuredResponse.setterKey) {
-								const args = structuredResponse.args || [];
-								const { executeCustomSetter } = get();
-								executeCustomSetter(
-									structuredResponse.stateKey as string,
-									structuredResponse.setterKey as string,
-									...(args as unknown[])
-								);
-							}
-							break;
-						}
-					}
-				}
+			// This should be fixed tbh. HandleLLMResponse should be able to handle this, but due to current streaming limitations.
+
+			// Add content if present
+			if (response.content) {
+				items.push(response.content);
+			}
+
+			// Add object if present
+			if (response.object) {
+				items.push(response.object);
+			}
+
+			// Delegate message parsing to handleLLMResponse if we have items
+			if (items.length > 0) {
+				const { handleLLMResponse } = get();
+				handleLLMResponse(items);
 			}
 
 			// Set processing state to false when voice processing completes successfully

@@ -5,6 +5,7 @@ import type { AdditionalContext, ContextEntry, MentionProvider } from './types';
 import { ReactNode, useMemo } from 'react';
 import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
+import { sanitizeJson } from '@/utils/sanitizeJson';
 export type ChatInput = JSONContent;
 
 // Define the agent input context slice
@@ -199,48 +200,8 @@ export const createAgentInputContextSlice: StateCreator<
 	stringifyAdditionalContext: () => {
 		const context = get().additionalContext;
 
-		// Helper function to sanitize context data for JSON serialization
-		const sanitizeForJSON = (obj: any): any => {
-			if (obj === null || obj === undefined) {
-				return obj;
-			}
-
-			// Handle arrays
-			if (Array.isArray(obj)) {
-				return obj.map(sanitizeForJSON);
-			}
-
-			// Handle objects
-			if (typeof obj === 'object') {
-				// Check if it's a React element (has $$typeof property)
-				if ('$$typeof' in obj) {
-					return '[React Component]';
-				}
-
-				// Check if it's a DOM element
-				if (obj instanceof Element) {
-					return '[DOM Element]';
-				}
-
-				// Recursively sanitize object properties
-				const sanitized: any = {};
-				for (const [key, value] of Object.entries(obj)) {
-					// Skip functions
-					if (typeof value === 'function') {
-						sanitized[key] = '[Function]';
-					} else {
-						sanitized[key] = sanitizeForJSON(value);
-					}
-				}
-				return sanitized;
-			}
-
-			// Return primitives as-is
-			return obj;
-		};
-
 		// Sanitize context before stringifying
-		const sanitizedContext = sanitizeForJSON(context);
+		const sanitizedContext = sanitizeJson(context);
 		return JSON.stringify(sanitizedContext, null, 2);
 	},
 
