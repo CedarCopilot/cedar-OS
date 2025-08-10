@@ -357,7 +357,7 @@ export function getMessageStorageState(
 			message: Message,
 			autoCreateThread = true
 		): Promise<void> => {
-			if (!adapter) return;
+			if (!adapter?.persistMessage) return;
 
 			const state = get();
 			const uid = getCedarState('userId') as string | null;
