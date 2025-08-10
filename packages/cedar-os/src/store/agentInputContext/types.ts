@@ -11,6 +11,7 @@ export interface ContextEntry {
 		label?: string;
 		icon?: ReactNode;
 		color?: string; // Hex color
+		order?: number; // Order for display (lower numbers appear first)
 		[key: string]: unknown;
 	};
 }
@@ -52,7 +53,7 @@ export interface MentionProvider {
 	renderMenuItem?: (item: MentionItem) => ReactNode;
 	renderEditorItem?: (
 		item: MentionItem,
-		attrs: Record<string, unknown>
+		attrs: Record<string, any>
 	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
 }
@@ -63,15 +64,16 @@ export interface MentionProvider {
 export interface StateBasedMentionProviderConfig {
 	stateKey: string;
 	trigger?: string;
-	labelField?: string | ((item: unknown) => string);
+	labelField?: string | ((item: any) => string);
 	searchFields?: string[];
 	description?: string;
 	icon?: ReactNode;
 	color?: string; // Hex color
+	order?: number; // Order for display (lower numbers appear first)
 	renderMenuItem?: (item: MentionItem) => ReactNode;
 	renderEditorItem?: (
 		item: MentionItem,
-		attrs: Record<string, unknown>
+		attrs: Record<string, any>
 	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
 }

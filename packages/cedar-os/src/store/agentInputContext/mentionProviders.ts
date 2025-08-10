@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
 import type {
 	MentionProvider,
@@ -6,6 +6,7 @@ import type {
 	MentionItem,
 	ContextEntry,
 } from './types';
+import { v4 } from 'uuid';
 
 /**
  * Helper to extract label from an item
@@ -64,7 +65,7 @@ export function useStateBasedMentionProvider(
 	);
 
 	useEffect(() => {
-		const provider: MentionProvider & { icon?: any; color?: string } = {
+		const provider: MentionProvider & { icon?: ReactNode; color?: string } = {
 			id: config.stateKey, // Use stateKey as provider ID
 			trigger: config.trigger || '@',
 			label: config.description || `${config.stateKey} items`,
@@ -93,23 +94,25 @@ export function useStateBasedMentionProvider(
 					data: item,
 					metadata: {
 						...item.metadata,
-						// Add icon and color from config if provided
+						// Add icon, color, and order from config if provided
 						icon: config.icon || item.metadata?.icon,
 						color: config.color || item.metadata?.color,
+						order: config.order, // Add order from config
 					},
 				}));
 			},
 
 			toContextEntry: (item: MentionItem): ContextEntry => ({
-				id: item.id,
+				id: item.id || v4(),
 				source: 'mention',
 				data: item.data,
 				metadata: {
 					label: item.label,
 					...item.metadata,
-					// Ensure icon and color are passed through
+					// Ensure icon, color, and order are passed through
 					icon: item.metadata?.icon || config.icon,
 					color: item.metadata?.color || config.color,
+					order: config.order, // Add order from config
 				},
 			}),
 
