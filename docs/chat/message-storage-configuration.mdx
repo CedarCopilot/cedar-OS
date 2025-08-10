@@ -211,6 +211,11 @@ Cedar automatically handles message storage operations in the following way:
 
 # User and Thread Management
 
+<Info>
+	User ID and thread ID are automatically sent to the backend for Mastra and
+	Custom backends. See Agent Backend Connection docs for more details.
+</Info>
+
 **Setting User ID:**
 User ID is treated internally as just another Cedar State. If at runtime you want to override the user ID when using `callLLM`, it is also available on the `SendMessageParams` type
 
