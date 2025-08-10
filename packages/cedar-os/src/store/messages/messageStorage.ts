@@ -6,12 +6,12 @@ import { getCedarState, useCedarStore } from '@/store/CedarStore';
 // Type definitions
 // -------------------------------------------------
 export interface MessageStorageBaseAdapter {
-	loadMessages(
+	loadMessages?(
 		userId: string | null | undefined,
 		threadId: string
 	): Promise<Message[]>;
 	// Returns the message that was persisted
-	persistMessage(
+	persistMessage?(
 		userId: string | null | undefined,
 		threadId: string,
 		message: Message
@@ -115,7 +115,8 @@ const createMessageStorageLocalAdapter = (
 		},
 		async persistMessage(userId, threadId, message) {
 			try {
-				const existingMessages = await this.loadMessages(userId, threadId);
+				const existingMessages =
+					(await this.loadMessages?.(userId, threadId)) ?? [];
 				const updatedMessages = [...existingMessages, message];
 				localStorage.setItem(
 					threadKey(userId, threadId),
@@ -170,7 +171,7 @@ const createMessageStorageLocalAdapter = (
 		},
 		async updateMessage(userId, threadId, updatedMsg) {
 			try {
-				const msgs = await this.loadMessages(userId, threadId);
+				const msgs = (await this.loadMessages?.(userId, threadId)) ?? [];
 				const newMsgs = msgs.map((m) =>
 					m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m
 				);
@@ -186,7 +187,7 @@ const createMessageStorageLocalAdapter = (
 		async deleteMessage(userId, threadId, messageId) {
 			let removed: Message | undefined;
 			try {
-				const msgs = await this.loadMessages(userId, threadId);
+				const msgs = (await this.loadMessages?.(userId, threadId)) ?? [];
 				removed = msgs.find((m) => m.id === messageId);
 				const newMsgs = msgs.filter((m) => m.id !== messageId);
 				localStorage.setItem(
@@ -305,7 +306,7 @@ export function getMessageStorageState(
 	};
 
 	const attemptHydrate = () => {
-		if (!adapter) return;
+		if (!adapter || !adapter.loadMessages) return;
 		try {
 			const state = get();
 			const uid = getCedarState('userId') as string | null;
@@ -314,8 +315,7 @@ export function getMessageStorageState(
 
 			const threadToLoad = tid || defaultThread;
 
-			adapter
-				.loadMessages(uid, threadToLoad)
+			adapter.loadMessages!(uid, threadToLoad)
 				.then((msgs) => {
 					if (msgs.length) {
 						useCedarStore.getState().setMessages(msgs);
@@ -344,11 +344,11 @@ export function getMessageStorageState(
 			attemptHydrate();
 		},
 		loadMessageStorageMessages: async (): Promise<void> => {
-			if (!adapter) return;
+			if (!adapter || !adapter.loadMessages) return;
 			const uid = getCedarState('userId') as string | null;
 			const tid = get().messageCurrentThreadId;
 			const threadToLoad = tid || defaultThread;
-			const msgs = await adapter.loadMessages(uid, threadToLoad);
+			const msgs = await adapter.loadMessages!(uid, threadToLoad);
 			if (msgs.length) {
 				useCedarStore.getState().setMessages(msgs);
 			}
@@ -382,7 +382,9 @@ export function getMessageStorageState(
 			}
 
 			// Persist the message itself
-			await adapter.persistMessage(uid, tid, message);
+			if (adapter.persistMessage) {
+				await adapter.persistMessage!(uid, tid, message);
+			}
 
 			// Update thread meta while preserving original title
 			if (adapter.updateThread) {
