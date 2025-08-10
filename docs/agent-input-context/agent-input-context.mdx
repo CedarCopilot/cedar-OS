@@ -43,6 +43,7 @@ function DocumentChat() {
 		description: 'Documents',
 		icon: <FileText size={16} />,
 		color: '#8b5cf6',
+		order: 5, // Control display order when mentioned
 	});
 
 	return <ChatInput />;
@@ -53,10 +54,10 @@ For detailed information about mentions, including custom providers, multiple tr
 
 ## State Subscription
 
-Automatically sync your specific cedarStates to the agent input context using `subscribeInputContext`:
+Automatically sync your specific cedarStates to the agent input context using `useSubscribeInputContext`:
 
 ```tsx
-import { subscribeInputContext } from 'cedar-os';
+import { useSubscribeInputContext } from 'cedar-os';
 import { useState } from 'react';
 
 function AutoSyncChat() {
@@ -66,7 +67,7 @@ function AutoSyncChat() {
 	});
 
 	// Automatically sync state to context
-	subscribeInputContext(
+	useSubscribeInputContext(
 		appState,
 		(state) => ({
 			'app-state': [
@@ -80,6 +81,7 @@ function AutoSyncChat() {
 		{
 			icon: <Settings size={16} />,
 			color: '#6b7280',
+			order: 10, // Control display order of context badges
 		}
 	);
 

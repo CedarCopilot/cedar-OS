@@ -38,7 +38,7 @@ import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import { TooltipMenu } from '@/inputs/TooltipMenu';
 import {
-	subscribeInputContext,
+	useSubscribeInputContext,
 	useRegisterState,
 	useStateBasedMentionProvider,
 } from 'cedar-os';
@@ -299,6 +299,7 @@ function FlowCanvas() {
 		description: 'Product roadmap features',
 		icon: <Box />,
 		color: '#3B82F6', // Blue color
+		order: 10, // Features appear after selected nodes
 	});
 
 	// Register mention provider for edges
@@ -315,6 +316,7 @@ function FlowCanvas() {
 		description: 'Product roadmap connections',
 		icon: <ArrowRight />,
 		color: '#10B981', // Green color
+		order: 20, // Edges appear last
 	});
 
 	// Fetch initial data
@@ -527,16 +529,31 @@ function FlowCanvas() {
 function SelectedNodesPanel() {
 	const [selected, setSelected] = React.useState<Node<FeatureNodeData>[]>([]);
 
-	// whenever `selected` changes, it'll be merged into store.additionalContext
-	// Update to use 'nodes' key to match what mention provider uses
-	subscribeInputContext(
+	// First subscription - for numSelectedNodes (order: 1)
+	useSubscribeInputContext(
 		selected,
-		(nodes: Node<FeatureNodeData>[]) => ({
+		(nodes) => ({
+			numSelectedNodes: nodes.length,
+		}),
+		{
+			icon: <Box />,
+			color: '#8B5CF6', // Purple color for selected nodes
+			labelField: (item) => item.toString(),
+			order: 2, // This will appear first
+		}
+	);
+
+	// Second subscription - for selectedNodes (order: 2)
+	useSubscribeInputContext(
+		selected,
+		(nodes) => ({
 			selectedNodes: nodes,
 		}),
 		{
 			icon: <Box />,
 			color: '#8B5CF6', // Purple color for selected nodes
+			labelField: (item) => item.data.title,
+			order: 1, // This will appear second
 		}
 	);
 

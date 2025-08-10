@@ -94,9 +94,10 @@ export function useStateBasedMentionProvider(
 					data: item,
 					metadata: {
 						...item.metadata,
-						// Add icon and color from config if provided
+						// Add icon, color, and order from config if provided
 						icon: config.icon || item.metadata?.icon,
 						color: config.color || item.metadata?.color,
+						order: config.order, // Add order from config
 					},
 				}));
 			},
@@ -108,9 +109,10 @@ export function useStateBasedMentionProvider(
 				metadata: {
 					label: item.label!,
 					...item.metadata,
-					// Ensure icon and color are passed through
+					// Ensure icon, color, and order are passed through
 					icon: item.metadata?.icon || config.icon,
 					color: item.metadata?.color || config.color,
+					order: config.order, // Add order from config
 				},
 			}),
 

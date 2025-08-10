@@ -36,6 +36,7 @@ function TodoApp() {
 		description: 'Todo items',
 		icon: '📝',
 		color: '#3b82f6',
+		order: 10, // Control display order of mentioned todos
 	});
 
 	return <ChatInput />;
@@ -94,6 +95,7 @@ function UserMentions() {
 				label: item.label,
 				icon: '👤',
 				color: '#10b981',
+				order: 5, // Users appear before other mentions
 			},
 		}),
 	});
@@ -451,11 +453,120 @@ function getProjects() {
 
 function getTasks() {
 	return [
-		{ id: '1', title: 'Fix login bug' },
-		{ id: '2', title: 'Add dark mode' },
+		{ id: '1', title: 'Review PR #123' },
+		{ id: '2', title: 'Update documentation' },
 	];
 }
 ```
+
+## Ordering Mentions
+
+When you have multiple mention providers or context subscriptions, you can control their display order using the `order` property. This ensures the most important context appears first in the UI.
+
+### Order Property
+
+The `order` property (optional) determines the display order of context badges:
+
+- **Lower numbers appear first**: `order: 1` appears before `order: 10`
+- **Default behavior**: Items without an order appear last
+- **Applies to both**: Mention providers and `useSubscribeInputContext`
+
+### Example: Prioritized Mentions
+
+```tsx
+import {
+	useStateBasedMentionProvider,
+	useSubscribeInputContext,
+} from 'cedar-os';
+import { User, FileText, Tag, Archive } from 'lucide-react';
+
+function PrioritizedMentions() {
+	// Current user context - highest priority (order: 1)
+	useSubscribeInputContext(currentUser, (user) => ({ currentUser: user }), {
+		icon: <User />,
+		color: '#8B5CF6',
+		order: 1, // Always visible first
+	});
+
+	// Active documents - high priority (order: 5)
+	useStateBasedMentionProvider({
+		stateKey: 'activeDocuments',
+		trigger: '@',
+		labelField: 'title',
+		description: 'Active Documents',
+		icon: <FileText />,
+		color: '#3B82F6',
+		order: 5, // After user, before tags
+	});
+
+	// Tags - medium priority (order: 10)
+	useStateBasedMentionProvider({
+		stateKey: 'tags',
+		trigger: '#',
+		labelField: 'name',
+		description: 'Tags',
+		icon: <Tag />,
+		color: '#10B981',
+		order: 10, // After documents
+	});
+
+	// Archived items - low priority (order: 100)
+	useStateBasedMentionProvider({
+		stateKey: 'archivedItems',
+		trigger: '@',
+		labelField: 'title',
+		description: 'Archived',
+		icon: <Archive />,
+		color: '#6B7280',
+		order: 100, // Appears last
+	});
+
+	return <ChatInput />;
+}
+```
+
+### Custom Provider with Order
+
+When using `useMentionProvider`, include order in the metadata:
+
+```tsx
+useMentionProvider({
+	id: 'priority-users',
+	trigger: '@',
+	label: 'Team Leads',
+	getItems: (query) => {
+		// ... filtering logic
+		return items.map((item) => ({
+			id: item.id,
+			label: item.name,
+			data: item,
+			metadata: {
+				icon: '👤',
+				color: '#EF4444',
+			},
+		}));
+	},
+	toContextEntry: (item) => ({
+		id: item.id,
+		source: 'mention',
+		data: item.data,
+		metadata: {
+			label: item.label,
+			icon: item.metadata.icon,
+			color: item.metadata.color,
+			order: 2, // Team leads appear near the top
+		},
+	}),
+});
+```
+
+### Best Practices for Ordering
+
+1. **Reserve low numbers (1-9)** for critical context like user info
+2. **Use 10-49** for active/selected items
+3. **Use 50-99** for general mentions
+4. **Use 100+** for archived or low-priority items
+5. **Leave gaps** between orders for future additions
 
 ## Mention Data in Context
 

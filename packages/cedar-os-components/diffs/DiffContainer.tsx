@@ -217,7 +217,7 @@ const DiffContainer: React.FC<DiffContainerProps> = ({
 	const diffColors = {
 		neutral: mainColor,
 		added: 'rgb(34, 197, 94)', // green-500
-		removed: 'rgba(239, 68, 68, 0.85)', // red-500, less opaque
+		removed: 'rgba(239, 68, 68, 0.4)', // red-500, less opaque
 		changed: 'rgb(251, 191, 36)', // amber-400
 	};
 
