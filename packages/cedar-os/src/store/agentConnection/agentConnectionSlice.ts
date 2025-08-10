@@ -32,6 +32,7 @@ export interface SendMessageParams {
 	userId?: string;
 	// Enable streaming responses
 	stream?: boolean;
+	[key: string]: any;
 }
 
 // Helper type to get params based on provider config
@@ -526,8 +527,12 @@ export const createAgentConnectionSlice: StateCreator<
 					break;
 				case 'mastra':
 					const chatPath = config.chatPath || '/chat';
+
 					llmParams = {
 						...llmParams,
+						// we're overriding the prompt since we pass in additionalContext as a raw object.
+						prompt: editorContent,
+						additionalContext: state.additionalContext,
 						route: route || `${chatPath}`,
 						resourceId: (params?.userId || getCedarState('userId')) as string,
 					};
@@ -538,6 +543,8 @@ export const createAgentConnectionSlice: StateCreator<
 				case 'custom':
 					llmParams = {
 						...llmParams,
+						prompt: editorContent,
+						additionalContext: state.additionalContext,
 						userId: (params?.userId || getCedarState('userId')) as string,
 					};
 					break;
