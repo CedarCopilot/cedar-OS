@@ -153,11 +153,11 @@ If the user is just asking a question or making a comment, return:
 			experimental_output: ExecuteFunctionResponseSchema, // Use experimental_output for structured output with tools
 		});
 
-		console.log(messages);
+		console.log(response.object);
 
 		// Return the structured response
 		return c.json({
-			text: response.object?.content || '', // Extract content from the structured object
+			// text: response.object?.content || '', // Extract content from the structured object
 			object: response.object || {
 				type: 'message',
 				content: '',
