@@ -24,7 +24,7 @@ export type MessagesSlice = MessageStorageState & {
 	// Actions
 	setMessages: (messages: Message[]) => void;
 	addMessage: (message: MessageInput, isComplete?: boolean) => Message;
-	appendToLatestMessage: (content: string) => Message;
+	appendToLatestMessage: (content: string, isComplete?: boolean) => Message;
 	updateMessage: (id: string, updates: Partial<Message>) => void;
 	deleteMessage: (id: string) => void;
 	clearMessages: () => void;
@@ -82,7 +82,10 @@ export const createMessagesSlice: StateCreator<
 			}
 			return newMessage;
 		},
-		appendToLatestMessage: (content: string): Message => {
+		appendToLatestMessage: (
+			content: string,
+			isComplete: boolean = true
+		): Message => {
 			const state = get();
 			const messages = state.messages;
 			const latestMessage = messages[messages.length - 1];
@@ -93,11 +96,14 @@ export const createMessagesSlice: StateCreator<
 			if (latestMessage && latestMessage.role === 'assistant') {
 				state.updateMessage(latestMessage.id, updatedLatestMessage);
 			} else {
-				return state.addMessage({
-					role: 'assistant',
-					type: 'text',
-					content: content,
-				});
+				return state.addMessage(
+					{
+						role: 'assistant',
+						type: 'text',
+						content: content,
+					},
+					isComplete
+				);
 			}
 			return updatedLatestMessage;
 		},

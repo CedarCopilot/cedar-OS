@@ -411,11 +411,7 @@ export const createAgentConnectionSlice: StateCreator<
 		itemsToProcess.forEach((item) => {
 			if (typeof item === 'string') {
 				// Handle text content - append to latest message
-				const latestMessage = state.appendToLatestMessage(item);
-				// During streaming we defer persistence until stream completion
-				if (!state.isStreaming) {
-					state.persistMessageStorageMessage(latestMessage);
-				}
+				state.appendToLatestMessage(item, !state.isStreaming);
 			} else if (item && typeof item === 'object') {
 				// Handle structured objects
 				const structuredResponse = item as Record<string, unknown>;
@@ -465,11 +461,7 @@ export const createAgentConnectionSlice: StateCreator<
 								type: 'text' as const,
 								content,
 							};
-							if (state.isStreaming) {
-								state.addMessage(message, false);
-							} else {
-								state.addMessage(message);
-							}
+							state.addMessage(message, !state.isStreaming);
 							break;
 						}
 						default:
