@@ -218,13 +218,14 @@ const createMessageStorageNoopAdapter = (): MessageStorageNoopAdapter => ({
 export const createMessageStorageAdapter = (
 	cfg?: MessageStorageConfig
 ): MessageStorageAdapter => {
-	if (!cfg || cfg.type === 'local') {
-		return createMessageStorageLocalAdapter(cfg?.options);
+	if (!cfg || cfg.type === 'none') {
+		return createMessageStorageNoopAdapter();
 	}
-	if (cfg.type === 'none') return createMessageStorageNoopAdapter();
+	if (cfg.type === 'local')
+		return createMessageStorageLocalAdapter(cfg?.options);
 	if (cfg.type === 'custom')
 		return { type: 'custom', ...cfg.adapter } as MessageStorageCustomAdapter;
-	return createMessageStorageLocalAdapter();
+	return createMessageStorageNoopAdapter();
 };
 
 // Add messageThreadMeta type

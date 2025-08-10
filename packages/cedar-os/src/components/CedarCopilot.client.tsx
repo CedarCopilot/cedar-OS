@@ -55,6 +55,8 @@ export function CedarCopilotClient({
 	useEffect(() => {
 		if (messageStorage) {
 			useCedarStore.getState().setMessageStorageAdapter(messageStorage);
+			useCedarStore.getState().loadMessageStorageThreads?.();
+			useCedarStore.getState().loadMessageStorageMessages?.();
 		}
 	}, [messageStorage]);
 

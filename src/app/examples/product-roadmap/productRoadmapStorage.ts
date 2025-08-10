@@ -125,13 +125,6 @@ export const localStorageAdapter: StorageConfig = {
 	},
 };
 
-export const remoteStorageAdapter: StorageConfig = {
-	type: 'remote',
-	options: {
-		baseURL: 'https://localhost:4111',
-	},
-};
-
 export const customStorageAdapter: StorageConfig = {
 	type: 'custom',
 	adapter: {

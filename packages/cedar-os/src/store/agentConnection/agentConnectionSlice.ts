@@ -29,6 +29,7 @@ export interface SendMessageParams {
 	// Optional conversation/thread ID
 	conversationId?: string;
 	threadId?: string;
+	userId?: string;
 	// Enable streaming responses
 	stream?: boolean;
 }
@@ -504,12 +505,11 @@ export const createAgentConnectionSlice: StateCreator<
 			const unifiedMessage = fullContext;
 
 			// Step 3: Add the stringified chatInputContent as a message from the user
-			const userMessage = {
+			state.addMessage({
 				role: 'user' as const,
 				type: 'text' as const,
 				content: editorContent,
-			};
-			state.addMessage(userMessage);
+			});
 
 			// Clear the chat specific contextEntries (mentions)
 			state.clearMentions();
@@ -537,7 +537,7 @@ export const createAgentConnectionSlice: StateCreator<
 					llmParams = {
 						...llmParams,
 						route: route || `${chatPath}`,
-						resourceId: (getCedarState('userId') as string) || undefined,
+						resourceId: (params?.userId || getCedarState('userId')) as string,
 					};
 					break;
 				case 'ai-sdk':
@@ -546,7 +546,7 @@ export const createAgentConnectionSlice: StateCreator<
 				case 'custom':
 					llmParams = {
 						...llmParams,
-						userId: (getCedarState('userId') as string) || undefined,
+						userId: (params?.userId || getCedarState('userId')) as string,
 					};
 					break;
 			}
@@ -605,12 +605,11 @@ export const createAgentConnectionSlice: StateCreator<
 			});
 		} catch (error) {
 			console.error('Error sending message:', error);
-			const errorMessage = {
+			state.addMessage({
 				role: 'assistant' as const,
 				type: 'text' as const,
 				content: 'An error occurred while sending your message.',
-			};
-			state.addMessage(errorMessage);
+			});
 		} finally {
 			state.setIsProcessing(false);
 		}

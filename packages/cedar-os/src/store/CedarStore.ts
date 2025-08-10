@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
 import { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
 import { createStylingSlice } from './stylingSlice';
 import { CedarStore } from './types';
@@ -9,40 +8,16 @@ import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnect
 import { createVoiceSlice } from '@/store/voice/voiceSlice';
 import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
 
-// Create the combined store
-export const useCedarStore = create<CedarStore>()(
-	subscribeWithSelector((...args) => {
-		const a = args;
-		const slices = {
-			...createStylingSlice(...a),
-			...createAgentInputContextSlice(...a),
-			...createStateSlice(...a),
-			...createMessagesSlice(...a),
-			...createAgentConnectionSlice(...a),
-			...createVoiceSlice(...a),
-			...createDebuggerSlice(...a),
-		} as CedarStore;
-
-		return slices;
-	})
-);
-
-// React to userId / threadId changes to hydrate or load threads
-useCedarStore.subscribe(
-	(state) => state && [useCedarStore.getState().messageStorageAdapter],
-	() => {
-		if (useCedarStore.getState().messageStorageAdapter) {
-			useCedarStore.getState().loadMessageStorageThreads?.();
-			// Hydrate messages for the active thread
-			useCedarStore.getState().loadMessageStorageMessages?.();
-		}
-	},
-	{
-		equalityFn: (a, b) => {
-			return JSON.stringify(a) === JSON.stringify(b);
-		},
-	}
-);
+// Create the combined store (default for backwards compatibility)
+export const useCedarStore = create<CedarStore>()((...a) => ({
+	...createStylingSlice(...a),
+	...createAgentInputContextSlice(...a),
+	...createStateSlice(...a),
+	...createMessagesSlice(...a),
+	...createAgentConnectionSlice(...a),
+	...createVoiceSlice(...a),
+	...createDebuggerSlice(...a),
+}));
 
 export const useMessages = () => ({
 	messages: useCedarStore((state) => state.messages),
