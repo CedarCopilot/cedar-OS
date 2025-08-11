@@ -42,9 +42,21 @@ import {
 	useRegisterState,
 	useStateBasedMentionProvider,
 } from 'cedar-os';
-import { ArrowRight, Box, CheckCircle, Loader } from 'lucide-react';
+import {
+	ArrowRight,
+	Box,
+	CheckCircle,
+	Loader,
+	Copy,
+	Sparkles,
+	Share2,
+	Download,
+} from 'lucide-react';
 import { motion } from 'motion/react';
 import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
+import RadialMenuSpell from '../../../../packages/cedar-os-components/spells/RadialMenuSpell';
+import { MouseEvent as SpellMouseEvent } from '../../../../packages/cedar-os/src/store/spellSlice/useSpellActivationConditions';
+import type { CedarStore } from '../../../../packages/cedar-os/src/store/types';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)
@@ -587,6 +599,91 @@ export default function ProductMapPage() {
 		'floating' | 'sidepanel' | 'caption'
 	>('caption');
 
+	// Define radial menu items with 4 dummy commands
+	const radialMenuItems = React.useMemo(
+		() => [
+			{
+				title: 'Copy',
+				icon: Copy,
+				onInvoke: (store: CedarStore) => {
+					console.log('Copy action triggered', store);
+					// Get selected nodes from the store
+					const nodes = store.getCedarState?.('nodes') || [];
+					const selectedNodes = nodes.filter(
+						(n: Node<FeatureNodeData>) => n.selected
+					);
+					if (selectedNodes.length > 0) {
+						const nodeData = JSON.stringify(selectedNodes, null, 2);
+						navigator.clipboard.writeText(nodeData);
+						console.log('Copied selected nodes to clipboard');
+					} else {
+						console.log('No nodes selected to copy');
+					}
+				},
+			},
+			{
+				title: 'Improve',
+				icon: Sparkles,
+				onInvoke: (store: CedarStore) => {
+					console.log('Improve action triggered', store);
+					// In a real implementation, this would:
+					// 1. Get selected nodes
+					// 2. Send to AI for improvement
+					// 3. Update the nodes with better descriptions
+					alert(
+						'AI Improvement - Coming soon! This will enhance node descriptions.'
+					);
+				},
+			},
+			{
+				title: 'Share',
+				icon: Share2,
+				onInvoke: (store: CedarStore) => {
+					console.log('Share action triggered', store);
+					// Generate a shareable link or export
+					const currentUrl = window.location.href;
+					navigator.clipboard.writeText(currentUrl);
+					alert('Link copied to clipboard!');
+				},
+			},
+			{
+				title: 'Export',
+				icon: Download,
+				onInvoke: (store: CedarStore) => {
+					console.log('Export action triggered', store);
+					// Export the roadmap as JSON
+					const nodes = store.getCedarState?.('nodes') || [];
+					const edges = store.getCedarState?.('edges') || [];
+					const exportData = {
+						nodes,
+						edges,
+						timestamp: new Date().toISOString(),
+					};
+					const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+						type: 'application/json',
+					});
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = `roadmap-${Date.now()}.json`;
+					a.click();
+					URL.revokeObjectURL(url);
+					console.log('Exported roadmap data');
+				},
+			},
+		],
+		[]
+	);
+
+	// Define activation conditions for the radial menu
+	const radialMenuActivationConditions = React.useMemo(
+		() => ({
+			mouseEvents: [SpellMouseEvent.RIGHT_CLICK],
+			hotkeys: ['r'], // Press 'm' to activate the menu
+		}),
+		[]
+	);
+
 	const renderContent = () => (
 		<ReactFlowProvider>
 			<div className='relative h-screen w-full'>
@@ -605,6 +702,13 @@ export default function ProductMapPage() {
 						collapsedLabel='Need help with your roadmap?'
 					/>
 				)}
+
+				{/* Radial Menu Spell */}
+				<RadialMenuSpell
+					spellId='product-roadmap-radial-menu'
+					items={radialMenuItems}
+					activationConditions={radialMenuActivationConditions}
+				/>
 			</div>
 		</ReactFlowProvider>
 	);
