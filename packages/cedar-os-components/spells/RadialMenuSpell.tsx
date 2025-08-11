@@ -1,22 +1,21 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { cn } from '../../cedar-os/src/styles/stylingUtils';
+import React, { useEffect, useRef, useState } from 'react';
 import {
 	useCedarStore,
-	useStyling,
 	useSpells,
+	useStyling,
 } from '../../cedar-os/src/store/CedarStore';
-import type { CedarStore } from '../../cedar-os/src/store/types';
 import {
-	useSpellActivationConditions,
 	ActivationConditions,
+	useSpellActivationConditions,
 } from '../../cedar-os/src/store/spellSlice/useSpellActivationConditions';
+import type { CedarStore } from '../../cedar-os/src/store/types';
+import { cn } from '../../cedar-os/src/styles/stylingUtils';
 import Container3D from '../containers/Container3D';
 // Motion for React
 import { motion } from 'motion/react';
-import Flat3dContainer from '@/containers/Flat3dContainer';
 
 export interface RadialMenuItem {
 	title: string;
@@ -35,7 +34,8 @@ interface RadialMenuSpellProps {
 }
 
 const MENU_RADIUS = 100; // px
-const INNER_RADIUS = 55; // cancel zone
+const INNER_RADIUS = 50; // cancel zone
+const INNER_GAP = 4; // gap between cancel zone and menu
 const OUTER_PADDING = 10; // matches previous svg padding
 const BORDER_STROKE_WIDTH = 8; // outer ring thickness
 
@@ -241,16 +241,26 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 						const startA = startDeg + sliceDeg * idx;
 						const endA = startA + sliceDeg;
 						const largeArc = sliceDeg > 180 ? 1 : 0;
-						const r = MENU_RADIUS + 10;
-						const x1 = r * Math.cos(degToRad(startA));
-						const y1 = -r * Math.sin(degToRad(startA));
-						const x2 = r * Math.cos(degToRad(endA));
-						const y2 = -r * Math.sin(degToRad(endA));
+						const rOuter = MENU_RADIUS + 10;
+						const rInner = INNER_RADIUS + INNER_GAP;
+
+						// Outer arc points
+						const x1Outer = rOuter * Math.cos(degToRad(startA));
+						const y1Outer = -rOuter * Math.sin(degToRad(startA));
+						const x2Outer = rOuter * Math.cos(degToRad(endA));
+						const y2Outer = -rOuter * Math.sin(degToRad(endA));
+
+						// Inner arc points
+						const x1Inner = rInner * Math.cos(degToRad(startA));
+						const y1Inner = -rInner * Math.sin(degToRad(startA));
+						const x2Inner = rInner * Math.cos(degToRad(endA));
+						const y2Inner = -rInner * Math.sin(degToRad(endA));
+
 						const isActive = hoverIndex === idx;
 						return (
 							<path
 								key={idx}
-								d={`M0 0 L${x1} ${y1} A ${r} ${r} 0 ${largeArc} 0 ${x2} ${y2} Z`}
+								d={`M${x1Inner} ${y1Inner} L${x1Outer} ${y1Outer} A ${rOuter} ${rOuter} 0 ${largeArc} 0 ${x2Outer} ${y2Outer} L${x2Inner} ${y2Inner} A ${rInner} ${rInner} 0 ${largeArc} 1 ${x1Inner} ${y1Inner} Z`}
 								fill={isActive ? highlightColor : 'transparent'}
 							/>
 						);
@@ -259,9 +269,12 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 					{/* Radial divider lines (keep section borders, remove outer arc) */}
 					{items.map((_, idx) => {
 						const angle = startDeg + sliceDeg * idx;
-						const r = MENU_RADIUS + 10;
-						const x = r * Math.cos(degToRad(angle));
-						const y = -r * Math.sin(degToRad(angle));
+						const rOuter = MENU_RADIUS + 10;
+						const rInner = INNER_RADIUS + INNER_GAP;
+						const xOuter = rOuter * Math.cos(degToRad(angle));
+						const yOuter = -rOuter * Math.sin(degToRad(angle));
+						const xInner = rInner * Math.cos(degToRad(angle));
+						const yInner = -rInner * Math.sin(degToRad(angle));
 						// Highlight the two boundaries around the hovered segment
 						const isBoundaryActive =
 							hoverIndex !== null &&
@@ -270,11 +283,13 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 						return (
 							<line
 								key={`divider-${idx}`}
-								x1={0}
-								y1={0}
-								x2={x}
-								y2={y}
-								stroke={isBoundaryActive ? highlightColor : `${dividerColor}20`}
+								x1={xInner}
+								y1={yInner}
+								x2={xOuter}
+								y2={yOuter}
+								stroke={
+									isBoundaryActive ? `highlightColor` : `${dividerColor}20`
+								}
 								strokeWidth={0.5}
 							/>
 						);
@@ -321,10 +336,10 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 
 				{/* Items */}
 				{items.map((item, idx) => {
-					// Position icons at the midpoint between the inner cancel radius and the outer menu radius
+					// Position icons at the midpoint between the inner gap boundary and the outer menu radius
 					const angleDeg = startDeg + sliceDeg * (idx + 0.5);
 					const angleRad = degToRad(angleDeg);
-					const iconRadius = (MENU_RADIUS + INNER_RADIUS) / 2;
+					const iconRadius = (MENU_RADIUS + INNER_RADIUS + INNER_GAP) / 2;
 					const posX = iconRadius * Math.cos(angleRad);
 					const posY = -iconRadius * Math.sin(angleRad);
 					const isActive = hoverIndex === idx;
@@ -359,21 +374,48 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 				{/* Cancel / center */}
 				{(() => {
 					const cancelDiameter = INNER_RADIUS * 2;
+					const separatorDiameter = cancelDiameter + 8; // slightly larger circle for visual separation
+
 					return (
-						<Flat3dContainer
-							className={
-								'absolute rounded-full flex items-center justify-center select-none drop-shadow text-center text-sm text-[12px]'
-							}
-							style={{
-								width: cancelDiameter,
-								height: cancelDiameter,
-								left: 0,
-								top: 0,
-								transform: 'translate(-50%, -50%)',
-								color: isCancelActive ? highlightColor : textColor,
-							}}>
-							{centerLabel}
-						</Flat3dContainer>
+						<>
+							{/* Separator circle - creates visual disconnect */}
+							<div
+								className='absolute rounded-full border'
+								style={{
+									width: separatorDiameter,
+									height: separatorDiameter,
+									backgroundColor: styling.darkMode
+										? 'rgba(0,0,0,0.5)'
+										: 'rgba(255,255,255,0.5)',
+									opacity: 1,
+									left: 0,
+									top: 0,
+									transform: 'translate(-50%, -50%)',
+								}}
+							/>
+
+							{/* Main cancel button */}
+							<div
+								className={
+									'absolute rounded-full flex items-center justify-center select-none text-center text-sm text-[12px]'
+								}
+								style={{
+									width: cancelDiameter,
+									height: cancelDiameter,
+									backgroundColor: isCancelActive
+										? `${highlightColor}`
+										: 'transparent',
+									border: `1px solid ${
+										styling.darkMode ? '#374151' : '#e5e7eb'
+									}`,
+									// color: isCancelActive ? 'white' : textColor,
+									left: 0,
+									top: 0,
+									transform: 'translate(-50%, -50%)',
+								}}>
+								{centerLabel}
+							</div>
+						</>
 					);
 				})()}
 			</div>

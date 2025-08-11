@@ -685,13 +685,7 @@ export default function ProductMapPage() {
 	// Define activation conditions for the radial menu
 	const radialMenuActivationConditions: ActivationConditions = React.useMemo(
 		() => ({
-			events: [
-				SpellMouseEvent.RIGHT_CLICK,
-				Hotkey.R, // Hold 'r' to activate the menu
-				// You can also use multi-modifier combos like:
-				// 'cmd+shift+p',
-				// 'ctrl+alt+r',
-			],
+			events: [SpellMouseEvent.RIGHT_CLICK],
 			mode: ActivationMode.HOLD, // Hold mode for radial menu
 		}),
 		[]
