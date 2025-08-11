@@ -107,8 +107,21 @@ export type {
 	StreamResponse,
 } from '@/store/agentConnection/types';
 
-// Export SendMessageParams from the slice
-export type { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
+// Export SendMessageParams and response processor types from the slice
+export type {
+	BaseStructuredResponseType,
+	DefaultStructuredResponseType,
+	CustomStructuredResponseType,
+	StructuredResponseType,
+	ResponseProcessor,
+	ResponseProcessorRegistry,
+} from '@/store/agentConnection/types';
+
+// Export Mastra message types
+export type {
+	MastraStreamedResponse,
+	MastraStreamedResponseType,
+} from '@/store/agentConnection/providers/mastra';
 
 // Export storage configuration types
 export type {
@@ -137,6 +150,20 @@ export {
 	useStyling,
 	useVoice,
 } from '@/store/CedarStore';
+
+// Export response processor hooks
+export {
+	useResponseProcessor,
+	useResponseProcessors,
+} from '@/hooks/useResponseProcessor';
+
+// Export action response processor hooks
+export {
+	useActionResponseProcessor,
+	ActionResponse,
+	ActionResponseFor,
+	createActionResponseProcessor,
+} from '@/store/agentConnection/responseProcessors/actionResponseProcessor';
 
 // Export Tiptap components
 export {

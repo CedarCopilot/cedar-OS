@@ -9,6 +9,7 @@ import type {
 	VoiceParams,
 	VoiceLLMResponse,
 } from '../types';
+import type { StructuredResponseType } from '../types';
 import {
 	generateText,
 	streamText,
@@ -211,7 +212,7 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 
 		return {
 			content: JSON.stringify(result.object),
-			object: result.object,
+			object: result.object as StructuredResponseType,
 			usage: result.usage
 				? {
 						promptTokens:

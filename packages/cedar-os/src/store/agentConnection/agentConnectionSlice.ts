@@ -16,10 +16,17 @@ import type {
 	StructuredParams,
 	VoiceParams,
 	VoiceLLMResponse,
+	ResponseProcessor,
+	ResponseProcessorRegistry,
+	StructuredResponseType,
 } from './types';
 import { useCedarStore } from '@/store/CedarStore';
 import { getCedarState } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';
+import {
+	defaultResponseProcessors,
+	initializeResponseProcessorRegistry,
+} from './responseProcessors/initializeResponseProcessorRegistry';
 
 // Parameters for sending a message
 export interface SendMessageParams {
@@ -55,6 +62,7 @@ export interface AgentConnectionSlice {
 	isStreaming: boolean;
 	providerConfig: ProviderConfig | null;
 	currentAbortController: AbortController | null;
+	responseProcessors: ResponseProcessorRegistry;
 
 	// Core methods - properly typed based on current provider config
 	callLLM: <T extends ProviderConfig = ProviderConfig>(
@@ -87,7 +95,16 @@ export interface AgentConnectionSlice {
 
 	// High-level methods that use callLLM/streamLLM
 	sendMessage: (params?: SendMessageParams) => Promise<void>;
-	handleLLMResponse: (items: (string | object)[]) => void;
+	handleLLMResponse: (
+		items: (string | StructuredResponseType)[]
+	) => Promise<void>;
+
+	// Response processor methods
+	registerResponseProcessor: <T extends StructuredResponseType>(
+		processor: ResponseProcessor<T>
+	) => void;
+	getResponseProcessors: (type: string) => ResponseProcessor[];
+	processStructuredResponse: (obj: StructuredResponseType) => Promise<boolean>;
 
 	// Configuration methods
 	setProviderConfig: (config: ProviderConfig) => void;
@@ -165,7 +182,6 @@ Return only the improved prompt without explanations or meta-commentary.`;
 		return response.content;
 	}
 };
-
 export const createAgentConnectionSlice: StateCreator<
 	CedarStore,
 	[],
@@ -177,6 +193,9 @@ export const createAgentConnectionSlice: StateCreator<
 	isStreaming: false,
 	providerConfig: null,
 	currentAbortController: null,
+	responseProcessors: initializeResponseProcessorRegistry(
+		defaultResponseProcessors as ResponseProcessor<StructuredResponseType>[]
+	),
 
 	// Core methods with runtime type checking
 	callLLM: async (
@@ -407,80 +426,95 @@ export const createAgentConnectionSlice: StateCreator<
 	},
 
 	// Handle LLM response
-	handleLLMResponse: (itemsToProcess: (string | object)[]) => {
+	handleLLMResponse: async (itemsToProcess) => {
 		const state = get();
 
-		itemsToProcess.forEach((item) => {
+		for (const item of itemsToProcess) {
 			if (typeof item === 'string') {
 				// Handle text content - append to latest message
 				state.appendToLatestMessage(item, !state.isStreaming);
 			} else if (item && typeof item === 'object') {
-				// Handle structured objects
-				const structuredResponse = item as Record<string, unknown>;
+				const structuredResponse = item;
 
-				if (
-					'type' in structuredResponse &&
-					typeof structuredResponse.type === 'string'
-				) {
-					switch (structuredResponse.type) {
-						case 'action': {
-							// Execute the custom setter with the provided parameters
-							if (
-								'stateKey' in structuredResponse &&
-								'setterKey' in structuredResponse &&
-								typeof structuredResponse.stateKey === 'string' &&
-								typeof structuredResponse.setterKey === 'string'
-							) {
-								const args =
-									'args' in structuredResponse &&
-									Array.isArray(structuredResponse.args)
-										? structuredResponse.args
-										: [];
-								state.executeCustomSetter(
-									structuredResponse.stateKey,
-									structuredResponse.setterKey,
-									...args
-								);
-							}
-							break;
-						}
-						case 'message': {
-							// Add as a message with specific role/content
-							const role =
-								'role' in structuredResponse &&
-								typeof structuredResponse.role === 'string'
-									? structuredResponse.role
-									: 'assistant';
-							const content =
-								'content' in structuredResponse &&
-								typeof structuredResponse.content === 'string'
-									? structuredResponse.content
-									: JSON.stringify(structuredResponse);
-							// Map system role to assistant if needed
-							const messageRole = role === 'system' ? 'assistant' : role;
-							const message = {
-								role: messageRole as 'user' | 'assistant' | 'bot',
-								type: 'text' as const,
-								content,
-							};
-							state.addMessage(message, !state.isStreaming);
-							break;
-						}
-						default:
-							// TODO: Check for registered generative UI handlers for other types
-							console.log(
-								'Unhandled structured response type:',
-								structuredResponse.type,
-								structuredResponse
-							);
-							break;
-					}
-				} else {
-					// Handle objects without explicit type (e.g., OpenAI delta objects)
-					console.log('Unhandled object response:', structuredResponse);
+				// Try to process with registered response processors (including defaults)
+				const processed = await state.processStructuredResponse(
+					structuredResponse
+				);
+
+				if (!processed) {
+					// No processor handled this response, log it
+					console.log('Unhandled structured response:', structuredResponse);
 				}
 			}
+		}
+	},
+
+	// Response processor methods
+	registerResponseProcessor: <T extends StructuredResponseType>(
+		processor: ResponseProcessor<T>
+	) => {
+		set((state) => {
+			const type = processor.type;
+			const existingProcessors = (state.responseProcessors[type] ||
+				[]) as ResponseProcessor[];
+
+			// Create processor entry with defaults
+			const entry = {
+				type: processor.type,
+				namespace: processor.namespace,
+				priority: processor.priority ?? 0,
+				execute: processor.execute,
+				validate: processor.validate,
+			} as ResponseProcessor<T>;
+
+			// Add to array and sort by priority (highest first)
+			const updatedProcessors = [...existingProcessors, entry].sort(
+				(a, b) => (b.priority ?? 0) - (a.priority ?? 0)
+			);
+
+			return {
+				responseProcessors: {
+					...state.responseProcessors,
+					[type]:
+						updatedProcessors as ResponseProcessor<StructuredResponseType>[],
+				},
+			};
 		});
+	},
+
+	getResponseProcessors: (type: string) => {
+		return get().responseProcessors[type] || [];
+	},
+
+	processStructuredResponse: async (obj) => {
+		const state = get();
+
+		if (!obj.type || typeof obj.type !== 'string') {
+			return false;
+		}
+
+		const processors = state.getResponseProcessors(obj.type);
+
+		for (const processor of processors) {
+			// If processor has validation, use it to check if it can handle this object
+			if (processor.validate && !processor.validate(obj)) {
+				continue;
+			}
+
+			try {
+				// Execute the processor
+				await processor.execute(obj as StructuredResponseType, state);
+				return true; // Successfully processed
+			} catch (error) {
+				console.error(
+					`Error executing response processor for type ${obj.type}:`,
+					error
+				);
+				// Continue to next processor if this one fails
+			}
+		}
+
+		return false; // No processor handled this response
 	},
 
 	sendMessage: async (params?: SendMessageParams) => {
@@ -561,15 +595,15 @@ export const createAgentConnectionSlice: StateCreator<
 				// Capture current message count so we know which ones are new during the stream
 				const startIdx = get().messages.length;
 
-				const streamResponse = state.streamLLM(llmParams, (event) => {
+				const streamResponse = state.streamLLM(llmParams, async (event) => {
 					switch (event.type) {
 						case 'chunk':
 							// Process single text chunk as array of one
-							state.handleLLMResponse([event.content]);
+							await state.handleLLMResponse([event.content]);
 							break;
 						case 'object':
 							// Process single object as array of one
-							state.handleLLMResponse([event.object]);
+							await state.handleLLMResponse([event.object]);
 							break;
 						case 'done':
 							// Stream completed - no additional processing needed
@@ -594,12 +628,14 @@ export const createAgentConnectionSlice: StateCreator<
 
 				// Process response content as array of one
 				if (response.content) {
-					state.handleLLMResponse([response.content]);
+					await state.handleLLMResponse([response.content]);
 				}
 
 				// Process structured output if present
 				if (response.object) {
-					state.handleLLMResponse([response.object]);
+					await state.handleLLMResponse(
+						Array.isArray(response.object) ? response.object : [response.object]
+					);
 				}
 			}
 
