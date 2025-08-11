@@ -16,7 +16,6 @@ export const messageResponseProcessor: ResponseProcessor<BackendMessageResponse>
 	{
 		type: 'message',
 		namespace: 'default',
-		priority: 0,
 		execute: (obj, store) => {
 			// Convert message response type to text message and add to chat
 			const role = obj.role || 'assistant';

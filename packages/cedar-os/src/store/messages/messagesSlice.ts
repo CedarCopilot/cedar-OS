@@ -1,5 +1,4 @@
 import { StateCreator } from 'zustand';
-import React from 'react';
 import { CedarStore } from '../types';
 import type {
 	Message,
@@ -11,6 +10,10 @@ import {
 	getMessageStorageState,
 	MessageStorageState,
 } from '@/store/messages/messageStorage';
+import {
+	defaultMessageRenderers,
+	initializeMessageRendererRegistry,
+} from '@/store/messages/renderers/initializeMessageRendererRegistry';
 
 // Define the messages slice
 export type MessagesSlice = MessageStorageState & {
@@ -32,12 +35,12 @@ export type MessagesSlice = MessageStorageState & {
 	setIsProcessing: (isProcessing: boolean) => void;
 	setShowChat: (showChat: boolean) => void;
 
-	// Renderer management - now matches response processor pattern
+	// Renderer management - now single renderer per type
 	registerMessageRenderer: <T extends Message>(
 		config: MessageRenderer<T>
 	) => void;
 	unregisterMessageRenderer: (type: string, namespace?: string) => void;
-	getMessageRenderers: (type: string) => MessageRenderer[];
+	getMessageRenderers: (type: string) => MessageRenderer | undefined;
 
 	// Utility methods
 	getMessageById: (id: string) => Message | undefined;
@@ -57,7 +60,9 @@ export const createMessagesSlice: StateCreator<
 		messages: [],
 		isProcessing: false,
 		showChat: false,
-		messageRenderers: {},
+		messageRenderers: initializeMessageRendererRegistry(
+			defaultMessageRenderers
+		),
 		// Actions
 		setMessages: (messages: Message[]) => set({ messages }),
 		setShowChat: (showChat: boolean) => set({ showChat }),
@@ -128,67 +133,33 @@ export const createMessagesSlice: StateCreator<
 			config: MessageRenderer<T>
 		) => {
 			set((state) => {
-				const {
-					type,
-					render,
-					namespace,
-					priority = 0,
-					validateMessage,
-				} = config;
-				const existingRenderers = (state.messageRenderers[type] ||
-					[]) as MessageRenderer[];
+				const { type } = config;
 
-				// Create renderer function that wraps the component
-				const rendererFunction = (message: Message) => {
-					const Component = render;
-					return React.createElement(Component, message as T);
-				};
-
-				// Create renderer entry with all metadata
-				const entry: MessageRenderer<T> = {
-					type,
-					render: rendererFunction,
-					namespace,
-					priority,
-					validateMessage,
-				};
-
-				// Add to array and sort by priority (highest first)
-				const updatedRenderers = [...existingRenderers, entry].sort(
-					(a, b) => (b.priority ?? 0) - (a.priority ?? 0)
-				);
-
+				// Store the config as-is (it already fits the MessageRenderer shape)
 				return {
 					messageRenderers: {
 						...state.messageRenderers,
-						[type]: updatedRenderers as MessageRenderer<Message>[],
+						[type]: config as unknown as MessageRenderer<Message>,
 					},
 				};
 			});
 		},
 		unregisterMessageRenderer: (type: string, namespace?: string) => {
 			set((state) => {
-				const renderers = state.messageRenderers[type] || [];
-				const filteredRenderers = namespace
-					? renderers.filter((r) => r.namespace !== namespace)
-					: [];
+				const existing = state.messageRenderers[type];
+				if (!existing) return {};
 
-				if (filteredRenderers.length === 0) {
+				if (!namespace || existing.namespace === namespace) {
 					const { [type]: removed, ...rest } = state.messageRenderers;
 					void removed;
 					return { messageRenderers: rest };
-				} else {
-					return {
-						messageRenderers: {
-							...state.messageRenderers,
-							[type]: filteredRenderers,
-						},
-					};
 				}
+				// Namespace didn't match; keep as is
+				return {};
 			});
 		},
 		getMessageRenderers: (type: string) => {
-			return get().messageRenderers[type] || [];
+			return get().messageRenderers[type];
 		},
 		getMessageById: (id: string) => {
 			return get().messages.find((msg) => msg.id === id);

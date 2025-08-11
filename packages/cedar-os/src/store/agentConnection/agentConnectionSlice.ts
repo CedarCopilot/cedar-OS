@@ -103,7 +103,7 @@ export interface AgentConnectionSlice {
 	registerResponseProcessor: <T extends StructuredResponseType>(
 		processor: ResponseProcessor<T>
 	) => void;
-	getResponseProcessors: (type: string) => ResponseProcessor[];
+	getResponseProcessors: (type: string) => ResponseProcessor | undefined;
 	processStructuredResponse: (obj: StructuredResponseType) => Promise<boolean>;
 
 	// Configuration methods
@@ -458,35 +458,31 @@ export const createAgentConnectionSlice: StateCreator<
 	) => {
 		set((state) => {
 			const type = processor.type;
-			const existingProcessors = (state.responseProcessors[type] ||
-				[]) as ResponseProcessor[];
 
-			// Create processor entry with defaults
-			const entry = {
-				type: processor.type,
-				namespace: processor.namespace,
-				priority: processor.priority ?? 0,
-				execute: processor.execute,
-				validate: processor.validate,
-			} as ResponseProcessor<T>;
-
-			// Add to array and sort by priority (highest first)
-			const updatedProcessors = [...existingProcessors, entry].sort(
-				(a, b) => (b.priority ?? 0) - (a.priority ?? 0)
-			);
-
-			return {
-				responseProcessors: {
-					...state.responseProcessors,
-					[type]:
-						updatedProcessors as ResponseProcessor<StructuredResponseType>[],
-				},
+			const entry: ResponseProcessor<T> = {
+				...processor,
 			};
+
+			const existing = state.responseProcessors[type] as
+				| ResponseProcessor
+				| undefined;
+
+			// Replace if no existing
+			if (!existing) {
+				return {
+					responseProcessors: {
+						...state.responseProcessors,
+						[type]: entry,
+					} as ResponseProcessorRegistry,
+				};
+			}
+
+			return {};
 		});
 	},
 
 	getResponseProcessors: (type: string) => {
-		return get().responseProcessors[type] || [];
+		return get().responseProcessors[type];
 	},
 
 	processStructuredResponse: async (obj) => {
@@ -496,28 +492,27 @@ export const createAgentConnectionSlice: StateCreator<
 			return false;
 		}
 
-		const processors = state.getResponseProcessors(obj.type);
+		const processor = state.getResponseProcessors(obj.type);
 
-		for (const processor of processors) {
-			// If processor has validation, use it to check if it can handle this object
-			if (processor.validate && !processor.validate(obj)) {
-				continue;
-			}
-
-			try {
-				// Execute the processor
-				await processor.execute(obj as StructuredResponseType, state);
-				return true; // Successfully processed
-			} catch (error) {
-				console.error(
-					`Error executing response processor for type ${obj.type}:`,
-					error
-				);
-				// Continue to next processor if this one fails
-			}
+		if (!processor) {
+			return false;
 		}
 
-		return false; // No processor handled this response
+		// Validate if needed
+		if (processor.validate && !processor.validate(obj)) {
+			return false;
+		}
+
+		try {
+			await processor.execute(obj as StructuredResponseType, state);
+			return true;
+		} catch (error) {
+			console.error(
+				`Error executing response processor for type ${obj.type}:`,
+				error
+			);
+			return false;
+		}
 	},
 
 	sendMessage: async (params?: SendMessageParams) => {

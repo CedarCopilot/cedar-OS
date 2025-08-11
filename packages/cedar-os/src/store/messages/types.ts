@@ -147,9 +147,11 @@ export type MessageRenderer<T extends Message = Message> = {
 	type: T['type'];
 	render: (message: T) => ReactNode;
 	namespace?: string;
-	priority?: number;
 	validateMessage?: (message: Message) => message is T;
 };
 
 // Registry for message renderers
-export type MessageRendererRegistry = Record<string, MessageRenderer[]>;
+export type MessageRendererRegistry = Record<
+	string,
+	MessageRenderer | undefined
+>;

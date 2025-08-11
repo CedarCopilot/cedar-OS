@@ -27,20 +27,15 @@ export const ChatRenderer: React.FC<ChatRendererProps> = ({ message }) => {
 	);
 	const isDark = styling.darkMode;
 
-	// Check if there are registered renderers for this message type
-	const renderers = getMessageRenderers(message.type);
-	if (renderers && renderers.length > 0) {
-		// Find the first renderer that can handle this message
-		for (const renderer of renderers) {
-			const typedRenderer = renderer as MessageRenderer<Message>;
-			// If renderer has validation, use it to check compatibility
-			if (typedRenderer.validateMessage) {
-				if (typedRenderer.validateMessage(message)) {
-					return <>{renderer.render(message)}</>;
-				}
-			} else {
-				return <>{renderer.render(message)}</>;
-			}
+	// Check if there is a registered renderer for this message type
+	const renderer = getMessageRenderers(message.type) as
+		| MessageRenderer<Message>
+		| undefined;
+
+	if (renderer) {
+		// If renderer has validation, ensure compatibility
+		if (!renderer.validateMessage || renderer.validateMessage(message)) {
+			return <>{renderer.render(message)}</>;
 		}
 	}
 

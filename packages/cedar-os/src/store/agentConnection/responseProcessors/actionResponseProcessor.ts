@@ -29,7 +29,6 @@ export type ActionResponse = CustomStructuredResponseType<
 export const actionResponseProcessor: ResponseProcessor<ActionResponse> = {
 	type: 'action' as const,
 	namespace: 'default',
-	priority: 5,
 	execute: async (obj, store) => {
 		const args = 'args' in obj && Array.isArray(obj.args) ? obj.args : [];
 		store.executeCustomSetter(obj.stateKey, obj.setterKey, ...args);
@@ -60,13 +59,12 @@ export function createActionResponseProcessor<
 	T extends ActionResponse
 >(config: {
 	namespace?: string;
-	priority?: number;
 	/** Optional setterKey. If provided the processor only handles msgs with this key */
 	setterKey?: string;
 	execute?: ResponseProcessorExecute<T>;
 	validate?: (obj: StructuredResponseType) => obj is T; // custom validator override
 }): ResponseProcessor<T> {
-	const { namespace, priority = 0, setterKey, execute, validate } = config;
+	const { namespace, setterKey, execute, validate } = config;
 
 	const defaultValidate = (obj: StructuredResponseType): obj is T => {
 		if (obj.type !== 'action') return false;
@@ -78,7 +76,6 @@ export function createActionResponseProcessor<
 	return {
 		type: 'action',
 		namespace,
-		priority,
 		execute: execute as ResponseProcessorExecute<T>,
 		validate: validate ?? defaultValidate,
 	};
@@ -91,7 +88,6 @@ export function createActionResponseProcessor<
 export function useActionResponseProcessor<T extends ActionResponse>(config: {
 	action: T;
 	namespace?: string;
-	priority?: number;
 	execute: ResponseProcessorExecute<T>;
 }) {
 	const registerResponseProcessor = useCedarStore(

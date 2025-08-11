@@ -156,17 +156,6 @@ export {
 	useVoice,
 } from '@/store/CedarStore';
 
-// Export response processor hooks
-export {
-	useResponseProcessor,
-	useResponseProcessors,
-} from '@/hooks/useResponseProcessor';
-
-export {
-	useMessageRenderers,
-	useMessageRenderer,
-} from '@/hooks/useMessageRenderer';
-
 // Export action response processor hooks
 export {
 	useActionResponseProcessor,

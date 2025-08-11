@@ -1,10 +1,10 @@
-import React from 'react';
 import {
-	CustomMessage,
 	MastraStreamedResponse,
 	MastraStreamedResponseType,
-	cn,
-} from 'cedar-os';
+} from '@/store/agentConnection/providers/mastra';
+import { CustomMessage } from '@/store/messages/types';
+import { cn } from '@/styles/stylingUtils';
+import React from 'react';
 
 export type CustomMastraMessage<T extends MastraStreamedResponseType> =
 	CustomMessage<T, MastraStreamedResponse<T>>;

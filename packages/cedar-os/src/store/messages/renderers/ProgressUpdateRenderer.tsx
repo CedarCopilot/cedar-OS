@@ -1,6 +1,7 @@
 import React from 'react';
-import { CustomMessage, ProgressUpdateResponse } from 'cedar-os';
-import { ShimmerText } from '../../text/ShimmerText';
+import { ShimmerText } from './ShimmerText';
+import { ProgressUpdateResponse } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
+import { CustomMessage } from '@/store/messages/types';
 
 /**
  * Message shape for progress updates stored in the chat history.

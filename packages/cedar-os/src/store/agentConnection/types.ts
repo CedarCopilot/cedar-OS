@@ -205,7 +205,6 @@ export interface ResponseProcessor<
 > {
 	type: string;
 	namespace?: string;
-	priority?: number;
 	execute: (obj: T, store: CedarStore) => void | Promise<void>;
 	validate?: (obj: StructuredResponseType) => obj is T;
 }
@@ -214,4 +213,7 @@ export type ResponseProcessorExecute<
 	T extends StructuredResponseType = StructuredResponseType
 > = (obj: T, store: CedarStore) => void | Promise<void>;
 
-export type ResponseProcessorRegistry = Record<string, ResponseProcessor[]>;
+export type ResponseProcessorRegistry = Record<
+	string,
+	ResponseProcessor | undefined
+>;

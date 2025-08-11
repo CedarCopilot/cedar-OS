@@ -1,7 +1,8 @@
 import React from 'react';
 
-import { CustomMessage, ActionResponsePayload } from 'cedar-os';
-import { ShimmerText } from '../../text/ShimmerText';
+import { ShimmerText } from './ShimmerText';
+import { ActionResponsePayload } from '@/store/agentConnection/responseProcessors/actionResponseProcessor';
+import { CustomMessage } from '@/store/messages/types';
 
 export type ActionResponseMessage = CustomMessage<
 	'action',

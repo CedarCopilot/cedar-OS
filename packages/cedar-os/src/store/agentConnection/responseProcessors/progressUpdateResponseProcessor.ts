@@ -54,7 +54,6 @@ export const progressUpdateResponseProcessor: ResponseProcessor<ProgressUpdateRe
 	{
 		type: 'progress_update',
 		namespace: 'default',
-		priority: 5,
 		execute: async (obj, store: CedarStore) => {
 			// Clone the current messages array so we can manipulate it
 			const messages = [...store.messages];

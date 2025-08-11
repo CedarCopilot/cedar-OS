@@ -19,20 +19,12 @@ export const initializeResponseProcessorRegistry = (
 	const registry: ResponseProcessorRegistry = {};
 
 	processors.forEach((processor) => {
-		const entry: ResponseProcessor = {
-			...processor,
-			priority: processor.priority ?? 0,
-		};
+		const existing = registry[processor.type];
 
-		if (!registry[processor.type]) {
-			registry[processor.type] = [];
+		// If no existing, replace
+		if (!existing) {
+			registry[processor.type] = processor;
 		}
-		registry[processor.type].push(entry);
-	});
-
-	// Sort each type's processors by priority (highest first)
-	Object.keys(registry).forEach((type) => {
-		registry[type].sort((a, b) => (b.priority || 0) - (a.priority || 0));
 	});
 
 	return registry;
