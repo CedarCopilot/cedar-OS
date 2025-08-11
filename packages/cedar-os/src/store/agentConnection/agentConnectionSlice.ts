@@ -443,7 +443,10 @@ export const createAgentConnectionSlice: StateCreator<
 
 				if (!processed) {
 					// No processor handled this response, log it and add it to the chat
-					state.addMessage({ ...structuredResponse, role: 'assistant' });
+					state.addMessage({
+						role: 'bot',
+						...structuredResponse,
+					});
 				}
 			}
 		}
