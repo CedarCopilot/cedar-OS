@@ -3,7 +3,7 @@ import type {
 	ResponseProcessorRegistry,
 } from '@/store/agentConnection/types';
 import { actionResponseProcessor } from '@/store/agentConnection/responseProcessors/actionResponseProcessor';
-import { messageResponseProcessor } from '@/store/agentConnection/responseProcessors/messageProcessor';
+import { messageResponseProcessor } from '@/store/agentConnection/responseProcessors/messageResponseProcessor';
 
 export const defaultResponseProcessors = [
 	messageResponseProcessor,
