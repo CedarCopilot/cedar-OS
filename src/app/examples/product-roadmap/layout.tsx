@@ -2,12 +2,17 @@
 
 import {
 	CedarCopilot,
+	createActionMessageRenderer,
+	createActionResponseProcessor,
 	createMessageRenderer,
 	createResponseProcessor,
 } from 'cedar-os';
 import type {
+	ActionMessageFor,
+	ActionResponseFor,
 	CustomMessage,
 	CustomStructuredResponseType,
+	MessageInput,
 	MessageStorageConfig,
 	ProviderConfig,
 } from 'cedar-os';
@@ -74,13 +79,41 @@ export default function ProductRoadmapLayout({
 		},
 	});
 
+	type AddNodeActionResponse = ActionResponseFor<
+		'nodes',
+		'addNode',
+		[{ name: string; description: string }]
+	>;
+
+	const customActionResponseProcessor =
+		createActionResponseProcessor<AddNodeActionResponse>({
+			setterKey: 'addNode',
+			execute: (obj, store) => {
+				console.log('🔥 Custom action', obj);
+				store.addMessage(obj as unknown as MessageInput);
+			},
+		});
+
+	type AddNodeActionMessage = ActionMessageFor<
+		'nodes',
+		'addNode',
+		[{ name: string; description: string }]
+	>;
+
+	const customActionMessageRenderer =
+		createActionMessageRenderer<AddNodeActionMessage>({
+			render: (message) => {
+				return <div>Action: {message.setterKey}</div>;
+			},
+		});
+
 	return (
 		<CedarCopilot
 			llmProvider={llmProvider}
 			voiceSettings={voiceSettings}
 			messageStorage={localStorageConfig}
-			responseProcessors={[responseProcessor]}
-			messageRenderers={[AlertMessageRenderer]}>
+			responseProcessors={[responseProcessor, customActionResponseProcessor]}
+			messageRenderers={[AlertMessageRenderer, customActionMessageRenderer]}>
 			{children}
 		</CedarCopilot>
 	);

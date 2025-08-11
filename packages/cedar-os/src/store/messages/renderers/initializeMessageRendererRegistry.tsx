@@ -8,9 +8,8 @@ import type {
 import ProgressUpdateRenderer, {
 	ProgressUpdateMessage,
 } from './ProgressUpdateRenderer';
-import ActionResponseRenderer, {
-	ActionResponseMessage,
-} from './ActionResponseRenderer';
+import ActionRenderer from './ActionRenderer';
+import { ActionMessage } from '@/store/messages/renderers/createMessageRenderer';
 import MastraEventRenderer, {
 	CustomMastraMessage,
 } from './MastraEventRenderer';
@@ -33,10 +32,8 @@ export const progressUpdateMessageRenderer: MessageRenderer<Message> = {
 export const actionResponseMessageRenderer: MessageRenderer<Message> = {
 	type: 'action',
 	namespace: 'default',
-	render: (message) => (
-		<ActionResponseRenderer message={message as ActionResponseMessage} />
-	),
-	validateMessage: (msg): msg is ActionResponseMessage => msg.type === 'action',
+	render: (message) => <ActionRenderer message={message as ActionMessage} />,
+	validateMessage: (msg): msg is ActionMessage => msg.type === 'action',
 };
 
 // Mastra event renderers – one per streamed event type

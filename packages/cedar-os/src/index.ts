@@ -106,9 +106,6 @@ export type {
 	StreamResponse,
 } from '@/store/agentConnection/types';
 
-// Export Action response payload type
-export type { ActionResponsePayload } from '@/store/agentConnection/responseProcessors/actionResponseProcessor';
-
 // Export SendMessageParams and response processor types from the slice
 export type {
 	BaseStructuredResponseType,
@@ -158,14 +155,19 @@ export {
 
 // Export action response processor hooks
 export {
-	useActionResponseProcessor,
+	ActionResponsePayload,
 	ActionResponse,
 	ActionResponseFor,
 	createActionResponseProcessor,
-} from '@/store/agentConnection/responseProcessors/actionResponseProcessor';
+} from '@/store/agentConnection/responseProcessors/createResponseProcessor';
 
 // Export message renderer factory function
-export { createMessageRenderer } from '@/store/messages/renderers/createMessageRenderer';
+export {
+	createMessageRenderer,
+	ActionMessage,
+	ActionMessageFor,
+	createActionMessageRenderer,
+} from '@/store/messages/renderers/createMessageRenderer';
 
 // Export response processor factory function
 export { createResponseProcessor } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
