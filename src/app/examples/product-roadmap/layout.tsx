@@ -1,7 +1,16 @@
 'use client';
 
-import { CedarCopilot } from 'cedar-os';
-import type { MessageStorageConfig, ProviderConfig } from 'cedar-os';
+import {
+	CedarCopilot,
+	createMessageRenderer,
+	createResponseProcessor,
+} from 'cedar-os';
+import type {
+	CustomMessage,
+	CustomStructuredResponseType,
+	MessageStorageConfig,
+	ProviderConfig,
+} from 'cedar-os';
 import { ReactNode } from 'react';
 
 export default function ProductRoadmapLayout({
@@ -16,8 +25,8 @@ export default function ProductRoadmapLayout({
 		provider: 'mastra',
 		apiKey: 'not-needed-for-local', // API key is not needed for local Mastra agent
 		baseURL: 'http://localhost:4111',
-		chatPath: '/chat/execute-function',
-		voiceRoute: '/chat/voice-execute',
+		// chatPath: '/chat/execute-function',
+		// voiceRoute: '/chat/voice-execute',
 	};
 
 	// const llmProvider: ProviderConfig = {
@@ -38,11 +47,40 @@ export default function ProductRoadmapLayout({
 		options: { key: 'cedar-test' },
 	};
 
+	type UnregisteredResponseType = CustomStructuredResponseType<
+		'unregistered_event',
+		{
+			level: string;
+		}
+	>;
+	const responseProcessor = createResponseProcessor<UnregisteredResponseType>({
+		type: 'unregistered_event',
+		execute: (obj) => {
+			console.log('🔥 Unregistered event', obj);
+		},
+	});
+
+	type AlertMessage = CustomMessage<
+		'alert',
+		{
+			level: string;
+		}
+	>;
+
+	const AlertMessageRenderer = createMessageRenderer<AlertMessage>({
+		type: 'alert',
+		render: (message) => {
+			return <div>Alert: {message.level}</div>;
+		},
+	});
+
 	return (
 		<CedarCopilot
 			llmProvider={llmProvider}
 			voiceSettings={voiceSettings}
-			messageStorage={localStorageConfig}>
+			messageStorage={localStorageConfig}
+			responseProcessors={[responseProcessor]}
+			messageRenderers={[AlertMessageRenderer]}>
 			{children}
 		</CedarCopilot>
 	);

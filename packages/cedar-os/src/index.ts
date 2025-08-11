@@ -164,6 +164,12 @@ export {
 	createActionResponseProcessor,
 } from '@/store/agentConnection/responseProcessors/actionResponseProcessor';
 
+// Export message renderer factory function
+export { createMessageRenderer } from '@/store/messages/renderers/createMessageRenderer';
+
+// Export response processor factory function
+export { createResponseProcessor } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
+
 // Export Tiptap components
 export {
 	Editor as CedarEditor,
