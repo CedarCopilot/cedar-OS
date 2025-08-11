@@ -3,16 +3,13 @@
 import {
 	CedarCopilot,
 	createActionMessageRenderer,
-	createActionResponseProcessor,
 	createMessageRenderer,
 	createResponseProcessor,
 } from 'cedar-os';
 import type {
 	ActionMessageFor,
-	ActionResponseFor,
 	CustomMessage,
 	CustomStructuredResponseType,
-	MessageInput,
 	MessageStorageConfig,
 	ProviderConfig,
 } from 'cedar-os';
@@ -79,21 +76,6 @@ export default function ProductRoadmapLayout({
 		},
 	});
 
-	type AddNodeActionResponse = ActionResponseFor<
-		'nodes',
-		'addNode',
-		[{ name: string; description: string }]
-	>;
-
-	const customActionResponseProcessor =
-		createActionResponseProcessor<AddNodeActionResponse>({
-			setterKey: 'addNode',
-			execute: (obj, store) => {
-				console.log('🔥 Custom action', obj);
-				store.addMessage(obj as unknown as MessageInput);
-			},
-		});
-
 	type AddNodeActionMessage = ActionMessageFor<
 		'nodes',
 		'addNode',
@@ -112,7 +94,7 @@ export default function ProductRoadmapLayout({
 			llmProvider={llmProvider}
 			voiceSettings={voiceSettings}
 			messageStorage={localStorageConfig}
-			responseProcessors={[responseProcessor, customActionResponseProcessor]}
+			responseProcessors={[responseProcessor]}
 			messageRenderers={[AlertMessageRenderer, customActionMessageRenderer]}>
 			{children}
 		</CedarCopilot>
