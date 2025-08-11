@@ -2,6 +2,12 @@ import { MastraStreamedResponseType, useMessageRenderers } from 'cedar-os';
 import MastraEventRenderer, {
 	CustomMastraMessage,
 } from './MastraEventRenderer';
+import ProgressUpdateRenderer, {
+	ProgressUpdateMessage,
+} from './ProgressUpdateRenderer';
+import ActionResponseRenderer, {
+	ActionResponseMessage,
+} from './ActionResponseRenderer';
 
 /**
  * Hook to register all Mastra message renderers
@@ -54,6 +60,29 @@ export function useMastraRenderers() {
 			type: 'finish',
 			render: (message) => MastraEventRenderer({ message }),
 			priority: 8,
+		},
+	]);
+}
+
+/**
+ * Hook to register the renderer for progress_update chat messages.
+ */
+export function useProgressUpdateRenderers() {
+	useMessageRenderers<ProgressUpdateMessage>([
+		{
+			type: 'progress_update',
+			render: (message) => ProgressUpdateRenderer({ message }),
+			priority: 9,
+		},
+	]);
+}
+
+export function useActionResponseRenderers() {
+	useMessageRenderers<ActionResponseMessage>([
+		{
+			type: 'action',
+			render: (message) => ActionResponseRenderer({ message }),
+			priority: 9,
 		},
 	]);
 }
