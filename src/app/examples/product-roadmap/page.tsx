@@ -55,7 +55,12 @@ import {
 import { motion } from 'motion/react';
 import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import RadialMenuSpell from '../../../../packages/cedar-os-components/spells/RadialMenuSpell';
-import { MouseEvent as SpellMouseEvent } from '../../../../packages/cedar-os/src/store/spellSlice/useSpellActivationConditions';
+import {
+	MouseEvent as SpellMouseEvent,
+	Hotkey,
+	ActivationMode,
+	type ActivationConditions,
+} from '../../../../packages/cedar-os/src/store/spellSlice/useSpellActivationConditions';
 import type { CedarStore } from '../../../../packages/cedar-os/src/store/types';
 
 // -----------------------------------------------------------------------------
@@ -608,16 +613,18 @@ export default function ProductMapPage() {
 				onInvoke: (store: CedarStore) => {
 					console.log('Copy action triggered', store);
 					// Get selected nodes from the store
-					const nodes = store.getCedarState?.('nodes') || [];
-					const selectedNodes = nodes.filter(
-						(n: Node<FeatureNodeData>) => n.selected
-					);
-					if (selectedNodes.length > 0) {
-						const nodeData = JSON.stringify(selectedNodes, null, 2);
-						navigator.clipboard.writeText(nodeData);
-						console.log('Copied selected nodes to clipboard');
-					} else {
-						console.log('No nodes selected to copy');
+					const nodes = store.getCedarState?.('nodes');
+					if (Array.isArray(nodes)) {
+						const selectedNodes = nodes.filter(
+							(n: Node<FeatureNodeData>) => n.selected
+						);
+						if (selectedNodes.length > 0) {
+							const nodeData = JSON.stringify(selectedNodes, null, 2);
+							navigator.clipboard.writeText(nodeData);
+							console.log('Copied selected nodes to clipboard');
+						} else {
+							console.log('No nodes selected to copy');
+						}
 					}
 				},
 			},
@@ -676,10 +683,16 @@ export default function ProductMapPage() {
 	);
 
 	// Define activation conditions for the radial menu
-	const radialMenuActivationConditions = React.useMemo(
+	const radialMenuActivationConditions: ActivationConditions = React.useMemo(
 		() => ({
-			mouseEvents: [SpellMouseEvent.RIGHT_CLICK],
-			hotkeys: ['r'], // Press 'm' to activate the menu
+			events: [
+				SpellMouseEvent.RIGHT_CLICK,
+				Hotkey.R, // Hold 'r' to activate the menu
+				// You can also use multi-modifier combos like:
+				// 'cmd+shift+p',
+				// 'ctrl+alt+r',
+			],
+			mode: ActivationMode.HOLD, // Hold mode for radial menu
 		}),
 		[]
 	);

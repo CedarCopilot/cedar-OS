@@ -60,6 +60,12 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 	const isCancelActive = hoverIndex === null;
 	const centerLabel = isCancelActive ? 'Cancel' : items[hoverIndex!].title;
 
+	// Use a ref to track the hover index when deactivating
+	const hoverIndexRef = useRef<number | null>(null);
+	useEffect(() => {
+		hoverIndexRef.current = hoverIndex;
+	}, [hoverIndex]);
+
 	// Register the spell on mount
 	useEffect(() => {
 		addSpell(spellId);
@@ -82,6 +88,15 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 			}
 		},
 		onDeactivate: () => {
+			// Execute the action on deactivation if an item is hovered
+			if (
+				hoverIndexRef.current !== null &&
+				hoverIndexRef.current >= 0 &&
+				hoverIndexRef.current < items.length
+			) {
+				items[hoverIndexRef.current].onInvoke(useCedarStore.getState());
+			}
+			// Then close the menu
 			setMenuPosition(null);
 			setHoverIndex(null);
 		},
@@ -157,33 +172,22 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 			setHoverIndex(getIndexFromAngle(angleDeg));
 		};
 
-		const handleMouseUp = () => {
-			// Invoke if hovering over item
-			if (hoverIndex !== null && hoverIndex >= 0 && hoverIndex < items.length) {
-				items[hoverIndex].onInvoke(useCedarStore.getState());
-			}
-			// Close the menu
-			setMenuPosition(null);
-			setHoverIndex(null);
-		};
-
 		const handleEscape = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
-				setMenuPosition(null);
+				// Clear selection and close without executing
 				setHoverIndex(null);
+				setMenuPosition(null);
 			}
 		};
 
 		window.addEventListener('mousemove', handleMouseMove);
-		window.addEventListener('mouseup', handleMouseUp);
 		window.addEventListener('keydown', handleEscape);
 
 		return () => {
 			window.removeEventListener('mousemove', handleMouseMove);
-			window.removeEventListener('mouseup', handleMouseUp);
 			window.removeEventListener('keydown', handleEscape);
 		};
-	}, [menuPosition, hoverIndex, items]);
+	}, [menuPosition]);
 
 	// Don't render if menu is not active
 	if (!menuPosition) return null;

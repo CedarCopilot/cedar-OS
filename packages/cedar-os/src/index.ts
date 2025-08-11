@@ -130,9 +130,29 @@ export {
 	useChatInput,
 	useDebugger,
 	useMessages,
+	useSpells,
 	useStyling,
 	useVoice,
 } from '@/store/CedarStore';
+
+// Export spell system types and utilities
+export {
+	useSpellActivationConditions,
+	Hotkey,
+	MouseEvent,
+	SelectionEvent,
+	ActivationMode,
+} from '@/store/spellSlice/useSpellActivationConditions';
+
+export type {
+	ActivationConditions,
+	ActivationEvent,
+	ActivationState,
+	HotkeyCombo,
+	CommonHotkeyCombo,
+} from '@/store/spellSlice/useSpellActivationConditions';
+
+export type { SpellSlice } from '@/store/spellSlice/spellSlice';
 
 // Export Tiptap components
 export {
