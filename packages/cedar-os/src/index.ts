@@ -106,6 +106,9 @@ export type {
 	StreamResponse,
 } from '@/store/agentConnection/types';
 
+// Export Action response payload type
+export type { ActionResponsePayload } from '@/store/agentConnection/responseProcessors/actionResponseProcessor';
+
 // Export SendMessageParams and response processor types from the slice
 export type {
 	BaseStructuredResponseType,
@@ -121,6 +124,9 @@ export type {
 	MastraStreamedResponse,
 	MastraStreamedResponseType,
 } from '@/store/agentConnection/providers/mastra';
+
+// Export progress update response processor
+export type { ProgressUpdateResponse } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 
 // Export storage configuration types
 export type {

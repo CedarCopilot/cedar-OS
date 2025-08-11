@@ -4,10 +4,12 @@ import type {
 } from '@/store/agentConnection/types';
 import { actionResponseProcessor } from '@/store/agentConnection/responseProcessors/actionResponseProcessor';
 import { messageResponseProcessor } from '@/store/agentConnection/responseProcessors/messageResponseProcessor';
+import { progressUpdateResponseProcessor } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 
 export const defaultResponseProcessors = [
 	messageResponseProcessor,
 	actionResponseProcessor,
+	progressUpdateResponseProcessor,
 ];
 
 // Helper function to initialize processor registry with defaults

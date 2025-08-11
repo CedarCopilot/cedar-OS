@@ -6,16 +6,23 @@ import {
 	StructuredResponseType,
 } from '@/store/agentConnection/types';
 import { useCedarStore } from '@/store/CedarStore';
+import { MessageInput } from '@/store/messages/types';
 import { useEffect, useMemo } from 'react';
 
-// Generic action response type
+// -----------------------------------------------------------------------------
+// Base payload shared by ActionResponse structured responses and chat messages
+// -----------------------------------------------------------------------------
+
+export type ActionResponsePayload = {
+	stateKey: string;
+	setterKey: string;
+	args?: unknown[];
+};
+
+// Generic action structured response type
 export type ActionResponse = CustomStructuredResponseType<
 	'action',
-	{
-		stateKey: string;
-		setterKey: string;
-		args?: unknown[];
-	}
+	ActionResponsePayload
 >;
 
 // Action response processor - generic action handling
@@ -26,6 +33,7 @@ export const actionResponseProcessor: ResponseProcessor<ActionResponse> = {
 	execute: async (obj, store) => {
 		const args = 'args' in obj && Array.isArray(obj.args) ? obj.args : [];
 		store.executeCustomSetter(obj.stateKey, obj.setterKey, ...args);
+		store.addMessage(obj as unknown as MessageInput);
 	},
 	validate: (obj): obj is ActionResponse =>
 		obj.type === 'action' &&
@@ -35,7 +43,7 @@ export const actionResponseProcessor: ResponseProcessor<ActionResponse> = {
 		typeof obj.setterKey === 'string',
 };
 
-// Helper type for action responses - mirrors ActionMessageFor pattern
+// Helper type for action responses
 export type ActionResponseFor<
 	StateKey extends string,
 	SetterKey extends string,
