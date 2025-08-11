@@ -27,6 +27,7 @@ import {
 	defaultResponseProcessors,
 	initializeResponseProcessorRegistry,
 } from './responseProcessors/initializeResponseProcessorRegistry';
+import { MessageInput } from '@/store/messages/types';
 
 // Parameters for sending a message
 export interface SendMessageParams {
@@ -442,8 +443,9 @@ export const createAgentConnectionSlice: StateCreator<
 				);
 
 				if (!processed) {
-					// No processor handled this response, log it
+					// No processor handled this response, log it and add it to the chat
 					console.log('Unhandled structured response:', structuredResponse);
+					state.addMessage(structuredResponse as MessageInput);
 				}
 			}
 		}

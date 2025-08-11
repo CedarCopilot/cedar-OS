@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+import React from 'react';
 import { CedarStore } from '../types';
 import type {
 	Message,
@@ -31,10 +32,12 @@ export type MessagesSlice = MessageStorageState & {
 	setIsProcessing: (isProcessing: boolean) => void;
 	setShowChat: (showChat: boolean) => void;
 
-	// Renderer management
-	registerMessageRenderer: (type: string, renderer: MessageRenderer) => void;
-	unregisterMessageRenderer: (type: string) => void;
-	getMessageRenderer: (type: string) => MessageRenderer | undefined;
+	// Renderer management - now matches response processor pattern
+	registerMessageRenderer: <T extends Message>(
+		config: MessageRenderer<T>
+	) => void;
+	unregisterMessageRenderer: (type: string, namespace?: string) => void;
+	getMessageRenderers: (type: string) => MessageRenderer[];
 
 	// Utility methods
 	getMessageById: (id: string) => Message | undefined;
@@ -121,23 +124,71 @@ export const createMessagesSlice: StateCreator<
 		},
 		clearMessages: () => set({ messages: [] }),
 		setIsProcessing: (isProcessing: boolean) => set({ isProcessing }),
-		registerMessageRenderer: (type: string, renderer: MessageRenderer) => {
-			set((state) => ({
-				messageRenderers: {
-					...state.messageRenderers,
-					[type]: renderer,
-				},
-			}));
-		},
-		unregisterMessageRenderer: (type: string) => {
+		registerMessageRenderer: <T extends Message>(
+			config: MessageRenderer<T>
+		) => {
 			set((state) => {
-				const { [type]: removed, ...rest } = state.messageRenderers;
-				void removed;
-				return { messageRenderers: rest };
+				const {
+					type,
+					render,
+					namespace,
+					priority = 0,
+					validateMessage,
+				} = config;
+				const existingRenderers = (state.messageRenderers[type] ||
+					[]) as MessageRenderer[];
+
+				// Create renderer function that wraps the component
+				const rendererFunction = (message: Message) => {
+					const Component = render;
+					return React.createElement(Component, message as T);
+				};
+
+				// Create renderer entry with all metadata
+				const entry: MessageRenderer<T> = {
+					type,
+					render: rendererFunction,
+					namespace,
+					priority,
+					validateMessage,
+				};
+
+				// Add to array and sort by priority (highest first)
+				const updatedRenderers = [...existingRenderers, entry].sort(
+					(a, b) => (b.priority ?? 0) - (a.priority ?? 0)
+				);
+
+				return {
+					messageRenderers: {
+						...state.messageRenderers,
+						[type]: updatedRenderers as MessageRenderer<Message>[],
+					},
+				};
 			});
 		},
-		getMessageRenderer: (type: string) => {
-			return get().messageRenderers[type];
+		unregisterMessageRenderer: (type: string, namespace?: string) => {
+			set((state) => {
+				const renderers = state.messageRenderers[type] || [];
+				const filteredRenderers = namespace
+					? renderers.filter((r) => r.namespace !== namespace)
+					: [];
+
+				if (filteredRenderers.length === 0) {
+					const { [type]: removed, ...rest } = state.messageRenderers;
+					void removed;
+					return { messageRenderers: rest };
+				} else {
+					return {
+						messageRenderers: {
+							...state.messageRenderers,
+							[type]: filteredRenderers,
+						},
+					};
+				}
+			});
+		},
+		getMessageRenderers: (type: string) => {
+			return get().messageRenderers[type] || [];
 		},
 		getMessageById: (id: string) => {
 			return get().messages.find((msg) => msg.id === id);

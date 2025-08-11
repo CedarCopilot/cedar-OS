@@ -72,7 +72,6 @@ export type {
 	MessageByType,
 	MessageInput,
 	MessageRenderer,
-	MessageRendererConfig,
 	MessageRendererRegistry,
 	MessageRole,
 	MultipleChoiceMessage,
@@ -156,6 +155,11 @@ export {
 	useResponseProcessor,
 	useResponseProcessors,
 } from '@/hooks/useResponseProcessor';
+
+export {
+	useMessageRenderers,
+	useMessageRenderer,
+} from '@/hooks/useMessageRenderer';
 
 // Export action response processor hooks
 export {

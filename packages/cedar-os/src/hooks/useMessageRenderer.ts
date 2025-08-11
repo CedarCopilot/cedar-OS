@@ -1,16 +1,13 @@
 import { useCedarStore } from '@/store/CedarStore';
-import type {
-	BaseMessage,
-	MessageRendererConfig,
-} from '@/store/messages/types';
-import React, { useEffect, useMemo } from 'react';
+import type { Message, MessageRenderer } from '@/store/messages/types';
+import { useEffect, useMemo } from 'react';
 
 /**
  * Hook to register a message renderer with the Cedar store
  * @param config - The message renderer configuration
  */
-export function useMessageRenderer<T extends BaseMessage = BaseMessage>(
-	config: MessageRendererConfig<T>
+export function useMessageRenderer<T extends Message>(
+	config: MessageRenderer<T>
 ) {
 	const registerMessageRenderer = useCedarStore(
 		(s) => s.registerMessageRenderer
@@ -19,36 +16,30 @@ export function useMessageRenderer<T extends BaseMessage = BaseMessage>(
 		(s) => s.unregisterMessageRenderer
 	);
 
-	// Memoize the renderer function to prevent unnecessary re-creations
-	const renderer = useMemo(() => {
-		// Wrap the component to match the MessageRenderer signature
-		return (message: any) => {
-			const Component = config.renderer;
-			return React.createElement(Component, { message });
-		};
-	}, [config.renderer]);
-
-	// Extract stable values from config
-	const type = config.type;
-	const priority = config.priority;
-	const validateMessage = config.validateMessage;
+	// Memoize the config to prevent unnecessary re-registrations
+	const rendererConfig = useMemo<MessageRenderer<T>>(
+		() => ({ ...config }),
+		[config]
+	);
 
 	useEffect(() => {
-		// Register the renderer
-		registerMessageRenderer(type, renderer);
+		// Register the renderer with full config
+		registerMessageRenderer(rendererConfig);
 
 		// Cleanup on unmount
 		return () => {
-			unregisterMessageRenderer(type);
+			unregisterMessageRenderer(rendererConfig.type, rendererConfig.namespace);
 		};
-	}, [type, renderer, registerMessageRenderer, unregisterMessageRenderer]);
+	}, [rendererConfig, registerMessageRenderer, unregisterMessageRenderer]);
 }
 
 /**
  * Hook to register multiple message renderers at once
  * @param configs - Array of message renderer configurations
  */
-export function useMessageRenderers(configs: MessageRendererConfig<any>[]) {
+export function useMessageRenderers<T extends Message = Message>(
+	configs: MessageRenderer<T>[]
+) {
 	const registerMessageRenderer = useCedarStore(
 		(s) => s.registerMessageRenderer
 	);
@@ -56,28 +47,22 @@ export function useMessageRenderers(configs: MessageRendererConfig<any>[]) {
 		(s) => s.unregisterMessageRenderer
 	);
 
-	// Memoize the renderers to prevent unnecessary re-creations
-	const renderers = useMemo(() => {
-		return configs.map((config) => ({
-			type: config.type,
-			renderer: (message: any) => {
-				const Component = config.renderer;
-				return React.createElement(Component, { message });
-			},
-		}));
+	// Memoize the configs to prevent unnecessary re-registrations
+	const rendererConfigs = useMemo(() => {
+		return configs.map((config) => ({ ...config }));
 	}, [configs]);
 
 	useEffect(() => {
-		// Register all renderers
-		renderers.forEach(({ type, renderer }) => {
-			registerMessageRenderer(type, renderer);
+		// Register all renderers with full configs
+		rendererConfigs.forEach((config) => {
+			registerMessageRenderer(config);
 		});
 
 		// Cleanup on unmount
 		return () => {
-			renderers.forEach(({ type }) => {
-				unregisterMessageRenderer(type);
+			rendererConfigs.forEach((config) => {
+				unregisterMessageRenderer(config.type, config.namespace);
 			});
 		};
-	}, [renderers, registerMessageRenderer, unregisterMessageRenderer]);
+	}, [rendererConfigs, registerMessageRenderer, unregisterMessageRenderer]);
 }
