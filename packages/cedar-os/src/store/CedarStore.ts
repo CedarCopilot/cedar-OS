@@ -7,6 +7,7 @@ import { createMessagesSlice } from '@/store/messages/messagesSlice';
 import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
 import { createVoiceSlice } from '@/store/voice/voiceSlice';
 import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
+import { createSpellSlice } from '@/store/spellSlice/spellSlice';
 
 // Create the combined store (default for backwards compatibility)
 export const useCedarStore = create<CedarStore>()((...a) => ({
@@ -17,6 +18,7 @@ export const useCedarStore = create<CedarStore>()((...a) => ({
 	...createAgentConnectionSlice(...a),
 	...createVoiceSlice(...a),
 	...createDebuggerSlice(...a),
+	...createSpellSlice(...a),
 }));
 
 export const useMessages = () => ({
@@ -121,4 +123,45 @@ export const useDebugger = () => ({
 	clearDebugLogs: useCedarStore((state) => state.clearDebugLogs),
 	setDebugEnabled: useCedarStore((state) => state.setDebugEnabled),
 	setMaxLogs: useCedarStore((state) => state.setMaxLogs),
+});
+
+// Export spell slice and utilities
+export { createSpellSlice } from './spellSlice/spellSlice';
+export type {
+	SpellSlice,
+	SpellMap,
+	SpellState,
+	SpellRegistration,
+} from './spellSlice/spellSlice';
+
+// Export the new useSpell hook
+export { useSpell } from './spellSlice/useSpell';
+export type { UseSpellOptions, UseSpellReturn } from './spellSlice/useSpell';
+
+// Export activation condition types
+export {
+	Hotkey,
+	MouseEvent,
+	SelectionEvent,
+	ActivationMode,
+	type ActivationConditions,
+	type ActivationState,
+	type ActivationEvent,
+	type HotkeyCombo,
+	type CommonHotkeyCombo,
+} from './spellSlice/types';
+
+// Export a hook for spell functionality
+export const useSpells = () => ({
+	spells: useCedarStore((state) => state.spells),
+
+	// Unified API
+	registerSpell: useCedarStore((state) => state.registerSpell),
+	unregisterSpell: useCedarStore((state) => state.unregisterSpell),
+
+	// Programmatic control
+	activateSpell: useCedarStore((state) => state.activateSpell),
+	deactivateSpell: useCedarStore((state) => state.deactivateSpell),
+	toggleSpell: useCedarStore((state) => state.toggleSpell),
+	clearSpells: useCedarStore((state) => state.clearSpells),
 });
