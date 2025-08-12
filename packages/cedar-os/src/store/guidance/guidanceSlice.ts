@@ -14,21 +14,21 @@ import { v4 as uuidv4 } from 'uuid';
 import { MessageInput } from '@/store/messages/MessageTypes';
 
 /**
- * Action Queue Management:
- * - currentAction: The action currently being executed
- * - queue: Contains only pending actions (doesn't include currentAction)
+ * Guidance Queue Management:
+ * - currentGuidance: The guidance currently being executed
+ * - queue: Contains only pending guidances (doesn't include currentGuidance)
  *
- * This structure avoids redundancy by ensuring the current action is not duplicated
- * in the queue. New actions are always added to the queue. Queue processing starts
- * automatically when adding an action to an empty queue with no current action.
+ * This structure avoids redundancy by ensuring the current guidance is not duplicated
+ * in the queue. New guidances are always added to the queue. Queue processing starts
+ * automatically when adding a guidance to an empty queue with no current guidance.
  *
- * When an action completes (nextAction is called):
- * 1. The current action's onEnd callback is executed if it exists
- * 2. The next action is taken from the queue and becomes the current action
+ * When a guidance completes (nextGuidance is called):
+ * 1. The current guidance's onEnd callback is executed if it exists
+ * 2. The next guidance is taken from the queue and becomes the current guidance
  */
 
-// Define action types
-export type ActionType =
+// Define guidance types
+export type GuidanceType =
 	| 'CURSOR_TAKEOVER'
 	| 'VIRTUAL_CLICK'
 	| 'VIRTUAL_DRAG'
@@ -48,15 +48,15 @@ export type ActionType =
 	| 'RIGHT_CLICK'
 	| 'DIALOGUE_BANNER';
 
-// Base action interface
-export interface BaseAction {
+// Base guidance interface
+export interface BaseGuidance {
 	id?: string; // Made optional so it can be auto-generated
-	type: ActionType;
+	type: GuidanceType;
 	onEnd?: () => void;
 }
 
-// Cursor takeover action
-export interface CursorTakeoverAction extends BaseAction {
+// Cursor takeover guidance
+export interface CursorTakeoverGuidance extends BaseGuidance {
 	type: 'CURSOR_TAKEOVER';
 	isRedirected: boolean;
 	cursorColor?: string;
@@ -64,8 +64,8 @@ export interface CursorTakeoverAction extends BaseAction {
 	blocking?: boolean; // When true, creates an overlay to block clicks outside the target area
 }
 
-// Virtual click action
-export interface VirtualClickAction extends BaseAction {
+// Virtual click guidance
+export interface VirtualClickGuidance extends BaseGuidance {
 	type: 'VIRTUAL_CLICK';
 	endPosition: PositionOrElement; // Can be a Position object or an HTML element
 	startPosition?: PositionOrElement; // Can be a Position object or an HTML element
@@ -78,14 +78,14 @@ export interface VirtualClickAction extends BaseAction {
 		| 'default'
 		| number
 		| (() => boolean)
-		| ((nextAction: () => void) => void); // Controls how the action advances to the next one
+		| ((nextGuidance: () => void) => void); // Controls how the guidance advances to the next one
 	blocking?: boolean; // When true, creates an overlay to block clicks outside the target area
 	shouldScroll?: boolean; // When false, disables automatic scrolling to elements that are outside viewport
 	disableClickableArea?: boolean; // When true, disables click interaction on the clickable area
 }
 
-// Virtual drag action
-export interface VirtualDragAction extends BaseAction {
+// Virtual drag guidance
+export interface VirtualDragGuidance extends BaseGuidance {
 	type: 'VIRTUAL_DRAG';
 	endPosition: PositionOrElement; // Can be a Position object or an HTML element
 	startPosition?: PositionOrElement; // Can be a Position object or an HTML element
@@ -101,16 +101,16 @@ export interface VirtualDragAction extends BaseAction {
 		| 'external'
 		| 'clickable'
 		| (() => boolean)
-		| ((nextAction: () => void) => void); // Controls how the action advances to the next one. Default is equivalent to 'external'
+		| ((nextGuidance: () => void) => void); // Controls how the guidance advances to the next one. Default is equivalent to 'external'
 	shouldScroll?: boolean; // When false, disables automatic scrolling to elements that are outside viewport
 	dragCursor?: boolean; // When true, uses a drag cursor animation (closed fist -> open)
 }
 
-// Multi virtual click action
-export interface MultiVirtualClickAction extends BaseAction {
+// Multi virtual click guidance
+export interface MultiVirtualClickGuidance extends BaseGuidance {
 	type: 'MULTI_VIRTUAL_CLICK';
-	actions: Omit<VirtualClickAction, 'id' | 'type'>[]; // Array of virtual click actions to execute in sequence
-	loop?: boolean; // Whether to loop through all click actions
+	guidances: Omit<VirtualClickGuidance, 'id' | 'type'>[]; // Array of virtual click guidances to execute in sequence
+	loop?: boolean; // Whether to loop through all click guidances
 	delay?: number; // Delay between each click in milliseconds
 	advanceMode?:
 		| 'auto'
@@ -118,11 +118,11 @@ export interface MultiVirtualClickAction extends BaseAction {
 		| 'default'
 		| number
 		| (() => boolean)
-		| ((nextAction: () => void) => void); // Controls how the action advances to the next one
+		| ((nextGuidance: () => void) => void); // Controls how the guidance advances to the next one
 }
 
-// Virtual typing action
-export interface VirtualTypingAction extends BaseAction {
+// Virtual typing guidance
+export interface VirtualTypingGuidance extends BaseGuidance {
 	type: 'VIRTUAL_TYPING';
 	endPosition: PositionOrElement; // Can be a Position object or an HTML element
 	startPosition?: PositionOrElement; // Can be a Position object or an HTML element
@@ -145,15 +145,15 @@ export interface VirtualTypingAction extends BaseAction {
 		| 'default'
 		| number
 		| (() => boolean)
-		| ((nextAction: () => void) => void); // Controls how the action advances to the next one
+		| ((nextGuidance: () => void) => void); // Controls how the guidance advances to the next one
 	blocking?: boolean; // When true, creates an overlay to block clicks outside the target area
 }
 
-// Chat action: dispatch messages via addMessage
-export interface ChatAction extends BaseAction {
+// Chat guidance: dispatch messages via addMessage
+export interface ChatGuidance extends BaseGuidance {
 	type: 'CHAT';
 	/**
-	 * The message to dispatch when this action runs.
+	 * The message to dispatch when this guidance runs.
 	 */
 	content: MessageInput;
 	/**
@@ -161,7 +161,7 @@ export interface ChatAction extends BaseAction {
 	 */
 	messageDelay?: number;
 	/**
-	 * Whether to automatically advance to the next action after dispatching the primary message.
+	 * Whether to automatically advance to the next guidance after dispatching the primary message.
 	 * Defaults to true.
 	 */
 	autoAdvance?: boolean;
@@ -175,8 +175,8 @@ export interface ChatAction extends BaseAction {
 	}[];
 }
 
-// Chat tooltip action
-export interface ChatTooltipAction extends BaseAction {
+// Chat tooltip guidance
+export interface ChatTooltipGuidance extends BaseGuidance {
 	type: 'CHAT_TOOLTIP';
 	content: string;
 	position?: 'left' | 'right' | 'top' | 'bottom';
@@ -186,15 +186,15 @@ export interface ChatTooltipAction extends BaseAction {
 	duration?: number; // If set, automatically complete after this duration
 }
 
-// Idle action
-export interface IdleAction extends BaseAction {
+// Idle guidance
+export interface IdleGuidance extends BaseGuidance {
 	type: 'IDLE';
 	duration?: number; // Duration in milliseconds
-	advanceFunction?: (nextAction: (actionId?: string) => void) => void; // Function to call with nextAction as parameter
+	advanceFunction?: (nextGuidance: (guidanceId?: string) => void) => void; // Function to call with nextGuidance as parameter
 }
 
-// Dialogue action
-export interface DialogueAction extends BaseAction {
+// Dialogue guidance
+export interface DialogueGuidance extends BaseGuidance {
 	type: 'DIALOGUE';
 	text: string;
 	style?: React.CSSProperties;
@@ -204,7 +204,7 @@ export interface DialogueAction extends BaseAction {
 		| 'default'
 		| number
 		| (() => boolean)
-		| ((nextAction: () => void) => void);
+		| ((nextGuidance: () => void) => void);
 	blocking?: boolean; // When true, creates an overlay to block clicks outside the target area
 	highlightElements?:
 		| PositionOrElement[]
@@ -212,8 +212,8 @@ export interface DialogueAction extends BaseAction {
 	shouldScroll?: boolean; // When false, disables automatic scrolling to elements that are outside viewport
 }
 
-// Dialogue banner action (banner without overlays)
-export interface DialogueBannerAction extends BaseAction {
+// Dialogue banner guidance (banner without overlays)
+export interface DialogueBannerGuidance extends BaseGuidance {
 	type: 'DIALOGUE_BANNER';
 	/** Optional text for typewriter or fallback if no children */
 	text?: string;
@@ -226,7 +226,7 @@ export interface DialogueBannerAction extends BaseAction {
 		| 'default'
 		| number
 		| (() => boolean)
-		| ((nextAction: () => void) => void);
+		| ((nextGuidance: () => void) => void);
 }
 
 // Define question types for the survey
@@ -296,8 +296,8 @@ export type SurveyQuestion =
 	| SliderQuestion
 	| NPSQuestion;
 
-// Survey action
-export interface SurveyAction extends BaseAction {
+// Survey guidance
+export interface SurveyGuidance extends BaseGuidance {
 	type: 'SURVEY';
 	title?: string;
 	description?: string;
@@ -309,8 +309,8 @@ export interface SurveyAction extends BaseAction {
 	trigger_id?: string; // Optional trigger ID to associate with feedback
 }
 
-// Execute click action (performs an actual DOM click)
-export interface ExecuteClickAction extends BaseAction {
+// Execute click guidance (performs an actual DOM click)
+export interface ExecuteClickGuidance extends BaseGuidance {
 	type: 'EXECUTE_CLICK';
 	target: PositionOrElement; // Element to physically click
 	startPosition?: PositionOrElement; // Optional starting position for animation
@@ -321,15 +321,15 @@ export interface ExecuteClickAction extends BaseAction {
 	showCursor?: boolean; // When true, shows virtual cursor animation before clicking (default: true)
 }
 
-// Execute typing action
-export interface ExecuteTypingAction extends BaseAction {
+// Execute typing guidance
+export interface ExecuteTypingGuidance extends BaseGuidance {
 	type: 'EXECUTE_TYPING';
 	endPosition: PositionOrElement; // Element to type into
 	expectedValue: string; // The expected value to type
 }
 
-// Toast action
-export interface ToastAction extends BaseAction {
+// Toast guidance
+export interface ToastGuidance extends BaseGuidance {
 	type: 'TOAST';
 	title?: string;
 	description: string;
@@ -344,262 +344,250 @@ export interface ToastAction extends BaseAction {
 	};
 }
 
-// IF action - conditionally shows one of two actions based on a condition
-export interface IFAction extends BaseAction {
+// IF guidance - conditionally shows one of two guidances based on a condition
+export interface IFGuidance extends BaseGuidance {
 	type: 'IF';
 	condition: boolean | (() => boolean) | (() => Promise<boolean>); // Condition to check - function (sync or async) or boolean
-	trueAction: ActionInput; // Action to show if condition is true
-	falseAction: ActionInput; // Action to show if condition is false
+	trueGuidance: GuidanceInput; // Guidance to show if condition is true
+	falseGuidance: GuidanceInput; // Guidance to show if condition is false
 	advanceCondition?:
 		| 'auto'
 		| 'external'
 		| 'default'
 		| number
 		| (() => boolean)
-		| ((nextAction: () => void) => void); // Controls how the action advances to the next one
+		| ((nextGuidance: () => void) => void); // Controls how the guidance advances to the next one
 }
 
-// GATE_IF action - conditionally adds a set of actions to the queue based on a one-time condition check
-export interface GateIfAction extends BaseAction {
+// GATE_IF guidance - conditionally adds a set of guidances to the queue based on a one-time condition check
+export interface GateIfGuidance extends BaseGuidance {
 	type: 'GATE_IF';
 	condition: boolean | (() => boolean) | (() => Promise<boolean>); // Condition to check - function (sync or async) or boolean
-	trueActions: ActionInput[]; // Actions to add if condition is true
-	falseActions: ActionInput[]; // Actions to add if condition is false
+	trueGuidances: GuidanceInput[]; // Guidances to add if condition is true
+	falseGuidances: GuidanceInput[]; // Guidances to add if condition is false
 }
 
-// Navigation action
-export interface NavigateAction extends BaseAction {
+// Navigation guidance
+export interface NavigateGuidance extends BaseGuidance {
 	type: 'NAVIGATE';
 	url: string; // URL to navigate to
 }
 
-// Right click indicator action
-export interface RightClickAction extends BaseAction {
+// Right click indicator guidance
+export interface RightClickGuidance extends BaseGuidance {
 	type: 'RIGHT_CLICK';
 	duration?: number; // optional auto-dismiss after duration ms
 }
 
-// Union type of all possible actions
-export type Action =
-	| CursorTakeoverAction
-	| VirtualClickAction
-	| VirtualDragAction
-	| ChatAction
-	| ChatTooltipAction
-	| IdleAction
-	| MultiVirtualClickAction
-	| VirtualTypingAction
-	| DialogueAction
-	| SurveyAction
-	| ExecuteClickAction
-	| ExecuteTypingAction
-	| ToastAction
-	| IFAction
-	| GateIfAction
-	| NavigateAction
-	| RightClickAction
-	| DialogueBannerAction;
+// Union type of all possible guidances
+export type Guidance =
+	| CursorTakeoverGuidance
+	| VirtualClickGuidance
+	| VirtualDragGuidance
+	| ChatGuidance
+	| ChatTooltipGuidance
+	| IdleGuidance
+	| MultiVirtualClickGuidance
+	| VirtualTypingGuidance
+	| DialogueGuidance
+	| SurveyGuidance
+	| ExecuteClickGuidance
+	| ExecuteTypingGuidance
+	| ToastGuidance
+	| IFGuidance
+	| GateIfGuidance
+	| NavigateGuidance
+	| RightClickGuidance
+	| DialogueBannerGuidance;
 
-// Type alias for actions with optional IDs
-export type MakeIdOptional<T> = T extends BaseAction
+// Type alias for guidances with optional IDs
+export type MakeIdOptional<T> = T extends BaseGuidance
 	? Omit<T, 'id'> & { id?: string }
 	: never;
-export type ActionInput = MakeIdOptional<Action>;
+export type GuidanceInput = MakeIdOptional<Guidance>;
 
-export interface ActionsSlice {
-	queue: Action[];
-	currentAction: Action | null;
+export interface GuidanceSlice {
+	queue: Guidance[];
+	currentGuidance: Guidance | null;
 	isActive: boolean;
 	prevCursorPosition: { x: number; y: number } | null;
 	onQueueComplete: (() => void) | null;
 	isAnimatingOut: boolean;
-	actionLogId: string;
-	actionSessionId: string;
+	guidanceLogId: string;
+	guidanceSessionId: string;
 
-	// Actions
-	addAction: (action: ActionInput, actionConfigId?: string) => void;
-	addActions: (actions: ActionInput[], actionConfigId?: string) => void;
-	removeAction: (id: string) => void;
-	replaceActions: (actions: ActionInput[], actionConfigId?: string) => void;
+	// Guidances
+	addGuidance: (guidance: GuidanceInput, guidanceConfigId?: string) => void;
+	addGuidances: (guidances: GuidanceInput[], guidanceConfigId?: string) => void;
+	removeGuidance: (id: string) => void;
+	replaceGuidances: (
+		guidances: GuidanceInput[],
+		guidanceConfigId?: string
+	) => void;
 	clearQueue: () => void;
-	nextAction: (actionId?: string) => void;
+	nextGuidance: (guidanceId?: string) => void;
 	setIsActive: (active: boolean) => void;
 	setPrevCursorPosition: (position: { x: number; y: number } | null) => void;
 	setOnQueueComplete: (callback: (() => void) | null) => void;
 	setIsAnimatingOut: (animating: boolean) => void;
-	addActionsToStart: (actions: ActionInput[] | ActionInput) => void;
-	setActionSessionId: (sessionId: string) => void;
-	setCurrentAction: (action: Action | null) => void;
+	addGuidancesToStart: (guidances: GuidanceInput[] | GuidanceInput) => void;
+	setGuidanceSessionId: (sessionId: string) => void;
+	setCurrentGuidance: (guidance: Guidance | null) => void;
 }
 
 // Create the slice
-export const createActionsSlice: StateCreator<
+export const createGuidanceSlice: StateCreator<
 	CedarStore,
 	[],
 	[],
-	ActionsSlice
+	GuidanceSlice
 > = (set, get) => ({
 	// Default state
 	queue: [],
-	currentAction: null,
+	currentGuidance: null,
 	isActive: true,
 	prevCursorPosition: null,
 	onQueueComplete: null,
 	isAnimatingOut: false,
-	actionLogId: '',
-	actionSessionId: '',
+	guidanceLogId: '',
+	guidanceSessionId: '',
 
-	// Actions
-	setCurrentAction: (action) => set({ currentAction: action }),
-	addAction: async (action: ActionInput, actionConfigId?: string) => {
+	// Guidances
+	setCurrentGuidance: (guidance) => set({ currentGuidance: guidance }),
+	addGuidance: async (guidance: GuidanceInput, guidanceConfigId?: string) => {
 		// Generate UUID if id is not provided
-		const actionWithId = {
-			...action,
-			id: action.id || uuidv4(),
-		} as Action;
+		const guidanceWithId = {
+			...guidance,
+			id: guidance.id || uuidv4(),
+		} as Guidance;
 
 		const state = get();
 
-		// Create action log if this is the first action and we have user/product IDs
-		if (
-			!state.currentAction &&
-			state.queue.length === 0 &&
-			state.userId &&
-			state.productId
-		) {
-			try {
-				const data = await createActionLog(
-					state.userId,
-					state.productId,
-					state.actionSessionId,
-					actionConfigId,
-					[actionWithId]
-				);
-				if (data.log) {
-					set({
-						actionLogId: data.log.id,
-						actionSessionId: data.log.session_id,
-					});
-				}
-			} catch (error) {
-				console.error('Error creating action log:', error);
-			}
-		}
+		// TODO: Create guidance log if this is the first guidance and we have user/product IDs
+		// This functionality is temporarily disabled until userId/productId are added to CedarStore
+		// if (
+		// 	!state.currentGuidance &&
+		// 	state.queue.length === 0 &&
+		// 	state.userId &&
+		// 	state.productId
+		// ) {
+		// 	try {
+		// 		const data = await createActionLog(
+		// 			state.userId,
+		// 			state.productId,
+		// 			state.guidanceSessionId,
+		// 			guidanceConfigId,
+		// 			[guidanceWithId]
+		// 		);
+		// 		if (data.log) {
+		// 			set({
+		// 				guidanceLogId: data.log.id,
+		// 				guidanceSessionId: data.log.session_id,
+		// 			});
+		// 		}
+		// 	} catch (error) {
+		// 		console.error('Error creating guidance log:', error);
+		// 	}
+		// }
 
-		if (!state.currentAction && state.queue.length === 0) {
+		if (!state.currentGuidance && state.queue.length === 0) {
 			set({
-				queue: [actionWithId],
+				queue: [guidanceWithId],
 			});
-			requestAnimationFrame(() => get().nextAction());
+			requestAnimationFrame(() => get().nextGuidance());
 		} else {
 			set((state: CedarStore) => ({
-				queue: [...state.queue, actionWithId],
+				queue: [...state.queue, guidanceWithId],
 			}));
 		}
 	},
 
-	addActions: async (actions: ActionInput[], actionConfigId?: string) => {
-		// Generate UUIDs for actions without ids
-		const actionsWithIds = actions.map((action) => ({
-			...action,
-			id: action.id || uuidv4(),
-		})) as Action[];
+	addGuidances: async (
+		guidances: GuidanceInput[],
+		guidanceConfigId?: string
+	) => {
+		// Generate UUIDs for guidances without ids
+		const guidancesWithIds = guidances.map((guidance) => ({
+			...guidance,
+			id: guidance.id || uuidv4(),
+		})) as Guidance[];
 
-		if (actionsWithIds.length === 0) return;
+		if (guidancesWithIds.length === 0) return;
 
 		const state = get();
 
-		// Create action log if this is the first action and we have user/product IDs
-		if (
-			!state.currentAction &&
-			state.queue.length === 0 &&
-			state.userId &&
-			state.productId
-		) {
-			try {
-				const data = await createActionLog(
-					state.userId,
-					state.productId,
-					state.actionSessionId,
-					actionConfigId,
-					actionsWithIds
-				);
-				if (data.log) {
-					set({
-						actionLogId: data.log.id,
-						actionSessionId: data.log.session_id,
-					});
-				}
-			} catch (error) {
-				console.error('Error creating action log:', error);
-			}
-		}
+		// TODO: Create guidance log if this is the first guidance and we have user/product IDs
+		// This functionality is temporarily disabled until userId/productId are added to CedarStore
 
-		if (!state.currentAction && state.queue.length === 0) {
+		if (!state.currentGuidance && state.queue.length === 0) {
 			set({
-				queue: actionsWithIds,
+				queue: guidancesWithIds,
 			});
-			requestAnimationFrame(() => get().nextAction());
+			requestAnimationFrame(() => get().nextGuidance());
 		} else {
 			set((state: CedarStore) => ({
-				queue: [...state.queue, ...actionsWithIds],
+				queue: [...state.queue, ...guidancesWithIds],
 			}));
 		}
 	},
 
-	replaceActions: async (actions: ActionInput[], actionConfigId?: string) => {
-		// Generate UUIDs for actions without ids
-		const actionsWithIds = actions.map((action) => ({
-			...action,
-			id: action.id || uuidv4(),
-		})) as Action[];
+	replaceGuidances: async (
+		guidances: GuidanceInput[],
+		guidanceConfigId?: string
+	) => {
+		// Generate UUIDs for guidances without ids
+		const guidancesWithIds = guidances.map((guidance) => ({
+			...guidance,
+			id: guidance.id || uuidv4(),
+		})) as Guidance[];
 
 		const state = get();
 
-		// Create action log if we have user/product IDs
-		if (state.userId && state.productId) {
+		// Create guidance log if we have user/product IDs
+		if ((state as any).userId && (state as any).productId) {
 			try {
 				const data = await createActionLog(
-					state.userId,
-					state.productId,
-					state.actionSessionId,
-					actionConfigId,
-					actionsWithIds
+					(state as any).userId,
+					(state as any).productId,
+					state.guidanceSessionId,
+					guidanceConfigId,
+					guidancesWithIds
 				);
 				if (data.log) {
 					set({
-						actionLogId: data.log.id,
-						actionSessionId: data.log.session_id,
+						guidanceLogId: data.log.id,
+						guidanceSessionId: data.log.session_id,
 					});
 				}
 			} catch (error) {
-				console.error('Error creating action log:', error);
+				console.error('Error creating guidance log:', error);
 			}
 		}
 
-		// Replace the queue with new actions
+		// Replace the queue with new guidances
 		set({
-			queue: actionsWithIds,
+			queue: guidancesWithIds,
 		});
 
-		requestAnimationFrame(() => get().nextAction());
+		requestAnimationFrame(() => get().nextGuidance());
 	},
 
-	removeAction: (id: string) => {
+	removeGuidance: (id: string) => {
 		set((state: CedarStore) => {
-			// Check if we're removing the current action
-			if (state.currentAction?.id === id) {
-				const newCurrentAction = state.queue.length > 0 ? state.queue[0] : null;
+			// Check if we're removing the current guidance
+			if (state.currentGuidance?.id === id) {
+				const newCurrentGuidance =
+					state.queue.length > 0 ? state.queue[0] : null;
 				const newQueue = state.queue.length > 0 ? state.queue.slice(1) : [];
 
 				return {
-					currentAction: newCurrentAction,
+					currentGuidance: newCurrentGuidance,
 					queue: newQueue,
 				};
 			} else {
 				// Otherwise just filter the queue
 				const newQueue = state.queue.filter(
-					(action: Action) => action.id !== id
+					(guidance: Guidance) => guidance.id !== id
 				);
 				return {
 					queue: newQueue,
@@ -611,61 +599,61 @@ export const createActionsSlice: StateCreator<
 	clearQueue: () => {
 		set({
 			queue: [],
-			currentAction: null,
+			currentGuidance: null,
 		});
 	},
 
-	nextAction: async (actionId?: string) => {
+	nextGuidance: async (guidanceId?: string) => {
 		const state = get();
-		// Only validate the actionId if one is provided
+		// Only validate the guidanceId if one is provided
 		if (
-			actionId &&
-			state.currentAction &&
-			actionId !== state.currentAction.id
+			guidanceId &&
+			state.currentGuidance &&
+			guidanceId !== state.currentGuidance.id
 		) {
 			return;
 		}
 
-		// Execute onEnd callback of current action if it exists
-		if (state.currentAction?.onEnd) {
+		// Execute onEnd callback of current guidance if it exists
+		if (state.currentGuidance?.onEnd) {
 			try {
-				state.currentAction.onEnd();
+				state.currentGuidance.onEnd();
 			} catch (error) {
 				console.error('Error in onEnd callback:', error);
 			}
 		}
 
-		// Update action log if we have one and a current action
-		if (state.actionLogId && state.currentAction) {
+		// Update guidance log if we have one and a current guidance
+		if (state.guidanceLogId && state.currentGuidance) {
 			try {
-				await updateActionLog(state.actionLogId, {
-					action: state.currentAction,
+				await updateActionLog(state.guidanceLogId, {
+					action: state.currentGuidance,
 				});
 			} catch (error) {
-				console.error('Error updating action log:', error);
+				console.error('Error updating guidance log:', error);
 			}
 		}
 
-		// Get the next action from the queue
-		const nextActionInQueue = state.queue[0];
+		// Get the next guidance from the queue
+		const nextGuidanceInQueue = state.queue[0];
 
-		// Handle navigation action
-		if (nextActionInQueue?.type === 'NAVIGATE') {
-			const navigateAction = nextActionInQueue as NavigateAction;
-			window.open(navigateAction.url, '_blank');
+		// Handle navigation guidance
+		if (nextGuidanceInQueue?.type === 'NAVIGATE') {
+			const navigateGuidance = nextGuidanceInQueue as NavigateGuidance;
+			window.open(navigateGuidance.url, '_blank');
 
 			set((state: CedarStore) => {
-				// Atomic check: only update if current action still matches actionId
+				// Atomic check: only update if current guidance still matches guidanceId
 				if (
-					actionId &&
-					(!state.currentAction || state.currentAction.id !== actionId)
+					guidanceId &&
+					(!state.currentGuidance || state.currentGuidance.id !== guidanceId)
 				) {
 					return state; // No changes
 				}
 				const newQueue = state.queue.slice(1);
 				return {
 					queue: newQueue,
-					currentAction: null,
+					currentGuidance: null,
 				};
 			});
 			return;
@@ -673,45 +661,45 @@ export const createActionsSlice: StateCreator<
 
 		// Special handling for function-based advance modes
 		if (
-			(nextActionInQueue?.type === 'VIRTUAL_CLICK' ||
-				nextActionInQueue?.type === 'VIRTUAL_DRAG' ||
-				nextActionInQueue?.type === 'DIALOGUE') &&
-			typeof nextActionInQueue?.advanceMode === 'function'
+			(nextGuidanceInQueue?.type === 'VIRTUAL_CLICK' ||
+				nextGuidanceInQueue?.type === 'VIRTUAL_DRAG' ||
+				nextGuidanceInQueue?.type === 'DIALOGUE') &&
+			typeof nextGuidanceInQueue?.advanceMode === 'function'
 		) {
 			// Call the function to check if we should advance
 			// For DIALOGUE type with function advanceMode, the DialogueBox component will handle it
 			// The function should return a boolean (true=advance, false=don't advance)
-			if ((nextActionInQueue.advanceMode as () => boolean)()) {
+			if ((nextGuidanceInQueue.advanceMode as () => boolean)()) {
 				set((state: CedarStore) => {
-					// Atomic check: only update if current action still matches actionId
+					// Atomic check: only update if current guidance still matches guidanceId
 					if (
-						actionId &&
-						(!state.currentAction || state.currentAction.id !== actionId)
+						guidanceId &&
+						(!state.currentGuidance || state.currentGuidance.id !== guidanceId)
 					) {
 						return state; // No changes
 					}
 					const newQueue = state.queue.slice(1);
 					return {
 						queue: newQueue,
-						currentAction: null,
+						currentGuidance: null,
 					};
 				});
 
-				requestAnimationFrame(() => get().nextAction()); // Use requestAnimationFrame instead of a 1ms timeout
+				requestAnimationFrame(() => get().nextGuidance()); // Use requestAnimationFrame instead of a 1ms timeout
 				return;
 			}
 		}
 
-		// Store position if current action is a cursor click or virtual drag
+		// Store position if current guidance is a cursor click or virtual drag
 		if (
-			state.currentAction?.type === 'VIRTUAL_CLICK' ||
-			state.currentAction?.type === 'VIRTUAL_DRAG' ||
-			state.currentAction?.type === 'VIRTUAL_TYPING'
+			state.currentGuidance?.type === 'VIRTUAL_CLICK' ||
+			state.currentGuidance?.type === 'VIRTUAL_DRAG' ||
+			state.currentGuidance?.type === 'VIRTUAL_TYPING'
 		) {
 			try {
 				// Convert to Position object if it's an HTML element
 				const endPosition = getPositionFromElement(
-					state.currentAction.endPosition
+					state.currentGuidance.endPosition
 				);
 
 				// Only update if we successfully got a position
@@ -723,25 +711,26 @@ export const createActionsSlice: StateCreator<
 					set({ prevCursorPosition: endPosition });
 				}
 
-				// If next action is also VIRTUAL_CLICK/DRAG/TYPING, update normally without fadeout
+				// If next guidance is also VIRTUAL_CLICK/DRAG/TYPING, update normally without fadeout
 				if (
-					nextActionInQueue &&
-					(nextActionInQueue.type === 'VIRTUAL_CLICK' ||
-						nextActionInQueue.type === 'VIRTUAL_DRAG' ||
-						nextActionInQueue.type === 'VIRTUAL_TYPING') &&
-					!nextActionInQueue.startPosition
+					nextGuidanceInQueue &&
+					(nextGuidanceInQueue.type === 'VIRTUAL_CLICK' ||
+						nextGuidanceInQueue.type === 'VIRTUAL_DRAG' ||
+						nextGuidanceInQueue.type === 'VIRTUAL_TYPING') &&
+					!nextGuidanceInQueue.startPosition
 				) {
 					set((state: CedarStore) => {
-						// Atomic check: only update if current action still matches actionId
+						// Atomic check: only update if current guidance still matches guidanceId
 						if (
-							actionId &&
-							(!state.currentAction || state.currentAction.id !== actionId)
+							guidanceId &&
+							(!state.currentGuidance ||
+								state.currentGuidance.id !== guidanceId)
 						) {
 							return state; // No changes
 						}
-						const [newCurrentAction, ...newQueue] = state.queue;
+						const [newCurrentGuidance, ...newQueue] = state.queue;
 						return {
-							currentAction: newCurrentAction,
+							currentGuidance: newCurrentGuidance,
 							queue: newQueue,
 						};
 					});
@@ -752,23 +741,24 @@ export const createActionsSlice: StateCreator<
 					// Wait for animation to complete before updating the queue
 					setTimeout(() => {
 						set((state: CedarStore) => {
-							// Atomic check: only update if current action still matches actionId
+							// Atomic check: only update if current guidance still matches guidanceId
 							if (
-								actionId &&
-								(!state.currentAction || state.currentAction.id !== actionId)
+								guidanceId &&
+								(!state.currentGuidance ||
+									state.currentGuidance.id !== guidanceId)
 							) {
 								return state; // No changes
 							}
-							const [newCurrentAction, ...newQueue] = state.queue;
+							const [newCurrentGuidance, ...newQueue] = state.queue;
 							if (state.queue.length > 0) {
 								return {
-									currentAction: newCurrentAction,
+									currentGuidance: newCurrentGuidance,
 									queue: newQueue,
 									isAnimatingOut: false,
 								};
 							} else {
 								return {
-									currentAction: null,
+									currentGuidance: null,
 									isAnimatingOut: false,
 								};
 							}
@@ -779,54 +769,54 @@ export const createActionsSlice: StateCreator<
 				console.error('Failed to update prevCursorPosition:', error);
 			}
 		} else {
-			// Regular handling for other action types
+			// Regular handling for other guidance types
 			set((state: CedarStore) => {
-				// Atomic check: only update if current action still matches actionId
+				// Atomic check: only update if current guidance still matches guidanceId
 				if (
-					actionId &&
-					(!state.currentAction || state.currentAction.id !== actionId)
+					guidanceId &&
+					(!state.currentGuidance || state.currentGuidance.id !== guidanceId)
 				) {
 					return state; // No changes
 				}
 				if (state.queue.length > 0) {
-					const [newCurrentAction, ...newQueue] = state.queue;
+					const [newCurrentGuidance, ...newQueue] = state.queue;
 					return {
-						currentAction: newCurrentAction,
+						currentGuidance: newCurrentGuidance,
 						queue: newQueue,
 					};
 				} else {
 					return {
-						currentAction: null,
+						currentGuidance: null,
 					};
 				}
 			});
 		}
 
-		// Check if this was the last action
+		// Check if this was the last guidance
 		if (state.queue.length === 0) {
 			set((state: CedarStore) => {
-				// Atomic check: only update if current action still matches actionId
+				// Atomic check: only update if current guidance still matches guidanceId
 				if (
-					actionId &&
-					(!state.currentAction || state.currentAction.id !== actionId)
+					guidanceId &&
+					(!state.currentGuidance || state.currentGuidance.id !== guidanceId)
 				) {
 					return { isAnimatingOut: false };
 				}
 				return {
 					isAnimatingOut: false,
-					currentAction: null,
+					currentGuidance: null,
 					queue: [],
 				};
 			});
 
-			// Update action log as completed
-			if (state.actionLogId) {
+			// Update guidance log as completed
+			if (state.guidanceLogId) {
 				try {
-					await updateActionLog(state.actionLogId, {
+					await updateActionLog(state.guidanceLogId, {
 						completed: true,
 					});
 				} catch (error) {
-					console.error('Error completing action log:', error);
+					console.error('Error completing guidance log:', error);
 				}
 			}
 
@@ -850,25 +840,25 @@ export const createActionsSlice: StateCreator<
 		}),
 	setIsAnimatingOut: (animating: boolean) => set({ isAnimatingOut: animating }),
 
-	addActionsToStart: (actions: ActionInput[] | ActionInput) => {
+	addGuidancesToStart: (guidances: GuidanceInput[] | GuidanceInput) => {
 		const state = get();
 
-		// Convert single action input to array if necessary
-		const actionsToAdd = Array.isArray(actions) ? actions : [actions];
+		// Convert single guidance input to array if necessary
+		const guidancesToAdd = Array.isArray(guidances) ? guidances : [guidances];
 
-		// Generate UUIDs for actions without ids
-		const actionsWithIds = actionsToAdd.map((action) => ({
-			...action,
-			id: action.id || uuidv4(),
-		})) as Action[];
+		// Generate UUIDs for guidances without ids
+		const guidancesWithIds = guidancesToAdd.map((guidance) => ({
+			...guidance,
+			id: guidance.id || uuidv4(),
+		})) as Guidance[];
 
-		// Add the actions to the start of the queue
+		// Add the guidances to the start of the queue
 		set({
-			queue: [...actionsWithIds, ...state.queue],
+			queue: [...guidancesWithIds, ...state.queue],
 		});
-		requestAnimationFrame(() => get().nextAction());
+		requestAnimationFrame(() => get().nextGuidance());
 	},
 
-	setActionSessionId: (sessionId: string) =>
-		set({ actionSessionId: sessionId }),
+	setGuidanceSessionId: (sessionId: string) =>
+		set({ guidanceSessionId: sessionId }),
 });

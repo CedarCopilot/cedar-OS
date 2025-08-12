@@ -8,6 +8,7 @@ import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnect
 import { createVoiceSlice } from '@/store/voice/voiceSlice';
 import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
 import { createSpellSlice } from '@/store/spellSlice/spellSlice';
+import { createGuidanceSlice } from '@/store/guidance/guidanceSlice';
 
 // Create the combined store (default for backwards compatibility)
 export const useCedarStore = create<CedarStore>()((...a) => ({
@@ -19,6 +20,7 @@ export const useCedarStore = create<CedarStore>()((...a) => ({
 	...createVoiceSlice(...a),
 	...createDebuggerSlice(...a),
 	...createSpellSlice(...a),
+	...createGuidanceSlice(...a),
 }));
 
 export const useMessages = () => ({
@@ -172,4 +174,31 @@ export const useSpells = () => ({
 	deactivateSpell: useCedarStore((state) => state.deactivateSpell),
 	toggleSpell: useCedarStore((state) => state.toggleSpell),
 	clearSpells: useCedarStore((state) => state.clearSpells),
+});
+
+// Export a hook for guidance functionality
+export const useGuidance = () => ({
+	queue: useCedarStore((state) => state.queue),
+	currentGuidance: useCedarStore((state) => state.currentGuidance),
+	isActive: useCedarStore((state) => state.isActive),
+	prevCursorPosition: useCedarStore((state) => state.prevCursorPosition),
+	onQueueComplete: useCedarStore((state) => state.onQueueComplete),
+	isAnimatingOut: useCedarStore((state) => state.isAnimatingOut),
+	guidanceLogId: useCedarStore((state) => state.guidanceLogId),
+	guidanceSessionId: useCedarStore((state) => state.guidanceSessionId),
+
+	// Guidance functions
+	addGuidance: useCedarStore((state) => state.addGuidance),
+	addGuidances: useCedarStore((state) => state.addGuidances),
+	removeGuidance: useCedarStore((state) => state.removeGuidance),
+	replaceGuidances: useCedarStore((state) => state.replaceGuidances),
+	clearQueue: useCedarStore((state) => state.clearQueue),
+	nextGuidance: useCedarStore((state) => state.nextGuidance),
+	setIsActive: useCedarStore((state) => state.setIsActive),
+	setPrevCursorPosition: useCedarStore((state) => state.setPrevCursorPosition),
+	setOnQueueComplete: useCedarStore((state) => state.setOnQueueComplete),
+	setIsAnimatingOut: useCedarStore((state) => state.setIsAnimatingOut),
+	addGuidancesToStart: useCedarStore((state) => state.addGuidancesToStart),
+	setGuidanceSessionId: useCedarStore((state) => state.setGuidanceSessionId),
+	setCurrentGuidance: useCedarStore((state) => state.setCurrentGuidance),
 });

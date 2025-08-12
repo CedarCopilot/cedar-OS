@@ -12,35 +12,35 @@ import TooltipText from '@/components/guidance/components/TooltipText';
 import VirtualCursor from '@/components/guidance/components/VirtualCursor';
 import VirtualTypingCursor from '@/components/guidance/components/VirtualTypingCursor';
 import { PositionOrElement } from '@/components/guidance/utils/positionUtils';
-import ToastCard from '@/components/ToastCard';
+import ToastCard from '@/components/guidance/components/ToastCard';
 import {
-	ChatAction,
-	DialogueBannerAction,
-	GateIfAction,
-	VirtualClickAction,
-	VirtualDragAction,
-	VirtualTypingAction,
-} from '@/store/actionsSlice';
-import { useActions, useMessages } from '@/store/CedarStore';
+	ChatGuidance,
+	DialogueBannerGuidance,
+	GateIfGuidance,
+	VirtualClickGuidance,
+	VirtualDragGuidance,
+	VirtualTypingGuidance,
+} from '@/store/guidance/guidanceSlice';
+import { useGuidance, useMessages } from '@/store/CedarStore';
 import { motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import IFActionRenderer from './guidance/components/IFActionRenderer';
+import IFGuidanceRenderer from '@/components/guidance/components/IFGuidanceRenderer';
 
-// Simplified ActionRenderer that delegates IF rendering to IFActionRenderer
-const ActionRenderer: React.FC = () => {
+// Simplified GuidanceRenderer that delegates IF rendering to IFGuidanceRenderer
+const GuidanceRenderer: React.FC = () => {
 	const {
-		currentAction,
-		nextAction,
+		currentGuidance,
+		nextGuidance,
 		isActive,
 		prevCursorPosition,
 		isAnimatingOut,
-		addActionsToStart,
-	} = useActions();
+		addGuidancesToStart,
+	} = useGuidance();
 
 	// Message helpers
 	const { addMessage } = useMessages();
 
-	const [actionKey, setActionKey] = useState('');
+	const [guidanceKey, setGuidanceKey] = useState('');
 	const [currentClickIndex, setCurrentClickIndex] = useState(0);
 	const [dragIterationCount, setDragIterationCount] = useState(0);
 	const [isDragAnimatingOut, setIsDragAnimatingOut] = useState(false);
@@ -48,10 +48,10 @@ const ActionRenderer: React.FC = () => {
 	const executeClickTargetRef = useRef<PositionOrElement | null>(null);
 	const functionAdvanceModeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-	// Call next action when animation completes
-	const handleActionEnd = useCallback(() => {
-		nextAction(currentAction?.id);
-	}, [currentAction, nextAction]);
+	// Call next guidance when animation completes
+	const handleGuidanceEnd = useCallback(() => {
+		nextGuidance(currentGuidance?.id);
+	}, [currentGuidance, nextGuidance]);
 
 	// Initialize to user's cursor position and set up tracking
 	useEffect(() => {
@@ -91,33 +91,33 @@ const ActionRenderer: React.FC = () => {
 		};
 	}, []);
 
-	// When the action changes, update the key to force a complete re-render
+	// When the guidance changes, update the key to force a complete re-render
 	useEffect(() => {
-		// Handle CHAT actions: dispatch MessageInput(s) via addMessage
-		if (currentAction?.type === 'CHAT') {
-			const chatAction = currentAction as ChatAction;
+		// Handle CHAT guidances: dispatch MessageInput(s) via addMessage
+		if (currentGuidance?.type === 'CHAT') {
+			const chatGuidance = currentGuidance as ChatGuidance;
 			{
 				const runChat = async () => {
 					// Primary message
-					const delay = chatAction.messageDelay ?? 0;
+					const delay = chatGuidance.messageDelay ?? 0;
 					if (delay > 0) {
 						await new Promise((res) => setTimeout(res, delay));
 					}
-					addMessage(chatAction.content);
-					if (chatAction.autoAdvance !== false) {
-						handleActionEnd();
+					addMessage(chatGuidance.content);
+					if (chatGuidance.autoAdvance !== false) {
+						handleGuidanceEnd();
 					}
 
 					// Custom messages
-					if (chatAction.customMessages) {
-						for (const msg of chatAction.customMessages) {
+					if (chatGuidance.customMessages) {
+						for (const msg of chatGuidance.customMessages) {
 							const msgDelay = msg.messageDelay ?? 0;
 							if (msgDelay > 0) {
 								await new Promise((res) => setTimeout(res, msgDelay));
 							}
 							addMessage(msg.content);
 							if (msg.autoAdvance !== false) {
-								handleActionEnd();
+								handleGuidanceEnd();
 							}
 						}
 					}
@@ -126,24 +126,24 @@ const ActionRenderer: React.FC = () => {
 			}
 		}
 
-		if (currentAction?.id) {
-			setActionKey(currentAction.id);
+		if (currentGuidance?.id) {
+			setGuidanceKey(currentGuidance.id);
 			setCurrentClickIndex(0);
 			setDragIterationCount(0);
 			setIsDragAnimatingOut(false);
 
-			// Handle GATE_IF actions by evaluating the condition once and adding appropriate actions
-			if (currentAction.type === 'GATE_IF') {
-				const gateIfAction = currentAction as GateIfAction;
+			// Handle GATE_IF guidances by evaluating the condition once and adding appropriate guidances
+			if (currentGuidance.type === 'GATE_IF') {
+				const gateIfGuidance = currentGuidance as GateIfGuidance;
 
 				// Get the condition result
 				const evaluateCondition = async () => {
 					try {
 						// Get initial result
 						const result =
-							typeof gateIfAction.condition === 'function'
-								? gateIfAction.condition()
-								: gateIfAction.condition;
+							typeof gateIfGuidance.condition === 'function'
+								? gateIfGuidance.condition()
+								: gateIfGuidance.condition;
 
 						let finalResult: boolean;
 
@@ -153,16 +153,16 @@ const ActionRenderer: React.FC = () => {
 							finalResult = !!result;
 						}
 
-						// Add the appropriate actions to the queue based on the result
+						// Add the appropriate guidances to the queue based on the result
 						if (finalResult) {
-							addActionsToStart(gateIfAction.trueActions);
+							addGuidancesToStart(gateIfGuidance.trueGuidances);
 						} else {
-							addActionsToStart(gateIfAction.falseActions);
+							addGuidancesToStart(gateIfGuidance.falseGuidances);
 						}
 					} catch (error) {
 						console.error('Error evaluating GATE_IF condition:', error);
-						// In case of error, add the falseActions as fallback
-						addActionsToStart(gateIfAction.falseActions);
+						// In case of error, add the falseGuidances as fallback
+						addGuidancesToStart(gateIfGuidance.falseGuidances);
 					}
 				};
 
@@ -172,9 +172,9 @@ const ActionRenderer: React.FC = () => {
 				return;
 			}
 
-			// Store target for EXECUTE_CLICK actions
-			if (currentAction.type === 'EXECUTE_CLICK') {
-				executeClickTargetRef.current = currentAction.target;
+			// Store target for EXECUTE_CLICK guidances
+			if (currentGuidance.type === 'EXECUTE_CLICK') {
+				executeClickTargetRef.current = currentGuidance.target;
 			} else {
 				executeClickTargetRef.current = null;
 			}
@@ -186,28 +186,28 @@ const ActionRenderer: React.FC = () => {
 			}
 
 			// Set up interval for function-based advanceMode
-			// Use proper type guards to ensure we're dealing with the right action types
+			// Use proper type guards to ensure we're dealing with the right guidance types
 			if (
-				currentAction.type === 'VIRTUAL_CLICK' ||
-				currentAction.type === 'VIRTUAL_DRAG' ||
-				currentAction.type === 'VIRTUAL_TYPING'
+				currentGuidance.type === 'VIRTUAL_CLICK' ||
+				currentGuidance.type === 'VIRTUAL_DRAG' ||
+				currentGuidance.type === 'VIRTUAL_TYPING'
 			) {
-				// Now we know it's a VirtualClickAction, VirtualDragAction, or VirtualTypingAction and has advanceMode
-				const clickOrDragAction = currentAction as
-					| VirtualClickAction
-					| VirtualDragAction
-					| VirtualTypingAction;
+				// Now we know it's a VirtualClickGuidance, VirtualDragGuidance, or VirtualTypingGuidance and has advanceMode
+				const clickOrDragGuidance = currentGuidance as
+					| VirtualClickGuidance
+					| VirtualDragGuidance
+					| VirtualTypingGuidance;
 
-				if (typeof clickOrDragAction.advanceMode === 'function') {
-					const advanceFn = clickOrDragAction.advanceMode;
+				if (typeof clickOrDragGuidance.advanceMode === 'function') {
+					const advanceFn = clickOrDragGuidance.advanceMode;
 
 					// If the function expects at least one argument, we treat it as
 					// the **callback** variant – invoke once and let it call
-					// `nextAction` (via handleActionEnd) when ready.
+					// `nextGuidance` (via handleGuidanceEnd) when ready.
 					if (advanceFn.length >= 1) {
 						(advanceFn as (next: () => void) => void)(() => {
 							// Ensure we don't create a new reference every call
-							handleActionEnd();
+							handleGuidanceEnd();
 						});
 						// No polling interval in this mode
 						return;
@@ -218,7 +218,7 @@ const ActionRenderer: React.FC = () => {
 
 					if ((advanceFn as () => boolean)()) {
 						// If the predicate returns true immediately, advance on next tick
-						setTimeout(() => handleActionEnd(), 0);
+						setTimeout(() => handleGuidanceEnd(), 0);
 						return;
 					}
 
@@ -226,7 +226,7 @@ const ActionRenderer: React.FC = () => {
 					functionAdvanceModeIntervalRef.current = setInterval(() => {
 						const shouldAdvance = (advanceFn as () => boolean)();
 						if (shouldAdvance) {
-							handleActionEnd();
+							handleGuidanceEnd();
 
 							if (functionAdvanceModeIntervalRef.current) {
 								clearInterval(functionAdvanceModeIntervalRef.current);
@@ -238,7 +238,7 @@ const ActionRenderer: React.FC = () => {
 			}
 		}
 
-		// Clean up interval on unmount or when currentAction changes
+		// Clean up interval on unmount or when currentGuidance changes
 		return () => {
 			if (functionAdvanceModeIntervalRef.current) {
 				clearInterval(functionAdvanceModeIntervalRef.current);
@@ -246,24 +246,24 @@ const ActionRenderer: React.FC = () => {
 			}
 		};
 	}, [
-		currentAction?.id,
-		currentAction?.type,
-		handleActionEnd,
-		addActionsToStart,
+		currentGuidance?.id,
+		currentGuidance?.type,
+		handleGuidanceEnd,
+		addGuidancesToStart,
 		addMessage,
-		nextAction,
+		nextGuidance,
 	]);
 
 	// Function to execute the actual click - now outside of conditional blocks
 	const executeClick = useCallback(() => {
-		// Exit if no current action or not an execute click action
-		if (!currentAction || currentAction.type !== 'EXECUTE_CLICK') {
+		// Exit if no current guidance or not an execute click guidance
+		if (!currentGuidance || currentGuidance.type !== 'EXECUTE_CLICK') {
 			return;
 		}
 
 		try {
 			// Get the target element - properly handling lazy elements
-			let targetElement: PositionOrElement = currentAction.target;
+			let targetElement: PositionOrElement = currentGuidance.target;
 
 			// Check if this is a lazy element and resolve it if needed
 			if (
@@ -295,7 +295,7 @@ const ActionRenderer: React.FC = () => {
 			// Check if we have a DOM element
 			if (targetElement instanceof Element) {
 				// First, ensure the element is in view
-				if (currentAction.shouldScroll !== false) {
+				if (currentGuidance.shouldScroll !== false) {
 					targetElement.scrollIntoView({
 						behavior: 'smooth',
 						block: 'center',
@@ -312,8 +312,8 @@ const ActionRenderer: React.FC = () => {
 					});
 					targetElement.dispatchEvent(clickEvent);
 
-					// Move to the next action
-					handleActionEnd();
+					// Move to the next guidance
+					handleGuidanceEnd();
 				}, 300);
 			} else {
 				// Handle case where we have coordinates instead of an element
@@ -327,7 +327,7 @@ const ActionRenderer: React.FC = () => {
 
 					if (elementAtPosition) {
 						// First, ensure the element is in view if needed
-						if (currentAction.shouldScroll !== false) {
+						if (currentGuidance.shouldScroll !== false) {
 							elementAtPosition.scrollIntoView({
 								behavior: 'smooth',
 								block: 'center',
@@ -344,81 +344,81 @@ const ActionRenderer: React.FC = () => {
 							});
 							elementAtPosition.dispatchEvent(clickEvent);
 
-							// Move to the next action
-							handleActionEnd();
+							// Move to the next guidance
+							handleGuidanceEnd();
 						}, 300);
 					} else {
 						console.error('No element found at the specified position');
-						handleActionEnd(); // Proceed to next action anyway
+						handleGuidanceEnd(); // Proceed to next guidance anyway
 					}
 				} else {
 					console.error('Unable to execute click: Invalid target');
-					handleActionEnd(); // Proceed to next action anyway
+					handleGuidanceEnd(); // Proceed to next guidance anyway
 				}
 			}
 		} catch (error) {
 			console.error('Error executing click:', error);
-			handleActionEnd(); // Proceed to next action anyway
+			handleGuidanceEnd(); // Proceed to next guidance anyway
 		}
-	}, [currentAction, handleActionEnd]);
+	}, [currentGuidance, handleGuidanceEnd]);
 
-	// Modified effect to handle IDLE actions with automatic duration
+	// Modified effect to handle IDLE guidances with automatic duration
 	useEffect(() => {
-		if (!currentAction) return;
+		if (!currentGuidance) return;
 
-		if (currentAction.type === 'IDLE') {
-			if (currentAction.duration) {
+		if (currentGuidance.type === 'IDLE') {
+			if (currentGuidance.duration) {
 				const timeout = setTimeout(() => {
-					nextAction(currentAction.id);
-				}, currentAction.duration);
+					nextGuidance(currentGuidance.id);
+				}, currentGuidance.duration);
 
 				return () => clearTimeout(timeout);
 			}
-			if (currentAction.advanceFunction) {
-				currentAction.advanceFunction(() => {
-					nextAction(currentAction.id);
+			if (currentGuidance.advanceFunction) {
+				currentGuidance.advanceFunction(() => {
+					nextGuidance(currentGuidance.id);
 				});
 			}
 		}
 
-		// Handle auto-completing CHAT_TOOLTIP actions with duration
-		if (currentAction.type === 'CHAT_TOOLTIP' && currentAction.duration) {
+		// Handle auto-completing CHAT_TOOLTIP guidances with duration
+		if (currentGuidance.type === 'CHAT_TOOLTIP' && currentGuidance.duration) {
 			const timeout = setTimeout(() => {
-				nextAction(currentAction.id);
-			}, currentAction.duration);
+				nextGuidance(currentGuidance.id);
+			}, currentGuidance.duration);
 
 			return () => clearTimeout(timeout);
 		}
 
-		// Handle EXECUTE_CLICK actions without animation - directly execute the click
+		// Handle EXECUTE_CLICK guidances without animation - directly execute the click
 		if (
-			currentAction.type === 'EXECUTE_CLICK' &&
-			currentAction.showCursor === false
+			currentGuidance.type === 'EXECUTE_CLICK' &&
+			currentGuidance.showCursor === false
 		) {
 			// Execute click directly rather than setting a state
 			executeClick();
 		}
-	}, [currentAction, nextAction, executeClick, handleActionEnd]);
+	}, [currentGuidance, nextGuidance, executeClick, handleGuidanceEnd]);
 
 	// Handler for cursor animation completion
 	const handleCursorAnimationComplete = useCallback(
 		(clicked: boolean) => {
-			// Use type guards for different action types
-			if (currentAction?.type === 'VIRTUAL_CLICK') {
-				const clickAction = currentAction as VirtualClickAction;
+			// Use type guards for different guidance types
+			if (currentGuidance?.type === 'VIRTUAL_CLICK') {
+				const clickGuidance = currentGuidance as VirtualClickGuidance;
 				if (
-					clickAction.advanceMode !== 'external' &&
-					typeof clickAction.advanceMode !== 'function'
+					clickGuidance.advanceMode !== 'external' &&
+					typeof clickGuidance.advanceMode !== 'function'
 				) {
-					return handleActionEnd();
+					return handleGuidanceEnd();
 				}
 			}
 
 			// For VIRTUAL_DRAG with external advance mode, loop the animation
-			if (currentAction?.type === 'VIRTUAL_DRAG') {
+			if (currentGuidance?.type === 'VIRTUAL_DRAG') {
 				// CARE -> it should default to clickable
-				if (clicked && currentAction.advanceMode !== 'external') {
-					return handleActionEnd();
+				if (clicked && currentGuidance.advanceMode !== 'external') {
+					return handleGuidanceEnd();
 				}
 
 				// Start fade-out animation
@@ -431,35 +431,37 @@ const ActionRenderer: React.FC = () => {
 				}, 300); // Duration of fadeout animation
 			}
 		},
-		[handleActionEnd, currentAction]
+		[handleGuidanceEnd, currentGuidance]
 	);
 
 	// Handler for MULTI_VIRTUAL_CLICK completion
 	const handleMultiClickComplete = useCallback(() => {
-		if (currentAction?.type === 'MULTI_VIRTUAL_CLICK') {
+		if (currentGuidance?.type === 'MULTI_VIRTUAL_CLICK') {
 			// If there are more clicks to go through
-			if (currentClickIndex < currentAction.actions.length - 1) {
+			if (currentClickIndex < currentGuidance.guidances.length - 1) {
 				// Move to the next click
 				setCurrentClickIndex((prevIndex) => prevIndex + 1);
-			} else if (currentAction.loop) {
+			} else if (currentGuidance.loop) {
 				// If looping is enabled, start from the beginning
 				setCurrentClickIndex(0);
-			} else if (currentAction.advanceMode !== 'external') {
-				// Complete the entire action only if advanceMode is not 'external'
-				handleActionEnd();
+			} else if (currentGuidance.advanceMode !== 'external') {
+				// Complete the entire guidance only if advanceMode is not 'external'
+				handleGuidanceEnd();
 			}
 		}
-	}, [currentAction, currentClickIndex, handleActionEnd]);
+	}, [currentGuidance, currentClickIndex, handleGuidanceEnd]);
 
 	// Handle delay between clicks for MULTI_VIRTUAL_CLICK
 	useEffect(() => {
 		if (
-			currentAction?.type === 'MULTI_VIRTUAL_CLICK' &&
+			currentGuidance?.type === 'MULTI_VIRTUAL_CLICK' &&
 			currentClickIndex > 0
 		) {
 			const defaultDelay = 500; // Default delay between clicks in ms
 			const delay =
-				currentAction.delay !== undefined ? currentAction.delay : defaultDelay;
+				currentGuidance.delay !== undefined
+					? currentGuidance.delay
+					: defaultDelay;
 
 			// Apply delay before showing the next click
 			const timer = setTimeout(() => {
@@ -468,24 +470,24 @@ const ActionRenderer: React.FC = () => {
 
 			return () => clearTimeout(timer);
 		}
-	}, [currentAction, currentClickIndex]);
+	}, [currentGuidance, currentClickIndex]);
 
-	// If there's no current action or the animation system is inactive, don't render anything
-	if (!isActive || !currentAction) {
+	// If there's no current guidance or the animation system is inactive, don't render anything
+	if (!isActive || !currentGuidance) {
 		return null;
 	}
 
-	// Render the appropriate component based on action type
-	switch (currentAction.type) {
+	// Render the appropriate component based on guidance type
+	switch (currentGuidance.type) {
 		case 'IF':
 			return (
-				<IFActionRenderer
-					key={actionKey}
-					action={currentAction}
-					actionKey={actionKey}
+				<IFGuidanceRenderer
+					key={guidanceKey}
+					guidance={currentGuidance}
+					guidanceKey={guidanceKey}
 					prevCursorPosition={prevCursorPosition}
 					isAnimatingOut={isAnimatingOut}
-					handleActionEnd={handleActionEnd}
+					handleGuidanceEnd={handleGuidanceEnd}
 					handleMultiClickComplete={handleMultiClickComplete}
 					currentClickIndex={currentClickIndex}
 					executeClick={executeClick}
@@ -496,31 +498,31 @@ const ActionRenderer: React.FC = () => {
 				/>
 			);
 		case 'GATE_IF':
-			// GATE_IF actions are handled in the useEffect and don't need special rendering
+			// GATE_IF guidances are handled in the useEffect and don't need special rendering
 			return null;
 		case 'CURSOR_TAKEOVER':
 			return (
 				<CedarCursor
-					key={actionKey}
-					isRedirected={currentAction.isRedirected}
-					messages={currentAction.messages}
-					onAnimationComplete={handleActionEnd}
-					cursorColor={currentAction.cursorColor}
-					blocking={currentAction.blocking}
+					key={guidanceKey}
+					isRedirected={currentGuidance.isRedirected}
+					messages={currentGuidance.messages}
+					onAnimationComplete={handleGuidanceEnd}
+					cursorColor={currentGuidance.cursorColor}
+					blocking={currentGuidance.blocking}
 				/>
 			);
 
 		case 'VIRTUAL_CLICK': {
-			// Determine the start position - use action.startPosition if provided,
+			// Determine the start position - use guidance.startPosition if provided,
 			// otherwise use the previous cursor position, or undefined if neither exists
 			const resolvedStartPosition: PositionOrElement | undefined =
-				currentAction.startPosition ||
+				currentGuidance.startPosition ||
 				(prevCursorPosition ? prevCursorPosition : undefined);
 
-			// Determine the advanceMode from the action – if the provided value
+			// Determine the advanceMode from the guidance – if the provided value
 			// is a **callback** variant (expects an argument), fall back to
 			// 'default' as VirtualCursor itself doesn't need to know about it.
-			const rawAdvanceMode = currentAction.advanceMode;
+			const rawAdvanceMode = currentGuidance.advanceMode;
 			type CursorAdvanceMode =
 				| 'auto'
 				| 'external'
@@ -536,80 +538,80 @@ const ActionRenderer: React.FC = () => {
 
 			return (
 				<motion.div
-					key={actionKey}
+					key={guidanceKey}
 					initial={{ opacity: 1 }}
 					animate={{ opacity: isAnimatingOut ? 0 : 1 }}
 					exit={{ opacity: 0 }}
 					transition={{ duration: 0.3, ease: 'easeInOut' }}
 					style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none' }}>
 					<VirtualCursor
-						endPosition={currentAction.endPosition}
+						endPosition={currentGuidance.endPosition}
 						startPosition={resolvedStartPosition}
-						tooltipText={currentAction.tooltipText}
+						tooltipText={currentGuidance.tooltipText}
 						onAnimationComplete={handleCursorAnimationComplete}
-						tooltipPosition={currentAction.tooltipPosition}
-						tooltipAnchor={currentAction.tooltipAnchor}
+						tooltipPosition={currentGuidance.tooltipPosition}
+						tooltipAnchor={currentGuidance.tooltipAnchor}
 						advanceMode={advanceMode}
-						blocking={currentAction.blocking}
-						shouldScroll={currentAction.shouldScroll}
-						disableClickableArea={currentAction.disableClickableArea}
+						blocking={currentGuidance.blocking}
+						shouldScroll={currentGuidance.shouldScroll}
+						disableClickableArea={currentGuidance.disableClickableArea}
 					/>
 				</motion.div>
 			);
 		}
 
 		case 'VIRTUAL_DRAG': {
-			// Determine the start position - use action.startPosition if provided,
+			// Determine the start position - use guidance.startPosition if provided,
 			// otherwise use the previous cursor position, or undefined if neither exists
 			const resolvedStartPosition: PositionOrElement | undefined =
-				currentAction.startPosition ||
+				currentGuidance.startPosition ||
 				(prevCursorPosition ? prevCursorPosition : undefined);
 
 			return (
 				<motion.div
-					key={`${actionKey}-drag-${dragIterationCount}`}
+					key={`${guidanceKey}-drag-${dragIterationCount}`}
 					initial={{ opacity: 1 }}
 					animate={{ opacity: isDragAnimatingOut || isAnimatingOut ? 0 : 1 }}
 					exit={{ opacity: 0 }}
 					transition={{ duration: 0.3, ease: 'easeInOut' }}
 					style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none' }}>
 					<VirtualCursor
-						endPosition={currentAction.endPosition}
+						endPosition={currentGuidance.endPosition}
 						startPosition={resolvedStartPosition}
-						tooltipText={currentAction.tooltipText}
+						tooltipText={currentGuidance.tooltipText}
 						onAnimationComplete={handleCursorAnimationComplete}
-						tooltipPosition={currentAction.tooltipPosition}
-						tooltipAnchor={currentAction.tooltipAnchor}
-						startTooltip={currentAction.startTooltip}
+						tooltipPosition={currentGuidance.tooltipPosition}
+						tooltipAnchor={currentGuidance.tooltipAnchor}
+						startTooltip={currentGuidance.startTooltip}
 						advanceMode={'auto'}
-						shouldScroll={currentAction.shouldScroll}
-						dragCursor={currentAction.dragCursor !== false}
+						shouldScroll={currentGuidance.shouldScroll}
+						dragCursor={currentGuidance.dragCursor !== false}
 					/>
 				</motion.div>
 			);
 		}
 
 		case 'MULTI_VIRTUAL_CLICK': {
-			// Determine the current click action
-			const currentClickAction = currentAction.actions[currentClickIndex];
+			// Determine the current click guidance
+			const currentClickGuidance = currentGuidance.guidances[currentClickIndex];
 
 			// Determine the start position based on the click index
 			let startPosition: PositionOrElement | undefined;
 			if (currentClickIndex === 0) {
 				// For the first click, use the previous cursor position or the specified start position
 				startPosition =
-					currentClickAction.startPosition ||
+					currentClickGuidance.startPosition ||
 					(prevCursorPosition ? prevCursorPosition : undefined);
 			} else {
 				// For subsequent clicks, always use their specified start position if available,
 				// otherwise fallback to the end position of the previous click
 				startPosition =
-					currentClickAction.startPosition ||
-					currentAction.actions[currentClickIndex - 1].endPosition;
+					currentClickGuidance.startPosition ||
+					currentGuidance.guidances[currentClickIndex - 1].endPosition;
 			}
 
 			// Use the same advanceMode calculation as for VIRTUAL_CLICK
-			const rawAdvanceModeMulti = currentClickAction.advanceMode;
+			const rawAdvanceModeMulti = currentClickGuidance.advanceMode;
 			type CursorAdvanceModeMulti =
 				| 'auto'
 				| 'external'
@@ -626,12 +628,12 @@ const ActionRenderer: React.FC = () => {
 
 			return (
 				<VirtualCursor
-					key={`${actionKey}-${currentClickIndex}`}
-					endPosition={currentClickAction.endPosition}
+					key={`${guidanceKey}-${currentClickIndex}`}
+					endPosition={currentClickGuidance.endPosition}
 					startPosition={startPosition}
-					tooltipText={currentClickAction.tooltipText}
-					tooltipPosition={currentClickAction.tooltipPosition}
-					tooltipAnchor={currentClickAction.tooltipAnchor}
+					tooltipText={currentClickGuidance.tooltipText}
+					tooltipPosition={currentClickGuidance.tooltipPosition}
+					tooltipAnchor={currentClickGuidance.tooltipAnchor}
 					onAnimationComplete={handleMultiClickComplete}
 					advanceMode={advanceMode}
 				/>
@@ -639,28 +641,28 @@ const ActionRenderer: React.FC = () => {
 		}
 
 		case 'VIRTUAL_TYPING': {
-			// Determine the start position - use action.startPosition if provided,
+			// Determine the start position - use guidance.startPosition if provided,
 			const typingStartPosition: PositionOrElement | undefined =
-				currentAction.startPosition ||
+				currentGuidance.startPosition ||
 				(prevCursorPosition ? prevCursorPosition : undefined);
 
 			return (
 				<VirtualTypingCursor
-					key={actionKey}
-					endPosition={currentAction.endPosition}
+					key={guidanceKey}
+					endPosition={currentGuidance.endPosition}
 					startPosition={typingStartPosition}
-					expectedValue={currentAction.expectedValue}
-					checkExistingValue={currentAction.checkExistingValue}
-					typingDelay={currentAction.typingDelay}
-					tooltipText={currentAction.tooltipText}
-					tooltipPosition={currentAction.tooltipPosition}
-					tooltipAnchor={currentAction.tooltipAnchor}
+					expectedValue={currentGuidance.expectedValue}
+					checkExistingValue={currentGuidance.checkExistingValue}
+					typingDelay={currentGuidance.typingDelay}
+					tooltipText={currentGuidance.tooltipText}
+					tooltipPosition={currentGuidance.tooltipPosition}
+					tooltipAnchor={currentGuidance.tooltipAnchor}
 					advanceMode={((): 'auto' | 'external' | 'default' | number => {
-						if (typeof currentAction.advanceMode === 'function') {
+						if (typeof currentGuidance.advanceMode === 'function') {
 							return 'default';
 						}
 						return (
-							(currentAction.advanceMode as
+							(currentGuidance.advanceMode as
 								| 'auto'
 								| 'external'
 								| 'default'
@@ -668,8 +670,8 @@ const ActionRenderer: React.FC = () => {
 								| undefined) || 'default'
 						);
 					})()}
-					onAnimationComplete={handleActionEnd}
-					blocking={currentAction.blocking}
+					onAnimationComplete={handleGuidanceEnd}
+					blocking={currentGuidance.blocking}
 				/>
 			);
 		}
@@ -682,8 +684,8 @@ const ActionRenderer: React.FC = () => {
 			const chatButtonRect = chatButton?.getBoundingClientRect();
 
 			if (!chatButtonRect) {
-				// If chat button not found, complete this action and go to next
-				setTimeout(handleActionEnd, 100);
+				// If chat button not found, complete this guidance and go to next
+				setTimeout(handleGuidanceEnd, 100);
 				return null;
 			}
 
@@ -697,7 +699,7 @@ const ActionRenderer: React.FC = () => {
 
 			return (
 				<motion.div
-					key={actionKey}
+					key={guidanceKey}
 					className='fixed z-50 pointer-events-none'
 					initial={{
 						opacity: 0,
@@ -722,10 +724,10 @@ const ActionRenderer: React.FC = () => {
 						transformOrigin: 'bottom center',
 					}}>
 					<TooltipText
-						content={currentAction.content}
+						content={currentGuidance.content}
 						position='top'
-						textColor={currentAction.textColor}
-						onEnd={() => handleActionEnd()}
+						textColor={currentGuidance.textColor}
+						onEnd={() => handleGuidanceEnd()}
 					/>
 				</motion.div>
 			);
@@ -740,16 +742,16 @@ const ActionRenderer: React.FC = () => {
 		case 'DIALOGUE':
 			return (
 				<>
-					{currentAction.highlightElements && (
+					{currentGuidance.highlightElements && (
 						<HighlightOverlay
-							elements={currentAction.highlightElements}
-							shouldScroll={currentAction.shouldScroll}
+							elements={currentGuidance.highlightElements}
+							shouldScroll={currentGuidance.shouldScroll}
 						/>
 					)}
 					<DialogueBox
-						key={actionKey}
-						text={currentAction.text}
-						style={currentAction.style}
+						key={guidanceKey}
+						text={currentGuidance.text}
+						style={currentGuidance.style}
 						advanceMode={(():
 							| 'auto'
 							| 'external'
@@ -757,14 +759,15 @@ const ActionRenderer: React.FC = () => {
 							| number
 							| (() => boolean) => {
 							if (
-								typeof currentAction.advanceMode === 'function' &&
-								((currentAction.advanceMode as (...args: unknown[]) => unknown)
-									.length ?? 0) >= 1
+								typeof currentGuidance.advanceMode === 'function' &&
+								((
+									currentGuidance.advanceMode as (...args: unknown[]) => unknown
+								).length ?? 0) >= 1
 							) {
 								return 'default';
 							}
 							return (
-								(currentAction.advanceMode as
+								(currentGuidance.advanceMode as
 									| 'auto'
 									| 'external'
 									| 'default'
@@ -772,23 +775,23 @@ const ActionRenderer: React.FC = () => {
 									| (() => boolean)) || 'default'
 							);
 						})()}
-						blocking={currentAction.blocking}
-						onComplete={handleActionEnd}
+						blocking={currentGuidance.blocking}
+						onComplete={handleGuidanceEnd}
 					/>
 				</>
 			);
 
 		case 'DIALOGUE_BANNER': {
-			const bannerAction = currentAction as DialogueBannerAction & {
+			const bannerGuidance = currentGuidance as DialogueBannerGuidance & {
 				children?: React.ReactNode;
 			};
 			return (
 				<DialogueBanner
-					key={actionKey}
-					style={bannerAction.style}
-					advanceMode={bannerAction.advanceMode}
-					onComplete={handleActionEnd}>
-					{bannerAction.children ?? bannerAction.text}
+					key={guidanceKey}
+					style={bannerGuidance.style}
+					advanceMode={bannerGuidance.advanceMode}
+					onComplete={handleGuidanceEnd}>
+					{bannerGuidance.children ?? bannerGuidance.text}
 				</DialogueBanner>
 			);
 		}
@@ -796,54 +799,54 @@ const ActionRenderer: React.FC = () => {
 		case 'SURVEY':
 			return (
 				<SurveyDialog
-					key={actionKey}
-					title={currentAction.title}
-					description={currentAction.description}
-					questions={currentAction.questions}
+					key={guidanceKey}
+					title={currentGuidance.title}
+					description={currentGuidance.description}
+					questions={currentGuidance.questions}
 					open={true}
 					onOpenChange={(open) => {
-						if (!open && !currentAction.blocking) {
-							handleActionEnd();
+						if (!open && !currentGuidance.blocking) {
+							handleGuidanceEnd();
 						}
 					}}
-					submitButtonText={currentAction.submitButtonText}
-					cancelButtonText={currentAction.cancelButtonText}
+					submitButtonText={currentGuidance.submitButtonText}
+					cancelButtonText={currentGuidance.cancelButtonText}
 					onSubmit={(responses) => {
-						currentAction.onSubmit?.(responses);
-						handleActionEnd();
+						currentGuidance.onSubmit?.(responses);
+						handleGuidanceEnd();
 					}}
-					blocking={currentAction.blocking}
-					trigger_id={currentAction.trigger_id}
+					blocking={currentGuidance.blocking}
+					trigger_id={currentGuidance.trigger_id}
 				/>
 			);
 
 		case 'EXECUTE_CLICK': {
 			// Only render cursor animation if showCursor is true (default) or undefined
-			const showCursor = currentAction.showCursor !== false;
+			const showCursor = currentGuidance.showCursor !== false;
 
 			if (showCursor) {
-				// Determine the start position - use action.startPosition if provided,
+				// Determine the start position - use guidance.startPosition if provided,
 				// otherwise use the previous cursor position, or undefined if neither exists
 				const resolvedStartPosition: PositionOrElement | undefined =
-					currentAction.startPosition ||
+					currentGuidance.startPosition ||
 					(prevCursorPosition ? prevCursorPosition : undefined);
 
 				return (
 					<motion.div
-						key={actionKey}
+						key={guidanceKey}
 						initial={{ opacity: 1 }}
 						animate={{ opacity: isAnimatingOut ? 0 : 1 }}
 						exit={{ opacity: 0 }}
 						transition={{ duration: 0.3, ease: 'easeInOut' }}
 						style={{ position: 'fixed', zIndex: 9999, pointerEvents: 'none' }}>
 						<VirtualCursor
-							endPosition={currentAction.target}
+							endPosition={currentGuidance.target}
 							startPosition={resolvedStartPosition}
-							tooltipText={currentAction.tooltipText}
+							tooltipText={currentGuidance.tooltipText}
 							onAnimationComplete={executeClick}
-							tooltipPosition={currentAction.tooltipPosition}
+							tooltipPosition={currentGuidance.tooltipPosition}
 							advanceMode={'auto'}
-							blocking={currentAction.blocking}
+							blocking={currentGuidance.blocking}
 						/>
 					</motion.div>
 				);
@@ -856,15 +859,15 @@ const ActionRenderer: React.FC = () => {
 		case 'TOAST': {
 			return (
 				<ToastCard
-					key={actionKey}
-					title={currentAction.title || 'Notification'}
-					description={currentAction.description}
-					variant={currentAction.variant}
-					position={currentAction.position || 'bottom-right'}
-					duration={currentAction.duration || 4000}
-					toastMode={currentAction.toastMode}
-					action={currentAction.action}
-					onClose={() => nextAction(currentAction.id)}
+					key={guidanceKey}
+					title={currentGuidance.title || 'Notification'}
+					description={currentGuidance.description}
+					variant={currentGuidance.variant}
+					position={currentGuidance.position || 'bottom-right'}
+					duration={currentGuidance.duration || 4000}
+					toastMode={currentGuidance.toastMode}
+					action={currentGuidance.action}
+					onClose={() => nextGuidance(currentGuidance.id)}
 				/>
 			);
 		}
@@ -872,10 +875,10 @@ const ActionRenderer: React.FC = () => {
 		case 'EXECUTE_TYPING': {
 			return (
 				<ExecuteTyping
-					key={actionKey}
-					endPosition={currentAction.endPosition}
-					expectedValue={currentAction.expectedValue}
-					onComplete={handleActionEnd}
+					key={guidanceKey}
+					endPosition={currentGuidance.endPosition}
+					expectedValue={currentGuidance.expectedValue}
+					onComplete={handleGuidanceEnd}
 				/>
 			);
 		}
@@ -883,17 +886,17 @@ const ActionRenderer: React.FC = () => {
 		case 'RIGHT_CLICK': {
 			return (
 				<RightClickIndicator
-					key={actionKey}
-					duration={currentAction.duration || 2000}
-					onComplete={handleActionEnd}
+					key={guidanceKey}
+					duration={currentGuidance.duration || 2000}
+					onComplete={handleGuidanceEnd}
 				/>
 			);
 		}
 
 		default:
-			console.error('Unknown action type:', currentAction);
+			console.error('Unknown guidance type:', currentGuidance);
 			return null;
 	}
 };
 
-export default ActionRenderer;
+export default GuidanceRenderer;

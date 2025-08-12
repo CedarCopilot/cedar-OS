@@ -1,5 +1,6 @@
 // Components
 export { CedarCopilot } from '@/components/CedarCopilot';
+export { GuidanceRenderer } from '@/components/guidance';
 
 export { useCedarEditor } from '@/components/chatInput/useCedarEditor';
 
@@ -26,6 +27,7 @@ export { createAgentInputContextSlice } from '@/store/agentInputContext/agentInp
 export { createMessagesSlice } from '@/store/messages/messagesSlice';
 export { createStateSlice } from '@/store/stateSlice/stateSlice';
 export { createStylingSlice } from '@/store/stylingSlice';
+export { createGuidanceSlice } from '@/store/guidance/guidanceSlice';
 
 // Export state management
 export { useRegisterState } from '@/store/stateSlice/stateSlice';
@@ -148,6 +150,7 @@ export {
 	useCedarStore,
 	useChatInput,
 	useDebugger,
+	useGuidance,
 	useMessages,
 	useSpell,
 	useSpells,
@@ -194,6 +197,33 @@ export type {
 	UseSpellOptions,
 	UseSpellReturn,
 } from '@/store/spellSlice/useSpell';
+
+// Export guidance system types
+export type {
+	GuidanceSlice,
+	GuidanceType,
+	BaseGuidance,
+	Guidance,
+	GuidanceInput,
+	CursorTakeoverGuidance,
+	VirtualClickGuidance,
+	VirtualDragGuidance,
+	MultiVirtualClickGuidance,
+	VirtualTypingGuidance,
+	ChatGuidance,
+	ChatTooltipGuidance,
+	IdleGuidance,
+	DialogueGuidance,
+	DialogueBannerGuidance,
+	SurveyGuidance,
+	ExecuteClickGuidance,
+	ExecuteTypingGuidance,
+	ToastGuidance,
+	IFGuidance,
+	GateIfGuidance,
+	NavigateGuidance,
+	RightClickGuidance,
+} from '@/store/guidance/guidanceSlice';
 
 // Export Tiptap components
 export {

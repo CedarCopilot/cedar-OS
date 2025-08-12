@@ -35,3 +35,5 @@ export type {
 
 export { default as DialogueBox } from './components/DialogueBox';
 export type { DialogueBoxProps } from './components/DialogueBox';
+
+export { default as GuidanceRenderer } from './GuidanceRenderer';
