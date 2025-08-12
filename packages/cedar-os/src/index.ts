@@ -58,7 +58,7 @@ export type {
 	MentionItem,
 	MentionProvider,
 	StateBasedMentionProviderConfig,
-} from '@/store/agentInputContext/types';
+} from '@/store/agentInputContext/AgentInputContextTypes';
 
 // Export message types
 export type {
@@ -85,11 +85,11 @@ export type {
 	TodoListItem,
 	TodoListMessage,
 	TypedMessage,
-} from '@/store/messages/types';
+} from '@/store/messages/MessageTypes';
 
 // Export types
 export type { StylingSlice } from '@/store/stylingSlice';
-export type { CedarStore } from '@/store/types';
+export type { CedarStore } from '@/store/CedarOSTypes';
 
 // Export agent connection types
 export type {
@@ -105,7 +105,7 @@ export type {
 	StreamEvent,
 	StreamHandler,
 	StreamResponse,
-} from '@/store/agentConnection/types';
+} from '@/store/agentConnection/AgentConnectionTypes';
 
 // Export SendMessageParams from the slice
 export type { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
@@ -141,7 +141,7 @@ export {
 	MouseEvent,
 	SelectionEvent,
 	ActivationMode,
-} from '@/store/spellSlice/types';
+} from '@/store/spellSlice/SpellTypes';
 
 export type {
 	ActivationConditions,
@@ -149,7 +149,7 @@ export type {
 	ActivationState,
 	HotkeyCombo,
 	CommonHotkeyCombo,
-} from '@/store/spellSlice/types';
+} from '@/store/spellSlice/SpellTypes';
 
 export type { SpellSlice } from '@/store/spellSlice/spellSlice';
 

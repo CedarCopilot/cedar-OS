@@ -1,5 +1,5 @@
-import { CedarStore } from '@/store/types';
-import type { Message } from './types';
+import { CedarStore } from '@/store/CedarOSTypes';
+import type { Message } from './MessageTypes';
 import { getCedarState, useCedarStore } from '@/store/CedarStore';
 
 // -------------------------------------------------

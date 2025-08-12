@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import type { CedarStore } from '../types';
+import type { CedarStore } from '../CedarOSTypes';
 import { getProviderImplementation } from './providers/index';
 import type {
 	AISDKParams,
@@ -16,7 +16,7 @@ import type {
 	StructuredParams,
 	VoiceParams,
 	VoiceLLMResponse,
-} from './types';
+} from './AgentConnectionTypes';
 import { useCedarStore } from '@/store/CedarStore';
 import { getCedarState } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';

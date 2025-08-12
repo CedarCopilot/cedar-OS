@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
-import type { ProviderConfig } from '@/store/agentConnection/types';
+import type { ProviderConfig } from '@/store/agentConnection/AgentConnectionTypes';
 import { useCedarState } from '@/store/stateSlice/useCedarState';
 import { MessageStorageConfig } from '@/store/messages/messageStorage';
 import type { VoiceState } from '@/store/voice/voiceSlice';

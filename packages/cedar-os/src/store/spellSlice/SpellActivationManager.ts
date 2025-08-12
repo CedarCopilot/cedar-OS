@@ -6,7 +6,7 @@ import {
 	type ActivationEvent,
 	type ActivationConditions,
 	type ActivationState,
-} from './types';
+} from '@/store/spellSlice/SpellTypes';
 
 type ActivationCallback = (state: ActivationState) => void;
 type DeactivationCallback = () => void;

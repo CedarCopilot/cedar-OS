@@ -37,11 +37,13 @@ import {
 import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
-import { TooltipMenu } from '@/inputs/TooltipMenu';
 import {
+	ActivationMode,
+	MouseEvent as SpellMouseEvent,
 	useRegisterState,
 	useStateBasedMentionProvider,
 	useSubscribeInputContext,
+	type CedarStore,
 } from 'cedar-os';
 import {
 	ArrowRight,
@@ -54,13 +56,8 @@ import {
 	Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import RadialMenuSpell from '../../../../packages/cedar-os-components/spells/RadialMenuSpell';
-import {
-	ActivationMode,
-	MouseEvent as SpellMouseEvent,
-	type ActivationConditions,
-} from '../../../../packages/cedar-os/src';
-import type { CedarStore } from '../../../../packages/cedar-os/src/store/types';
+import { TooltipMenu } from '@/inputs/TooltipMenu';
+import RadialMenuSpell from '@/spells/RadialMenuSpell';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)

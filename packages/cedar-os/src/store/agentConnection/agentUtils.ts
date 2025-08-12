@@ -15,7 +15,7 @@
  * 5. Provide completion summary with all items
  */
 
-import type { StreamHandler } from './types';
+import type { StreamHandler } from './AgentConnectionTypes';
 
 /**
  * Process raw content chunks to handle encoding and newlines

@@ -5,7 +5,7 @@ import { createStylingSlice } from './stylingSlice';
 import { createStateSlice } from '@/store/stateSlice/stateSlice';
 import { createMessagesSlice } from '@/store/messages/messagesSlice';
 import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
-import type { CedarStore } from './types';
+import type { CedarStore } from './CedarOSTypes';
 import { createSpellSlice } from '@/store/spellSlice/spellSlice';
 
 // Type helper to extract state from StateCreator

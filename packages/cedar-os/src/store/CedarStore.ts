@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
 import { createStylingSlice } from './stylingSlice';
-import { CedarStore } from './types';
+import { CedarStore } from './CedarOSTypes';
 import { createStateSlice } from '@/store/stateSlice/stateSlice';
 import { createMessagesSlice } from '@/store/messages/messagesSlice';
 import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
@@ -81,7 +81,7 @@ export type {
 	TypedMessage,
 	MessageByType,
 	MessageRendererConfig,
-} from './messages/types';
+} from './messages/MessageTypes';
 
 // Export voice slice and utilities
 export { createVoiceSlice } from './voice/voiceSlice';
@@ -126,17 +126,21 @@ export const useDebugger = () => ({
 });
 
 // Export spell slice and utilities
-export { createSpellSlice } from './spellSlice/spellSlice';
+export { createSpellSlice } from '@/store/spellSlice/spellSlice';
 export type {
 	SpellSlice,
 	SpellMap,
 	SpellState,
 	SpellRegistration,
-} from './spellSlice/spellSlice';
+} from '@/store/spellSlice/spellSlice';
 
 // Export the new useSpell hook
-export { useSpell } from './spellSlice/useSpell';
-export type { UseSpellOptions, UseSpellReturn } from './spellSlice/useSpell';
+export { useSpell } from '@/store/spellSlice/useSpell';
+
+export type {
+	UseSpellOptions,
+	UseSpellReturn,
+} from '@/store/spellSlice/useSpell';
 
 // Export activation condition types
 export {
@@ -149,7 +153,7 @@ export {
 	type ActivationEvent,
 	type HotkeyCombo,
 	type CommonHotkeyCombo,
-} from './spellSlice/types';
+} from '@/store/spellSlice/SpellTypes';
 
 // Export a hook for spell functionality
 export const useSpells = () => ({

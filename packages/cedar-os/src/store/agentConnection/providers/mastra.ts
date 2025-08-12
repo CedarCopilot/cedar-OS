@@ -5,7 +5,7 @@ import type {
 	StructuredParams,
 	VoiceParams,
 	VoiceLLMResponse,
-} from '../types';
+} from '../AgentConnectionTypes';
 import { handleEventStream } from '../agentUtils';
 
 type MastraConfig = InferProviderConfig<'mastra'>;

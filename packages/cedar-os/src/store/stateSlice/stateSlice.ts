@@ -1,7 +1,7 @@
 // @stateSlice: central registry for React component states with AI-readable metadata.
 // Supports manual registration via registerState (with optional external setter) and automatic registration via useCedarState hook.
 import { StateCreator } from 'zustand';
-import { CedarStore } from '@/store/types';
+import { CedarStore } from '@/store/CedarOSTypes';
 import type { ZodSchema } from 'zod';
 import { z } from 'zod/v4';
 import { useEffect } from 'react';

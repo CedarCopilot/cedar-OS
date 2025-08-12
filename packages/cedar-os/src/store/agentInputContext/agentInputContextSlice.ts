@@ -1,7 +1,11 @@
-import { CedarStore } from '@/store/types';
+import { CedarStore } from '@/store/CedarOSTypes';
 import type { JSONContent } from '@tiptap/core';
 import type { StateCreator } from 'zustand';
-import type { AdditionalContext, ContextEntry, MentionProvider } from './types';
+import type {
+	AdditionalContext,
+	ContextEntry,
+	MentionProvider,
+} from './AgentInputContextTypes';
 import { ReactNode, useMemo } from 'react';
 import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';

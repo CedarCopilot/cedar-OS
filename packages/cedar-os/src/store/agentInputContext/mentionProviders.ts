@@ -6,7 +6,7 @@ import type {
 	MentionItem,
 	MentionProvider,
 	StateBasedMentionProviderConfig,
-} from './types';
+} from './AgentInputContextTypes';
 
 /**
  * Helper to extract label from an item
