@@ -3,13 +3,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { TooltipMenu, type TooltipMenuItem } from '../inputs/TooltipMenu';
 import { FloatingChatInput } from '../chatInput/FloatingChatInput';
-import { useCedarStore, useSpells } from '../../cedar-os/src/store/CedarStore';
 import {
+	useCedarStore,
+	useSpell,
 	SelectionEvent,
 	ActivationMode,
 	type ActivationConditions,
-	useSpellActivationConditions,
-} from '../../cedar-os/src/store/spellSlice/useSpellActivationConditions';
+} from '../../cedar-os/src/store/CedarStore';
 
 export interface ExtendedTooltipMenuItem extends TooltipMenuItem {
 	/** If true, this item will spawn a floating input instead of invoking immediately */
@@ -33,7 +33,6 @@ const TooltipMenuSpell: React.FC<TooltipMenuSpellProps> = ({
 	activationConditions,
 	stream = true,
 }) => {
-	const { addSpell } = useSpells();
 	const [menuPosition, setMenuPosition] = useState<{
 		x: number;
 		y: number;
@@ -51,11 +50,6 @@ const TooltipMenuSpell: React.FC<TooltipMenuSpellProps> = ({
 		events: [SelectionEvent.TEXT_SELECT],
 		mode: ActivationMode.TOGGLE,
 	};
-
-	// Register the spell on mount
-	useEffect(() => {
-		addSpell(spellId);
-	}, [spellId, addSpell]);
 
 	// Calculate position for the menu based on selection
 	const calculateMenuPosition = () => {
@@ -76,10 +70,10 @@ const TooltipMenuSpell: React.FC<TooltipMenuSpellProps> = ({
 		};
 	};
 
-	// Use the activation conditions hook
-	useSpellActivationConditions({
-		spellId,
-		conditions: activationConditions || defaultConditions,
+	// Use the new simplified useSpell hook
+	useSpell({
+		id: spellId,
+		activationConditions: activationConditions || defaultConditions,
 		onActivate: (state) => {
 			if (state.triggerData?.selectedText) {
 				const position = calculateMenuPosition();

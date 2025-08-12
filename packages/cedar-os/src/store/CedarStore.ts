@@ -127,14 +127,39 @@ export const useDebugger = () => ({
 
 // Export spell slice and utilities
 export { createSpellSlice } from './spellSlice/spellSlice';
-export type { SpellSlice, SpellMap } from './spellSlice/spellSlice';
+export type {
+	SpellSlice,
+	SpellMap,
+	SpellState,
+	SpellRegistration,
+} from './spellSlice/spellSlice';
+
+// Export the new useSpell hook
+export { useSpell } from './spellSlice/useSpell';
+export type { UseSpellOptions, UseSpellReturn } from './spellSlice/useSpell';
+
+// Export activation condition types
+export {
+	Hotkey,
+	MouseEvent,
+	SelectionEvent,
+	ActivationMode,
+	type ActivationConditions,
+	type ActivationState,
+	type ActivationEvent,
+	type HotkeyCombo,
+	type CommonHotkeyCombo,
+} from './spellSlice/types';
 
 // Export a hook for spell functionality
 export const useSpells = () => ({
 	spells: useCedarStore((state) => state.spells),
 
-	addSpell: useCedarStore((state) => state.addSpell),
-	removeSpell: useCedarStore((state) => state.removeSpell),
+	// Unified API
+	registerSpell: useCedarStore((state) => state.registerSpell),
+	unregisterSpell: useCedarStore((state) => state.unregisterSpell),
+
+	// Programmatic control
 	activateSpell: useCedarStore((state) => state.activateSpell),
 	deactivateSpell: useCedarStore((state) => state.deactivateSpell),
 	toggleSpell: useCedarStore((state) => state.toggleSpell),

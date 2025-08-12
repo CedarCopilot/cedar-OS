@@ -59,7 +59,7 @@ import {
 	ActivationMode,
 	MouseEvent as SpellMouseEvent,
 	type ActivationConditions,
-} from '../../../../packages/cedar-os/src/store/spellSlice/useSpellActivationConditions';
+} from '../../../../packages/cedar-os/src';
 import type { CedarStore } from '../../../../packages/cedar-os/src/store/types';
 
 // -----------------------------------------------------------------------------

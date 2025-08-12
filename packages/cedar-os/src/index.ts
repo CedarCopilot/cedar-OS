@@ -137,12 +137,11 @@ export {
 
 // Export spell system types and utilities
 export {
-	useSpellActivationConditions,
 	Hotkey,
 	MouseEvent,
 	SelectionEvent,
 	ActivationMode,
-} from '@/store/spellSlice/useSpellActivationConditions';
+} from '@/store/spellSlice/types';
 
 export type {
 	ActivationConditions,
@@ -150,7 +149,7 @@ export type {
 	ActivationState,
 	HotkeyCombo,
 	CommonHotkeyCombo,
-} from '@/store/spellSlice/useSpellActivationConditions';
+} from '@/store/spellSlice/types';
 
 export type { SpellSlice } from '@/store/spellSlice/spellSlice';
 

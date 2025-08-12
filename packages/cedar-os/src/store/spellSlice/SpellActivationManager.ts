@@ -6,7 +6,7 @@ import {
 	type ActivationEvent,
 	type ActivationConditions,
 	type ActivationState,
-} from './useSpellActivationConditions';
+} from './types';
 
 type ActivationCallback = (state: ActivationState) => void;
 type DeactivationCallback = () => void;
@@ -221,7 +221,7 @@ class SpellActivationManager {
 		hotkey: Hotkey | string
 	): boolean {
 		if (typeof hotkey === 'string' && hotkey.includes('+')) {
-			// It's a combo
+			// It's a combo - must match all modifiers exactly
 			const combo = this.parseHotkeyCombo(hotkey);
 			const keyMatches = event.key.toLowerCase() === combo.key;
 			const modifiersMatch =
@@ -231,7 +231,13 @@ class SpellActivationManager {
 				event.shiftKey === combo.modifiers.shift;
 			return keyMatches && modifiersMatch;
 		} else {
-			// Single key
+			// Single key - should NOT have any modifiers (except shift for capital letters)
+			// We allow shift for typing capital letters
+			const hasUnexpectedModifiers =
+				event.ctrlKey || event.metaKey || event.altKey;
+			if (hasUnexpectedModifiers) {
+				return false;
+			}
 			return event.key.toLowerCase() === hotkey.toLowerCase();
 		}
 	}
@@ -423,6 +429,7 @@ class SpellActivationManager {
 			);
 
 			for (const hotkey of hotkeyEvents) {
+				// Use the same matching logic as keydown
 				if (this.matchesHotkey(event, hotkey)) {
 					const keyString =
 						typeof hotkey === 'string' ? hotkey : (hotkey as string);

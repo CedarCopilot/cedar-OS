@@ -4,13 +4,10 @@ import type { LucideIcon } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import {
 	useCedarStore,
-	useSpells,
 	useStyling,
+	useSpell,
+	type ActivationConditions,
 } from '../../cedar-os/src/store/CedarStore';
-import {
-	ActivationConditions,
-	useSpellActivationConditions,
-} from '../../cedar-os/src/store/spellSlice/useSpellActivationConditions';
 import type { CedarStore } from '../../cedar-os/src/store/types';
 import { cn } from '../../cedar-os/src/styles/stylingUtils';
 import Container3D from '../containers/Container3D';
@@ -46,7 +43,6 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 }) => {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const { styling } = useStyling();
-	const { addSpell } = useSpells();
 	const highlightColor = styling.color || '#3b82f6';
 	const textColor = styling.darkMode ? '#FFFFFF' : '#000000';
 	const borderColor = !styling.darkMode ? '#FFFFFF' : '#000000';
@@ -66,15 +62,10 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 		hoverIndexRef.current = hoverIndex;
 	}, [hoverIndex]);
 
-	// Register the spell on mount
-	useEffect(() => {
-		addSpell(spellId);
-	}, [spellId, addSpell]);
-
-	// Use the activation conditions hook
-	useSpellActivationConditions({
-		spellId,
-		conditions: activationConditions,
+	// Use the new simplified useSpell hook
+	useSpell({
+		id: spellId,
+		activationConditions,
 		onActivate: (state) => {
 			// If it's a mouse event, capture the position
 			if (state.triggerData?.mousePosition) {
