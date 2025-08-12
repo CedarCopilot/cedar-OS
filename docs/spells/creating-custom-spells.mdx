@@ -1,0 +1,487 @@
+---
+title: 'Creating Custom Spells'
+description: 'Learn how to build your own magical interactions with Cedar-OS spells'
+icon: 'code'
+---
+
+# Creating Custom Spells
+
+Spells in Cedar-OS are created using the `useSpell` hook, which provides a declarative API for binding gestures to behaviors. This guide will walk you through creating custom spells from simple to advanced.
+
+## Basic Spell Structure
+
+Every spell requires three core elements:
+
+```tsx
+import { useSpell, Hotkey, ActivationMode } from 'cedar-os';
+
+function MySpell() {
+	const { isActive, activate, deactivate, toggle } = useSpell({
+		// 1. Unique identifier
+		id: 'my-unique-spell',
+
+		// 2. Activation conditions
+		activationConditions: {
+			events: [Hotkey.SPACE],
+			mode: ActivationMode.TOGGLE,
+		},
+
+		// 3. Lifecycle callbacks
+		onActivate: (state) => {
+			console.log('Activated!', state.triggerData);
+		},
+		onDeactivate: () => {
+			console.log('Deactivated!');
+		},
+	});
+
+	return isActive ? <YourMagicUI /> : null;
+}
+```
+
+## The useSpell Hook
+
+The `useSpell` hook is your primary interface for creating spells:
+
+### Parameters
+
+```tsx
+interface UseSpellOptions {
+	/** Unique identifier for the spell */
+	id: string;
+
+	/** Conditions that trigger activation */
+	activationConditions: ActivationConditions;
+
+	/** Called when spell activates */
+	onActivate?: (state: ActivationState) => void;
+
+	/** Called when spell deactivates */
+	onDeactivate?: () => void;
+
+	/** Prevent default browser behavior */
+	preventDefaultEvents?: boolean;
+
+	/** Ignore activation in input elements */
+	ignoreInputElements?: boolean;
+}
+```
+
+### Return Values
+
+```tsx
+interface UseSpellReturn {
+	/** Current activation state */
+	isActive: boolean;
+
+	/** Programmatically activate */
+	activate: () => void;
+
+	/** Programmatically deactivate */
+	deactivate: () => void;
+
+	/** Toggle activation state */
+	toggle: () => void;
+}
+```
+
+## Activation Conditions
+
+Activation conditions define how users trigger your spell:
+
+### Events
+
+Spells can respond to multiple event types:
+
+```tsx
+import { Hotkey, MouseEvent, SelectionEvent } from 'cedar-os';
+
+// Single key activation
+activationConditions: {
+	events: [Hotkey.Q];
+}
+
+// Keyboard combination
+activationConditions: {
+	events: ['ctrl+k', 'cmd+k']; // Support both Windows and Mac
+}
+
+// Mouse events
+activationConditions: {
+	events: [MouseEvent.RIGHT_CLICK];
+}
+
+// Text selection
+activationConditions: {
+	events: [SelectionEvent.TEXT_SELECT];
+}
+
+// Multiple triggers
+activationConditions: {
+	events: [Hotkey.SPACE, MouseEvent.RIGHT_CLICK];
+}
+```
+
+### Activation Modes
+
+Control how your spell's lifecycle works:
+
+```tsx
+import { ActivationMode } from 'cedar-os';
+
+// TOGGLE: Press to activate, press again to deactivate
+activationConditions: {
+  events: [Hotkey.T],
+  mode: ActivationMode.TOGGLE
+}
+
+// HOLD: Active only while key/button is held
+activationConditions: {
+  events: [Hotkey.SPACE],
+  mode: ActivationMode.HOLD
+}
+
+// TRIGGER: Fire once with optional cooldown
+activationConditions: {
+  events: [Hotkey.ENTER],
+  mode: ActivationMode.TRIGGER,
+  cooldown: 1000 // Prevent spam (milliseconds)
+}
+```
+
+## Complete Examples
+
+### Example 1: Command Palette Spell
+
+A command palette that appears with `Cmd+K`:
+
+```tsx
+import { useSpell, ActivationMode } from 'cedar-os';
+import { useState } from 'react';
+
+function CommandPaletteSpell() {
+	const [query, setQuery] = useState('');
+
+	const { isActive, deactivate } = useSpell({
+		id: 'command-palette',
+		activationConditions: {
+			events: ['cmd+k', 'ctrl+k'],
+			mode: ActivationMode.TOGGLE,
+		},
+		onActivate: () => {
+			setQuery(''); // Reset on open
+		},
+		preventDefaultEvents: true, // Prevent browser default for Ctrl+K
+	});
+
+	if (!isActive) return null;
+
+	return (
+		<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50'>
+			<div className='w-96 bg-white rounded-lg shadow-xl p-4'>
+				<input
+					autoFocus
+					value={query}
+					onChange={(e) => setQuery(e.target.value)}
+					onKeyDown={(e) => {
+						if (e.key === 'Escape') deactivate();
+					}}
+					placeholder='Type a command...'
+					className='w-full p-2 border rounded'
+				/>
+				{/* Command results here */}
+			</div>
+		</div>
+	);
+}
+```
+
+### Example 2: Context Menu Spell
+
+A context menu that appears on right-click:
+
+```tsx
+import { useSpell, MouseEvent, ActivationMode, useCedarStore } from 'cedar-os';
+
+function ContextMenuSpell() {
+	const [position, setPosition] = useState({ x: 0, y: 0 });
+
+	const { isActive } = useSpell({
+		id: 'context-menu',
+		activationConditions: {
+			events: [MouseEvent.RIGHT_CLICK],
+			mode: ActivationMode.TOGGLE,
+		},
+		onActivate: (state) => {
+			// Capture mouse position from trigger data
+			if (state.triggerData?.mousePosition) {
+				setPosition(state.triggerData.mousePosition);
+			}
+		},
+		preventDefaultEvents: true, // Prevent browser context menu
+	});
+
+	if (!isActive) return null;
+
+	return (
+		<div
+			className='fixed bg-white rounded shadow-lg p-2 z-50'
+			style={{ left: position.x, top: position.y }}>
+			<button className='block w-full text-left p-2 hover:bg-gray-100'>
+				Copy
+			</button>
+			<button className='block w-full text-left p-2 hover:bg-gray-100'>
+				Paste
+			</button>
+			{/* More menu items */}
+		</div>
+	);
+}
+```
+
+### Example 3: AI Assistant Spell
+
+A spell that integrates with Cedar's AI capabilities:
+
+```tsx
+import { useSpell, SelectionEvent, useCedarStore } from 'cedar-os';
+
+function AIAssistantSpell() {
+	const { sendMessage } = useCedarStore();
+	const [selectedText, setSelectedText] = useState('');
+
+	const { isActive } = useSpell({
+		id: 'ai-assistant',
+		activationConditions: {
+			events: [SelectionEvent.TEXT_SELECT],
+			mode: ActivationMode.TOGGLE,
+		},
+		onActivate: (state) => {
+			if (state.triggerData?.selectedText) {
+				setSelectedText(state.triggerData.selectedText);
+			}
+		},
+		ignoreInputElements: false, // Allow in text areas
+	});
+
+	if (!isActive || !selectedText) return null;
+
+	const handleAction = (action: string) => {
+		sendMessage({
+			content: `${action}: ${selectedText}`,
+			role: 'user',
+		});
+	};
+
+	return (
+		<div className='fixed bottom-4 right-4 bg-white rounded-lg shadow-xl p-4'>
+			<h3 className='font-bold mb-2'>AI Assistant</h3>
+			<p className='text-sm text-gray-600 mb-3'>
+				Selected: "{selectedText.slice(0, 50)}..."
+			</p>
+			<div className='space-y-2'>
+				<button
+					onClick={() => handleAction('Explain')}
+					className='block w-full text-left p-2 bg-blue-50 rounded hover:bg-blue-100'>
+					🤔 Explain this
+				</button>
+				<button
+					onClick={() => handleAction('Improve')}
+					className='block w-full text-left p-2 bg-green-50 rounded hover:bg-green-100'>
+					✨ Improve writing
+				</button>
+				<button
+					onClick={() => handleAction('Translate to Spanish')}
+					className='block w-full text-left p-2 bg-purple-50 rounded hover:bg-purple-100'>
+					🌍 Translate
+				</button>
+			</div>
+		</div>
+	);
+}
+```
+
+## Advanced Patterns
+
+### Combining Multiple Spells
+
+You can compose multiple spells for complex interactions:
+
+```tsx
+function MultiSpellComponent() {
+	// Primary spell for activation
+	const mainSpell = useSpell({
+		id: 'main-menu',
+		activationConditions: {
+			events: [Hotkey.SPACE],
+			mode: ActivationMode.HOLD,
+		},
+	});
+
+	// Secondary spell that only works when main is active
+	const subSpell = useSpell({
+		id: 'sub-action',
+		activationConditions: {
+			events: [Hotkey.ENTER],
+			mode: ActivationMode.TRIGGER,
+		},
+		onActivate: () => {
+			if (mainSpell.isActive) {
+				// Perform sub-action
+			}
+		},
+	});
+
+	return mainSpell.isActive ? <Menu /> : null;
+}
+```
+
+### Dynamic Activation Conditions
+
+Activation conditions can be changed dynamically:
+
+```tsx
+function DynamicSpell({ userPreference }) {
+	const activationKey = userPreference === 'vim' ? Hotkey.J : Hotkey.ARROW_DOWN;
+
+	const spell = useSpell({
+		id: 'navigation',
+		activationConditions: {
+			events: [activationKey],
+			mode: ActivationMode.TRIGGER,
+		},
+		onActivate: () => {
+			// Navigate down
+		},
+	});
+
+	// Spell will re-register when preference changes
+}
+```
+
+### Accessing Cedar Store
+
+Spells can interact with the Cedar store for AI operations:
+
+```tsx
+import { useCedarStore } from 'cedar-os';
+
+function StoreIntegratedSpell() {
+	const store = useCedarStore();
+
+	const spell = useSpell({
+		id: 'ai-spell',
+		activationConditions: {
+			events: ['alt+a'],
+			mode: ActivationMode.TOGGLE,
+		},
+		onActivate: () => {
+			// Access messages
+			const lastMessage = store.messages[store.messages.length - 1];
+
+			// Send new message
+			store.sendMessage({
+				content: 'Activated spell!',
+				role: 'user',
+			});
+
+			// Access other store slices
+			const styling = store.styling;
+		},
+	});
+}
+```
+
+## Best Practices
+
+### 1. Use Descriptive IDs
+
+```tsx
+// ✅ Good
+id: 'command-palette-main';
+id: 'context-menu-editor';
+
+// ❌ Bad
+id: 'spell1';
+id: 'menu';
+```
+
+### 2. Handle Cleanup
+
+```tsx
+// The hook automatically handles cleanup, but you can add custom logic
+onDeactivate: () => {
+	// Reset state
+	setMenuItems([]);
+	// Clear timers
+	clearTimeout(timeoutId);
+};
+```
+
+### 3. Prevent Conflicts
+
+```tsx
+// Use ignoreInputElements to avoid conflicts in forms
+ignoreInputElements: true; // Default
+
+// Use preventDefaultEvents to override browser shortcuts
+preventDefaultEvents: true; // When using Ctrl+S, etc.
+```
+
+### 4. Provide Visual Feedback
+
+```tsx
+const { isActive } = useSpell({...});
+
+// Always indicate spell state to users
+return (
+  <>
+    {isActive && <StatusIndicator />}
+    {isActive && <SpellUI />}
+  </>
+);
+```
+
+### 5. Consider Accessibility
+
+```tsx
+// Provide alternative activation methods
+activationConditions: {
+	events: [
+		'ctrl+space', // Keyboard users
+		MouseEvent.RIGHT_CLICK, // Mouse users
+		'alt+enter', // Screen reader friendly
+	];
+}
+```
+
+## API Reference
+
+### Available Hotkeys
+
+All single keys (A-Z, 0-9) plus:
+
+- Function keys: `F1` - `F12`
+- Special keys: `ESCAPE`, `ENTER`, `SPACE`, `TAB`, `DELETE`, `BACKSPACE`
+- Arrow keys: `ARROW_UP`, `ARROW_DOWN`, `ARROW_LEFT`, `ARROW_RIGHT`
+- Modifiers: `CTRL`, `CMD`, `META`, `ALT`, `SHIFT`
+
+### Mouse Events
+
+- `RIGHT_CLICK` - Right mouse button
+- `DOUBLE_CLICK` - Double left click
+- `MIDDLE_CLICK` - Middle mouse button
+- `SHIFT_CLICK` - Shift + left click
+- `CTRL_CLICK` - Ctrl + left click
+- `CMD_CLICK` - Cmd + left click (Mac)
+- `ALT_CLICK` - Alt + left click
+
+### Selection Events
+
+- `TEXT_SELECT` - Text selection in document
+
+## Next Steps
+
+- Explore the [Spell Architecture](/spells/spell-architecture) to understand the internals
+- Check out the [Radial Menu](/spells/radial-menu) implementation for a complex example
+- Visit the [Cedar Playground](/examples/cedar-playground) to see spells in action
