@@ -72,7 +72,6 @@ export type {
 	MessageByType,
 	MessageInput,
 	MessageRenderer,
-	MessageRendererConfig,
 	MessageRendererRegistry,
 	MessageRole,
 	MultipleChoiceMessage,
@@ -107,8 +106,24 @@ export type {
 	StreamResponse,
 } from '@/store/agentConnection/AgentConnectionTypes';
 
-// Export SendMessageParams from the slice
-export type { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
+// Export SendMessageParams and response processor types from the slice
+export type {
+	BaseStructuredResponseType,
+	DefaultStructuredResponseType,
+	CustomStructuredResponseType,
+	StructuredResponseType,
+	ResponseProcessor,
+	ResponseProcessorRegistry,
+} from '@/store/agentConnection/AgentConnectionTypes';
+
+// Export Mastra message types
+export type {
+	MastraStreamedResponse,
+	MastraStreamedResponseType,
+} from '@/store/agentConnection/providers/mastra';
+
+// Export progress update response processor
+export type { ProgressUpdateResponse } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 
 // Export storage configuration types
 export type {
@@ -139,6 +154,23 @@ export {
 	useStyling,
 	useVoice,
 } from '@/store/CedarStore';
+
+// Export action response processor hooks
+export {
+	ActionResponsePayload,
+	ActionResponse,
+	ActionResponseFor,
+	createActionResponseProcessor,
+	createResponseProcessor,
+} from '@/store/agentConnection/responseProcessors/createResponseProcessor';
+
+// Export message renderer factory function
+export {
+	createMessageRenderer,
+	ActionMessage,
+	ActionMessageFor,
+	createActionMessageRenderer,
+} from '@/store/messages/renderers/createMessageRenderer';
 
 // Export spell system types and utilities
 export {

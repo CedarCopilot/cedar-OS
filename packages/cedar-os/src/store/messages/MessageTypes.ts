@@ -31,7 +31,10 @@ export type MessageInput =
 	| (Omit<TodoListMessage, 'id'> & { id?: string })
 	| (Omit<DialogueOptionsMessage, 'id'> & { id?: string })
 	| (Omit<TickerMessage, 'id'> & { id?: string })
-	| (Omit<SliderMessage, 'id'> & { id?: string });
+	| (Omit<SliderMessage, 'id'> & { id?: string })
+	| (Omit<CustomMessage<string, Record<string, unknown>>, 'id'> & {
+			id?: string;
+	  });
 
 // Default Cedar message types as a union
 export type DefaultMessage =
@@ -50,7 +53,7 @@ export type MessageByType<T extends string, M = DefaultMessage> = Extract<
 >;
 
 // Keep the old Message type for backwards compatibility
-export type Message = DefaultMessage;
+export type Message = DefaultMessage | CustomMessage<string, object>;
 
 // Message that contains text content
 export type TextMessage = BaseMessage & {
@@ -136,19 +139,19 @@ export interface SliderMessage extends BaseMessage {
 // Export a type helper for creating custom message types
 export type CustomMessage<
 	T extends string,
-	P extends Record<string, unknown> = Record<string, never>
+	P extends object = Record<string, never>
 > = BaseMessage & { type: T } & P;
 
-// Message renderer function type
-export type MessageRenderer = (message: Message) => ReactNode;
+// Message renderer function type - now typed to accept BaseMessage and return ReactNode
+export type MessageRenderer<T extends Message = Message> = {
+	type: T['type'];
+	render: (message: T) => ReactNode;
+	namespace?: string;
+	validateMessage?: (message: Message) => message is T;
+};
 
 // Registry for message renderers
-export type MessageRendererRegistry = Record<string, MessageRenderer>;
-
-// Message renderer configuration
-export interface MessageRendererConfig<T extends BaseMessage = BaseMessage> {
-	type: T['type'];
-	renderer: React.ComponentType<{ message: T }>;
-	priority?: number;
-	validateMessage?: (message: BaseMessage) => message is T;
-}
+export type MessageRendererRegistry = Record<
+	string,
+	MessageRenderer | undefined
+>;

@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { CedarStore } from '@/store/CedarOSTypes';
 
 // Base types for LLM responses and events
 export interface LLMResponse {
@@ -10,7 +11,8 @@ export interface LLMResponse {
 	};
 	metadata?: Record<string, unknown>;
 	// The object field contains structured output when using JSON Schema or Zod
-	object?: unknown;
+	// Can be a single object or an array of objects for multiple operations
+	object?: StructuredResponseType | StructuredResponseType[];
 }
 
 // Voice-specific response type
@@ -40,7 +42,7 @@ export interface VoiceParams {
 
 export type StreamEvent =
 	| { type: 'chunk'; content: string }
-	| { type: 'object'; object: object }
+	| { type: 'object'; object: StructuredResponseType }
 	| { type: 'done'; completedItems: (string | object)[] }
 	| { type: 'error'; error: Error }
 	| { type: 'metadata'; data: unknown };
@@ -58,7 +60,7 @@ export interface BaseParams {
 	systemPrompt?: string;
 	temperature?: number;
 	maxTokens?: number;
-	[key: string]: unknown;
+	[key: string]: any;
 }
 
 export interface OpenAIParams extends BaseParams {
@@ -175,3 +177,43 @@ export interface ProviderImplementation<
 	handleResponse: (response: Response) => Promise<LLMResponse>;
 	handleStreamResponse: (chunk: string) => StreamEvent;
 }
+
+// Response processor types
+export interface BaseStructuredResponseType {
+	type: string;
+	content?: string;
+}
+
+// Default response type with fields from LLMResponse (excluding 'object')
+export interface DefaultStructuredResponseType
+	extends BaseStructuredResponseType {
+	content: string;
+}
+
+export type CustomStructuredResponseType<
+	T extends string,
+	P extends object = Record<string, never>
+> = BaseStructuredResponseType & { type: T } & P;
+
+// Union of default and custom response types
+export type StructuredResponseType =
+	| DefaultStructuredResponseType
+	| CustomStructuredResponseType<string, object>;
+
+export interface ResponseProcessor<
+	T extends StructuredResponseType = StructuredResponseType
+> {
+	type: string;
+	namespace?: string;
+	execute: (obj: T, store: CedarStore) => void | Promise<void>;
+	validate?: (obj: StructuredResponseType) => obj is T;
+}
+
+export type ResponseProcessorExecute<
+	T extends StructuredResponseType = StructuredResponseType
+> = (obj: T, store: CedarStore) => void | Promise<void>;
+
+export type ResponseProcessorRegistry = Record<
+	string,
+	ResponseProcessor | undefined
+>;

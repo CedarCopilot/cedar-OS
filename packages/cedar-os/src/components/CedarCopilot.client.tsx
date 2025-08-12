@@ -2,7 +2,11 @@
 
 import React, { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
-import type { ProviderConfig } from '@/store/agentConnection/AgentConnectionTypes';
+import type {
+	ProviderConfig,
+	ResponseProcessor,
+} from '@/store/agentConnection/AgentConnectionTypes';
+import type { MessageRenderer } from '@/store/messages/MessageTypes';
 import { useCedarState } from '@/store/stateSlice/useCedarState';
 import { MessageStorageConfig } from '@/store/messages/messageStorage';
 import type { VoiceState } from '@/store/voice/voiceSlice';
@@ -14,6 +18,8 @@ export interface CedarCopilotProps {
 	llmProvider?: ProviderConfig;
 	messageStorage?: MessageStorageConfig;
 	voiceSettings?: Partial<VoiceState['voiceSettings']>;
+	responseProcessors?: ResponseProcessor[];
+	messageRenderers?: MessageRenderer[];
 }
 
 // Client-side component with useEffect
@@ -23,6 +29,8 @@ export function CedarCopilotClient({
 	llmProvider,
 	messageStorage,
 	voiceSettings,
+	responseProcessors = [],
+	messageRenderers = [],
 }: CedarCopilotProps) {
 	// Voice settings
 	const updateVoiceSettings = useCedarStore(
@@ -60,11 +68,38 @@ export function CedarCopilotClient({
 		}
 	}, [messageStorage]);
 
+	// Response processors
+	useEffect(() => {
+		const store = useCedarStore.getState();
+
+		responseProcessors.forEach((processor) => {
+			store.registerResponseProcessor(processor as ResponseProcessor);
+		});
+	}, [responseProcessors]);
+
+	// Message renderers
+	useEffect(() => {
+		const store = useCedarStore.getState();
+
+		messageRenderers.forEach((renderer) => {
+			store.registerMessageRenderer(renderer as MessageRenderer);
+		});
+
+		// Cleanup on unmount
+		return () => {
+			messageRenderers.forEach((renderer) => {
+				store.unregisterMessageRenderer(renderer.type, renderer.namespace);
+			});
+		};
+	}, [messageRenderers]);
+
 	console.log('CedarCopilot', {
 		userId,
 		llmProvider,
 		voiceSettings,
 		messageStorage,
+		responseProcessors,
+		messageRenderers,
 	});
 
 	return <>{children}</>;

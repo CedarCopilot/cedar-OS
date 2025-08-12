@@ -10,6 +10,10 @@ import {
 	getMessageStorageState,
 	MessageStorageState,
 } from '@/store/messages/messageStorage';
+import {
+	defaultMessageRenderers,
+	initializeMessageRendererRegistry,
+} from '@/store/messages/renderers/initializeMessageRendererRegistry';
 
 // Define the messages slice
 export type MessagesSlice = MessageStorageState & {
@@ -31,10 +35,12 @@ export type MessagesSlice = MessageStorageState & {
 	setIsProcessing: (isProcessing: boolean) => void;
 	setShowChat: (showChat: boolean) => void;
 
-	// Renderer management
-	registerMessageRenderer: (type: string, renderer: MessageRenderer) => void;
-	unregisterMessageRenderer: (type: string) => void;
-	getMessageRenderer: (type: string) => MessageRenderer | undefined;
+	// Renderer management - now single renderer per type
+	registerMessageRenderer: <T extends Message>(
+		config: MessageRenderer<T>
+	) => void;
+	unregisterMessageRenderer: (type: string, namespace?: string) => void;
+	getMessageRenderers: (type: string) => MessageRenderer | undefined;
 
 	// Utility methods
 	getMessageById: (id: string) => Message | undefined;
@@ -54,7 +60,9 @@ export const createMessagesSlice: StateCreator<
 		messages: [],
 		isProcessing: false,
 		showChat: false,
-		messageRenderers: {},
+		messageRenderers: initializeMessageRendererRegistry(
+			defaultMessageRenderers
+		),
 		// Actions
 		setMessages: (messages: Message[]) => set({ messages }),
 		setShowChat: (showChat: boolean) => set({ showChat }),
@@ -121,22 +129,36 @@ export const createMessagesSlice: StateCreator<
 		},
 		clearMessages: () => set({ messages: [] }),
 		setIsProcessing: (isProcessing: boolean) => set({ isProcessing }),
-		registerMessageRenderer: (type: string, renderer: MessageRenderer) => {
-			set((state) => ({
-				messageRenderers: {
-					...state.messageRenderers,
-					[type]: renderer,
-				},
-			}));
-		},
-		unregisterMessageRenderer: (type: string) => {
+		registerMessageRenderer: <T extends Message>(
+			config: MessageRenderer<T>
+		) => {
 			set((state) => {
-				const { [type]: removed, ...rest } = state.messageRenderers;
-				void removed;
-				return { messageRenderers: rest };
+				const { type } = config;
+
+				// Store the config as-is (it already fits the MessageRenderer shape)
+				return {
+					messageRenderers: {
+						...state.messageRenderers,
+						[type]: config as unknown as MessageRenderer<Message>,
+					},
+				};
 			});
 		},
-		getMessageRenderer: (type: string) => {
+		unregisterMessageRenderer: (type: string, namespace?: string) => {
+			set((state) => {
+				const existing = state.messageRenderers[type];
+				if (!existing) return {};
+
+				if (!namespace || existing.namespace === namespace) {
+					const { [type]: removed, ...rest } = state.messageRenderers;
+					void removed;
+					return { messageRenderers: rest };
+				}
+				// Namespace didn't match; keep as is
+				return {};
+			});
+		},
+		getMessageRenderers: (type: string) => {
 			return get().messageRenderers[type];
 		},
 		getMessageById: (id: string) => {

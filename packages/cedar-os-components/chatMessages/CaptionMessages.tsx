@@ -22,7 +22,6 @@ interface CaptionMessagesProps {
 }
 
 const CaptionMessages: React.FC<CaptionMessagesProps> = ({
-	showThinking = true,
 	className = '',
 }) => {
 	const { messages } = useMessages();
@@ -34,19 +33,14 @@ const CaptionMessages: React.FC<CaptionMessagesProps> = ({
 
 	// Get the appropriate message based on showThinking prop
 	const latestMessage = React.useMemo(() => {
-		if (showThinking) {
-			// Show the latest message regardless of role
-			return messages[messages.length - 1];
-		} else {
-			// Find the last non-user message
-			for (let i = messages.length - 1; i >= 0; i--) {
-				if (messages[i].role !== 'user') {
-					return messages[i];
-				}
+		// Find the last non-user message of type text
+		for (let i = messages.length - 1; i >= 0; i--) {
+			if (messages[i].role !== 'user' && messages[i].type === 'text') {
+				return messages[i];
 			}
-			return null;
 		}
-	}, [messages, showThinking]);
+		return null;
+	}, [messages]);
 
 	// Calculate text size based on character count
 	const getTextSizeClass = (text: string) => {

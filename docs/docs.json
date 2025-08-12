@@ -31,7 +31,8 @@
 				"pages": [
 					"agent-backend-connection/agent-backend-connection",
 					"agent-backend-connection/mastra",
-					"agent-backend-connection/custom"
+					"agent-backend-connection/custom",
+					"agent-backend-connection/custom-response-processing"
 				]
 			},
 			{

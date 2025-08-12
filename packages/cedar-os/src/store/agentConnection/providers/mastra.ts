@@ -226,3 +226,31 @@ export const mastraProvider: ProviderImplementation<
 		return { type: 'chunk', content: chunk };
 	},
 };
+
+/**
+ * All event types emitted by a Mastra agent stream.
+ */
+export type MastraStreamedResponseType =
+	| 'start'
+	| 'step-start'
+	| 'tool-call'
+	| 'tool-result'
+	| 'step-finish'
+	| 'tool-output'
+	| 'step-result'
+	| 'step-output'
+	| 'finish';
+
+/**
+ * Strongly-typed wrapper around a Mastra structured response message.
+ * Extends Cedar's `CustomMessage` so it is compatible with the message system.
+ */
+export type MastraStreamedResponse<
+	T extends MastraStreamedResponseType = MastraStreamedResponseType
+> = {
+	type: T;
+	runId: string;
+	from: string;
+	// TODO: update once Mastra releases new types
+	payload: Record<string, unknown>;
+};

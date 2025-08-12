@@ -80,7 +80,7 @@ export type {
 	DefaultMessage,
 	TypedMessage,
 	MessageByType,
-	MessageRendererConfig,
+	MessageRenderer,
 } from '@/store/messages/MessageTypes';
 
 // Export voice slice and utilities

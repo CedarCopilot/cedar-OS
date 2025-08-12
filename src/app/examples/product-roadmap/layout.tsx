@@ -1,7 +1,20 @@
 'use client';
 
-import { CedarCopilot, useCedarStore } from 'cedar-os';
-import type { MessageStorageConfig, ProviderConfig } from 'cedar-os';
+import { FeatureNodeData } from '@/app/examples/product-roadmap/components/FeatureNode';
+import {
+	CedarCopilot,
+	createActionMessageRenderer,
+	createMessageRenderer,
+	createResponseProcessor,
+	useCedarStore,
+} from 'cedar-os';
+import type {
+	ActionMessageFor,
+	CustomMessage,
+	CustomStructuredResponseType,
+	MessageStorageConfig,
+	ProviderConfig,
+} from 'cedar-os';
 import { ReactNode } from 'react';
 import TooltipMenuSpell from '../../../../packages/cedar-os-components/spells/TooltipMenuSpell';
 import type { ExtendedTooltipMenuItem } from '../../../../packages/cedar-os-components/spells/TooltipMenuSpell';
@@ -47,6 +60,57 @@ export default function ProductRoadmapLayout({
 		type: 'local',
 		options: { key: 'cedar-test' },
 	};
+
+	type UnregisteredResponseType = CustomStructuredResponseType<
+		'unregistered_event',
+		{
+			level: string;
+		}
+	>;
+	const responseProcessor = createResponseProcessor<UnregisteredResponseType>({
+		type: 'unregistered_event',
+		execute: (obj) => {
+			console.log('🔥 Unregistered event', obj);
+		},
+	});
+
+	type AlertMessage = CustomMessage<
+		'alert',
+		{
+			level: string;
+		}
+	>;
+
+	const AlertMessageRenderer = createMessageRenderer<AlertMessage>({
+		type: 'alert',
+		render: (message) => {
+			return <div>Alert: {message.level}</div>;
+		},
+	});
+
+	type AddNodeActionMessage = ActionMessageFor<
+		'nodes',
+		'addNode',
+		[{ data: Partial<FeatureNodeData> }]
+	>;
+
+	const customActionMessageRenderer = createActionMessageRenderer({
+		render: (message) => {
+			switch (message.setterKey) {
+				case 'addNode':
+					const typedMessage = message as AddNodeActionMessage;
+
+					return (
+						<div>
+							Add node action:{' '}
+							{JSON.stringify(typedMessage.args[0].data.description)}
+						</div>
+					);
+				default:
+					return <div>Action: {message.setterKey}</div>;
+			}
+		},
+	});
 
 	// Define menu items for text selection
 	const textSelectionMenuItems: ExtendedTooltipMenuItem[] = [
@@ -190,7 +254,9 @@ export default function ProductRoadmapLayout({
 		<CedarCopilot
 			llmProvider={llmProvider}
 			voiceSettings={voiceSettings}
-			messageStorage={localStorageConfig}>
+			messageStorage={localStorageConfig}
+			responseProcessors={[responseProcessor]}
+			messageRenderers={[AlertMessageRenderer, customActionMessageRenderer]}>
 			{children}
 			{/* TooltipMenuSpell for any text selection */}
 			<TooltipMenuSpell

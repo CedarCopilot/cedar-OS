@@ -1,241 +1,272 @@
 ---
-title: 'Custom Message Rendering'
-description: 'Create custom message components and renderers'
+title: 'How Messages are Rendered (and Custom Rendering)'
+description: 'Create custom message components and renderers for the chat interface'
 ---
 
-Cedar allows you to completely customize how messages are displayed in your chat interface. You can create custom message components, override default renderers, and add interactive elements to messages.
+Cedar allows you to completely customize how messages are displayed in your chat interface. This is used for use cases like Generative UI, or any custom logic you want for the way that messages are rendered to the user.
 
-## Custom Message Components
+Note: This system closely mirrors the architecture of [Custom Response Processing](/agent-backend-connection/custom-response-processing).
 
-Create custom components for specific message types:
+## Base Message Type
+
+All messages in Cedar extend the `BaseMessage` interface from `@messages/types`:
 
 ```tsx
-import { useMessageRenderer } from 'cedar-os';
-
-// Custom component for code execution results
-function CodeResultMessage({ message }) {
-	return (
-		<div className='bg-gray-900 text-green-400 p-4 rounded-lg font-mono'>
-			<div className='text-xs text-gray-500 mb-2'>Execution Result</div>
-			<pre>{message.content}</pre>
-			<button
-				className='mt-2 text-blue-400 hover:text-blue-300'
-				onClick={() => navigator.clipboard.writeText(message.content)}>
-				Copy Result
-			</button>
-		</div>
-	);
-}
-
-// Custom component for interactive surveys
-function SurveyMessage({ message, onResponse }) {
-	const [selectedOption, setSelectedOption] = useState(null);
-
-	return (
-		<div className='border rounded-lg p-4'>
-			<h3 className='font-semibold mb-3'>{message.content.question}</h3>
-			<div className='space-y-2'>
-				{message.content.options.map((option, index) => (
-					<button
-						key={index}
-						className={`block w-full text-left p-2 rounded ${
-							selectedOption === index ? 'bg-blue-100' : 'hover:bg-gray-50'
-						}`}
-						onClick={() => {
-							setSelectedOption(index);
-							onResponse(option);
-						}}>
-						{option}
-					</button>
-				))}
-			</div>
-		</div>
-	);
+interface BaseMessage {
+	id: string; // Unique identifier (auto-generated if not provided)
+	role: MessageRole; // 'bot' | 'user' | 'assistant'
+	content: string; // The text content of the message
+	createdAt?: string; // ISO timestamp (auto-generated)
+	metadata?: Record<string, unknown>; // Optional key-value pairs
+	type: string; // String identifier for renderer matching
 }
 ```
 
-## Registering Custom Renderers
+## Requirements for Custom Messages
 
-Register your custom components with the message renderer:
-
-```tsx
-import { CedarCopilot } from 'cedar-os';
-
-function App() {
-	const customRenderers = {
-		'code-result': CodeResultMessage,
-		survey: SurveyMessage,
-		'file-upload': FileUploadMessage,
-		chart: ChartMessage,
-	};
-
-	return (
-		<CedarCopilot llmProvider={llmProvider} messageRenderers={customRenderers}>
-			{/* Your app content */}
-		</CedarCopilot>
-	);
-}
-```
-
-## Message Renderer Hook
-
-Use the `useMessageRenderer` hook for advanced customization:
+To use the custom message rendering system, your message objects must have a `type` field. This field determines which renderer will be used to display the message.
 
 ```tsx
-import { useMessageRenderer } from 'cedar-os';
-
-function CustomChatBubbles() {
-	const { renderMessage, registerRenderer } = useMessageRenderer();
-
-	// Register a new renderer
-	useEffect(() => {
-		registerRenderer('todo-list', ({ message }) => (
-			<TodoListMessage
-				items={message.content.items}
-				onToggle={(index) => {
-					// Handle todo toggle
-				}}
-			/>
-		));
-	}, [registerRenderer]);
-
-	return (
-		<div className='messages-container'>
-			{messages.map((message) => (
-				<div key={message.id} className='message-wrapper'>
-					{renderMessage(message)}
-				</div>
-			))}
-		</div>
-	);
-}
-```
-
-## Message Types and Structure
-
-Messages in Cedar follow this structure:
-
-```tsx
-interface Message {
-	id: string;
-	type: string; // 'text', 'image', 'file', or custom type
-	role: 'user' | 'assistant' | 'system';
-	content: any; // Content varies by type
-	timestamp: Date;
-	metadata?: {
-		streaming?: boolean;
-		error?: string;
-		[key: string]: any;
-	};
-}
-```
-
-## Built-in Message Types
-
-Cedar provides several built-in message renderers:
-
-### Text Messages
-
-```tsx
+// Valid message - has required 'type' field
 {
-  type: 'text',
-  content: 'Hello, how can I help you?'
+  type: 'alert',
+  role: 'assistant',
+  content: 'This is an alert message',
+  level: 'warning'
 }
-```
 
-### Image Messages
-
-```tsx
+// Invalid - missing 'type' field
 {
-  type: 'image',
-  content: {
-    url: 'https://example.com/image.jpg',
-    alt: 'Description',
-    caption: 'Optional caption'
-  }
+  role: 'assistant',
+  content: 'This message will use default rendering'
 }
 ```
 
-### File Messages
+## Message Renderer Interface
+
+Cedar uses a strongly typed `MessageRenderer` interface that ensures type safety throughout the rendering pipeline:
 
 ```tsx
-{
-  type: 'file',
-  content: {
-    filename: 'document.pdf',
-    size: 1024000,
-    url: 'https://example.com/document.pdf',
-    type: 'application/pdf'
-  }
-}
+export type MessageRenderer<T extends Message = Message> = {
+	type: T['type']; // Must match the message type
+	render: (message: T) => ReactNode; // Receives narrowly typed message
+	namespace?: string; // Optional organization namespace
+	validateMessage?: (message: Message) => message is T; // Receives broadly typed Message for validation
+};
 ```
 
-## Conditional Rendering
+**Key typing features:**
 
-Render different components based on message properties:
+- The `render` function receives your **narrowly typed custom message** (e.g., `AlertMessage`)
+- The `validateMessage` function receives the **broadly typed `Message`** for runtime validation
+
+## Custom Message Type Definition
+
+Cedar exports a `CustomMessage<T, P>` type that allows you to create type-safe custom messages:
 
 ```tsx
-function ConditionalRenderer({ message }) {
-	const { renderMessage } = useMessageRenderer();
+import { CustomMessage } from 'cedar-os';
 
-	// Custom logic for rendering based on user role
-	if (message.role === 'system') {
-		return <SystemNotification message={message} />;
+// T = type string, P = additional properties
+export type CustomMessage<
+	T extends string,
+	P extends object = Record<string, never>
+> = BaseMessage & { type: T } & P;
+
+// Example usage
+type AlertMessage = CustomMessage<
+	'alert',
+	{
+		level: 'info' | 'warning' | 'error';
 	}
+>;
 
-	// Custom rendering for messages with attachments
-	if (message.metadata?.hasAttachments) {
-		return <MessageWithAttachments message={message} />;
+type TodoListMessage = CustomMessage<
+	'todo-list',
+	{
+		items: Array<{ id: string; text: string; completed: boolean }>;
+		onToggle?: (id: string) => void;
 	}
-
-	// Fall back to default renderer
-	return renderMessage(message);
-}
+>;
 ```
 
-## Interactive Message Actions
+## Message Renderer Factory Function
 
-Add interactive elements to messages:
+Cedar exports a `createMessageRenderer` factory function to create type-safe renderers:
 
 ```tsx
-function InteractiveMessage({ message }) {
-	const { addMessage, callLLM } = useCedarStore();
+import { createMessageRenderer } from 'cedar-os';
 
-	const handleFollowUp = async (question) => {
-		addMessage({
-			type: 'text',
-			role: 'user',
-			content: question,
-		});
-
-		await callLLM({
-			prompt: question,
-			context: message.content, // Use original message as context
-		});
-	};
-
-	return (
-		<div className='message-content'>
-			<p>{message.content}</p>
-
-			<div className='message-actions mt-2 space-x-2'>
-				<button
-					onClick={() => handleFollowUp('Can you explain this further?')}
-					className='text-blue-600 hover:text-blue-800 text-sm'>
-					Explain Further
-				</button>
-				<button
-					onClick={() => handleFollowUp('Give me an example')}
-					className='text-blue-600 hover:text-blue-800 text-sm'>
-					Show Example
-				</button>
-			</div>
-		</div>
-	);
-}
+// Create a renderer with full type safety
+const AlertRenderer = createMessageRenderer<AlertMessage>({
+	type: 'alert',
+	namespace: 'my-app',
+	render: (message) => {
+		// message is narrowly typed as AlertMessage
+		return <div className={`alert-${message.level}`}>{message.content}</div>;
+	},
+	validateMessage: (msg): msg is AlertMessage => {
+		// msg is broadly typed as Message for validation
+		return msg.type === 'alert' && 'level' in msg;
+	},
+});
 ```
 
-## Next Steps
+## How Message Rendering Works Internally
 
-- Learn about [agent input context](/chat/agent-input-context)
-- Explore [subscribing to state](/chat/subscribing-state)
+The chat system uses the following process to render messages:
+
+1. **Message Reception**: When a message is added to the chat, the system examines its `type` field
+2. **Renderer Lookup**: The system searches for a registered renderer that matches the message type
+3. **Validation**: If a renderer is found and has a validation function, it checks if the message structure is valid
+4. **Rendering**: If validation passes (or no validation exists), the renderer's `render` function is called
+5. **Fallback**: If no matching renderer is found or validation fails, the default text renderer is used
+
+## Full Implementation Examples
+
+Here's an example of creating a custom message renderer for an AlertMessage.
+
+```tsx
+import { createMessageRenderer, CustomMessage } from 'cedar-os';
+
+// Define custom message type
+type AlertMessage = CustomMessage<'alert', { level: string }>;
+
+// Create the renderer
+const AlertMessageRenderer = createMessageRenderer<AlertMessage>({
+	type: 'alert',
+	namespace: 'product-roadmap',
+	render: (message) => {
+		const levelColors = {
+			info: 'bg-blue-100 text-blue-800',
+			warning: 'bg-yellow-100 text-yellow-800',
+			error: 'bg-red-100 text-red-800',
+		};
+
+		return (
+			<div
+				className={`p-3 rounded-lg ${
+					levelColors[message.level] || levelColors.info
+				}`}>
+				<div className='font-semibold'>Alert</div>
+				<div>{message.content}</div>
+			</div>
+		);
+	},
+	validateMessage: (msg): msg is AlertMessage => {
+		return (
+			msg.type === 'alert' && 'level' in msg && typeof msg.level === 'string'
+		);
+	},
+});
+
+// Register with CedarCopilot
+<CedarCopilot
+	messageRenderers={[AlertMessageRenderer]}
+	// ... other props
+>
+	{children}
+</CedarCopilot>;
+```
+
+## Default Message Types and Renderers
+
+Cedar automatically handles these message types with default behavior. Each type has a corresponding default renderer:
+
+### `"message"` Type
+
+- **Behavior**: Standard text messages with role-based styling
+- **Properties**: `content: string`, `role: 'user' | 'assistant' | 'bot'`
+- **Renderer**: Built-in text message renderer with role-based styling
+- **Warning**: Overriding this type will disable default text message rendering
+
+### `"action"` Type
+
+- **Behavior**: Executes state actions and displays completion status
+- **Properties**: `stateKey: string`, `setterKey: string`, `args?: unknown[]`
+- **Default Renderer**: `ActionRenderer` shows action completion with shimmer effects
+
+**Action Factory Functions**: Cedar provides special factory functions for action messages:
+
+```tsx
+import { createActionMessageRenderer, ActionMessageFor } from 'cedar-os';
+
+// Specific action message type using helper
+type UpdateCounterAction = ActionMessageFor<
+	'counter', // StateKey
+	'increment', // SetterKey
+	[number] // Args
+>;
+
+// Create custom action renderer with filtering
+const CounterActionRenderer = createActionMessageRenderer<UpdateCounterAction>({
+	namespace: 'counter',
+	setterKey: 'increment', // Only handle increment actions
+	render: (message) => (
+		<div className='action-message'>
+			✅ Incremented counter by {message.args?.[0] || 1}
+		</div>
+	),
+});
+```
+
+### `"progress_update"` Type
+
+- **Behavior**: Shows progress indicators with shimmer effects
+- **Properties**: `content: string`, `metadata.state?: 'in_progress' | 'complete' | 'error'`
+- **Default Renderer**: `ProgressUpdateRenderer` with animated shimmer text
+
+### Additional Built-in Renderers
+
+Cedar also includes renderers for streaming events:
+
+#### Mastra Event Renderer
+
+Cedar automatically receives and renders all Mastra streamed events. Any of these can be customized or overridden with your own renderers:
+
+**Supported Mastra Event Types:**
+
+- `'start'` - Agent run started
+- `'step-start'` - Agent step started
+- `'tool-call'` - Tool being called
+- `'tool-result'` - Tool call result
+- `'step-finish'` - Agent step completed
+- `'tool-output'` - Tool output received
+- `'step-result'` - Step result available
+- `'step-output'` - Step output received
+- `'finish'` - Agent run completed
+
+**Customization**: You can override any specific Mastra event type by creating a custom renderer with the same `type`. For example, to customize just the `'tool-call'` event:
+
+```tsx
+const CustomToolCallRenderer = createMessageRenderer<
+	CustomMastraMessage<'tool-call'>
+>({
+	type: 'tool-call',
+	render: (
+		message // typed
+	) => (
+		<div className='custom-tool-call'>
+			🔧 Calling tool: {message.payload.toolName}
+		</div>
+	),
+});
+```
+
+**⚠️ Important**: If you override any of these default types, you lose the built-in behavior. Ensure your custom implementation covers all cases you want to support.
+
+## Recommended File Structure
+
+Cedar encourages organizing custom renderers in dedicated files for easier maintenance and debugging:
+
+```
+src/
+  cedar-os/
+    renderers/
+      messageRenderers.tsx    // All custom message renderers
+      index.ts               // Export registration function
+  components/
+    Layout.tsx              // Register renderers with CedarCopilot
+```
+
+This structure keeps all Cedar-related logic organized under a `cedar-os` directory, making it easier to maintain, debug, and ensure consistency across your application.
