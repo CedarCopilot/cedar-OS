@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { TooltipMenu, type TooltipMenuItem } from '../inputs/TooltipMenu';
-import { FloatingChatInput } from '../chatInput/FloatingChatInput';
+import { TooltipMenu, type TooltipMenuItem } from '@/inputs/TooltipMenu';
+import { FloatingChatInput } from '@/chatInput/FloatingChatInput';
 import {
 	useCedarStore,
 	useSpell,
 	SelectionEvent,
 	ActivationMode,
 	type ActivationConditions,
-} from '../../cedar-os/src/store/CedarStore';
+} from 'cedar-os';
 
 export interface ExtendedTooltipMenuItem extends TooltipMenuItem {
 	/** If true, this item will spawn a floating input instead of invoking immediately */

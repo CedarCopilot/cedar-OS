@@ -9,7 +9,7 @@ import {
 	Hotkey,
 	ActivationMode,
 	type ActivationConditions,
-} from '../../cedar-os/src/store/CedarStore';
+} from 'cedar-os';
 // TODO: TooltipText component needs to be created
 // import TooltipText from '@/components/interactions/components/TooltipText';
 

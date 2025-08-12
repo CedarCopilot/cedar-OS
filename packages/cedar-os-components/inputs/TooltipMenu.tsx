@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../cedar-os/src/styles/stylingUtils';
 import { useStyling } from '../../cedar-os/src/store/CedarStore';
-import type { CedarStore } from '../../cedar-os/src/store/types';
+import type { CedarStore } from 'cedar-os';
 
 export interface TooltipMenuItem {
 	title: string;
