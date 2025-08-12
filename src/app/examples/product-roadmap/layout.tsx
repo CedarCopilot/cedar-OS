@@ -1,5 +1,6 @@
 'use client';
 
+import { FeatureNodeData } from '@/app/examples/product-roadmap/components/FeatureNode';
 import {
 	CedarCopilot,
 	createActionMessageRenderer,
@@ -79,15 +80,26 @@ export default function ProductRoadmapLayout({
 	type AddNodeActionMessage = ActionMessageFor<
 		'nodes',
 		'addNode',
-		[{ name: string; description: string }]
+		[{ data: Partial<FeatureNodeData> }]
 	>;
 
-	const customActionMessageRenderer =
-		createActionMessageRenderer<AddNodeActionMessage>({
-			render: (message) => {
-				return <div>Action: {message.setterKey}</div>;
-			},
-		});
+	const customActionMessageRenderer = createActionMessageRenderer({
+		render: (message) => {
+			switch (message.setterKey) {
+				case 'addNode':
+					const typedMessage = message as AddNodeActionMessage;
+
+					return (
+						<div>
+							Add node action:{' '}
+							{JSON.stringify(typedMessage.args[0].data.description)}
+						</div>
+					);
+				default:
+					return <div>Action: {message.setterKey}</div>;
+			}
+		},
+	});
 
 	return (
 		<CedarCopilot
