@@ -1,11 +1,11 @@
 import { create, StateCreator } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
-import { createStylingSlice } from './stylingSlice';
+import { createStylingSlice } from '@/store/stylingSlice';
 import { createStateSlice } from '@/store/stateSlice/stateSlice';
 import { createMessagesSlice } from '@/store/messages/messagesSlice';
 import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
-import type { CedarStore } from './CedarOSTypes';
+import type { CedarStore } from '@/store/CedarOSTypes';
 import { createSpellSlice } from '@/store/spellSlice/spellSlice';
 
 // Type helper to extract state from StateCreator

@@ -5,7 +5,7 @@ import type {
 	MessageByType,
 	MessageRendererConfig,
 	MessageRole,
-} from './MessageTypes';
+} from '@/store/messages/MessageTypes';
 
 /**
  * Type Safety Note:

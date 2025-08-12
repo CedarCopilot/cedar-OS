@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { CedarStore } from './CedarOSTypes';
+import { CedarStore } from '@/store/CedarOSTypes';
 
 export interface StylingConfig {
 	darkMode: boolean;

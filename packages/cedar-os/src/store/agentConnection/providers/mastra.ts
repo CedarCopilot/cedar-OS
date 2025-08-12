@@ -1,12 +1,10 @@
 import type {
+	InferProviderConfig,
 	MastraParams,
 	ProviderImplementation,
-	InferProviderConfig,
 	StructuredParams,
-	VoiceParams,
-	VoiceLLMResponse,
-} from '../AgentConnectionTypes';
-import { handleEventStream } from '../agentUtils';
+} from '@/store/agentConnection/AgentConnectionTypes';
+import { handleEventStream } from '@/store/agentConnection/agentUtils';
 
 type MastraConfig = InferProviderConfig<'mastra'>;
 

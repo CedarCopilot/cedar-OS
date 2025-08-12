@@ -3,8 +3,8 @@ import type {
 	ProviderImplementation,
 	InferProviderConfig,
 	StructuredParams,
-} from '../AgentConnectionTypes';
-import { handleEventStream } from '../agentUtils';
+} from '@/store/agentConnection/AgentConnectionTypes';
+import { handleEventStream } from '@/store/agentConnection/agentUtils';
 
 type OpenAIConfig = InferProviderConfig<'openai'>;
 

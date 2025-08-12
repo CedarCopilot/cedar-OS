@@ -1,9 +1,9 @@
 import type { StateCreator } from 'zustand';
-import type { CedarStore } from '../CedarOSTypes';
+import type { CedarStore } from '@/store/CedarOSTypes';
 import type {
 	LLMResponse,
 	BaseParams,
-} from '../agentConnection/AgentConnectionTypes';
+} from '@/store/agentConnection/AgentConnectionTypes';
 
 export interface DebugLogEntry {
 	id: string;

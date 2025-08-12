@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
-import { createStylingSlice } from './stylingSlice';
-import { CedarStore } from './CedarOSTypes';
+import { createStylingSlice } from '@/store/stylingSlice';
+import { CedarStore } from '@/store/CedarOSTypes';
 import { createStateSlice } from '@/store/stateSlice/stateSlice';
 import { createMessagesSlice } from '@/store/messages/messagesSlice';
 import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
@@ -67,12 +67,12 @@ export const setCedarState: CedarStore['setCedarState'] = (key, value) =>
 	useCedarStore.getState().setCedarState(key, value);
 
 // Export the extensible store creator
-export { createCedarStore } from './createCedarStore';
-export type { CreateCedarStoreOptions } from './createCedarStore';
+export { createCedarStore } from '@/store/createCedarStore';
+export type { CreateCedarStoreOptions } from '@/store/createCedarStore';
 
 // Export the typed messages slice creator
-export { createTypedMessagesSlice } from './messages/createTypedMessagesSlice';
-export type { TypedMessagesSlice } from './messages/createTypedMessagesSlice';
+export { createTypedMessagesSlice } from '@/store/messages/createTypedMessagesSlice';
+export type { TypedMessagesSlice } from '@/store/messages/createTypedMessagesSlice';
 
 // Export message types
 export type {
@@ -81,11 +81,15 @@ export type {
 	TypedMessage,
 	MessageByType,
 	MessageRendererConfig,
-} from './messages/MessageTypes';
+} from '@/store/messages/MessageTypes';
 
 // Export voice slice and utilities
-export { createVoiceSlice } from './voice/voiceSlice';
-export type { VoiceSlice, VoiceState, VoiceActions } from './voice/voiceSlice';
+export { createVoiceSlice } from '@/store/voice/voiceSlice';
+export type {
+	VoiceSlice,
+	VoiceState,
+	VoiceActions,
+} from '@/store/voice/voiceSlice';
 
 // Export a hook for voice functionality
 export const useVoice = () => ({

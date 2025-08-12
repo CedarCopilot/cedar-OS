@@ -5,7 +5,7 @@ import type {
 	AdditionalContext,
 	ContextEntry,
 	MentionProvider,
-} from './AgentInputContextTypes';
+} from '@/store/agentInputContext/AgentInputContextTypes';
 import { ReactNode, useMemo } from 'react';
 import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
