@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/styles/stylingUtils';
 
 interface Toggle3DProps {
 	/** Optional additional classes */
