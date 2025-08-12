@@ -7,10 +7,10 @@ import {
 	useStyling,
 	useSpell,
 	type ActivationConditions,
-} from '../../cedar-os/src/store/CedarStore';
-import type { CedarStore } from '../../cedar-os/src/store/types';
-import { cn } from '../../cedar-os/src/styles/stylingUtils';
-import Container3D from '../containers/Container3D';
+	type CedarStore,
+	cn,
+} from 'cedar-os';
+import Container3D from '@/containers/Container3D';
 // Motion for React
 import { motion } from 'motion/react';
 

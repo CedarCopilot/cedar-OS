@@ -8,7 +8,7 @@ import type {
 	StreamEvent,
 	VoiceParams,
 	VoiceLLMResponse,
-} from '../types';
+} from '@/store/agentConnection/AgentConnectionTypes';
 import {
 	generateText,
 	streamText,

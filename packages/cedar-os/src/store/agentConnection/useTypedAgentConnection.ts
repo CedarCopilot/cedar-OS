@@ -9,7 +9,7 @@ import type {
 	LLMResponse,
 	StreamHandler,
 	StreamResponse,
-} from './types';
+} from '@/store/agentConnection/AgentConnectionTypes';
 
 // Helper to get the right params type based on provider
 type GetParamsForProvider<T extends ProviderConfig['provider']> =

@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
-import type { CedarStore } from '../types';
-import type { VoiceLLMResponse } from '../agentConnection/types';
+import type { CedarStore } from '@/store/CedarOSTypes';
+import type { VoiceLLMResponse } from '@/store/agentConnection/AgentConnectionTypes';
 
 export interface VoiceState {
 	// Voice state

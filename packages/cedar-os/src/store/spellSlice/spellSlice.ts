@@ -1,10 +1,10 @@
 import { StateCreator } from 'zustand';
-import type { CedarStore } from '@/store/types';
+import type { CedarStore } from '@/store/CedarOSTypes';
 import SpellActivationManager from '@/store/spellSlice/SpellActivationManager';
 import type {
 	ActivationConditions,
 	ActivationState,
-} from '@/store/spellSlice/types';
+} from '@/store/spellSlice/SpellTypes';
 
 //--------------------------------------------------------------------------
 // Refactor 2025-01-14 - Unified Spell System

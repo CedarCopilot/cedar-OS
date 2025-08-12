@@ -1,5 +1,5 @@
 import { useCedarStore, useChatInput } from '@/store/CedarStore';
-import type { CedarStore } from '@/store/types';
+import type { CedarStore } from '@/store/CedarOSTypes';
 import Document from '@tiptap/extension-document';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useEditor } from '@tiptap/react';

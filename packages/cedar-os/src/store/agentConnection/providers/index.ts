@@ -1,7 +1,7 @@
-import { openAIProvider } from './openai';
-import { mastraProvider } from './mastra';
-import { aiSDKProvider } from './ai-sdk';
-import type { ProviderConfig } from '../types';
+import { openAIProvider } from '@/store/agentConnection/providers/openai';
+import { mastraProvider } from '@/store/agentConnection/providers/mastra';
+import { aiSDKProvider } from '@/store/agentConnection/providers/ai-sdk';
+import type { ProviderConfig } from '@/store/agentConnection/AgentConnectionTypes';
 
 // Provider registry - direct mapping of provider types to implementations
 export const providerRegistry = {

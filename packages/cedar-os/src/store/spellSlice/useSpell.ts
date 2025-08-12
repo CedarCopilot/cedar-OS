@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useSpells } from '../CedarStore';
-import type { ActivationConditions, ActivationState } from './types';
+import { useSpells } from '@/store/CedarStore';
+import type {
+	ActivationConditions,
+	ActivationState,
+} from '@/store/spellSlice/SpellTypes';
 
 export interface UseSpellOptions {
 	/** Unique identifier for the spell */
