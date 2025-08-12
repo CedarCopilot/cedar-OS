@@ -34,31 +34,30 @@ import {
 	getNodes,
 	saveNodes,
 } from '@/app/examples/product-roadmap/supabase/nodes';
+import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import { TooltipMenu } from '@/inputs/TooltipMenu';
 import {
-	useSubscribeInputContext,
 	useRegisterState,
 	useStateBasedMentionProvider,
+	useSubscribeInputContext,
 } from 'cedar-os';
 import {
 	ArrowRight,
 	Box,
 	CheckCircle,
-	Loader,
 	Copy,
-	Sparkles,
-	Share2,
 	Download,
+	Loader,
+	Share2,
+	Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import RadialMenuSpell from '../../../../packages/cedar-os-components/spells/RadialMenuSpell';
 import {
-	MouseEvent as SpellMouseEvent,
-	Hotkey,
 	ActivationMode,
+	MouseEvent as SpellMouseEvent,
 	type ActivationConditions,
 } from '../../../../packages/cedar-os/src/store/spellSlice/useSpellActivationConditions';
 import type { CedarStore } from '../../../../packages/cedar-os/src/store/types';
