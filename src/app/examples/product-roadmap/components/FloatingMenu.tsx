@@ -13,9 +13,11 @@ import {
 	Subtitles,
 	Sun,
 	Moon,
+	Sparkles,
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { useCedarStore } from 'cedar-os';
+import { lazyFindElement, useCedarStore } from 'cedar-os';
+import { useGuidance } from 'cedar-os';
 import Container3D from '@/containers/Container3D';
 import { Button } from '@/components/ui/button';
 
@@ -37,6 +39,9 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
 	const executeCustomSetter = useCedarStore(
 		(state) => state.executeCustomSetter
 	);
+
+	// Guidance helpers
+	const { addGuidances } = useGuidance();
 
 	// Initialize theme from localStorage or system preference and sync with Cedar store
 	useEffect(() => {
@@ -129,6 +134,39 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
 			icon: isDarkMode ? Sun : Moon,
 			label: isDarkMode ? 'Light Mode' : 'Dark Mode',
 			onClick: handleThemeToggle,
+		},
+		{
+			id: 'guide',
+			icon: Sparkles,
+			label: 'Guide',
+			onClick: () => {
+				addGuidances([
+					{
+						type: 'VIRTUAL_CLICK',
+						tooltipText: 'Click to add a feature, bug, or improvement.',
+						tooltipPosition: 'right',
+						endPosition: lazyFindElement({
+							role: 'button',
+							name: 'Add Node',
+						}),
+						advanceMode: 'auto',
+					},
+					{
+						type: 'TOAST',
+						title: 'Tip',
+						description: 'Use + to add features, bugs, or improvements.',
+						variant: 'info',
+						duration: 2500,
+						position: 'top',
+					},
+					{
+						type: 'CHAT_TOOLTIP',
+						content: 'Try switching chat modes here.',
+						position: 'right',
+						duration: 2500,
+					},
+				]);
+			},
 		},
 	];
 

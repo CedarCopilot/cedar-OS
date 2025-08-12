@@ -5,11 +5,11 @@ import {
 	Guidance,
 	VirtualClickGuidance,
 } from '@/store/guidance/guidanceSlice';
-import VirtualCursor from './VirtualCursor';
-import VirtualTypingCursor from './VirtualTypingCursor';
-import ExecuteTyping from './ExecuteTyping';
-import { CedarCursor } from './CedarCursor';
-import DialogueBox from './DialogueBox';
+import VirtualCursor from '@/components/guidance/components/VirtualCursor';
+import VirtualTypingCursor from '@/components/guidance/components/VirtualTypingCursor';
+import ExecuteTyping from '@/components/guidance/components/ExecuteTyping';
+import { CedarCursor } from '@/components/guidance/components/CedarCursor';
+import DialogueBox from '@/components/guidance/components/DialogueBox';
 
 import TooltipText from './TooltipText';
 import ToastCard from './ToastCard';
