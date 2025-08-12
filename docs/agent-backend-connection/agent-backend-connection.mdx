@@ -226,7 +226,7 @@ export interface LLMResponse {
 		totalTokens: number;
 	};
 	metadata?: Record<string, unknown>;
-	object?: unknown; // The object field contains structured output that is parsed for state execution, generative UI, etc.
+	object?: StructuredResponseType | StructuredResponseType[]; // See the docs on How Responses are Processed to understand how this field is parsed
 }
 ```
 
@@ -241,7 +241,7 @@ export interface LLMResponse {
     - Automatically renders the object content as a new chat message
     - Note: if you return an object with this type AND a content field, both will be rendered as chat messages in the order the are received
 
-    Other `type` values can be used for custom handling (such as generative UI).
+    Other `type` values can be used for custom handling (such as generative UI). See [Custom Response Handling](/agent-backend-connection/custom-response-processing) to learn how this works.
 
   </Accordion>
 </AccordionGroup>
