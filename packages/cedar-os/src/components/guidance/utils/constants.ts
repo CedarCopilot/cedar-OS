@@ -35,8 +35,8 @@ export const SPRING_CONFIGS = {
 // Animation timing constants for drag cursor
 export const DRAG_ANIMATION_TIMINGS = {
 	// Time to stay in open hand state before closing (initial pause)
-	INITIAL_OPEN_DURATION: 300,
+	INITIAL_OPEN_DURATION: 200, // Reduced from 300
 
 	// Time to stay in closed fist state before starting movement
-	CLOSED_BEFORE_MOVE_DURATION: 200,
+	CLOSED_BEFORE_MOVE_DURATION: 150, // Reduced from 200
 };

@@ -5,11 +5,9 @@ import { useState } from 'react';
 import {
 	AgentBackendConnectionSection,
 	ChatSection,
-	DiffHistorySection,
-	SpellsSection,
-	StateAccessSection,
-	VoiceSection,
+	GuidancePlayground,
 } from './sections';
+import { GuidanceRenderer } from 'cedar-os';
 
 export default function CedarPlaygroundPage() {
 	const [activeChatTab, setActiveChatTab] = useState('caption');
@@ -42,9 +40,14 @@ export default function CedarPlaygroundPage() {
 
 			{/* Sequential sections */}
 
+			<GuidanceRenderer />
+
 			<AgentBackendConnectionSection />
 
 			<ChatSection activeTab={activeChatTab} onTabChange={setActiveChatTab} />
+
+			<GuidancePlayground />
+
 			{/* 
 			<StateAccessSection /> */}
 

@@ -7,7 +7,7 @@ import DialogueBox from '@/components/guidance/components/DialogueBox';
 import ExecuteTyping from '@/components/guidance/components/ExecuteTyping';
 import HighlightOverlay from '@/components/guidance/components/HighlightOverlay';
 import RightClickIndicator from '@/components/guidance/components/RightClickIndicator';
-import SurveyDialog from '@/components/guidance/components/SurveyDialog';
+
 import TooltipText from '@/components/guidance/components/TooltipText';
 import VirtualCursor from '@/components/guidance/components/VirtualCursor';
 import VirtualTypingCursor from '@/components/guidance/components/VirtualTypingCursor';
@@ -795,30 +795,6 @@ const GuidanceRenderer: React.FC = () => {
 				</DialogueBanner>
 			);
 		}
-
-		case 'SURVEY':
-			return (
-				<SurveyDialog
-					key={guidanceKey}
-					title={currentGuidance.title}
-					description={currentGuidance.description}
-					questions={currentGuidance.questions}
-					open={true}
-					onOpenChange={(open) => {
-						if (!open && !currentGuidance.blocking) {
-							handleGuidanceEnd();
-						}
-					}}
-					submitButtonText={currentGuidance.submitButtonText}
-					cancelButtonText={currentGuidance.cancelButtonText}
-					onSubmit={(responses) => {
-						currentGuidance.onSubmit?.(responses);
-						handleGuidanceEnd();
-					}}
-					blocking={currentGuidance.blocking}
-					trigger_id={currentGuidance.trigger_id}
-				/>
-			);
 
 		case 'EXECUTE_CLICK': {
 			// Only render cursor animation if showCursor is true (default) or undefined

@@ -10,7 +10,7 @@ import VirtualTypingCursor from './VirtualTypingCursor';
 import ExecuteTyping from './ExecuteTyping';
 import { CedarCursor } from './CedarCursor';
 import DialogueBox from './DialogueBox';
-import SurveyDialog from './SurveyDialog';
+
 import TooltipText from './TooltipText';
 import ToastCard from './ToastCard';
 import { motion } from 'framer-motion';
@@ -480,30 +480,6 @@ const IFGuidanceRenderer: React.FC<IFGuidanceRendererProps> = ({
 						})()}
 						blocking={currentGuidanceToRender.blocking}
 						onComplete={handleGuidanceEnd}
-					/>
-				);
-
-			case 'SURVEY':
-				return (
-					<SurveyDialog
-						key={guidanceKey}
-						title={currentGuidanceToRender.title}
-						description={currentGuidanceToRender.description}
-						questions={currentGuidanceToRender.questions}
-						open={true}
-						onOpenChange={(open) => {
-							if (!open && !currentGuidanceToRender.blocking) {
-								handleGuidanceEnd();
-							}
-						}}
-						submitButtonText={currentGuidanceToRender.submitButtonText}
-						cancelButtonText={currentGuidanceToRender.cancelButtonText}
-						onSubmit={(responses) => {
-							currentGuidanceToRender.onSubmit?.(responses);
-							handleGuidanceEnd();
-						}}
-						blocking={currentGuidanceToRender.blocking}
-						trigger_id={currentGuidanceToRender.trigger_id}
 					/>
 				);
 

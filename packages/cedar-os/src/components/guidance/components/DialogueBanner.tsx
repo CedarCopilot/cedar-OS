@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import Container3D from '@/components/ui/Container3D';
-import GlowingMesh from '@/components/ui/GlowingMesh';
+import Container3D from '@/components/guidance/generic/Container3D';
+import GlowingMesh from '@/components/guidance/generic/GlowingMesh';
 
 export interface DialogueBannerProps {
 	/** Optional children content to display instead of typewriter text */

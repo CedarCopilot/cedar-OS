@@ -4,6 +4,9 @@ export { GuidanceRenderer } from '@/components/guidance';
 
 export { useCedarEditor } from '@/components/chatInput/useCedarEditor';
 
+// Export guidance utilities
+export { lazyFindElement, lazyFindParentElement } from '@/components/guidance';
+
 // Export chat input components
 export { MentionNodeView } from '@/components/chatInput/ChatMention';
 export { default as MentionList } from '@/components/chatInput/MentionList';

@@ -1,17 +1,13 @@
-import { StateCreator } from 'zustand';
 import { CedarStore } from '@/store/CedarOSTypes';
-import {
-	createActionLog,
-	updateActionLog,
-} from '@/components/guidance/utils/actionSupabase';
+import { StateCreator } from 'zustand';
 
 import {
 	getPositionFromElement,
 	PositionOrElement,
 } from '@/components/guidance/utils/positionUtils';
+import { MessageInput } from '@/store/messages/MessageTypes';
 import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { MessageInput } from '@/store/messages/MessageTypes';
 
 /**
  * Guidance Queue Management:
@@ -454,7 +450,7 @@ export const createGuidanceSlice: StateCreator<
 
 	// Guidances
 	setCurrentGuidance: (guidance) => set({ currentGuidance: guidance }),
-	addGuidance: async (guidance: GuidanceInput, guidanceConfigId?: string) => {
+	addGuidance: async (guidance: GuidanceInput) => {
 		// Generate UUID if id is not provided
 		const guidanceWithId = {
 			...guidance,
@@ -462,33 +458,6 @@ export const createGuidanceSlice: StateCreator<
 		} as Guidance;
 
 		const state = get();
-
-		// TODO: Create guidance log if this is the first guidance and we have user/product IDs
-		// This functionality is temporarily disabled until userId/productId are added to CedarStore
-		// if (
-		// 	!state.currentGuidance &&
-		// 	state.queue.length === 0 &&
-		// 	state.userId &&
-		// 	state.productId
-		// ) {
-		// 	try {
-		// 		const data = await createActionLog(
-		// 			state.userId,
-		// 			state.productId,
-		// 			state.guidanceSessionId,
-		// 			guidanceConfigId,
-		// 			[guidanceWithId]
-		// 		);
-		// 		if (data.log) {
-		// 			set({
-		// 				guidanceLogId: data.log.id,
-		// 				guidanceSessionId: data.log.session_id,
-		// 			});
-		// 		}
-		// 	} catch (error) {
-		// 		console.error('Error creating guidance log:', error);
-		// 	}
-		// }
 
 		if (!state.currentGuidance && state.queue.length === 0) {
 			set({
@@ -502,10 +471,7 @@ export const createGuidanceSlice: StateCreator<
 		}
 	},
 
-	addGuidances: async (
-		guidances: GuidanceInput[],
-		guidanceConfigId?: string
-	) => {
+	addGuidances: async (guidances: GuidanceInput[]) => {
 		// Generate UUIDs for guidances without ids
 		const guidancesWithIds = guidances.map((guidance) => ({
 			...guidance,
@@ -515,9 +481,6 @@ export const createGuidanceSlice: StateCreator<
 		if (guidancesWithIds.length === 0) return;
 
 		const state = get();
-
-		// TODO: Create guidance log if this is the first guidance and we have user/product IDs
-		// This functionality is temporarily disabled until userId/productId are added to CedarStore
 
 		if (!state.currentGuidance && state.queue.length === 0) {
 			set({
@@ -531,38 +494,12 @@ export const createGuidanceSlice: StateCreator<
 		}
 	},
 
-	replaceGuidances: async (
-		guidances: GuidanceInput[],
-		guidanceConfigId?: string
-	) => {
+	replaceGuidances: async (guidances: GuidanceInput[]) => {
 		// Generate UUIDs for guidances without ids
 		const guidancesWithIds = guidances.map((guidance) => ({
 			...guidance,
 			id: guidance.id || uuidv4(),
 		})) as Guidance[];
-
-		const state = get();
-
-		// Create guidance log if we have user/product IDs
-		if ((state as any).userId && (state as any).productId) {
-			try {
-				const data = await createActionLog(
-					(state as any).userId,
-					(state as any).productId,
-					state.guidanceSessionId,
-					guidanceConfigId,
-					guidancesWithIds
-				);
-				if (data.log) {
-					set({
-						guidanceLogId: data.log.id,
-						guidanceSessionId: data.log.session_id,
-					});
-				}
-			} catch (error) {
-				console.error('Error creating guidance log:', error);
-			}
-		}
 
 		// Replace the queue with new guidances
 		set({
@@ -620,17 +557,6 @@ export const createGuidanceSlice: StateCreator<
 				state.currentGuidance.onEnd();
 			} catch (error) {
 				console.error('Error in onEnd callback:', error);
-			}
-		}
-
-		// Update guidance log if we have one and a current guidance
-		if (state.guidanceLogId && state.currentGuidance) {
-			try {
-				await updateActionLog(state.guidanceLogId, {
-					action: state.currentGuidance,
-				});
-			} catch (error) {
-				console.error('Error updating guidance log:', error);
 			}
 		}
 
@@ -808,17 +734,6 @@ export const createGuidanceSlice: StateCreator<
 					queue: [],
 				};
 			});
-
-			// Update guidance log as completed
-			if (state.guidanceLogId) {
-				try {
-					await updateActionLog(state.guidanceLogId, {
-						completed: true,
-					});
-				} catch (error) {
-					console.error('Error completing guidance log:', error);
-				}
-			}
 
 			// Call onQueueComplete if it exists
 			if (state.onQueueComplete) {
