@@ -161,6 +161,7 @@ export {
 	ActionResponse,
 	ActionResponseFor,
 	createActionResponseProcessor,
+	createResponseProcessor,
 } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
 
 // Export message renderer factory function
@@ -170,9 +171,6 @@ export {
 	ActionMessageFor,
 	createActionMessageRenderer,
 } from '@/store/messages/renderers/createMessageRenderer';
-
-// Export response processor factory function
-export { createResponseProcessor } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
 
 // Export spell system types and utilities
 export {

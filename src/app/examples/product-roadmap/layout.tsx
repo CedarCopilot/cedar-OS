@@ -39,8 +39,8 @@ export default function ProductRoadmapLayout({
 		provider: 'mastra',
 		apiKey: 'not-needed-for-local', // API key is not needed for local Mastra agent
 		baseURL: 'http://localhost:4111',
-		// chatPath: '/chat/execute-function',
-		// voiceRoute: '/chat/voice-execute',
+		chatPath: '/chat/execute-function',
+		voiceRoute: '/chat/voice-execute',
 	};
 
 	// const llmProvider: ProviderConfig = {
