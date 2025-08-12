@@ -446,6 +446,8 @@ const { callLLM, streamLLM, callLLMStructured } =
 
 interface MastraParams extends BaseParams {
 	route: string;
+	resourceId?: string; // User ID in Cedar
+	threadId?: string;
 }
 
 // Example usage
@@ -516,6 +518,8 @@ const { callLLM, streamLLM, callLLMStructured } =
 	useTypedAgentConnection('custom');
 
 interface CustomParams extends BaseParams {
+	userId?: string;
+	threadId?: string;
 	[key: string]: unknown;
 }
 

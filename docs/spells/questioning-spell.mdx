@@ -1,0 +1,452 @@
+---
+title: 'Questioning Spell'
+description: 'An interactive cursor that reveals hidden information on hover'
+icon: 'question'
+---
+
+# Questioning Spell
+
+The `QuestioningSpell` component transforms your cursor into an interactive exploration tool that reveals hidden information when hovering over elements. It's perfect for creating educational interfaces, providing contextual help, or building discovery-based experiences.
+
+## Features
+
+- **Interactive Cursor**: Custom reticle cursor with smooth animations
+- **Data Attribute Detection**: Automatically finds `data-question` attributes
+- **Visual Feedback**: Rotating reticle that locks onto targets
+- **Tooltip Display**: Shows contextual information on hover
+- **Theme Aware**: Adapts to Cedar's color scheme
+- **Keyboard Activation**: Default 'Q' key toggle
+
+## Installation
+
+```tsx
+import { QuestioningSpell } from 'cedar-os-components/spells';
+```
+
+## Basic Usage
+
+```tsx
+import { QuestioningSpell } from 'cedar-os-components/spells';
+
+function MyComponent() {
+	return (
+		<>
+			{/* Add the spell to your app */}
+			<QuestioningSpell />
+
+			{/* Add data-question attributes to elements */}
+			<div className='p-4'>
+				<button
+					data-question='This button submits the form and saves your data'
+					className='bg-blue-500 text-white px-4 py-2 rounded'>
+					Save
+				</button>
+
+				<span
+					data-question='This metric shows the total number of active users in the last 30 days'
+					className='font-bold'>
+					Active Users: 1,234
+				</span>
+			</div>
+		</>
+	);
+}
+```
+
+Press 'Q' to activate the questioning mode, then hover over elements to see their explanations.
+
+## Props
+
+| Prop                   | Type                   | Required | Default               | Description                               |
+| ---------------------- | ---------------------- | -------- | --------------------- | ----------------------------------------- |
+| `spellId`              | `string`               | No       | `'questioning-spell'` | Unique identifier for this spell instance |
+| `activationConditions` | `ActivationConditions` | No       | Q key toggle          | Custom activation conditions              |
+
+## Customization
+
+### Custom Activation
+
+Change the activation key or mode:
+
+```tsx
+import { Hotkey, ActivationMode } from 'cedar-os';
+
+<QuestioningSpell
+	spellId='help-cursor'
+	activationConditions={{
+		events: [Hotkey.H], // Press 'H' instead of 'Q'
+		mode: ActivationMode.TOGGLE,
+	}}
+/>;
+```
+
+### Hold Mode
+
+Use hold mode for temporary activation:
+
+```tsx
+<QuestioningSpell
+	activationConditions={{
+		events: [Hotkey.SHIFT],
+		mode: ActivationMode.HOLD, // Active only while holding Shift
+	}}
+/>
+```
+
+### Multiple Triggers
+
+Support multiple activation methods:
+
+```tsx
+<QuestioningSpell
+	activationConditions={{
+		events: [Hotkey.Q, 'alt+h', 'f1'],
+		mode: ActivationMode.TOGGLE,
+	}}
+/>
+```
+
+## Advanced Examples
+
+### Educational Interface
+
+Create an educational UI with detailed explanations:
+
+```tsx
+function MathLesson() {
+	return (
+		<>
+			<QuestioningSpell />
+
+			<div className='lesson'>
+				<h2>Quadratic Formula</h2>
+
+				<div className='formula'>
+					<span data-question="The coefficient 'a' represents the quadratic term">
+						a
+					</span>
+					<span>x²</span>
+					<span> + </span>
+					<span data-question="The coefficient 'b' represents the linear term">
+						b
+					</span>
+					<span>x</span>
+					<span> + </span>
+					<span data-question="The coefficient 'c' is the constant term">
+						c
+					</span>
+					<span> = 0</span>
+				</div>
+
+				<div
+					className='solution'
+					data-question='This formula finds the x-values where the parabola crosses the x-axis'>
+					x = (-b ± √(b² - 4ac)) / 2a
+				</div>
+			</div>
+		</>
+	);
+}
+```
+
+### Dashboard with Metrics
+
+Add context to complex data visualizations:
+
+```tsx
+function Dashboard() {
+	return (
+		<>
+			<QuestioningSpell />
+
+			<div className='grid grid-cols-3 gap-4'>
+				<div
+					className='metric-card'
+					data-question='Revenue from the last 30 days compared to the previous period'>
+					<h3>Monthly Revenue</h3>
+					<p className='text-2xl'>$45,231</p>
+					<span className='text-green-500'>+12.5%</span>
+				</div>
+
+				<div
+					className='metric-card'
+					data-question='Average time users spend on the platform per session'>
+					<h3>Avg. Session Duration</h3>
+					<p className='text-2xl'>8m 34s</p>
+					<span className='text-red-500'>-5.2%</span>
+				</div>
+
+				<div
+					className='metric-card'
+					data-question='Percentage of users who completed the onboarding flow'>
+					<h3>Onboarding Completion</h3>
+					<p className='text-2xl'>73%</p>
+					<span className='text-green-500'>+8.1%</span>
+				</div>
+			</div>
+		</>
+	);
+}
+```
+
+### Form with Field Help
+
+Provide inline help for form fields:
+
+```tsx
+function RegistrationForm() {
+	return (
+		<>
+			<QuestioningSpell />
+
+			<form className='space-y-4'>
+				<div>
+					<label
+						htmlFor='username'
+						data-question='Choose a unique username between 3-20 characters. This will be your public identifier.'>
+						Username *
+					</label>
+					<input id='username' type='text' />
+				</div>
+
+				<div>
+					<label
+						htmlFor='email'
+						data-question="We'll use this email for account recovery and important notifications only.">
+						Email Address *
+					</label>
+					<input id='email' type='email' />
+				</div>
+
+				<div>
+					<label
+						htmlFor='timezone'
+						data-question='Your timezone helps us schedule notifications and display times correctly.'>
+						Timezone
+					</label>
+					<select id='timezone'>
+						<option>Select timezone...</option>
+					</select>
+				</div>
+
+				<button
+					type='submit'
+					data-question="Submit the form to create your account. You'll receive a confirmation email.">
+					Create Account
+				</button>
+			</form>
+		</>
+	);
+}
+```
+
+### Dynamic Questions
+
+Generate questions based on data:
+
+```tsx
+function ProductList({ products }) {
+	return (
+		<>
+			<QuestioningSpell />
+
+			<div className='grid grid-cols-4 gap-4'>
+				{products.map((product) => (
+					<div
+						key={product.id}
+						className='product-card'
+						data-question={`${product.name}: ${product.description}. In stock: ${product.stock} units. Rating: ${product.rating}/5`}>
+						<img src={product.image} alt={product.name} />
+						<h3>{product.name}</h3>
+						<p>${product.price}</p>
+					</div>
+				))}
+			</div>
+		</>
+	);
+}
+```
+
+## Visual Behavior
+
+### Cursor States
+
+The questioning cursor has two visual states:
+
+1. **Searching State**: Continuously rotating reticle when not hovering over a target
+2. **Locked State**: Snaps to nearest 180° and scales slightly when hovering over an element with `data-question`
+
+### Animation Details
+
+- **Rotation Speed**: 3 seconds per full rotation when searching
+- **Lock Animation**: Spring animation with bounce when locking onto target
+- **Debounce**: 200ms delay before releasing lock to prevent flicker
+
+### Theme Integration
+
+The cursor automatically uses Cedar's theme colors:
+
+- Uses `styling.color` from Cedar store for the reticle color
+- Falls back to `#3b82f6` (blue) if no color is set
+- Tooltip background matches the theme color
+
+## Best Practices
+
+### 1. Write Clear Explanations
+
+```tsx
+// ✅ Good: Specific and helpful
+data-question="This button saves your draft and creates a backup. Auto-save happens every 5 minutes."
+
+// ❌ Avoid: Vague or redundant
+data-question="This is a button"
+```
+
+### 2. Keep Tooltips Concise
+
+```tsx
+// ✅ Good: Brief but informative
+data-question="Shows revenue trends for the last 90 days"
+
+// ❌ Avoid: Too lengthy
+data-question="This chart displays the revenue trends for your organization over the last 90 days, including daily, weekly, and monthly breakdowns with comparison to previous periods..."
+```
+
+### 3. Add Context Where Needed
+
+```tsx
+// ✅ Good: Explains non-obvious functionality
+<Icon
+  name="shield"
+  data-question="Protected by 256-bit encryption"
+/>
+
+// ❌ Unnecessary: Obvious elements
+<button data-question="Click to submit">
+  Submit
+</button>
+```
+
+### 4. Use for Progressive Disclosure
+
+```tsx
+// Show basic info in UI, details in question
+<div className='status-badge'>
+	<span>Processing</span>
+	<Icon
+		name='info'
+		data-question="Your request is in the queue. Estimated time: 2-3 minutes. You'll receive an email when complete."
+	/>
+</div>
+```
+
+## Technical Implementation
+
+### How It Works
+
+1. **Activation**: User presses 'Q' (or custom key) to activate
+2. **Event Listening**: Listens to mousemove events when active
+3. **Element Detection**: Uses `Element.closest('[data-question]')` to find attributes
+4. **Tooltip Display**: Shows tooltip with the attribute value
+5. **Cursor Enhancement**: Uses motion-plus-react for smooth cursor animations
+
+### Performance Considerations
+
+- **Event Delegation**: Single mousemove listener for all elements
+- **Debounced Animations**: Prevents excessive re-renders
+- **Conditional Rendering**: Only renders when spell is active
+- **Ref-based State**: Uses refs for animation values to avoid re-renders
+
+## Styling
+
+### Custom Tooltip Styles
+
+While the component provides a default tooltip, you can customize it:
+
+```css
+/* Override default tooltip styles */
+.questioning-tooltip {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	backdrop-filter: blur(10px);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+}
+```
+
+### Cursor Customization
+
+The cursor consists of corner brackets that form a reticle:
+
+```tsx
+// Corner dimensions (defined in component)
+const thickness = 2; // Line thickness
+const length = 10; // Line length
+const size = 38; // Overall reticle size
+```
+
+## Accessibility
+
+### Keyboard Navigation
+
+- The spell can be activated via keyboard (default: 'Q')
+- Consider providing alternative ways to access the same information
+
+### Screen Reader Support
+
+For better accessibility, consider also providing the information in screen-reader accessible ways:
+
+```tsx
+<button
+	data-question='Saves your work'
+	aria-label='Save your work'
+	title='Save your work'>
+	Save
+</button>
+```
+
+### Alternative Access
+
+Provide multiple ways to access help information:
+
+```tsx
+function AccessibleHelp() {
+	const [showHelp, setShowHelp] = useState(false);
+
+	return (
+		<>
+			<QuestioningSpell />
+
+			{/* Visual indicator that help is available */}
+			<button onClick={() => setShowHelp(!showHelp)}>Toggle Help Mode</button>
+
+			{/* Alternative help display */}
+			{showHelp && <HelpPanel />}
+		</>
+	);
+}
+```
+
+## Troubleshooting
+
+### Tooltip not appearing
+
+- Verify `data-question` attribute is set correctly
+- Check that the spell is activated (press 'Q')
+- Ensure QuestioningSpell component is mounted
+
+### Cursor not changing
+
+- Check motion-plus-react is installed and configured
+- Verify no CSS conflicts with cursor styles
+- Ensure spell activation is working
+
+### Performance issues
+
+- Reduce the number of elements with `data-question` if excessive
+- Consider lazy-loading content with many questionable elements
+- Check for memory leaks in tooltip content generation
+
+## Related Components
+
+- [RadialMenuSpell](/spells/radial-menu) - Circular menu for actions
+- [TooltipMenuSpell](/spells/tooltip-menu) - Context menu for text selections
+- [Creating Custom Spells](/spells/creating-custom-spells) - Build your own spell components

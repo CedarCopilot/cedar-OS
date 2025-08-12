@@ -1,23 +1,153 @@
 ---
-title: 'Spells'
-description: 'Overview of Spells system'
+title: 'Spells Overview'
+description: 'Magical interactions for your Cedar-OS applications'
+icon: 'wand-magic-sparkles'
 ---
 
-Spells are our aspirational name for intuitive and powerful interfaces for users to **control AI without text input**. They're called "spells" because we want the user to feel like they're casting a spell.
+# Spells
 
-One of the goals of Cedar is to give people ways to be creative and design human software, and we hope that this will be filled by innovative, fun solutions.
+Spells are Cedar-OS's powerful system for creating contextual, gesture-based interactions that enhance your AI-native applications. They provide a unified way to bind keyboard shortcuts, mouse gestures, and selection events to custom UI behaviors and actions.
 
-I could talk more about them, but here are some first initial versions.
+## What are Spells?
 
-### Examples
+Spells are reusable interaction patterns that can be activated through various triggers:
 
-- [Radial Menu](./radial-menu)
+- **Keyboard shortcuts** (single keys or combinations like `Ctrl+K`)
+- **Mouse events** (right-click, double-click, modifier+click)
+- **Text selection** (automatically activate when text is selected)
+- **Programmatic activation** (trigger spells from code using `activate()`, `deactivate()`, or `toggle()`)
+
+When activated, spells can display custom UI components, execute actions, or modify application state - all while integrating seamlessly with Cedar's AI capabilities.
 
 <img
 	src='https://vrhlhwfhghqbpdpfnpdq.supabase.co/storage/v1/object/public/logos//radialMenu.gif'
 	alt='Radial Menu Demo'
 />
 
-- Questioning Cursor
-- Tooltip
-- Gestures (coming soon)
+## Why Use Spells?
+
+Spells enable you to create sophisticated interactions that feel magical to users:
+
+- **Contextual Actions**: Display radial menus, tooltips, or floating inputs exactly when and where users need them
+- **Rapid Workflows**: Bind complex AI operations to simple gestures
+- **Progressive Disclosure**: Hide advanced features behind intuitive activations
+- **Custom Experiences**: Build unique interaction patterns tailored to your application
+
+## Built-in Spells
+
+Cedar-OS comes with several pre-built spells you can use immediately:
+
+### RadialMenuSpell
+
+A circular menu that appears on activation, perfect for quick actions:
+
+- Activate with right-click or custom hotkey
+- Supports emoji or Lucide icons
+- Execute actions on release (hold mode) or click (toggle mode)
+
+### TooltipMenuSpell
+
+A contextual menu for text selections:
+
+- Automatically appears when text is selected
+- Can spawn floating inputs for AI interactions
+- Perfect for text editing and annotation workflows
+
+### QuestioningSpell
+
+An interactive cursor that reveals hidden information:
+
+- Press 'Q' to activate questioning mode
+- Hover over elements with `data-question` attributes
+- Display contextual tooltips with explanations
+
+## Quick Start
+
+```tsx
+import { useSpell, Hotkey, ActivationMode } from 'cedar-os';
+
+function MyComponent() {
+	const { isActive, activate, deactivate, toggle } = useSpell({
+		id: 'my-spell',
+		activationConditions: {
+			events: [Hotkey.SPACE],
+			mode: ActivationMode.HOLD,
+		},
+		onActivate: () => console.log('Spell activated!'),
+		onDeactivate: () => console.log('Spell deactivated!'),
+	});
+
+	// You can also trigger spells programmatically
+	const handleButtonClick = () => {
+		toggle(); // or activate() / deactivate()
+	};
+
+	return (
+		<>
+			{isActive ? <div>✨ Magic is happening!</div> : null}
+			<button onClick={handleButtonClick}>Toggle Spell</button>
+		</>
+	);
+}
+```
+
+## Learn More
+
+<CardGroup cols={2}>
+	<Card
+		title='Creating Custom Spells'
+		icon='code'
+		href='/spells/creating-custom-spells'>
+		Learn how to build your own spells using the useSpell hook and activation
+		conditions
+	</Card>
+
+    <Card
+    	title='Spell Architecture'
+    	icon='sitemap'
+    	href='/spells/spell-architecture'>
+    	Understand the technical architecture behind the spell system
+    </Card>
+
+    <Card title='Radial Menu Example' icon='circle' href='/spells/radial-menu'>
+    	Deep dive into the RadialMenuSpell implementation
+    </Card>
+
+    <Card
+    	title='Examples & Patterns'
+    	icon='sparkles'
+    	href='/examples/cedar-playground#spells'>
+    	See spells in action in the Cedar Playground
+    </Card>
+
+</CardGroup>
+
+## Key Concepts
+
+### Activation Modes
+
+Spells support three activation modes that determine their lifecycle:
+
+- **Toggle**: Press to activate, press again to deactivate
+- **Hold**: Active while key/button is held down
+- **Trigger**: Fire once with optional cooldown
+
+### Event Types
+
+Spells can respond to multiple event types simultaneously:
+
+- **Keyboard Events**: Single keys or modifier combinations
+- **Mouse Events**: Clicks, right-clicks, double-clicks
+- **Selection Events**: Text selection in the document
+
+### State Management
+
+Spells are fully integrated with Cedar's state management:
+
+- Automatic registration/cleanup with React lifecycle
+- Access to Cedar store for AI operations
+- Synchronization with other Cedar components
+
+## Next Steps
+
+Ready to add some magic to your application? Start by [creating your first custom spell](/spells/creating-custom-spells) or explore the [technical architecture](/spells/spell-architecture) to understand how it all works under the hood.

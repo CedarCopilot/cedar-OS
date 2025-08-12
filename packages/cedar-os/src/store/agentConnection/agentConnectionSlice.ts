@@ -520,6 +520,9 @@ export const createAgentConnectionSlice: StateCreator<
 				temperature,
 			};
 
+			const threadId = params?.threadId || get().messageCurrentThreadId;
+			const userId = params?.userId || getCedarState('userId');
+
 			// Add provider-specific params
 			switch (config.provider) {
 				case 'openai':
@@ -535,7 +538,8 @@ export const createAgentConnectionSlice: StateCreator<
 						prompt: editorContent,
 						additionalContext: sanitizeJson(state.additionalContext),
 						route: route || `${chatPath}`,
-						resourceId: (params?.userId || getCedarState('userId')) as string,
+						resourceId: userId,
+						threadId,
 					};
 					break;
 				case 'ai-sdk':
@@ -546,7 +550,8 @@ export const createAgentConnectionSlice: StateCreator<
 						...llmParams,
 						prompt: editorContent,
 						additionalContext: sanitizeJson(state.additionalContext),
-						userId: (params?.userId || getCedarState('userId')) as string,
+						userId,
+						threadId,
 					};
 					break;
 			}

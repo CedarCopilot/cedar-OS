@@ -201,6 +201,14 @@ Cedar automatically handles message storage operations in the following way:
 - **When storage adapter changes**: Loads threads from the new storage system
 - **When the thread ID changes**: Automatically loads in all messages for that thread
 
+<Info>
+	Best practice: make your **load** endpoints idempotent. Implementations of
+	`listThreads` or `loadMessages`should **NOT** perform any mutations such as
+	creating threads or messages. Cedar may call these functions multiple times
+	during normal operation; if they create data each time you could end up with
+	duplicated threads or messages.
+</Info>
+
 **Message Persistence & Thread Updates:**
 
 - **User messages**: Persisted immediately when sent via `sendMessage()` (internally calls `store.persistMessage`).
@@ -210,6 +218,11 @@ Cedar automatically handles message storage operations in the following way:
 - **Automatic thread meta update**: Every persisted message refreshes the thread’s `updatedAt` and `lastMessage` fields. The thread title is **always** the very first message in the thread and is never overwritten.
 
 # User and Thread Management
+
+<Info>
+	User ID and thread ID are automatically sent to the backend for Mastra and
+	Custom backends. See Agent Backend Connection docs for more details.
+</Info>
 
 **Setting User ID:**
 User ID is treated internally as just another Cedar State. If at runtime you want to override the user ID when using `callLLM`, it is also available on the `SendMessageParams` type
