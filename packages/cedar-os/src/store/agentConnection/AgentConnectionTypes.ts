@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { CedarStore } from '@/store/types';
+import type { CedarStore } from '@/store/CedarOSTypes';
 
 // Base types for LLM responses and events
 export interface LLMResponse {

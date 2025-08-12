@@ -58,7 +58,7 @@ export type {
 	MentionItem,
 	MentionProvider,
 	StateBasedMentionProviderConfig,
-} from '@/store/agentInputContext/types';
+} from '@/store/agentInputContext/AgentInputContextTypes';
 
 // Export message types
 export type {
@@ -84,11 +84,11 @@ export type {
 	TodoListItem,
 	TodoListMessage,
 	TypedMessage,
-} from '@/store/messages/types';
+} from '@/store/messages/MessageTypes';
 
 // Export types
 export type { StylingSlice } from '@/store/stylingSlice';
-export type { CedarStore } from '@/store/types';
+export type { CedarStore } from '@/store/CedarOSTypes';
 
 // Export agent connection types
 export type {
@@ -104,7 +104,7 @@ export type {
 	StreamEvent,
 	StreamHandler,
 	StreamResponse,
-} from '@/store/agentConnection/types';
+} from '@/store/agentConnection/AgentConnectionTypes';
 
 // Export SendMessageParams and response processor types from the slice
 export type {
@@ -114,7 +114,7 @@ export type {
 	StructuredResponseType,
 	ResponseProcessor,
 	ResponseProcessorRegistry,
-} from '@/store/agentConnection/types';
+} from '@/store/agentConnection/AgentConnectionTypes';
 
 // Export Mastra message types
 export type {
@@ -149,6 +149,8 @@ export {
 	useChatInput,
 	useDebugger,
 	useMessages,
+	useSpell,
+	useSpells,
 	useStyling,
 	useVoice,
 } from '@/store/CedarStore';
@@ -171,6 +173,29 @@ export {
 
 // Export response processor factory function
 export { createResponseProcessor } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
+
+// Export spell system types and utilities
+export {
+	Hotkey,
+	MouseEvent,
+	SelectionEvent,
+	ActivationMode,
+} from '@/store/spellSlice/SpellTypes';
+
+export type {
+	ActivationConditions,
+	ActivationEvent,
+	ActivationState,
+	HotkeyCombo,
+	CommonHotkeyCombo,
+} from '@/store/spellSlice/SpellTypes';
+
+export type { SpellSlice } from '@/store/spellSlice/spellSlice';
+
+export type {
+	UseSpellOptions,
+	UseSpellReturn,
+} from '@/store/spellSlice/useSpell';
 
 // Export Tiptap components
 export {

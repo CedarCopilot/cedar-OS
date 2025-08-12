@@ -3,9 +3,8 @@ import {
 	CustomStructuredResponseType,
 	ResponseProcessorExecute,
 	StructuredResponseType,
-} from '@/store/agentConnection/types';
-
-import { ResponseProcessor } from '@/store/agentConnection/types';
+	ResponseProcessor,
+} from '@/store/agentConnection/AgentConnectionTypes';
 
 export function createResponseProcessor<T extends StructuredResponseType>(
 	p: ResponseProcessor<T>

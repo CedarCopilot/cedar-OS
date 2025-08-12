@@ -1,1 +1,1 @@
-export { useCedarEditor } from './useCedarEditor';
+export { useCedarEditor } from '@/components/chatInput/useCedarEditor';

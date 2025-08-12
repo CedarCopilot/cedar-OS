@@ -1,7 +1,7 @@
 import type {
 	ResponseProcessor,
 	ResponseProcessorRegistry,
-} from '@/store/agentConnection/types';
+} from '@/store/agentConnection/AgentConnectionTypes';
 import { actionResponseProcessor } from '@/store/agentConnection/responseProcessors/actionResponseProcessor';
 import { messageResponseProcessor } from '@/store/agentConnection/responseProcessors/messageResponseProcessor';
 import { progressUpdateResponseProcessor } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';

@@ -1,6 +1,6 @@
-import { ResponseProcessor } from '@/store/agentConnection/types';
+import { ResponseProcessor } from '@/store/agentConnection/AgentConnectionTypes';
 import { ActionResponse } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
-import { MessageInput } from '@/store/messages/types';
+import { MessageInput } from '@/store/messages/MessageTypes';
 
 // Action response processor - generic action handling
 export const actionResponseProcessor: ResponseProcessor<ActionResponse> = {

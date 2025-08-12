@@ -8,8 +8,8 @@ import type {
 	StreamEvent,
 	VoiceParams,
 	VoiceLLMResponse,
-} from '../types';
-import type { StructuredResponseType } from '../types';
+} from '@/store/agentConnection/AgentConnectionTypes';
+import type { StructuredResponseType } from '@/store/agentConnection/AgentConnectionTypes';
 import {
 	generateText,
 	streamText,

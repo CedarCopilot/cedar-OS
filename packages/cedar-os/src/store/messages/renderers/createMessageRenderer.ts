@@ -1,6 +1,4 @@
-import { MessageRenderer } from '@/store/messages/types';
-import { Message } from '@/store/messages/types';
-import { CustomMessage } from '@/store/messages/types';
+import { MessageRenderer, Message, CustomMessage } from '@/store/messages/MessageTypes';
 import React from 'react';
 
 export function createMessageRenderer<T extends Message>(

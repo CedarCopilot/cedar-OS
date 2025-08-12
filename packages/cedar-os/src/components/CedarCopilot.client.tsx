@@ -5,8 +5,8 @@ import { useCedarStore } from '@/store/CedarStore';
 import type {
 	ProviderConfig,
 	ResponseProcessor,
-} from '@/store/agentConnection/types';
-import type { MessageRenderer } from '@/store/messages/types';
+} from '@/store/agentConnection/AgentConnectionTypes';
+import type { MessageRenderer } from '@/store/messages/MessageTypes';
 import { useCedarState } from '@/store/stateSlice/useCedarState';
 import { MessageStorageConfig } from '@/store/messages/messageStorage';
 import type { VoiceState } from '@/store/voice/voiceSlice';

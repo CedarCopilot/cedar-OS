@@ -2,7 +2,7 @@ import type {
 	MessageRenderer,
 	Message,
 	MessageRendererRegistry,
-} from '@/store/messages/types';
+} from '@/store/messages/MessageTypes';
 
 // Import renderer components
 import ProgressUpdateRenderer, {

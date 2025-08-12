@@ -2,7 +2,7 @@ import {
 	MastraStreamedResponse,
 	MastraStreamedResponseType,
 } from '@/store/agentConnection/providers/mastra';
-import { CustomMessage } from '@/store/messages/types';
+import { CustomMessage } from '@/store/messages/MessageTypes';
 import React from 'react';
 import { ShimmerText } from './ShimmerText';
 

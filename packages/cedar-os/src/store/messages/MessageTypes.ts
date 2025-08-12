@@ -1,4 +1,4 @@
-import { CedarStore } from '@/store/types';
+import { CedarStore } from '@/store/CedarOSTypes';
 import type { ReactNode } from 'react';
 
 export interface ChatResponse {

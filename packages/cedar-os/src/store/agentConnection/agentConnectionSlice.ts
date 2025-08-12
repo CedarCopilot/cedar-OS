@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
-import type { CedarStore } from '../types';
-import { getProviderImplementation } from './providers/index';
+import type { CedarStore } from '@/store/CedarOSTypes';
+import { getProviderImplementation } from '@/store/agentConnection/providers/index';
 import type {
 	AISDKParams,
 	AISDKStructuredParams,
@@ -19,7 +19,7 @@ import type {
 	ResponseProcessor,
 	ResponseProcessorRegistry,
 	StructuredResponseType,
-} from './types';
+} from '@/store/agentConnection/AgentConnectionTypes';
 import { useCedarStore } from '@/store/CedarStore';
 import { getCedarState } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';

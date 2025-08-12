@@ -1,7 +1,7 @@
 import {
 	CustomStructuredResponseType,
 	ResponseProcessor,
-} from '@/store/agentConnection/types';
+} from '@/store/agentConnection/AgentConnectionTypes';
 
 // Response processor for 'message' type - execute logic + use default text renderer
 export type BackendMessageResponse = CustomStructuredResponseType<

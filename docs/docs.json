@@ -76,9 +76,16 @@
 				]
 			},
 			{
-				"group": "Spells (Coming Soon)",
+				"group": "Spells",
 				"icon": "wand-magic-sparkles",
-				"pages": ["spells/spells", "spells/radial-menu"]
+				"pages": [
+					"spells/spells",
+					"spells/creating-custom-spells",
+					"spells/spell-architecture",
+					"spells/radial-menu",
+					"spells/questioning-spell",
+					"spells/tooltip-menu"
+				]
 			},
 			{
 				"group": "External Integrations (Coming Soon)",

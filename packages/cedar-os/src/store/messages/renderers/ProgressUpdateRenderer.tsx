@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShimmerText } from './ShimmerText';
 import { ProgressUpdateResponse } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
-import { CustomMessage } from '@/store/messages/types';
+import { CustomMessage } from '@/store/messages/MessageTypes';
 
 /**
  * Message shape for progress updates stored in the chat history.

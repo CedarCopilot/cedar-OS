@@ -1,9 +1,9 @@
 import type {
 	ResponseProcessor,
 	StructuredResponseType,
-} from '@/store/agentConnection/types';
-import { CedarStore } from '@/store/types';
-import { Message } from '@/store/messages/types';
+} from '@/store/agentConnection/AgentConnectionTypes';
+import { CedarStore } from '@/store/CedarOSTypes';
+import { Message } from '@/store/messages/MessageTypes';
 
 // -----------------------------------------------------------------------------
 // Type definitions

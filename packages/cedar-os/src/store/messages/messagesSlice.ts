@@ -1,11 +1,11 @@
 import { StateCreator } from 'zustand';
-import { CedarStore } from '../types';
+import { CedarStore } from '@/store/CedarOSTypes';
 import type {
 	Message,
 	MessageInput,
 	MessageRenderer,
 	MessageRendererRegistry,
-} from './types';
+} from '@/store/messages/MessageTypes';
 import {
 	getMessageStorageState,
 	MessageStorageState,
