@@ -22,11 +22,7 @@ interface ProgressUpdateRendererProps {
 const ProgressUpdateRenderer: React.FC<ProgressUpdateRendererProps> = ({
 	message,
 }) => {
-	return (
-		<div className='my-1'>
-			<ShimmerText text={message.text} state={message.state} />
-		</div>
-	);
+	return <ShimmerText text={message.text} state={message.state} />;
 };
 
 export default ProgressUpdateRenderer;
