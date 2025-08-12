@@ -130,6 +130,7 @@ export {
 	useChatInput,
 	useDebugger,
 	useMessages,
+	useSpell,
 	useSpells,
 	useStyling,
 	useVoice,
@@ -152,6 +153,11 @@ export type {
 } from '@/store/spellSlice/SpellTypes';
 
 export type { SpellSlice } from '@/store/spellSlice/spellSlice';
+
+export type {
+	UseSpellOptions,
+	UseSpellReturn,
+} from '@/store/spellSlice/useSpell';
 
 // Export Tiptap components
 export {

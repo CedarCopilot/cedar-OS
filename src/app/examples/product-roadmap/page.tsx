@@ -39,6 +39,7 @@ import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import {
 	ActivationMode,
+	Hotkey,
 	MouseEvent as SpellMouseEvent,
 	useRegisterState,
 	useStateBasedMentionProvider,
@@ -696,7 +697,7 @@ export default function ProductMapPage() {
 						},
 					]}
 					activationConditions={{
-						events: [SpellMouseEvent.RIGHT_CLICK],
+						events: [SpellMouseEvent.RIGHT_CLICK, Hotkey.R],
 						mode: ActivationMode.HOLD, // Hold mode for radial menu
 					}}
 				/>
