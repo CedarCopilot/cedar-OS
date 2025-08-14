@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import TooltipText from '@/components/guidance/components/TooltipText';
 import { useStyling } from '@/store/CedarStore';
 import { Position } from '@/components/guidance/utils/positionUtils';
@@ -113,7 +113,7 @@ const BaseCursor: React.FC<BaseCursorProps> = ({
 			return {
 				type: 'tween' as const,
 				duration: 1, // Duration for the movement
-				ease: 'easeInOut', // Smooth ease-in-out curve
+				ease: 'easeInOut' as const, // Smooth ease-in-out curve
 				delay: 0.3, // Delay before starting movement
 			};
 		}

@@ -22,7 +22,7 @@ import {
 	VirtualTypingGuidance,
 } from '@/store/guidance/guidanceSlice';
 import { useGuidance, useMessages } from '@/store/CedarStore';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import IFGuidanceRenderer from '@/components/guidance/components/IFGuidanceRenderer';
 
