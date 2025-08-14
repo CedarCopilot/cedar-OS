@@ -15,6 +15,7 @@ export interface CedarCopilotProps {
 	children: React.ReactNode;
 	productId?: string | null;
 	userId?: string | null;
+	threadId?: string | null;
 	llmProvider?: ProviderConfig;
 	messageStorage?: MessageStorageConfig;
 	voiceSettings?: Partial<VoiceState['voiceSettings']>;
@@ -26,6 +27,7 @@ export interface CedarCopilotProps {
 export function CedarCopilotClient({
 	children,
 	userId = null,
+	threadId = null,
 	llmProvider,
 	messageStorage,
 	voiceSettings,
@@ -51,21 +53,41 @@ export function CedarCopilotClient({
 		}
 	}, [llmProvider, setProviderConfig]);
 
-	// User ID
-	const [, setCedarUserId] = useCedarState<string>('userId', userId ?? '');
+	// ─── userId ────────────────────────────────────────────────
+	const [cedarUserId, setCedarUserId] = useCedarState<string>(
+		'userId',
+		userId ?? ''
+	);
+
 	useEffect(() => {
 		if (userId !== null) {
 			setCedarUserId(userId);
 		}
 	}, [userId, setCedarUserId]);
 
-	// Message storage
+	// ─── threadId ──────────────────────────────────────────────
+	const [cedarThreadId, setCedarThreadId] = useCedarState<string>(
+		'threadId',
+		threadId ?? ''
+	);
+
 	useEffect(() => {
-		if (messageStorage) {
-			useCedarStore.getState().setMessageStorageAdapter(messageStorage);
-			useCedarStore.getState().loadMessageStorageThreads?.();
-			useCedarStore.getState().loadMessageStorageMessages?.();
+		if (threadId !== null) {
+			setCedarThreadId(threadId);
 		}
+	}, [threadId, setCedarThreadId]);
+
+	useEffect(() => {
+		useCedarStore.getState().initializeChat?.({
+			userId: cedarUserId,
+			threadId: cedarThreadId,
+		});
+	}, [cedarUserId, cedarThreadId]);
+
+	// Combined message storage initialization and updates
+	useEffect(() => {
+		if (!messageStorage) return;
+		useCedarStore.getState().setMessageStorageAdapter(messageStorage);
 	}, [messageStorage]);
 
 	// Response processors
@@ -95,6 +117,7 @@ export function CedarCopilotClient({
 
 	console.log('CedarCopilot', {
 		userId,
+		threadId,
 		llmProvider,
 		voiceSettings,
 		messageStorage,

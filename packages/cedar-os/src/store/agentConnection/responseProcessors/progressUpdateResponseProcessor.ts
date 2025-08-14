@@ -1,22 +1,25 @@
-import type {
-	ResponseProcessor,
-	StructuredResponseType,
-} from '@/store/agentConnection/AgentConnectionTypes';
-import { CedarStore } from '@/store/CedarOSTypes';
-import { Message } from '@/store/messages/MessageTypes';
-
 // -----------------------------------------------------------------------------
 // Type definitions
 // -----------------------------------------------------------------------------
 
-/**
- * Structured response object sent by the backend to indicate progress updates.
- */
-export type ProgressUpdateResponse = {
+import {
+	createResponseProcessor,
+	CustomStructuredResponseType,
+	StructuredResponseType,
+} from '@/index';
+import { CedarStore } from '@/store/CedarOSTypes';
+import { CustomMessage, Message } from '@/store/messages/MessageTypes';
+
+export type ProgressUpdateResponsePayload = {
 	type: 'progress_update';
 	state: 'in_progress' | 'complete' | 'error';
 	text: string;
 };
+
+export type ProgressUpdateResponse = CustomStructuredResponseType<
+	'progress_update',
+	ProgressUpdateResponsePayload
+>;
 
 /**
  * Runtime type-guard for ProgressUpdateResponse.
@@ -50,10 +53,10 @@ function isProgressMessage(m: Message | undefined): m is Message & {
 // Processor implementation
 // -----------------------------------------------------------------------------
 
-export const progressUpdateResponseProcessor: ResponseProcessor<ProgressUpdateResponse> =
-	{
+export const progressUpdateResponseProcessor =
+	createResponseProcessor<ProgressUpdateResponse>({
 		type: 'progress_update',
-		namespace: 'default',
+		namespace: 'custom',
 		execute: async (obj, store: CedarStore) => {
 			// Clone the current messages array so we can manipulate it
 			const messages = [...store.messages];
@@ -85,25 +88,25 @@ export const progressUpdateResponseProcessor: ResponseProcessor<ProgressUpdateRe
 			// Handle completion or error states
 			if (obj.state === 'complete' || obj.state === 'error') {
 				const newState = obj.state;
-				if (isProgressMessage(last) && last.state === 'in_progress') {
-					messages[messages.length - 1] = {
-						...last,
-						text: obj.text,
-						state: newState,
-					} as Message;
-				} else {
-					messages.push({
-						id: `message-${Date.now()}-${Math.random()
-							.toString(36)
-							.slice(2, 9)}`,
-						role: 'assistant',
-						type: 'progress_update',
-						text: obj.text,
-						state: newState,
-					} as unknown as Message);
-				}
-				store.setMessages(messages);
+				// Remove any existing in-progress messages
+				const filtered = messages.filter(
+					(m) =>
+						!(
+							m.type === 'progress_update' &&
+							(m as CustomMessage<'progress_update', ProgressUpdateResponse>)
+								.state === 'in_progress'
+						)
+				);
+				// Append the final complete or error message
+				filtered.push({
+					id: `message-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+					role: 'assistant',
+					type: 'progress_update',
+					text: obj.text,
+					state: newState,
+				} as unknown as Message);
+				store.setMessages(filtered);
 			}
 		},
 		validate: isProgressUpdateResponse,
-	};
+	});
