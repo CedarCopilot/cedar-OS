@@ -54,7 +54,7 @@
 		"@types/crypto-js": "^4.2.2",
 		"class-variance-authority": "^0.7.1",
 		"crypto-js": "^4.2.0",
-		"framer-motion": "12.17.0",
+		"framer-motion": "12.23.9",
 		"gsap": "^3.12.7",
 		"lucide-react": "^0.363.0",
 		"motion-plus-react": "^1.2.0",
