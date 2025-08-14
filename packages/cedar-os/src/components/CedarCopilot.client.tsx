@@ -1,6 +1,5 @@
 'use client';
 
-import React, { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
 import type {
 	ProviderConfig,
@@ -8,8 +7,9 @@ import type {
 } from '@/store/agentConnection/AgentConnectionTypes';
 import type { MessageRenderer } from '@/store/messages/MessageTypes';
 import { MessageStorageConfig } from '@/store/messages/messageStorage';
-import type { VoiceState } from '@/store/voice/voiceSlice';
 import { useCedarState } from '@/store/stateSlice/useCedarState';
+import type { VoiceState } from '@/store/voice/voiceSlice';
+import React, { useEffect } from 'react';
 
 export interface CedarCopilotProps {
 	children: React.ReactNode;

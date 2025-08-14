@@ -45,6 +45,7 @@ import {
 	useStateBasedMentionProvider,
 	useSubscribeInputContext,
 	type CedarStore,
+	GuidanceRenderer,
 } from 'cedar-os';
 import {
 	ArrowRight,
@@ -55,6 +56,9 @@ import {
 	Loader,
 	Share2,
 	Sparkles,
+	Trash,
+	Repeat,
+	Pencil,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { TooltipMenu } from '@/inputs/TooltipMenu';
@@ -515,9 +519,20 @@ function FlowCanvas() {
 			{edgeMenu && (
 				<TooltipMenu
 					position={{ x: edgeMenu.x, y: edgeMenu.y }}
-					onDelete={onDeleteEdge}
-					onReverse={onDirectionChange}
-					onEdit={() => openEditLabel(edgeMenu.edge)}
+					items={[
+						{ title: 'Edit label', icon: Pencil, onInvoke: () => {} },
+						{ title: 'Reverse direction', icon: Repeat, onInvoke: () => {} },
+						{ title: 'Delete edge', icon: Trash, onInvoke: () => {} },
+					]}
+					onItemClick={(item) => {
+						if (item.title === 'Delete edge') {
+							onDeleteEdge();
+						} else if (item.title === 'Reverse direction') {
+							onDirectionChange();
+						} else if (item.title === 'Edit label' && edgeMenu) {
+							openEditLabel(edgeMenu.edge);
+						}
+					}}
 					onClose={() => setEdgeMenu(null)}
 				/>
 			)}
@@ -532,6 +547,8 @@ function FlowCanvas() {
 					<CheckCircle size={20} className='text-green-500' />
 				) : null}
 			</div>
+			{/* Mount guidance renderer so any queued guidances can display */}
+			<GuidanceRenderer />
 		</div>
 	);
 }

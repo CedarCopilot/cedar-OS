@@ -11,7 +11,7 @@ import {
 	type ActivationConditions,
 } from 'cedar-os';
 // TODO: TooltipText component needs to be created
-// import TooltipText from '@/components/interactions/components/TooltipText';
+// import TooltipText from '@/components/guidance/components/TooltipText';
 
 interface QuestioningSpellProps {
 	/** Unique identifier for this spell instance */

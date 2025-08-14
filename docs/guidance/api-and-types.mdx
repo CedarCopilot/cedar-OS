@@ -1,0 +1,320 @@
+---
+title: 'Guidance API and Types'
+description: 'Control guidance via store actions only; the renderer handles visuals. Full API and examples for every GuidanceType.'
+---
+
+Cedar’s guidance is controlled through the store. You enqueue items with `useGuidance()` and the `GuidanceRenderer` (rendered once near the app root) handles visuals.
+
+## Setup
+
+```tsx
+import { GuidanceRenderer } from 'cedar-os';
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+	return (
+		<>
+			<GuidanceRenderer />
+			{children}
+		</>
+	);
+}
+```
+
+## useGuidance API
+
+```ts
+import { useGuidance } from 'cedar-os';
+d;
+const {
+	// State
+	queue,
+	currentGuidance,
+	isActive,
+	prevCursorPosition,
+	onQueueComplete,
+	isAnimatingOut,
+	guidanceLogId,
+	guidanceSessionId,
+
+	// Actions
+	addGuidance,
+	addGuidances,
+	addGuidancesToStart,
+	replaceGuidances,
+	removeGuidance,
+	clearQueue,
+	nextGuidance,
+	setIsActive,
+	setPrevCursorPosition,
+	setOnQueueComplete,
+	setIsAnimatingOut,
+	setGuidanceSessionId,
+	setCurrentGuidance,
+} = useGuidance();
+```
+
+### Actions
+
+- addGuidance(guidance)
+- addGuidances(guidances)
+- addGuidancesToStart(guidances)
+- replaceGuidances(guidances)
+- removeGuidance(id)
+- clearQueue()
+- nextGuidance(guidanceId?)
+- setIsActive(boolean)
+- setPrevCursorPosition({ x, y } | null)
+- setOnQueueComplete(callback | null)
+- setIsAnimatingOut(boolean)
+- setGuidanceSessionId(string)
+- setCurrentGuidance(guidance | null)
+
+Guidance targets accept any `PositionOrElement`: a DOM element, a selector (e.g., `'#save'`), `{ x, y }` coordinates, `'cursor'`, or a lazy resolver `{ _lazy: true, resolve: () => element }`. The renderer derives `endRect` for you and handles scrolling when supported.
+
+## Guidance types and examples
+
+All examples assume `const { addGuidance } = useGuidance()`.
+
+### CURSOR_TAKEOVER
+
+```tsx
+addGuidance({
+	type: 'CURSOR_TAKEOVER',
+	isRedirected: true,
+	messages: ['Let’s begin…'],
+	blocking: true,
+});
+```
+
+### VIRTUAL_CLICK
+
+```tsx
+addGuidance({
+	type: 'VIRTUAL_CLICK',
+	endPosition: '#settings',
+	tooltipText: 'Open settings',
+	tooltipPosition: 'right',
+	tooltipAnchor: 'rect',
+	advanceMode: 'default', // auto | external | default | number | (() => boolean)
+	blocking: true,
+	shouldScroll: true,
+});
+```
+
+### VIRTUAL_DRAG
+
+```tsx
+addGuidance({
+	type: 'VIRTUAL_DRAG',
+	startPosition: '#card-a',
+	endPosition: '#card-b',
+	tooltipText: 'Drag A onto B',
+	startTooltip: { tooltipText: 'Start', tooltipAnchor: 'rect' },
+	dragCursor: true,
+	shouldScroll: true,
+});
+```
+
+### MULTI_VIRTUAL_CLICK
+
+```tsx
+addGuidance({
+	type: 'MULTI_VIRTUAL_CLICK',
+	guidances: [
+		{ endPosition: '#nav-profile', tooltipText: 'Profile' },
+		{ endPosition: '#nav-billing', tooltipText: 'Billing' },
+		{ endPosition: '#nav-notifications', tooltipText: 'Notifications' },
+	],
+	loop: false,
+	delay: 500,
+	advanceMode: 'default',
+});
+```
+
+### VIRTUAL_TYPING
+
+```tsx
+addGuidance({
+	type: 'VIRTUAL_TYPING',
+	endPosition: '#email',
+	expectedValue: (val) => /@/.test(val),
+	checkExistingValue: true,
+	typingDelay: 120,
+	tooltipText: 'Enter your email',
+	tooltipPosition: 'bottom',
+	tooltipAnchor: 'rect',
+	advanceMode: 'default',
+	blocking: true,
+});
+```
+
+### CHAT
+
+```tsx
+addGuidance({
+	type: 'CHAT',
+	content: { role: 'assistant', type: 'text', content: 'Welcome to Cedar!' },
+	messageDelay: 200,
+	autoAdvance: true,
+	customMessages: [
+		{
+			content: { role: 'assistant', type: 'text', content: 'Step 1 complete.' },
+			messageDelay: 500,
+		},
+	],
+});
+```
+
+### CHAT_TOOLTIP
+
+```tsx
+addGuidance({
+	type: 'CHAT_TOOLTIP',
+	content: 'Open chat any time',
+	position: 'top',
+	duration: 3000,
+});
+```
+
+### IDLE
+
+```tsx
+addGuidance({
+	type: 'IDLE',
+	duration: 1000, // or use advanceFunction(next => …)
+});
+```
+
+### DIALOGUE
+
+```tsx
+addGuidance({
+	type: 'DIALOGUE',
+	text: 'Review changes before publishing',
+	advanceMode: 'auto',
+	blocking: true,
+	highlightElements: ['#changes-panel', '#publish-button'],
+	shouldScroll: true,
+});
+```
+
+### DIALOGUE_BANNER
+
+```tsx
+addGuidance({
+	type: 'DIALOGUE_BANNER',
+	text: 'New: Real-time collaboration',
+	advanceMode: 'external',
+});
+```
+
+### SURVEY
+
+```tsx
+addGuidance({
+	type: 'SURVEY',
+	title: 'Quick feedback',
+	description: 'Help us improve',
+	questions: [
+		{ id: 'q1', type: 'nps', question: 'Likelihood to recommend?' },
+		{ id: 'q2', type: 'shortText', question: 'What can we improve?' },
+	],
+	blocking: false,
+	submitButtonText: 'Send',
+});
+```
+
+### EXECUTE_CLICK
+
+```tsx
+addGuidance({
+	type: 'EXECUTE_CLICK',
+	target: '#submit',
+	tooltipText: 'Submitting…',
+	showCursor: true, // false executes immediately without animation
+	shouldScroll: true,
+});
+```
+
+### EXECUTE_TYPING
+
+```tsx
+addGuidance({
+	type: 'EXECUTE_TYPING',
+	endPosition: '#search',
+	expectedValue: 'hello world',
+});
+```
+
+### TOAST
+
+```tsx
+addGuidance({
+	type: 'TOAST',
+	title: 'Saved',
+	description: 'Your settings have been saved.',
+	variant: 'success',
+	position: 'bottom-right',
+	duration: 3000,
+});
+```
+
+### IF
+
+```tsx
+addGuidance({
+	type: 'IF',
+	condition: () => Boolean(document.querySelector('#pro-feature')),
+	trueGuidance: { type: 'DIALOGUE', text: 'Pro feature available' },
+	falseGuidance: { type: 'DIALOGUE', text: 'Upgrade to Pro to continue' },
+	advanceMode: 'default', // or a predicate/callback
+});
+```
+
+### GATE_IF
+
+```tsx
+addGuidance({
+	type: 'GATE_IF',
+	condition: async () => {
+		const ok = await Promise.resolve(true);
+		return ok;
+	},
+	trueGuidances: [
+		{
+			type: 'CHAT',
+			content: {
+				role: 'assistant',
+				type: 'text',
+				content: 'Great! Let’s continue.',
+			},
+		},
+	],
+	falseGuidances: [
+		{
+			type: 'CHAT',
+			content: { role: 'assistant', type: 'text', content: 'We’ll wait here.' },
+		},
+	],
+});
+```
+
+### NAVIGATE
+
+```tsx
+addGuidance({
+	type: 'NAVIGATE',
+	url: 'https://docs.yourapp.com/getting-started',
+});
+```
+
+### RIGHT_CLICK
+
+```tsx
+addGuidance({
+	type: 'RIGHT_CLICK',
+	duration: 2000,
+});
+```
+
+That’s it: enqueue via `useGuidance`; the renderer handles visuals, endRect math, offscreen logic, and tooltips automatically.

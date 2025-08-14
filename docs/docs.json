@@ -88,6 +88,11 @@
 				]
 			},
 			{
+				"group": "Guidance",
+				"icon": "bolt",
+				"pages": ["guidance/api-and-types", "guidance/endrect-utils"]
+			},
+			{
 				"group": "External Integrations (Coming Soon)",
 				"icon": "puzzle-piece",
 				"pages": [

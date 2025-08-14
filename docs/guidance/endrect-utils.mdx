@@ -1,0 +1,66 @@
+---
+title: 'endRect Utilities'
+description: 'How targets resolve to endRect and the helpers involved.'
+---
+
+The renderer derives `endRect` (a DOMRect) from your guidance targets. These helpers power that resolution and viewport-aware behavior.
+
+## Position and rect helpers
+
+```ts
+import {
+	getPositionFromElementWithViewport,
+	getRectFromPositionOrElement,
+	type Position,
+	type PositionOrElement,
+} from 'cedar-os';
+
+// From an element
+const el = document.querySelector('#save') as HTMLElement;
+const pos = getPositionFromElementWithViewport(el, 10, true); // scroll if needed
+const rect = getRectFromPositionOrElement(el, 10, true);
+
+// From coordinates
+const p: Position = { x: 200, y: 320 };
+// getRectFromPositionOrElement returns null for pure coordinates
+
+// Lazy resolver
+const lazy: PositionOrElement = {
+	_lazy: true,
+	resolve: () => document.querySelector('#avatar')!,
+};
+const rect2 = getRectFromPositionOrElement(lazy, 10, true);
+```
+
+## Viewport helpers
+
+```ts
+import {
+	isRectInViewport,
+	isRectPartiallyInViewport,
+	getVisibleRectPercentage,
+	isPositionInViewport,
+	getOffscreenDirection,
+} from 'cedar-os';
+
+const inView = isRectInViewport(rect!, 8);
+const partially = isRectPartiallyInViewport(rect!);
+const visiblePct = getVisibleRectPercentage(rect!); // 0..1
+const pointOK = isPositionInViewport({ x: 50, y: 80 }, 4);
+const offscreen = getOffscreenDirection({ x: -10, y: 200 }); // { left: true, ... } | null
+```
+
+## Offscreen edge pointer math
+
+```ts
+// Internal helper used by the renderer when a target is offscreen
+// to position an arrow at the nearest viewport edge.
+import /* not exported publicly */ 'cedar-os';
+// Conceptual API:
+// calculateEdgePointerPosition(targetRect) => { position: {x,y}, angle, edge: 'top'|'right'|'bottom'|'left' }
+```
+
+Notes:
+
+- Prefer passing elements or selectors; rect math is most precise on elements.
+- Set `shouldScroll: true` on guidance items that target potentially offscreen elements.
