@@ -133,55 +133,6 @@ export type TypedAgentConnectionSlice<T extends ProviderConfig> = Omit<
 	voiceLLM: (params: VoiceParams) => Promise<VoiceLLMResponse>;
 };
 
-export const improvePrompt = async (
-	prompt: string,
-	handler?: StreamHandler
-): Promise<string> => {
-	const systemPrompt = `You are an AI assistant that helps improve prompts for clarity and specificity. 
-Given a user's prompt, analyze it and enhance it to be more specific, detailed, and effective.
-Focus on adding context, clarifying ambiguities, and structuring the prompt for better results.
-Return only the improved prompt without explanations or meta-commentary.`;
-
-	const store = useCedarStore.getState();
-
-	if (handler) {
-		// Use streaming if handler is provided
-		store.streamLLM(
-			{
-				prompt,
-				systemPrompt,
-			},
-			handler
-		);
-
-		// Wait for completion and return the final content
-		let improvedPrompt = '';
-		const originalHandler = handler;
-
-		await new Promise<void>((resolve) => {
-			handler = (event) => {
-				if (event.type === 'chunk') {
-					improvedPrompt += event.content;
-				} else if (event.type === 'done') {
-					resolve();
-				}
-				originalHandler(event);
-			};
-		});
-
-		return improvedPrompt;
-	} else {
-		// Use non-streaming version
-		const response = await store.callLLM({
-			prompt,
-			systemPrompt,
-			temperature: 0.7,
-			maxTokens: 1000,
-		});
-
-		return response.content;
-	}
-};
 export const createAgentConnectionSlice: StateCreator<
 	CedarStore,
 	[],
