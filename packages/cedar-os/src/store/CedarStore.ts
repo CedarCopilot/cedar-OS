@@ -46,6 +46,13 @@ export const useStyling = () => ({
 	toggleDarkMode: useCedarStore((state) => state.toggleDarkMode),
 });
 
+// Export a hook for guidance styling
+export const useGuidanceStyling = () => ({
+	guidanceStyling: useCedarStore((state) => state.guidanceStyling),
+	setGuidanceStyling: useCedarStore((state) => state.setGuidanceStyling),
+	getGuidanceTextColor: useCedarStore((state) => state.getGuidanceTextColor),
+});
+
 // Export a hook for chat input
 export const useChatInput = () => ({
 	chatInputContent: useCedarStore((state) => state.chatInputContent),

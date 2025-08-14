@@ -8,6 +8,14 @@ import {
 import { MessageInput } from '@/store/messages/MessageTypes';
 import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { getShadedColor } from '@/styles/stylingUtils';
+
+// Guidance styling configuration
+export interface GuidanceStylingConfig {
+	textColor?: string;
+	tooltipStyle?: 'solid' | 'lined';
+	tooltipSize?: 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl';
+}
 
 /**
  * Guidance Queue Management:
@@ -396,6 +404,12 @@ export type Guidance =
 	| RightClickGuidance
 	| DialogueBannerGuidance;
 
+// Default guidance styling
+const DEFAULT_GUIDANCE_STYLING: GuidanceStylingConfig = {
+	tooltipStyle: 'lined',
+	tooltipSize: 'sm',
+};
+
 // Type alias for guidances with optional IDs
 export type MakeIdOptional<T> = T extends BaseGuidance
 	? Omit<T, 'id'> & { id?: string }
@@ -411,6 +425,7 @@ export interface GuidanceSlice {
 	isAnimatingOut: boolean;
 	guidanceLogId: string;
 	guidanceSessionId: string;
+	guidanceStyling: GuidanceStylingConfig;
 
 	// Guidances
 	addGuidance: (guidance: GuidanceInput, guidanceConfigId?: string) => void;
@@ -429,6 +444,10 @@ export interface GuidanceSlice {
 	addGuidancesToStart: (guidances: GuidanceInput[] | GuidanceInput) => void;
 	setGuidanceSessionId: (sessionId: string) => void;
 	setCurrentGuidance: (guidance: Guidance | null) => void;
+
+	// Guidance styling actions
+	setGuidanceStyling: (styling: Partial<GuidanceStylingConfig>) => void;
+	getGuidanceTextColor: (baseColor: string) => string;
 }
 
 // Create the slice
@@ -447,6 +466,7 @@ export const createGuidanceSlice: StateCreator<
 	isAnimatingOut: false,
 	guidanceLogId: '',
 	guidanceSessionId: '',
+	guidanceStyling: DEFAULT_GUIDANCE_STYLING,
 
 	// Guidances
 	setCurrentGuidance: (guidance) => set({ currentGuidance: guidance }),
@@ -776,4 +796,15 @@ export const createGuidanceSlice: StateCreator<
 
 	setGuidanceSessionId: (sessionId: string) =>
 		set({ guidanceSessionId: sessionId }),
+
+	// Guidance styling actions
+	setGuidanceStyling: (newStyling) =>
+		set((state) => ({
+			guidanceStyling: { ...state.guidanceStyling, ...newStyling },
+		})),
+
+	getGuidanceTextColor: (baseColor: string) => {
+		const state = get();
+		return state.guidanceStyling.textColor || getShadedColor(baseColor, 80);
+	},
 });

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useStyling } from '@/store/CedarStore';
+import { useStyling, useGuidanceStyling } from '@/store/CedarStore';
 import { createPortal } from 'react-dom';
 
 export interface DialogueBoxProps {
@@ -21,6 +21,7 @@ const DialogueBox: React.FC<DialogueBoxProps> = ({
 	blocking = false,
 }) => {
 	const { styling } = useStyling();
+	const { guidanceStyling, getGuidanceTextColor } = useGuidanceStyling();
 	const [displayedText, setDisplayedText] = useState('');
 	const [isTypingComplete, setIsTypingComplete] = useState(false);
 	const typingSpeed = 30; // ms per character
@@ -117,7 +118,9 @@ const DialogueBox: React.FC<DialogueBoxProps> = ({
 	}, [isTypingComplete, advanceMode, onComplete]);
 
 	// Define the box shadow style similar to ClickableArea
-	const boxShadowStyle = `0 0 0 2px white, 0 0 0 4px ${styling.color || '#FFBFE9'}, 0 0 30px rgba(255, 255, 255, 0.8)`;
+	const boxShadowStyle = `0 0 0 2px white, 0 0 0 4px ${
+		styling.color || '#FFBFE9'
+	}, 0 0 30px rgba(255, 255, 255, 0.8)`;
 
 	// Function to safely render the icon component
 	const renderIconComponent = () => {
@@ -135,7 +138,9 @@ const DialogueBox: React.FC<DialogueBoxProps> = ({
 				transition={{ delay: 0.3, type: 'spring' }}
 				style={{
 					border: `2px solid ${styling.color || '#FFBFE9'}`,
-					boxShadow: `0 0 10px ${styling.color ? styling.color + '80' : 'rgba(255, 191, 233, 0.5)'}`,
+					boxShadow: `0 0 10px ${
+						styling.color ? styling.color + '80' : 'rgba(255, 191, 233, 0.5)'
+					}`,
 				}}>
 				{React.isValidElement(styling.iconComponent)
 					? styling.iconComponent
@@ -180,8 +185,8 @@ const DialogueBox: React.FC<DialogueBoxProps> = ({
 					...style,
 					fontFamily: 'system-ui, sans-serif',
 					color:
-						(styling.tooltipStyle === 'lined'
-							? styling.textColor
+						(guidanceStyling.tooltipStyle === 'lined'
+							? getGuidanceTextColor(styling.color || '#000')
 							: styling.color) || '#000',
 				}}>
 				<div

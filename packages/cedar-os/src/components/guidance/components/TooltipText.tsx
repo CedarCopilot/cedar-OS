@@ -6,7 +6,7 @@ import {
 	TargetAndTransition,
 } from 'framer-motion';
 import { cn } from '@/styles/stylingUtils';
-import { useStyling } from '@/store/CedarStore';
+import { useStyling, useGuidanceStyling } from '@/store/CedarStore';
 import { SPRING_CONFIGS } from '@/components/guidance/utils/constants';
 
 interface TooltipTextProps {
@@ -50,12 +50,13 @@ const TooltipText: React.FC<TooltipTextProps> = ({
 	endRect = null,
 }: TooltipTextProps) => {
 	const { styling } = useStyling();
+	const { guidanceStyling, getGuidanceTextColor } = useGuidanceStyling();
 	// Get color from context
 	const bgColor = backgroundColor || styling?.color || '#319B72';
-	const textColor = overrideTextColor || styling?.textColor || '#FFFFFF';
-	const tooltipStyle = styling?.tooltipStyle || 'solid';
+	const textColor = overrideTextColor || getGuidanceTextColor(bgColor);
+	const tooltipStyle = guidanceStyling?.tooltipStyle || 'solid';
 	// Get fontSize from styling config
-	const tooltipFontSize = styling?.tooltipSize || 'sm';
+	const tooltipFontSize = guidanceStyling?.tooltipSize || 'sm';
 
 	const contentRef = useRef<HTMLDivElement>(null);
 	const measureRef = useRef<HTMLDivElement>(null);

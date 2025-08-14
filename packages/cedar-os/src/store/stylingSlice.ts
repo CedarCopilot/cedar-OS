@@ -1,11 +1,13 @@
 import { StateCreator } from 'zustand';
 import { CedarStore } from '@/store/CedarOSTypes';
+import React from 'react';
 
 export interface StylingConfig {
 	darkMode: boolean;
 	color: string;
 	secondaryColor: string;
 	accentColor: string;
+	iconComponent?: React.ReactElement;
 }
 
 export interface StylingState {

@@ -4,7 +4,7 @@ import gsap from 'gsap';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
-import { useStyling } from '@/store/CedarStore';
+import { useStyling, useGuidanceStyling } from '@/store/CedarStore';
 
 interface CedarCursorProps {
 	isRedirected: boolean;
@@ -33,12 +33,13 @@ export function CedarCursor({
 	// Tooltip-like styling (reuse values from global styling context)
 	// ---------------------------------------------------------------------
 	const { styling } = useStyling();
+	const { guidanceStyling, getGuidanceTextColor } = useGuidanceStyling();
 
 	// Derive styling values mimicking TooltipText.tsx
 	const bgColor = styling?.color || cursorColor;
-	const textColor = styling?.textColor || '#FFFFFF';
-	const tooltipStyle = styling?.tooltipStyle || 'solid';
-	const tooltipFontSize = styling?.tooltipSize || 'sm';
+	const textColor = getGuidanceTextColor(bgColor);
+	const tooltipStyle = guidanceStyling?.tooltipStyle || 'lined';
+	const tooltipFontSize = guidanceStyling?.tooltipSize || 'sm';
 
 	const fontSizeClassMap: Record<string, string> = {
 		xs: 'text-xs',
@@ -97,71 +98,6 @@ export function CedarCursor({
 			? Math.min(currentSize + change, 2.8)
 			: Math.max(currentSize - change, 1.8);
 	};
-
-	// // Create a "talking" animation sequence that simulates speech with size variations
-	// const createTalkingAnimation = (
-	// 	timeline: gsap.core.Timeline,
-	// 	cursor: HTMLElement,
-	// 	message: string,
-	// 	baseSize: number // Base size parameter to maintain expanded size
-	// ) => {
-	// 	// Calculate syllables for a more natural speech pattern
-	// 	const wordCount = message.split(' ').length;
-	// 	const characterCount = message.replace(/\s/g, '').length;
-	// 	// Estimate syllables - roughly one per 2-3 characters plus extra for longer words
-	// 	const syllableEstimate = Math.max(characterCount / 2.5, wordCount * 2);
-	// 	const movements = Math.ceil(syllableEstimate); // At least one movement per estimated syllable
-
-	// 	// Create a sequence of size changes to simulate natural speech
-	// 	for (let i = 0; i < movements; i++) {
-	// 		// Determine if this is a primary (larger) or secondary (smaller) syllable
-	// 		const isPrimarySyllable = i % 3 === 0 || Math.random() > 0.6; // Every 3rd syllable or 40% random chance
-
-	// 		// Create varied size increases - larger for primary syllables, smaller for secondary
-	// 		const sizeIncrease = isPrimarySyllable
-	// 			? baseSize * (1.15 + Math.random() * 0.15) // Primary: 15-30% larger (1.15-1.30)
-	// 			: baseSize * (1.05 + Math.random() * 0.08); // Secondary: 5-13% larger (1.05-1.13)
-
-	// 		// Add a "talking" animation that preserves the circular shape
-	// 		timeline
-	// 			// Expand to simulate "speaking"
-	// 			.to(cursor, {
-	// 				scale: sizeIncrease, // Uniform scaling to preserve circle shape
-	// 				duration: 0.15 + Math.random() * 0.1, // Varied expansion speed (0.15-0.25s)
-	// 				ease: 'power2.out', // Slightly accelerating out
-	// 			})
-	// 			// Contract back to near the base size
-	// 			.to(cursor, {
-	// 				scale: baseSize * (0.95 + Math.random() * 0.05), // Slightly under baseSize (0.95-1.0)
-	// 				duration: 0.1 + Math.random() * 0.1, // Varied contraction speed (0.1-0.2s)
-	// 				ease: 'power1.in', // Slightly accelerating in
-	// 			});
-
-	// 		// Add varied pauses between size changes
-	// 		if (i < movements - 1) {
-	// 			// Determine if we need a brief pause (syllable) or longer pause (word break)
-	// 			const isWordBreak = Math.random() > 0.7; // About 30% chance of a word break
-
-	// 			timeline.to(
-	// 				{},
-	// 				{
-	// 					duration: isWordBreak
-	// 						? 0.2 + Math.random() * 0.2 // Word break: 0.2-0.4s pause
-	// 						: 0.05 + Math.random() * 0.1, // Syllable: 0.05-0.15s pause
-	// 				}
-	// 			);
-	// 		}
-	// 	}
-
-	// 	// Final restoration to exactly baseSize
-	// 	timeline.to(cursor, {
-	// 		scale: baseSize,
-	// 		duration: 0.15,
-	// 		ease: 'power1.out',
-	// 	});
-
-	// 	return timeline;
-	// };
 
 	// Handle cursor movement
 	useEffect(() => {
