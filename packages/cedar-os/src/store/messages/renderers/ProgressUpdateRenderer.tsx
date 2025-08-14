@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShimmerText } from './ShimmerText';
-import { ProgressUpdateResponse } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
+import { ProgressUpdateResponsePayload } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 import { CustomMessage } from '@/store/messages/MessageTypes';
 
 /**
@@ -9,7 +9,7 @@ import { CustomMessage } from '@/store/messages/MessageTypes';
  */
 export type ProgressUpdateMessage = CustomMessage<
 	'progress_update',
-	ProgressUpdateResponse
+	ProgressUpdateResponsePayload
 >;
 
 interface ProgressUpdateRendererProps {

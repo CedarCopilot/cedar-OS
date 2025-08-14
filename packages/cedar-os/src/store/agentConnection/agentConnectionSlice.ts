@@ -458,26 +458,12 @@ export const createAgentConnectionSlice: StateCreator<
 	) => {
 		set((state) => {
 			const type = processor.type;
-
-			const entry: ResponseProcessor<T> = {
-				...processor,
+			return {
+				responseProcessors: {
+					...state.responseProcessors,
+					[type]: processor,
+				} as ResponseProcessorRegistry,
 			};
-
-			const existing = state.responseProcessors[type] as
-				| ResponseProcessor
-				| undefined;
-
-			// Replace if no existing
-			if (!existing) {
-				return {
-					responseProcessors: {
-						...state.responseProcessors,
-						[type]: entry,
-					} as ResponseProcessorRegistry,
-				};
-			}
-
-			return {};
 		});
 	},
 
@@ -552,7 +538,8 @@ export const createAgentConnectionSlice: StateCreator<
 				temperature,
 			};
 
-			const threadId = params?.threadId || get().messageCurrentThreadId;
+			const threadId =
+				params?.threadId || (getCedarState('threadId') as string | null);
 			const userId = params?.userId || getCedarState('userId');
 
 			// Add provider-specific params
@@ -600,8 +587,10 @@ export const createAgentConnectionSlice: StateCreator<
 							await state.handleLLMResponse([event.content]);
 							break;
 						case 'object':
-							// Process single object as array of one
-							await state.handleLLMResponse([event.object]);
+							// Process object(s) - handle both single and array
+							await state.handleLLMResponse(
+								Array.isArray(event.object) ? event.object : [event.object]
+							);
 							break;
 						case 'done':
 							// Stream completed - no additional processing needed
