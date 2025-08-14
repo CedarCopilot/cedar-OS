@@ -1,10 +1,10 @@
+import { useStyling } from '@/store/CedarStore';
 import {
-	useStyling,
-	cn,
-	createBorderColor,
 	getShadedColor,
+	createBorderColor,
 	getTextColorForBackground,
-} from 'cedar-os';
+	cn,
+} from '@/styles/stylingUtils';
 import { HTMLMotionProps, motion } from 'motion/react';
 import React from 'react';
 
