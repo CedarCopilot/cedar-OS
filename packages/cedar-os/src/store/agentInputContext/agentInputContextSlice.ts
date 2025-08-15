@@ -238,6 +238,8 @@ export function useSubscribeInputContext<T>(
 		color?: string;
 		labelField?: string | ((item: ElementType<T>) => string);
 		order?: number;
+		/** If false, the generated context entries will not be rendered as badges in the chat UI */
+		showInChat?: boolean;
 	}
 ): void {
 	const updateAdditionalContext = useCedarStore(
@@ -302,7 +304,8 @@ export function useSubscribeInputContext<T>(
 			(options.icon ||
 				options.color ||
 				options.labelField ||
-				options.order !== undefined)
+				options.order !== undefined ||
+				options.showInChat !== undefined)
 		) {
 			const enhanced: Record<string, unknown> = {};
 			for (const [key, value] of Object.entries(normalized)) {
@@ -324,6 +327,8 @@ export function useSubscribeInputContext<T>(
 								icon: options.icon,
 								color: options.color,
 								order: options.order,
+								showInChat:
+									options.showInChat !== undefined ? options.showInChat : true,
 							},
 						};
 					});
