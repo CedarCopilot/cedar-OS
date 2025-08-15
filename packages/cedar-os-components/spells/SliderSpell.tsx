@@ -8,7 +8,7 @@ import {
 	type ActivationConditions,
 	type CedarStore,
 } from 'cedar-os';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
 import Container3D from '../containers/Container3D';
 
 export interface SliderConfig {
@@ -41,7 +41,10 @@ const CustomSlider: React.FC<{
 	max: number;
 	step: number;
 	value: number;
-}> = ({ min, max, step, value }) => {
+	unit: string;
+	label?: string;
+	styling: { darkMode: boolean; color: string; accentColor: string };
+}> = ({ min, max, step, value, unit, label, styling }) => {
 	const percent = ((value - min) / (max - min)) * 100;
 
 	return (
@@ -55,13 +58,26 @@ const CustomSlider: React.FC<{
 							'inset 0px 4px 4px 0px rgba(0, 0, 0, 0.45), inset -0.5px 0.5px 0px rgba(255, 255, 255, 0.25)',
 					}}
 				/>
-				{/* Nub */}
+				{/* Nub and label */}
 				<div
 					className='absolute'
 					style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}>
 					<Container3D className='flex-shrink-0 mb-0.5 w-6 h-6 rounded-full'>
 						<></>
 					</Container3D>
+					<div className='absolute -top-8 left-1/2 transform -translate-x-1/2'>
+						<div
+							className='px-2 py-1 rounded text-sm font-semibold whitespace-nowrap'
+							style={{
+								color: styling.darkMode ? '#fff' : '#000',
+								backgroundColor: styling.darkMode
+									? 'rgba(0,0,0,0.8)'
+									: 'rgba(255,255,255,0.9)',
+							}}>
+							{value}
+							{unit}
+						</div>
+					</div>
 				</div>
 				{/* Invisible input for accessibility */}
 				<input
@@ -74,6 +90,16 @@ const CustomSlider: React.FC<{
 					readOnly
 				/>
 			</div>
+			{/* Label below the slider */}
+			{label && (
+				<div
+					className='mt-2 text-sm font-medium text-center'
+					style={{
+						color: styling.darkMode ? '#fff' : '#000',
+					}}>
+					{label}
+				</div>
+			)}
 		</div>
 	);
 };
@@ -85,7 +111,7 @@ const SliderSpell: React.FC<SliderSpellProps> = ({
 	activationConditions,
 }) => {
 	const { styling } = useStyling();
-	const { min = 0, max = 100, step = 1, unit = '%' } = sliderConfig;
+	const { min = 0, max = 100, step = 1, unit = '%', label } = sliderConfig;
 
 	const [sliderPosition, setSliderPosition] = useState<{
 		x: number;
@@ -183,35 +209,22 @@ const SliderSpell: React.FC<SliderSpellProps> = ({
 	return (
 		<AnimatePresence>
 			{sliderPosition && (
-				<motion.div
-					initial={{ opacity: 0, scale: 0.9 }}
-					animate={{ opacity: 1, scale: 1 }}
-					exit={{ opacity: 0, scale: 0.9 }}
-					transition={{ duration: 0.2, ease: 'easeOut' }}
+				<div
 					className='fixed z-[10000] pointer-events-none'
 					style={{
 						left: sliderPosition.x,
 						top: sliderPosition.y,
-						transform: 'translate(-50%, -100%)',
+						transform: 'translate(-50%, -100%)', // Center horizontally, position above cursor
+						marginTop: '-8px', // Small gap above cursor
 					}}>
 					<div
-						className='pointer-events-auto bg-background/95 backdrop-blur-md rounded-xl shadow-2xl p-6 border border-border'
+						className='pointer-events-auto bg-background/95 backdrop-blur-md rounded-xl shadow-2xl p-1 border border-border'
 						style={{
 							minWidth: '320px',
 							backgroundColor: styling.darkMode
 								? 'rgba(0,0,0,0.9)'
 								: 'rgba(255,255,255,0.95)',
 						}}>
-						{/* Value Display */}
-						<div className='mb-4 text-center'>
-							<div
-								className='text-2xl font-bold'
-								style={{ color: styling.darkMode ? '#fff' : '#000' }}>
-								{sliderValue}
-								{unit}
-							</div>
-						</div>
-
 						{/* Custom Slider implementation */}
 						<div className='w-full'>
 							<CustomSlider
@@ -219,10 +232,13 @@ const SliderSpell: React.FC<SliderSpellProps> = ({
 								max={max}
 								step={step}
 								value={sliderValue}
+								unit={unit}
+								label={label}
+								styling={styling}
 							/>
 						</div>
 					</div>
-				</motion.div>
+				</div>
 			)}
 		</AnimatePresence>
 	);

@@ -116,6 +116,10 @@ export default function CedarPlaygroundPage() {
 					events: ['s', 'right-click'],
 					mode: ActivationMode.HOLD,
 				}}
+				sliderConfig={{
+					// label: 'Percentage slider',
+					unit: '% more concise',
+				}}
 				onComplete={handleSliderComplete}
 			/>
 
