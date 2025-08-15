@@ -2,14 +2,8 @@
 
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import { useState } from 'react';
-import {
-	AgentBackendConnectionSection,
-	ChatSection,
-	DiffHistorySection,
-	SpellsSection,
-	StateAccessSection,
-	VoiceSection,
-} from './sections';
+import { AgentBackendConnectionSection, ChatSection } from './sections';
+import JsonPatchPlayground from '@/cedar-playground/JsonPatchPlayground';
 
 export default function CedarPlaygroundPage() {
 	const [activeChatTab, setActiveChatTab] = useState('caption');
@@ -47,6 +41,9 @@ export default function CedarPlaygroundPage() {
 			<ChatSection activeTab={activeChatTab} onTabChange={setActiveChatTab} />
 			{/* 
 			<StateAccessSection /> */}
+
+			{/* JSON Patch Playground */}
+			<JsonPatchPlayground />
 
 			{/* <SpellsSection /> */}
 
