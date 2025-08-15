@@ -12,8 +12,8 @@ import {
 	ChevronDown,
 	Tag,
 } from 'lucide-react';
-import { useEmailStore } from '../store/emailStore';
-import { EmailView } from '../types';
+import { useEmailStore } from '@/app/examples/email/store/emailStore';
+import { EmailView } from '@/app/examples/email/types';
 
 interface SidebarProps {
 	isOpen: boolean;

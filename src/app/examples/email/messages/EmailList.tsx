@@ -14,8 +14,9 @@ import {
 	ChevronRight,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useEmailStore } from '../store/emailStore';
-import { Email } from '../types';
+import { useEmailStore } from '@/app/examples/email/store/emailStore';
+import { Email } from '@/app/examples/email/types';
+import { useRouter } from 'next/navigation';
 
 export function EmailList() {
 	const {
@@ -23,7 +24,6 @@ export function EmailList() {
 		filter,
 		searchQuery,
 		selectedEmailIds,
-		selectEmail,
 		toggleEmailSelection,
 		selectAllEmails,
 		clearSelection,
@@ -32,7 +32,15 @@ export function EmailList() {
 		settings,
 	} = useEmailStore();
 
+	const router = useRouter();
 	const [, setHoveredEmailId] = useState<string | null>(null);
+
+	const prefetchEmail = (id: string) => {
+		try {
+			// Prefetch the detail route for snappier navigation
+			router.prefetch?.(`/examples/email/inbox/${id}`);
+		} catch {}
+	};
 
 	// Filter emails based on current view and search
 	const filteredEmails = useMemo(() => {
@@ -125,6 +133,51 @@ export function EmailList() {
 		}
 	};
 
+	// Sectioning helpers and data
+	const toLower = (s: string) => s.toLowerCase();
+	const includesAny = (text: string, keywords: string[]) => {
+		const t = toLower(text || '');
+		return keywords.some((k) => t.includes(k));
+	};
+
+	const meetingKeywords = [
+		'meeting',
+		'schedule',
+		'calendar',
+		'invite',
+		'reschedule',
+		'zoom',
+		'google meet',
+		'call',
+		'appointment',
+	];
+
+	const importantEmails = filteredEmails.filter((e) => e.isImportant);
+	const importantIds = new Set(importantEmails.map((e) => e.id));
+
+	const meetingEmails = filteredEmails.filter((e) => {
+		if (importantIds.has(e.id)) return false;
+		return (
+			includesAny(e.subject, meetingKeywords) ||
+			includesAny(e.body, meetingKeywords)
+		);
+	});
+	const meetingIds = new Set(meetingEmails.map((e) => e.id));
+
+	const responseEmails = filteredEmails.filter((e) => {
+		if (importantIds.has(e.id) || meetingIds.has(e.id)) return false;
+		const subject = toLower(e.subject || '');
+		const isReplySubject = subject.startsWith('re:');
+		const referencesExist =
+			Array.isArray(e.references) && e.references.length > 0;
+		const inReply = !!e.inReplyTo;
+		const fromNotMe = e.from.email !== 'me@gmail.com';
+		return fromNotMe && (isReplySubject || referencesExist || inReply);
+	});
+
+	const anySectionHasItems =
+		importantEmails.length + meetingEmails.length + responseEmails.length > 0;
+
 	return (
 		<div className='flex-1 bg-white dark:bg-gray-900 rounded-lg overflow-hidden'>
 			{/* Toolbar */}
@@ -177,29 +230,102 @@ export function EmailList() {
 				</div>
 			</div>
 
-			{/* Email list */}
+			{/* Email sections */}
 			<div
 				className='overflow-y-auto'
 				style={{ maxHeight: 'calc(100vh - 200px)' }}>
-				{filteredEmails.length === 0 ? (
+				{!anySectionHasItems ? (
 					<div className='flex flex-col items-center justify-center py-20 text-gray-500'>
 						<Mail className='w-12 h-12 mb-4 text-gray-300' />
 						<p className='text-lg'>No emails in {filter.view}</p>
 					</div>
 				) : (
-					filteredEmails.map((email) => (
-						<EmailListItem
-							key={email.id}
-							email={email}
-							isSelected={selectedEmailIds.includes(email.id)}
-							onHover={setHoveredEmailId}
-							onSelect={() => selectEmail(email.id)}
-							onToggleSelect={() => toggleEmailSelection(email.id)}
-							onToggleStar={() => toggleStar(email.id)}
-							densityClass={getRowDensityClass()}
-							formatDate={formatEmailDate}
-						/>
-					))
+					<div className='divide-y divide-gray-200 dark:divide-gray-800'>
+						{/* Important */}
+						<section className='py-4'>
+							<h2 className='px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500'>
+								Important
+							</h2>
+							{importantEmails.length === 0 ? (
+								<p className='px-4 py-6 text-sm text-gray-500'>
+									No important emails
+								</p>
+							) : (
+								importantEmails.map((email) => (
+									<EmailListItem
+										key={email.id}
+										email={email}
+										isSelected={selectedEmailIds.includes(email.id)}
+										onHover={(id) => {
+											setHoveredEmailId(id);
+											if (id) prefetchEmail(id);
+										}}
+										onOpen={() =>
+											router.push(`/examples/email/inbox/${email.id}`)
+										}
+										onToggleSelect={() => toggleEmailSelection(email.id)}
+										onToggleStar={() => toggleStar(email.id)}
+										densityClass={getRowDensityClass()}
+										formatDate={formatEmailDate}
+									/>
+								))
+							)}
+						</section>
+
+						{/* Meeting schedules */}
+						<section className='py-4'>
+							<h2 className='px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500'>
+								Meeting schedules
+							</h2>
+							{meetingEmails.length === 0 ? (
+								<p className='px-4 py-6 text-sm text-gray-500'>
+									No meeting-related emails
+								</p>
+							) : (
+								meetingEmails.map((email) => (
+									<EmailListItem
+										key={email.id}
+										email={email}
+										isSelected={selectedEmailIds.includes(email.id)}
+										onHover={setHoveredEmailId}
+										onOpen={() =>
+											router.push(`/examples/email/inbox/${email.id}`)
+										}
+										onToggleSelect={() => toggleEmailSelection(email.id)}
+										onToggleStar={() => toggleStar(email.id)}
+										densityClass={getRowDensityClass()}
+										formatDate={formatEmailDate}
+									/>
+								))
+							)}
+						</section>
+
+						{/* Responses */}
+						<section className='py-4'>
+							<h2 className='px-4 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500'>
+								Responses
+							</h2>
+							{responseEmails.length === 0 ? (
+								<p className='px-4 py-6 text-sm text-gray-500'>No responses</p>
+							) : (
+								responseEmails.map((email) => (
+									<EmailListItem
+										key={email.id}
+										email={email}
+										isSelected={selectedEmailIds.includes(email.id)}
+										onHover={setHoveredEmailId}
+										onOpen={() =>
+											router.push(`/examples/email/inbox/${email.id}`)
+										}
+										onToggleSelect={() => toggleEmailSelection(email.id)}
+										onToggleStar={() => toggleStar(email.id)}
+										densityClass={getRowDensityClass()}
+										formatDate={formatEmailDate}
+									/>
+								))
+							)}
+						</section>
+					</div>
 				)}
 			</div>
 		</div>
@@ -210,7 +336,7 @@ interface EmailListItemProps {
 	email: Email;
 	isSelected: boolean;
 	onHover: (id: string | null) => void;
-	onSelect: () => void;
+	onOpen: () => void;
 	onToggleSelect: () => void;
 	onToggleStar: () => void;
 	densityClass: string;
@@ -221,7 +347,7 @@ function EmailListItem({
 	email,
 	isSelected,
 	onHover,
-	onSelect,
+	onOpen,
 	onToggleSelect,
 	onToggleStar,
 	densityClass,
@@ -236,7 +362,7 @@ function EmailListItem({
 			} ${!email.isRead ? 'font-semibold' : ''}`}
 			onMouseEnter={() => onHover(email.id)}
 			onMouseLeave={() => onHover(null)}
-			onClick={onSelect}>
+			onClick={onOpen}>
 			<div className={`flex items-center gap-3 px-4 ${densityClass}`}>
 				<Checkbox
 					checked={isSelected}

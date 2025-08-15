@@ -13,10 +13,14 @@ import {
 	MoreVertical,
 	ChevronDown,
 } from 'lucide-react';
-import { useEmailStore } from '../store/emailStore';
-import { EmailAddress } from '../types';
+import { useEmailStore } from '@/app/examples/email/store/emailStore';
+import { EmailAddress } from '@/app/examples/email/types';
 
-export function ComposeEmail() {
+interface ComposeEmailProps {
+	inline?: boolean;
+}
+
+export function ComposeEmail({ inline = false }: ComposeEmailProps) {
 	const {
 		isComposeOpen,
 		composeMode,
@@ -168,15 +172,18 @@ export function ComposeEmail() {
 		);
 	};
 
-	return (
-		<div
-			className={`fixed bg-white dark:bg-gray-900 rounded-t-lg shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col ${
+	const wrapperClass = inline
+		? 'mt-4 bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 flex flex-col'
+		: `fixed bg-white dark:bg-gray-900 rounded-t-lg shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col ${
 				isFullscreen
 					? 'inset-0 z-50'
 					: isMinimized
 					? 'bottom-0 right-4 w-64 h-10'
 					: 'bottom-0 right-4 w-[600px] h-[600px]'
-			} transition-all duration-300`}>
+		  } transition-all duration-300`;
+
+	return (
+		<div className={wrapperClass}>
 			{/* Header */}
 			<div className='flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-t-lg'>
 				<span className='text-sm font-medium text-gray-700 dark:text-gray-300'>
@@ -189,16 +196,20 @@ export function ComposeEmail() {
 						: 'Forward'}
 				</span>
 				<div className='flex items-center gap-1'>
-					<button
-						onClick={() => setIsMinimized(!isMinimized)}
-						className='p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded'>
-						<Minimize2 className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-					</button>
-					<button
-						onClick={() => setIsFullscreen(!isFullscreen)}
-						className='p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded'>
-						<Maximize2 className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-					</button>
+					{!inline && (
+						<button
+							onClick={() => setIsMinimized(!isMinimized)}
+							className='p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded'>
+							<Minimize2 className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+						</button>
+					)}
+					{!inline && (
+						<button
+							onClick={() => setIsFullscreen(!isFullscreen)}
+							className='p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded'>
+							<Maximize2 className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+						</button>
+					)}
 					<button
 						onClick={closeCompose}
 						className='p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded'>
@@ -207,72 +218,68 @@ export function ComposeEmail() {
 				</div>
 			</div>
 
-			{!isMinimized && (
-				<>
-					{/* Recipients */}
-					<RecipientInput field='to' label='To' />
-					{showCc && <RecipientInput field='cc' label='Cc' />}
-					{showBcc && <RecipientInput field='bcc' label='Bcc' />}
+			{/* Recipients */}
+			<RecipientInput field='to' label='To' />
+			{showCc && <RecipientInput field='cc' label='Cc' />}
+			{showBcc && <RecipientInput field='bcc' label='Bcc' />}
 
-					{/* Subject */}
-					<div className='border-b border-gray-200 dark:border-gray-700 px-4 py-2'>
-						<input
-							type='text'
-							value={composeData.subject || ''}
-							onChange={(e) => updateComposeData({ subject: e.target.value })}
-							placeholder='Subject'
-							className='w-full bg-transparent outline-none text-sm'
-						/>
-					</div>
+			{/* Subject */}
+			<div className='border-b border-gray-200 dark:border-gray-700 px-4 py-2'>
+				<input
+					type='text'
+					value={composeData.subject || ''}
+					onChange={(e) => updateComposeData({ subject: e.target.value })}
+					placeholder='Subject'
+					className='w-full bg-transparent outline-none text-sm'
+				/>
+			</div>
 
-					{/* Body */}
-					<div className='flex-1 p-4'>
-						<textarea
-							ref={bodyRef}
-							value={composeData.body || ''}
-							onChange={(e) => updateComposeData({ body: e.target.value })}
-							placeholder='Compose email'
-							className='w-full h-full bg-transparent outline-none resize-none text-sm'
-						/>
-					</div>
+			{/* Body */}
+			<div className={`flex-1 p-4 ${inline ? '' : ''}`}>
+				<textarea
+					ref={bodyRef}
+					value={composeData.body || ''}
+					onChange={(e) => updateComposeData({ body: e.target.value })}
+					placeholder='Compose email'
+					className='w-full h-full bg-transparent outline-none resize-none text-sm'
+				/>
+			</div>
 
-					{/* Footer */}
-					<div className='border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between'>
-						<div className='flex items-center gap-2'>
-							<button
-								onClick={handleSend}
-								className='px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm flex items-center gap-2'>
-								Send
-								<ChevronDown className='w-4 h-4' />
-							</button>
+			{/* Footer */}
+			<div className='border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between rounded-b-lg'>
+				<div className='flex items-center gap-2'>
+					<button
+						onClick={handleSend}
+						className='px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm flex items-center gap-2'>
+						Send
+						<ChevronDown className='w-4 h-4' />
+					</button>
 
-							<div className='flex items-center gap-1 ml-4'>
-								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-									<Paperclip className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-								</button>
-								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-									<Link className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-								</button>
-								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-									<Smile className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-								</button>
-								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-									<Image className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-								</button>
-								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-									<MoreVertical className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-								</button>
-							</div>
-						</div>
-
-						<button
-							onClick={() => saveDraft()}
-							className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-							<Trash2 className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+					<div className='flex items-center gap-1 ml-4'>
+						<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+							<Paperclip className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+						</button>
+						<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+							<Link className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+						</button>
+						<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+							<Smile className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+						</button>
+						<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+							<Image className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+						</button>
+						<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+							<MoreVertical className='w-4 h-4 text-gray-600 dark:text-gray-400' />
 						</button>
 					</div>
-				</>
-			)}
+				</div>
+
+				<button
+					onClick={() => saveDraft()}
+					className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+					<Trash2 className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+				</button>
+			</div>
 		</div>
 	);
 }

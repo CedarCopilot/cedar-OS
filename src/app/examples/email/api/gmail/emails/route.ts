@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createGmailClient } from '../../../lib/gmail/auth';
-import { listGmailEmails } from '../../../lib/gmail/service';
+import { createGmailClient } from '@/app/examples/email/gmail/lib/auth';
+import { listGmailEmails } from '@/app/examples/email/gmail/lib/service';
 
 export async function GET(request: NextRequest) {
 	try {

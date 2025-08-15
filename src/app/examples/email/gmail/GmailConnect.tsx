@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Mail, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { useEmailStore } from '../store/emailStore';
+import { useEmailStore } from '@/app/examples/email/store/emailStore';
 import { useSearchParams } from 'next/navigation';
 
 export function GmailConnect() {

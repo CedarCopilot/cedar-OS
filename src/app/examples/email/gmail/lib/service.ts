@@ -1,5 +1,10 @@
 import { gmail_v1 } from 'googleapis';
-import { Email, EmailAddress, Label, Attachment } from '../../types';
+import {
+	Email,
+	EmailAddress,
+	Label,
+	Attachment,
+} from '@/app/examples/email/types';
 
 // Convert Gmail message to our Email type
 export async function convertGmailMessage(
@@ -14,12 +19,15 @@ export async function convertGmailMessage(
 	});
 
 	const msg = fullMessage.data;
-	const headers = msg.payload?.headers || [];
+	const headers = (msg.payload?.headers ??
+		[]) as gmail_v1.Schema$MessagePartHeader[];
 
 	// Extract header values
-	const getHeader = (name: string) =>
-		headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ||
-		'';
+	const getHeader = (name: string): string =>
+		(headers.find(
+			(h: gmail_v1.Schema$MessagePartHeader) =>
+				h.name?.toLowerCase() === name.toLowerCase()
+		)?.value || '') as string;
 
 	// Parse email addresses
 	const parseEmailAddress = (headerValue: string): EmailAddress => {
@@ -53,14 +61,14 @@ export async function convertGmailMessage(
 		return '';
 	};
 
-	const body = getBody(msg.payload || {});
+	const body = msg.payload ? getBody(msg.payload) : '';
 	const bodyPreview = body.substring(0, 100) + (body.length > 100 ? '...' : '');
 
 	// Extract labels
-	const labelIds = msg.labelIds || [];
+	const labelIds = (msg.labelIds ?? []) as string[];
 	const labels: Label[] = labelIds
 		.filter(
-			(id) =>
+			(id: string) =>
 				![
 					'INBOX',
 					'SENT',
@@ -72,7 +80,7 @@ export async function convertGmailMessage(
 					'IMPORTANT',
 				].includes(id)
 		)
-		.map((id) => ({
+		.map((id: string) => ({
 			id,
 			name: id.replace(/_/g, ' '),
 			color: '#4285f4', // Default blue color
@@ -170,19 +178,19 @@ export async function sendGmailEmail(
 	try {
 		// Create email content
 		const toAddresses = to
-			.map((addr) =>
+			.map((addr: EmailAddress) =>
 				addr.name ? `"${addr.name}" <${addr.email}>` : addr.email
 			)
 			.join(', ');
 
 		const ccAddresses = cc
-			?.map((addr) =>
+			?.map((addr: EmailAddress) =>
 				addr.name ? `"${addr.name}" <${addr.email}>` : addr.email
 			)
 			.join(', ');
 
 		const bccAddresses = bcc
-			?.map((addr) =>
+			?.map((addr: EmailAddress) =>
 				addr.name ? `"${addr.name}" <${addr.email}>` : addr.email
 			)
 			.join(', ');
@@ -232,8 +240,8 @@ export async function getGmailLabels(gmail: gmail_v1.Gmail): Promise<Label[]> {
 		const labels = response.data.labels || [];
 
 		return labels
-			.filter((label) => label.type === 'user') // Only user-created labels
-			.map((label) => ({
+			.filter((label: gmail_v1.Schema$Label) => label.type === 'user') // Only user-created labels
+			.map((label: gmail_v1.Schema$Label) => ({
 				id: label.id!,
 				name: label.name!,
 				color: label.color?.backgroundColor || '#4285f4',

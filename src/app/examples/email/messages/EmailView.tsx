@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import {
 	ArrowLeft,
 	Archive,
@@ -13,8 +14,8 @@ import {
 	Forward,
 	Star,
 } from 'lucide-react';
-import { useEmailStore } from '../store/emailStore';
-import { Email } from '../types';
+import { useEmailStore } from '@/app/examples/email/store/emailStore';
+import { Email } from '@/app/examples/email/types';
 import { format } from 'date-fns';
 
 interface EmailViewProps {
@@ -22,10 +23,10 @@ interface EmailViewProps {
 	onClose: () => void;
 }
 
-export function EmailView({ email, onClose }: EmailViewProps) {
+function EmailView({ email, onClose }: EmailViewProps) {
 	const { toggleStar, markAsRead, moveToTrash, openCompose } = useEmailStore();
 
-	// Mark as read when viewing
+	// Mark as read when viewing (only if not already read)
 	if (!email.isRead) {
 		markAsRead([email.id]);
 	}
@@ -207,3 +208,5 @@ export function EmailView({ email, onClose }: EmailViewProps) {
 		</div>
 	);
 }
+
+export default memo(EmailView);

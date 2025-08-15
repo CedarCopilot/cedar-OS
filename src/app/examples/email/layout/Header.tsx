@@ -9,7 +9,7 @@ import {
 	User,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useEmailStore } from '../store/emailStore';
+import { useEmailStore } from '@/app/examples/email/store/emailStore';
 
 interface HeaderProps {
 	onMenuClick: () => void;
