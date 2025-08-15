@@ -3,55 +3,63 @@ title: 'Subscribing State to Input'
 description: 'Automatically add state to the agent input context'
 ---
 
-Cedar's `useSubscribeInputContext` function allows you to automatically make any part of your application state available to AI agents as context. This enables agents to understand your app's current state and provide more relevant, contextual responses.
+Cedar's `useSubscribeStateToInputContext` function allows you to automatically make any Cedar-registered state available to AI agents as context. This enables agents to understand your app's current state and provide more relevant, contextual responses.
 
-## useSubscribeInputContext Overview
+> **Prerequisite** – The state you want to subscribe **must first be registered** in Cedar using either [`useCedarState`](/state-access/agentic-state-access#useCedarState) _or_ [`useRegisterState`](/state-access/agentic-state-access#useRegisterState-Hook).
 
-The `useSubscribeInputContext` function subscribes to local state changes and automatically updates the agent's input context whenever the state changes. This means your AI agent always has access to the most up-to-date information from your application.
+## useSubscribeStateToInputContext Overview
+
+The `useSubscribeStateToInputContext` function subscribes to local state changes and automatically updates the agent's input context whenever the state changes. This means your AI agent always has access to the most up-to-date information from your application.
 
 ### Function Signature
 
 ```typescript
-function useSubscribeInputContext<T>(
-	localState: T,
+function useSubscribeStateToInputContext<T>(
+	stateKey: string,
 	mapFn: (state: T) => Record<string, any>,
 	options?: {
 		icon?: ReactNode;
 		color?: string;
 		labelField?: string | ((item: unknown) => string);
 		order?: number;
+		showInChat?: boolean;
 	}
 ): void;
 ```
 
 ### Parameters
 
-- **`localState: T`** - The local state to subscribe to (any type including single values or arrays)
+- **`stateKey: string`** - The registered state key that we want to subscribe to
 - **`mapFn: (state: T) => Record<string, any>`** - Function that maps your state to context entries
 - **`options`** (optional) - Configuration for visual representation and label extraction:
   - `icon?: ReactNode` - Icon to display for this context
   - `color?: string` - Hex color for visual styling
   - `labelField?: string | ((item: unknown) => string)` - How to extract labels from your data
   - `order?: number` - Display order for context badges (lower numbers appear first)
+  - `showInChat?: boolean` - Whether to show or hide the state when subscribed to as a context badge in the chat (default = true)
 
 ## Basic Usage Example
 
 Here's a simple example with a todo list:
 
 ```tsx
-import React, { useState } from 'react';
-import { useSubscribeInputContext } from 'cedar-os';
+import { useCedarState, useSubscribeStateToInputContext } from 'cedar-os';
 import { CheckCircle } from 'lucide-react';
 
 function TodoApp() {
-	const [todos, setTodos] = useState([
-		{ id: 1, text: 'Buy groceries', completed: false },
-		{ id: 2, text: 'Walk the dog', completed: true },
-	]);
+	// 1) Register the state in Cedar
+	const [todos, setTodos] = useCedarState(
+		'todos',
+		[
+			{ id: 1, text: 'Buy groceries', completed: false },
+			{ id: 2, text: 'Walk the dog', completed: true },
+		],
+		'Todo items'
+	);
 
-	// Subscribe todos to input context
-	useSubscribeInputContext(
-		todos,
+	// 2) Subscribe that state to input context
+	useSubscribeStateToInputContext(
+		'todos',
 		(todoList) => ({
 			todos: todoList, // Key 'todos' will be available to the agent
 		}),
@@ -76,7 +84,7 @@ function TodoApp() {
 Here's a more advanced example from the Product Roadmap demo:
 
 ```tsx
-import { useSubscribeInputContext } from 'cedar-os';
+import { useRegisterState, useSubscribeStateToInputContext } from 'cedar-os';
 import { Box } from 'lucide-react';
 import { Node } from 'reactflow';
 
@@ -90,9 +98,16 @@ interface FeatureNodeData {
 function SelectedNodesPanel() {
 	const [selected, setSelected] = useState<Node<FeatureNodeData>[]>([]);
 
+	// Register the react-flow selection array in Cedar
+	useRegisterState({
+		key: 'selectedNodes',
+		value: selected,
+		description: 'Currently selected nodes in the canvas',
+	});
+
 	// Subscribe selected nodes to input context
-	useSubscribeInputContext(
-		selected,
+	useSubscribeStateToInputContext(
+		'selectedNodes',
 		(nodes: Node<FeatureNodeData>[]) => ({
 			selectedNodes: nodes.map((node) => ({
 				id: node.id,
@@ -139,11 +154,15 @@ const [users, setUsers] = useState([
 	{ userId: 'u2', fullName: 'Jane Smith', email: 'jane@example.com' },
 ]);
 
-useSubscribeInputContext(users, (userList) => ({ activeUsers: userList }), {
-	labelField: 'fullName', // Will use fullName as the label
-	icon: <User />,
-	color: '#3B82F6',
-});
+useSubscribeStateToInputContext(
+	users,
+	(userList) => ({ activeUsers: userList }),
+	{
+		labelField: 'fullName', // Will use fullName as the label
+		icon: <User />,
+		color: '#3B82F6',
+	}
+);
 ```
 
 ### labelField as a Function
@@ -156,7 +175,7 @@ const [products, setProducts] = useState([
 	{ sku: 'P002', name: 'Mouse', price: 29, inStock: false },
 ]);
 
-useSubscribeInputContext(
+useSubscribeStateToInputContext(
 	products,
 	(productList) => ({ inventory: productList }),
 	{
@@ -178,19 +197,23 @@ const [isEnabled, setIsEnabled] = useState(true);
 const [userName, setUserName] = useState('Alice');
 
 // Subscribe a number
-useSubscribeInputContext(count, (value) => ({ itemCount: value }), {
+useSubscribeStateToInputContext(count, (value) => ({ itemCount: value }), {
 	icon: <Hash />,
 	color: '#F59E0B',
 });
 
 // Subscribe a boolean
-useSubscribeInputContext(isEnabled, (value) => ({ featureEnabled: value }), {
-	icon: <ToggleLeft />,
-	color: '#10B981',
-});
+useSubscribeStateToInputContext(
+	isEnabled,
+	(value) => ({ featureEnabled: value }),
+	{
+		icon: <ToggleLeft />,
+		color: '#10B981',
+	}
+);
 
 // Subscribe a string with custom label
-useSubscribeInputContext(userName, (value) => ({ currentUser: value }), {
+useSubscribeStateToInputContext(userName, (value) => ({ currentUser: value }), {
 	labelField: (name) => `User: ${name}`,
 	icon: <User />,
 	color: '#8B5CF6',
@@ -216,7 +239,7 @@ function PrioritizedContext() {
 	const [archivedItems, setArchivedItems] = useState([]);
 
 	// Critical alerts appear first (order: 1)
-	useSubscribeInputContext(
+	useSubscribeStateToInputContext(
 		criticalAlerts,
 		(alerts) => ({ criticalAlerts: alerts }),
 		{
@@ -227,14 +250,18 @@ function PrioritizedContext() {
 	);
 
 	// Normal tasks appear second (order: 10)
-	useSubscribeInputContext(normalTasks, (tasks) => ({ activeTasks: tasks }), {
-		icon: <CheckCircle />,
-		color: '#3B82F6',
-		order: 10, // Medium priority
-	});
+	useSubscribeStateToInputContext(
+		normalTasks,
+		(tasks) => ({ activeTasks: tasks }),
+		{
+			icon: <CheckCircle />,
+			color: '#3B82F6',
+			order: 10, // Medium priority
+		}
+	);
 
 	// Archived items appear last (order: 100)
-	useSubscribeInputContext(
+	useSubscribeStateToInputContext(
 		archivedItems,
 		(items) => ({ archivedItems: items }),
 		{
@@ -260,15 +287,19 @@ function OrganizedWorkspace() {
 	const [user, setUser] = useState(null);
 
 	// User context appears first (order: 1)
-	useSubscribeInputContext(user, (userData) => ({ currentUser: userData }), {
-		icon: <User />,
-		color: '#8B5CF6',
-		labelField: 'name',
-		order: 1, // User info always visible first
-	});
+	useSubscribeStateToInputContext(
+		user,
+		(userData) => ({ currentUser: userData }),
+		{
+			icon: <User />,
+			color: '#8B5CF6',
+			labelField: 'name',
+			order: 1, // User info always visible first
+		}
+	);
 
 	// Selected items appear second (order: 5)
-	useSubscribeInputContext(
+	useSubscribeStateToInputContext(
 		selectedNodes,
 		(nodes) => ({ selectedNodes: nodes }),
 		{
@@ -320,11 +351,11 @@ function OrganizedWorkspace() {
 // 50-99: Historical or computed data
 // 100+: Low priority or debug information
 
-useSubscribeInputContext(sessionData, mapper, { order: 1 }); // Critical
-useSubscribeInputContext(selectedItems, mapper, { order: 10 }); // Active
-useSubscribeInputContext(appState, mapper, { order: 20 }); // General
-useSubscribeInputContext(history, mapper, { order: 50 }); // Historical
-useSubscribeInputContext(debugInfo, mapper, { order: 100 }); // Debug
+useSubscribeStateToInputContext('sessionData', mapper, { order: 1 }); // Critical
+useSubscribeStateToInputContext('selectedItems', mapper, { order: 10 }); // Active
+useSubscribeStateToInputContext('appState', mapper, { order: 20 }); // General
+useSubscribeStateToInputContext('history', mapper, { order: 50 }); // Historical
+useSubscribeStateToInputContext('debugInfo', mapper, { order: 100 }); // Debug
 ```
 
 ### Default Label Extraction
@@ -377,7 +408,7 @@ function MyApp() {
 	const [currentPage, setCurrentPage] = useState('/dashboard');
 
 	// Subscribe user data
-	useSubscribeInputContext(
+	useSubscribeStateToInputContext(
 		user,
 		(userData) => ({
 			currentUser: userData
@@ -395,7 +426,7 @@ function MyApp() {
 	);
 
 	// Subscribe preferences
-	useSubscribeInputContext(
+	useSubscribeStateToInputContext(
 		preferences,
 		(prefs) => ({
 			userPreferences: prefs,
@@ -407,7 +438,7 @@ function MyApp() {
 	);
 
 	// Subscribe navigation state
-	useSubscribeInputContext(
+	useSubscribeStateToInputContext(
 		currentPage,
 		(page) => ({
 			currentPage: {
@@ -432,7 +463,7 @@ function MyApp() {
 Don't expose sensitive information to the agent:
 
 ```tsx
-useSubscribeInputContext(userProfile, (profile) => ({
+useSubscribeStateToInputContext('userProfile', (profile) => ({
 	user: {
 		name: profile.name,
 		tier: profile.subscriptionTier,
@@ -447,7 +478,7 @@ useSubscribeInputContext(userProfile, (profile) => ({
 Choose descriptive keys for your context:
 
 ```tsx
-useSubscribeInputContext(shoppingCart, (cart) => ({
+useSubscribeStateToInputContext('shoppingCart', (cart) => ({
 	shoppingCart: cart.items, // Clear and descriptive
 	cartTotal: cart.total,
 	cartItemCount: cart.items.length,
@@ -459,7 +490,7 @@ useSubscribeInputContext(shoppingCart, (cart) => ({
 For large data sets, consider filtering or summarizing:
 
 ```tsx
-useSubscribeInputContext(allTransactions, (transactions) => ({
+useSubscribeStateToInputContext(allTransactions, (transactions) => ({
 	recentTransactions: transactions
 		.slice(0, 10) // Only last 10 transactions
 		.map((t) => ({
@@ -483,7 +514,7 @@ The `options` parameter allows you to customize how the context appears in the U
 import { Star, AlertCircle, CheckCircle } from 'lucide-react';
 
 // Different colors and icons for different priorities
-useSubscribeInputContext(
+useSubscribeStateToInputContext(
 	highPriorityTasks,
 	(tasks) => ({ highPriorityTasks: tasks }),
 	{
@@ -492,7 +523,7 @@ useSubscribeInputContext(
 	}
 );
 
-useSubscribeInputContext(
+useSubscribeStateToInputContext(
 	completedTasks,
 	(tasks) => ({ completedTasks: tasks }),
 	{
@@ -501,10 +532,14 @@ useSubscribeInputContext(
 	}
 );
 
-useSubscribeInputContext(starredItems, (items) => ({ starredItems: items }), {
-	icon: <Star />,
-	color: '#F59E0B', // Yellow for starred
-});
+useSubscribeStateToInputContext(
+	starredItems,
+	(items) => ({ starredItems: items }),
+	{
+		icon: <Star />,
+		color: '#F59E0B', // Yellow for starred
+	}
+);
 ```
 
 ## Integration with Chat Input

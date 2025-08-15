@@ -2,7 +2,7 @@
 title: 'Agentic State'
 ---
 
-Cedar allows your agent to understand what is happening in your application, and the ability to change it
+Cedar allows your agent to understand what is happening in your application, and the ability to change it. Registering a local state in Cedar is the first step to giving your agent frontend context, letting users point out parts of the UI to the agent, and letting agents manipulate state.
 
 In other words, it allows your agent to read and write to the local react state.
 
@@ -322,3 +322,12 @@ function setCedarState<T>(key: string, value: T): void;
 ```
 
 </CodeGroup>
+
+## Exposing states to your agent
+
+Now that your application states are registered in Cedar, learn how to expose just the right pieces of them to your agent:
+
+- **Agent Input Context** – orchestrate what context is sent alongside every user message, including state subscriptions and manual entries. See [Agent Input Context](/agent-input-context/agent-input-context).
+- **Mentions** – let users reference individual state items with simple `@` mentions. See [Mentions](/agent-input-context/mentions).
+
+These docs walk you through granting the agent scoped, real-time access to your frontend data.
