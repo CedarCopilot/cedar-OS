@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import EmailView from '../../messages/EmailView';
-import { ComposeEmail } from '../../drafts/ComposeEmail';
+import { InlineComposeEmail } from '../../drafts/InlineComposeEmail';
 import { useEmailStore } from '../../store/emailStore';
 
 function EmailDetailPage() {
@@ -31,11 +31,13 @@ function EmailDetailPage() {
 	}
 
 	return (
-		<>
+		<div className='flex flex-col h-full'>
 			<EmailView email={email} onClose={handleClose} />
-			{/* Inline composer below the opened email */}
-			<ComposeEmail inline />
-		</>
+			{/* Inline composer that takes up the remainder of the screen */}
+			<div className='flex-1 min-h-0'>
+				<InlineComposeEmail parentEmail={email} />
+			</div>
+		</div>
 	);
 }
 

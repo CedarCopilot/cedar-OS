@@ -5,6 +5,7 @@ import {
 	EmailSettings,
 	EmailView,
 	ComposeEmailData,
+	ComposeDraft,
 	Label,
 	EmailThread,
 } from '../types';
@@ -18,6 +19,11 @@ interface EmailStore {
 	// UI State
 	selectedEmailIds: string[];
 	selectedThreadId: string | null;
+
+	// Compose drafts (multiple compose windows)
+	composeDrafts: ComposeDraft[];
+
+	// Legacy single compose support (for backward compatibility)
 	isComposeOpen: boolean;
 	composeMode: 'new' | 'reply' | 'replyAll' | 'forward';
 	composeData: Partial<ComposeEmailData>;
@@ -62,7 +68,7 @@ interface EmailStore {
 	applyLabel: (ids: string[], labelId: string) => void;
 	removeLabel: (ids: string[], labelId: string) => void;
 
-	// Compose actions
+	// Compose actions (legacy)
 	openCompose: (
 		mode: 'new' | 'reply' | 'replyAll' | 'forward',
 		email?: Email
@@ -71,6 +77,19 @@ interface EmailStore {
 	updateComposeData: (data: Partial<ComposeEmailData>) => void;
 	sendEmail: () => void;
 	saveDraft: () => void;
+
+	// Multiple compose drafts actions
+	createComposeDraft: (
+		mode: 'new' | 'reply' | 'replyAll' | 'forward',
+		email?: Email,
+		isInline?: boolean,
+		parentEmailId?: string
+	) => string;
+	updateComposeDraft: (id: string, updates: Partial<ComposeDraft>) => void;
+	updateComposeDraftData: (id: string, data: Partial<ComposeEmailData>) => void;
+	closeComposeDraft: (id: string) => void;
+	sendEmailFromDraft: (id: string) => void;
+	saveDraftFromCompose: (id: string) => void;
 
 	// Filter and search
 	setFilter: (filter: Partial<EmailFilter>) => void;
@@ -197,6 +216,11 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 	labels: mockLabels,
 	selectedEmailIds: [],
 	selectedThreadId: null,
+
+	// Multiple compose drafts
+	composeDrafts: [],
+
+	// Legacy single compose
 	isComposeOpen: false,
 	composeMode: 'new',
 	composeData: {},
@@ -459,6 +483,150 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 			emails: [...state.emails, draftEmail],
 			isComposeOpen: false,
 			composeData: {},
+		}));
+	},
+
+	// Multiple compose drafts actions
+	createComposeDraft: (mode, email, isInline = false, parentEmailId) => {
+		const draftId = `compose-${Date.now()}-${Math.random()
+			.toString(36)
+			.substr(2, 9)}`;
+		let composeData: Partial<ComposeEmailData> = {};
+
+		if (email && mode !== 'new') {
+			switch (mode) {
+				case 'reply':
+					composeData = {
+						to: [email.from],
+						subject: `Re: ${email.subject}`,
+						inReplyTo: email.id,
+					};
+					break;
+				case 'replyAll':
+					composeData = {
+						to: [
+							email.from,
+							...email.to.filter((addr) => addr.email !== 'me@gmail.com'),
+						],
+						cc: email.cc,
+						subject: `Re: ${email.subject}`,
+						inReplyTo: email.id,
+					};
+					break;
+				case 'forward':
+					composeData = {
+						subject: `Fwd: ${email.subject}`,
+						body: `\n\n---------- Forwarded message ---------\nFrom: ${
+							email.from.name || email.from.email
+						}\nDate: ${email.date}\nSubject: ${email.subject}\n\n${email.body}`,
+					};
+					break;
+			}
+		}
+
+		const newDraft: ComposeDraft = {
+			id: draftId,
+			mode,
+			data: composeData,
+			isMinimized: false,
+			isFullscreen: false,
+			createdAt: new Date(),
+			isInline,
+			parentEmailId,
+		};
+
+		set((state) => ({
+			composeDrafts: [...state.composeDrafts, newDraft],
+		}));
+
+		return draftId;
+	},
+
+	updateComposeDraft: (id, updates) =>
+		set((state) => ({
+			composeDrafts: state.composeDrafts.map((draft) =>
+				draft.id === id ? { ...draft, ...updates } : draft
+			),
+		})),
+
+	updateComposeDraftData: (id, data) =>
+		set((state) => ({
+			composeDrafts: state.composeDrafts.map((draft) =>
+				draft.id === id ? { ...draft, data: { ...draft.data, ...data } } : draft
+			),
+		})),
+
+	closeComposeDraft: (id) =>
+		set((state) => ({
+			composeDrafts: state.composeDrafts.filter((draft) => draft.id !== id),
+		})),
+
+	sendEmailFromDraft: (id) => {
+		const { composeDrafts } = get();
+		const draft = composeDrafts.find((d) => d.id === id);
+
+		if (!draft) return;
+
+		const newEmail: Email = {
+			id: `email-${Date.now()}`,
+			threadId: `thread-${Date.now()}`,
+			from: { email: 'me@gmail.com', name: 'Me' },
+			to: draft.data.to || [],
+			cc: draft.data.cc,
+			bcc: draft.data.bcc,
+			subject: draft.data.subject || '',
+			body: draft.data.body || '',
+			bodyPreview: (draft.data.body || '').substring(0, 100) + '...',
+			date: new Date(),
+			isRead: true,
+			isStarred: false,
+			isImportant: false,
+			isDraft: false,
+			isSent: true,
+			isTrash: false,
+			isSpam: false,
+			labels: [],
+			attachments: draft.data.attachments,
+			inReplyTo: draft.data.inReplyTo,
+		};
+
+		set((state) => ({
+			emails: [...state.emails, newEmail],
+			composeDrafts: state.composeDrafts.filter((d) => d.id !== id),
+		}));
+	},
+
+	saveDraftFromCompose: (id) => {
+		const { composeDrafts } = get();
+		const draft = composeDrafts.find((d) => d.id === id);
+
+		if (!draft) return;
+
+		const draftEmail: Email = {
+			id: `draft-${Date.now()}`,
+			threadId: `thread-${Date.now()}`,
+			from: { email: 'me@gmail.com', name: 'Me' },
+			to: draft.data.to || [],
+			cc: draft.data.cc,
+			bcc: draft.data.bcc,
+			subject: draft.data.subject || '',
+			body: draft.data.body || '',
+			bodyPreview: (draft.data.body || '').substring(0, 100) + '...',
+			date: new Date(),
+			isRead: true,
+			isStarred: false,
+			isImportant: false,
+			isDraft: true,
+			isSent: false,
+			isTrash: false,
+			isSpam: false,
+			labels: [],
+			attachments: draft.data.attachments,
+		};
+
+		set((state) => ({
+			emails: [...state.emails, draftEmail],
+			composeDrafts: state.composeDrafts.filter((d) => d.id !== id),
 		}));
 	},
 

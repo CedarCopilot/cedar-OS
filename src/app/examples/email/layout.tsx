@@ -7,7 +7,7 @@ import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import { Mail } from 'lucide-react';
 import { Header } from './layout/Header';
 import { Sidebar } from './layout/Sidebar';
-import { ComposeEmail } from './drafts/ComposeEmail';
+import { ComposeManager } from './drafts/ComposeManager';
 import { usePathname } from 'next/navigation';
 
 function EmailLayout({ children }: { children: ReactNode }) {
@@ -49,10 +49,8 @@ function EmailLayout({ children }: { children: ReactNode }) {
 							{children}
 						</main>
 					</div>
-					{/* Always render composer but hide on detail routes to avoid mount/unmount */}
-					<div style={{ display: isDetailRoute ? 'none' : 'block' }}>
-						<ComposeEmail />
-					</div>
+					{/* Always render compose manager but hide inline compose on detail routes */}
+					<ComposeManager hideInlineCompose={isDetailRoute} />
 				</div>
 			</SidePanelCedarChat>
 		</CedarCopilot>

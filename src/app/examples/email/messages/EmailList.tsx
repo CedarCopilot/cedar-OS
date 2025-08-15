@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
 	Star,
 	Archive,
@@ -260,9 +261,6 @@ export function EmailList() {
 											setHoveredEmailId(id);
 											if (id) prefetchEmail(id);
 										}}
-										onOpen={() =>
-											router.push(`/examples/email/inbox/${email.id}`)
-										}
 										onToggleSelect={() => toggleEmailSelection(email.id)}
 										onToggleStar={() => toggleStar(email.id)}
 										densityClass={getRowDensityClass()}
@@ -288,9 +286,6 @@ export function EmailList() {
 										email={email}
 										isSelected={selectedEmailIds.includes(email.id)}
 										onHover={setHoveredEmailId}
-										onOpen={() =>
-											router.push(`/examples/email/inbox/${email.id}`)
-										}
 										onToggleSelect={() => toggleEmailSelection(email.id)}
 										onToggleStar={() => toggleStar(email.id)}
 										densityClass={getRowDensityClass()}
@@ -314,9 +309,6 @@ export function EmailList() {
 										email={email}
 										isSelected={selectedEmailIds.includes(email.id)}
 										onHover={setHoveredEmailId}
-										onOpen={() =>
-											router.push(`/examples/email/inbox/${email.id}`)
-										}
 										onToggleSelect={() => toggleEmailSelection(email.id)}
 										onToggleStar={() => toggleStar(email.id)}
 										densityClass={getRowDensityClass()}
@@ -336,7 +328,6 @@ interface EmailListItemProps {
 	email: Email;
 	isSelected: boolean;
 	onHover: (id: string | null) => void;
-	onOpen: () => void;
 	onToggleSelect: () => void;
 	onToggleStar: () => void;
 	densityClass: string;
@@ -347,106 +338,110 @@ function EmailListItem({
 	email,
 	isSelected,
 	onHover,
-	onOpen,
 	onToggleSelect,
 	onToggleStar,
 	densityClass,
 	formatDate,
 }: EmailListItemProps) {
 	return (
-		<div
-			className={`border-b border-gray-100 dark:border-gray-800 hover:shadow-sm transition-all cursor-pointer ${
-				isSelected
-					? 'bg-blue-50 dark:bg-blue-900/20'
-					: 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'
-			} ${!email.isRead ? 'font-semibold' : ''}`}
-			onMouseEnter={() => onHover(email.id)}
-			onMouseLeave={() => onHover(null)}
-			onClick={onOpen}>
-			<div className={`flex items-center gap-3 px-4 ${densityClass}`}>
-				<Checkbox
-					checked={isSelected}
-					onChange={(e) => {
-						e.stopPropagation();
-						onToggleSelect();
-					}}
-					onClick={(e) => e.stopPropagation()}
-				/>
-
-				<button
-					onClick={(e) => {
-						e.stopPropagation();
-						onToggleStar();
-					}}
-					className={`p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 ${
-						email.isStarred
-							? 'text-yellow-500'
-							: 'text-gray-400 dark:text-gray-600'
-					}`}>
-					<Star
-						className='w-4 h-4'
-						fill={email.isStarred ? 'currentColor' : 'none'}
+		<Link
+			href={`/examples/email/inbox/${email.id}`}
+			prefetch={true}
+			className='block'>
+			<div
+				className={`border-b border-gray-100 dark:border-gray-800 hover:shadow-sm transition-all cursor-pointer ${
+					isSelected
+						? 'bg-blue-50 dark:bg-blue-900/20'
+						: 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'
+				} ${!email.isRead ? 'font-semibold' : ''}`}
+				onMouseEnter={() => onHover(email.id)}
+				onMouseLeave={() => onHover(null)}>
+				<div className={`flex items-center gap-3 px-4 ${densityClass}`}>
+					<Checkbox
+						checked={isSelected}
+						onChange={(e) => {
+							e.stopPropagation();
+							onToggleSelect();
+						}}
+						onClick={(e) => e.stopPropagation()}
 					/>
-				</button>
 
-				{email.isImportant && (
-					<div className='w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-yellow-500' />
-				)}
+					<button
+						onClick={(e) => {
+							e.stopPropagation();
+							e.preventDefault();
+							onToggleStar();
+						}}
+						className={`p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 ${
+							email.isStarred
+								? 'text-yellow-500'
+								: 'text-gray-400 dark:text-gray-600'
+						}`}>
+						<Star
+							className='w-4 h-4'
+							fill={email.isStarred ? 'currentColor' : 'none'}
+						/>
+					</button>
 
-				<div className='flex-1 flex items-center gap-4 min-w-0'>
-					<div className='w-48 flex items-center gap-2'>
-						{email.from.avatar ? (
-							<img
-								src={email.from.avatar}
-								alt={email.from.name || email.from.email}
-								className='w-8 h-8 rounded-full'
-							/>
-						) : (
-							<div className='w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-sm font-medium'>
-								{(email.from.name || email.from.email)[0].toUpperCase()}
+					{email.isImportant && (
+						<div className='w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-yellow-500' />
+					)}
+
+					<div className='flex-1 flex items-center gap-4 min-w-0'>
+						<div className='w-48 flex items-center gap-2'>
+							{email.from.avatar ? (
+								<img
+									src={email.from.avatar}
+									alt={email.from.name || email.from.email}
+									className='w-8 h-8 rounded-full'
+								/>
+							) : (
+								<div className='w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-sm font-medium'>
+									{(email.from.name || email.from.email)[0].toUpperCase()}
+								</div>
+							)}
+							<span className='truncate text-sm'>
+								{email.from.name || email.from.email}
+							</span>
+						</div>
+
+						<div className='flex-1 flex items-center gap-2 min-w-0'>
+							<span className='truncate text-sm'>{email.subject}</span>
+							<span className='text-gray-500 dark:text-gray-500 font-normal'>
+								{' '}
+								-{' '}
+							</span>
+							<span className='truncate text-sm text-gray-600 dark:text-gray-400 font-normal'>
+								{email.bodyPreview}
+							</span>
+						</div>
+
+						{email.labels.length > 0 && (
+							<div className='flex gap-1'>
+								{email.labels.map((label) => (
+									<span
+										key={label.id}
+										className='px-2 py-0.5 text-xs rounded-full'
+										style={{
+											backgroundColor: `${label.color}20`,
+											color: label.color,
+										}}>
+										{label.name}
+									</span>
+								))}
 							</div>
 						)}
-						<span className='truncate text-sm'>
-							{email.from.name || email.from.email}
+
+						{email.attachments && email.attachments.length > 0 && (
+							<div className='text-gray-500 dark:text-gray-500'>📎</div>
+						)}
+
+						<span className='text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap'>
+							{formatDate(email.date)}
 						</span>
 					</div>
-
-					<div className='flex-1 flex items-center gap-2 min-w-0'>
-						<span className='truncate text-sm'>{email.subject}</span>
-						<span className='text-gray-500 dark:text-gray-500 font-normal'>
-							{' '}
-							-{' '}
-						</span>
-						<span className='truncate text-sm text-gray-600 dark:text-gray-400 font-normal'>
-							{email.bodyPreview}
-						</span>
-					</div>
-
-					{email.labels.length > 0 && (
-						<div className='flex gap-1'>
-							{email.labels.map((label) => (
-								<span
-									key={label.id}
-									className='px-2 py-0.5 text-xs rounded-full'
-									style={{
-										backgroundColor: `${label.color}20`,
-										color: label.color,
-									}}>
-									{label.name}
-								</span>
-							))}
-						</div>
-					)}
-
-					{email.attachments && email.attachments.length > 0 && (
-						<div className='text-gray-500 dark:text-gray-500'>📎</div>
-					)}
-
-					<span className='text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap'>
-						{formatDate(email.date)}
-					</span>
 				</div>
 			</div>
-		</div>
+		</Link>
 	);
 }

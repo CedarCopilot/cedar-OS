@@ -27,7 +27,8 @@ interface NavItem {
 }
 
 export function Sidebar({ isOpen }: SidebarProps) {
-	const { filter, setView, emails, labels, openCompose } = useEmailStore();
+	const { filter, setView, emails, labels, createComposeDraft } =
+		useEmailStore();
 
 	// Calculate counts for each view
 	const getEmailCount = (view: EmailView): number => {
@@ -108,7 +109,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
 			{/* Compose button */}
 			<div className='p-4'>
 				<button
-					onClick={() => openCompose('new')}
+					onClick={() => createComposeDraft('new')}
 					className={`${
 						isOpen ? 'w-full px-6 py-3 gap-3' : 'w-14 h-14 p-0'
 					} bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 text-gray-700 dark:text-gray-200 rounded-2xl flex items-center justify-center transition-all shadow-sm hover:shadow-md`}>

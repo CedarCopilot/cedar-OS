@@ -65,6 +65,17 @@ export interface ComposeEmailData {
 	inReplyTo?: string;
 }
 
+export interface ComposeDraft {
+	id: string;
+	mode: 'new' | 'reply' | 'replyAll' | 'forward';
+	data: Partial<ComposeEmailData>;
+	isMinimized?: boolean;
+	isFullscreen?: boolean;
+	createdAt: Date;
+	isInline?: boolean; // For inline compose in email detail pages
+	parentEmailId?: string; // For inline compose, the email being replied to
+}
+
 export type EmailView =
 	| 'inbox'
 	| 'starred'

@@ -17,42 +17,40 @@ import { useEmailStore } from '@/app/examples/email/store/emailStore';
 import { EmailAddress } from '@/app/examples/email/types';
 
 interface ComposeEmailProps {
+	draftId: string;
 	inline?: boolean;
 }
 
-export function ComposeEmail({ inline = false }: ComposeEmailProps) {
+export function ComposeEmail({ draftId, inline = false }: ComposeEmailProps) {
 	const {
-		isComposeOpen,
-		composeMode,
-		composeData,
-		closeCompose,
-		updateComposeData,
-		sendEmail,
-		saveDraft,
+		composeDrafts,
+		updateComposeDraft,
+		updateComposeDraftData,
+		closeComposeDraft,
+		sendEmailFromDraft,
+		saveDraftFromCompose,
+		isGmailConnected,
 	} = useEmailStore();
 
-	const [isMinimized, setIsMinimized] = useState(false);
-	const [isFullscreen, setIsFullscreen] = useState(false);
+	const draft = composeDrafts.find((d) => d.id === draftId);
+
 	const [showCc, setShowCc] = useState(false);
 	const [showBcc, setShowBcc] = useState(false);
 	const bodyRef = useRef<HTMLTextAreaElement>(null);
 
 	useEffect(() => {
-		if (isComposeOpen && !isMinimized && bodyRef.current) {
+		if (draft && !draft.isMinimized && bodyRef.current) {
 			bodyRef.current.focus();
 		}
-	}, [isComposeOpen, isMinimized]);
+	}, [draft?.isMinimized]);
 
-	if (!isComposeOpen) return null;
+	if (!draft) return null;
 
 	const handleSend = async () => {
-		if (!composeData.to?.length || !composeData.subject) {
+		if (!draft.data.to?.length || !draft.data.subject) {
 			alert('Please add recipients and a subject');
 			return;
 		}
-
-		// Check if Gmail is connected
-		const { isGmailConnected } = useEmailStore.getState();
 
 		if (isGmailConnected) {
 			try {
@@ -63,11 +61,11 @@ export function ComposeEmail({ inline = false }: ComposeEmailProps) {
 						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({
-						to: composeData.to,
-						subject: composeData.subject,
-						body: composeData.body || '',
-						cc: composeData.cc,
-						bcc: composeData.bcc,
+						to: draft.data.to,
+						subject: draft.data.subject,
+						body: draft.data.body || '',
+						cc: draft.data.cc,
+						bcc: draft.data.bcc,
 					}),
 				});
 
@@ -76,14 +74,14 @@ export function ComposeEmail({ inline = false }: ComposeEmailProps) {
 				}
 
 				alert('Email sent successfully via Gmail!');
-				closeCompose();
+				closeComposeDraft(draftId);
 			} catch (error) {
 				console.error('Error sending email:', error);
 				alert('Failed to send email. Please try again.');
 			}
 		} else {
 			// Use mock send for demo
-			sendEmail();
+			sendEmailFromDraft(draftId);
 		}
 	};
 
@@ -91,16 +89,16 @@ export function ComposeEmail({ inline = false }: ComposeEmailProps) {
 		if (!email || !email.includes('@')) return;
 
 		const newRecipient: EmailAddress = { email };
-		const currentRecipients = composeData[field] || [];
+		const currentRecipients = draft.data[field] || [];
 
-		updateComposeData({
+		updateComposeDraftData(draftId, {
 			[field]: [...currentRecipients, newRecipient],
 		});
 	};
 
 	const handleRemoveRecipient = (field: 'to' | 'cc' | 'bcc', index: number) => {
-		const currentRecipients = composeData[field] || [];
-		updateComposeData({
+		const currentRecipients = draft.data[field] || [];
+		updateComposeDraftData(draftId, {
 			[field]: currentRecipients.filter((_, i) => i !== index),
 		});
 	};
@@ -113,7 +111,7 @@ export function ComposeEmail({ inline = false }: ComposeEmailProps) {
 		label: string;
 	}) => {
 		const [inputValue, setInputValue] = useState('');
-		const recipients = composeData[field] || [];
+		const recipients = draft.data[field] || [];
 
 		return (
 			<div className='flex items-center border-b border-gray-200 dark:border-gray-700 px-4 py-2'>
@@ -173,13 +171,13 @@ export function ComposeEmail({ inline = false }: ComposeEmailProps) {
 	};
 
 	const wrapperClass = inline
-		? 'mt-4 bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 flex flex-col'
-		: `fixed bg-white dark:bg-gray-900 rounded-t-lg shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col ${
-				isFullscreen
-					? 'inset-0 z-50'
-					: isMinimized
-					? 'bottom-0 right-4 w-64 h-10'
-					: 'bottom-0 right-4 w-[600px] h-[600px]'
+		? 'h-full bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 flex flex-col'
+		: `bg-white dark:bg-gray-900 rounded-t-lg shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col ${
+				draft.isFullscreen
+					? 'w-full h-full'
+					: draft.isMinimized
+					? 'w-64 h-10'
+					: 'w-[600px] h-[600px]'
 		  } transition-all duration-300`;
 
 	return (
@@ -187,99 +185,113 @@ export function ComposeEmail({ inline = false }: ComposeEmailProps) {
 			{/* Header */}
 			<div className='flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-t-lg'>
 				<span className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-					{composeMode === 'new'
+					{draft.mode === 'new'
 						? 'New Message'
-						: composeMode === 'reply'
+						: draft.mode === 'reply'
 						? 'Reply'
-						: composeMode === 'replyAll'
+						: draft.mode === 'replyAll'
 						? 'Reply All'
 						: 'Forward'}
 				</span>
 				<div className='flex items-center gap-1'>
 					{!inline && (
 						<button
-							onClick={() => setIsMinimized(!isMinimized)}
+							onClick={() =>
+								updateComposeDraft(draftId, { isMinimized: !draft.isMinimized })
+							}
 							className='p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded'>
 							<Minimize2 className='w-4 h-4 text-gray-600 dark:text-gray-400' />
 						</button>
 					)}
 					{!inline && (
 						<button
-							onClick={() => setIsFullscreen(!isFullscreen)}
+							onClick={() =>
+								updateComposeDraft(draftId, {
+									isFullscreen: !draft.isFullscreen,
+								})
+							}
 							className='p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded'>
 							<Maximize2 className='w-4 h-4 text-gray-600 dark:text-gray-400' />
 						</button>
 					)}
 					<button
-						onClick={closeCompose}
+						onClick={() => closeComposeDraft(draftId)}
 						className='p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded'>
 						<X className='w-4 h-4 text-gray-600 dark:text-gray-400' />
 					</button>
 				</div>
 			</div>
 
-			{/* Recipients */}
-			<RecipientInput field='to' label='To' />
-			{showCc && <RecipientInput field='cc' label='Cc' />}
-			{showBcc && <RecipientInput field='bcc' label='Bcc' />}
+			{!draft.isMinimized && (
+				<>
+					{/* Recipients */}
+					<RecipientInput field='to' label='To' />
+					{showCc && <RecipientInput field='cc' label='Cc' />}
+					{showBcc && <RecipientInput field='bcc' label='Bcc' />}
 
-			{/* Subject */}
-			<div className='border-b border-gray-200 dark:border-gray-700 px-4 py-2'>
-				<input
-					type='text'
-					value={composeData.subject || ''}
-					onChange={(e) => updateComposeData({ subject: e.target.value })}
-					placeholder='Subject'
-					className='w-full bg-transparent outline-none text-sm'
-				/>
-			</div>
+					{/* Subject */}
+					<div className='border-b border-gray-200 dark:border-gray-700 px-4 py-2'>
+						<input
+							type='text'
+							value={draft.data.subject || ''}
+							onChange={(e) =>
+								updateComposeDraftData(draftId, { subject: e.target.value })
+							}
+							placeholder='Subject'
+							className='w-full bg-transparent outline-none text-sm'
+						/>
+					</div>
 
-			{/* Body */}
-			<div className={`flex-1 p-4 ${inline ? '' : ''}`}>
-				<textarea
-					ref={bodyRef}
-					value={composeData.body || ''}
-					onChange={(e) => updateComposeData({ body: e.target.value })}
-					placeholder='Compose email'
-					className='w-full h-full bg-transparent outline-none resize-none text-sm'
-				/>
-			</div>
+					{/* Body */}
+					<div className={`flex-1 p-4 ${inline ? 'min-h-[200px]' : ''}`}>
+						<textarea
+							ref={bodyRef}
+							value={draft.data.body || ''}
+							onChange={(e) =>
+								updateComposeDraftData(draftId, { body: e.target.value })
+							}
+							placeholder='Compose email'
+							className='w-full h-full bg-transparent outline-none resize-none text-sm'
+						/>
+					</div>
 
-			{/* Footer */}
-			<div className='border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between rounded-b-lg'>
-				<div className='flex items-center gap-2'>
-					<button
-						onClick={handleSend}
-						className='px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm flex items-center gap-2'>
-						Send
-						<ChevronDown className='w-4 h-4' />
-					</button>
+					{/* Footer */}
+					<div className='border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between rounded-b-lg'>
+						<div className='flex items-center gap-2'>
+							<button
+								onClick={handleSend}
+								className='px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm flex items-center gap-2'>
+								Send
+								<ChevronDown className='w-4 h-4' />
+							</button>
 
-					<div className='flex items-center gap-1 ml-4'>
-						<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-							<Paperclip className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-						</button>
-						<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-							<Link className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-						</button>
-						<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-							<Smile className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-						</button>
-						<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-							<Image className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-						</button>
-						<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-							<MoreVertical className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+							<div className='flex items-center gap-1 ml-4'>
+								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+									<Paperclip className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+								</button>
+								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+									<Link className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+								</button>
+								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+									<Smile className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+								</button>
+								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+									<Image className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+								</button>
+								<button className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+									<MoreVertical className='w-4 h-4 text-gray-600 dark:text-gray-400' />
+								</button>
+							</div>
+						</div>
+
+						<button
+							onClick={() => saveDraftFromCompose(draftId)}
+							className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
+							<Trash2 className='w-4 h-4 text-gray-600 dark:text-gray-400' />
 						</button>
 					</div>
-				</div>
-
-				<button
-					onClick={() => saveDraft()}
-					className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded'>
-					<Trash2 className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-				</button>
-			</div>
+				</>
+			)}
 		</div>
 	);
 }

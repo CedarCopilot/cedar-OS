@@ -24,7 +24,8 @@ interface EmailViewProps {
 }
 
 function EmailView({ email, onClose }: EmailViewProps) {
-	const { toggleStar, markAsRead, moveToTrash, openCompose } = useEmailStore();
+	const { toggleStar, markAsRead, moveToTrash, createComposeDraft } =
+		useEmailStore();
 
 	// Mark as read when viewing (only if not already read)
 	if (!email.isRead) {
@@ -32,7 +33,7 @@ function EmailView({ email, onClose }: EmailViewProps) {
 	}
 
 	return (
-		<div className='flex-1 bg-white dark:bg-gray-900 rounded-lg overflow-hidden flex flex-col'>
+		<div className='bg-white dark:bg-gray-900 rounded-lg overflow-hidden flex flex-col'>
 			{/* Toolbar */}
 			<div className='border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-2'>
 				<button
@@ -185,19 +186,19 @@ function EmailView({ email, onClose }: EmailViewProps) {
 					{/* Action buttons */}
 					<div className='mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 flex gap-3'>
 						<button
-							onClick={() => openCompose('reply', email)}
+							onClick={() => createComposeDraft('reply', email)}
 							className='px-6 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium text-sm flex items-center gap-2'>
 							<Reply className='w-4 h-4' />
 							Reply
 						</button>
 						<button
-							onClick={() => openCompose('replyAll', email)}
+							onClick={() => createComposeDraft('replyAll', email)}
 							className='px-6 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium text-sm flex items-center gap-2'>
 							<ReplyAll className='w-4 h-4' />
 							Reply All
 						</button>
 						<button
-							onClick={() => openCompose('forward', email)}
+							onClick={() => createComposeDraft('forward', email)}
 							className='px-6 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium text-sm flex items-center gap-2'>
 							<Forward className='w-4 h-4' />
 							Forward
