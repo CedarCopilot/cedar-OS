@@ -135,7 +135,7 @@ export const mastraProvider: ProviderImplementation<
 	},
 
 	voiceLLM: async (params, config) => {
-		const { audioData, voiceSettings, context } = params;
+		const { audioData, voiceSettings, context, ...rest } = params;
 
 		const headers: Record<string, string> = {};
 
@@ -156,6 +156,15 @@ export const mastraProvider: ProviderImplementation<
 		formData.append('settings', JSON.stringify(voiceSettings));
 		if (context) {
 			formData.append('context', context);
+		}
+
+		for (const [key, value] of Object.entries(rest)) {
+			if (value === undefined || value === null) continue;
+			if (typeof value === 'object') {
+				formData.append(key, JSON.stringify(value));
+			} else {
+				formData.append(key, String(value));
+			}
 		}
 
 		const response = await fetch(fullUrl, {

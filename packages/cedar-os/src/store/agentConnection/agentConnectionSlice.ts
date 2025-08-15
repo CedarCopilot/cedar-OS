@@ -115,6 +115,11 @@ export interface AgentConnectionSlice {
 
 	// Utility methods
 	cancelStream: () => void;
+
+	// Notifications
+	notificationInterval?: number;
+	subscribeToNotifications: () => void;
+	unsubscribeFromNotifications: () => void;
 }
 
 // Create a typed version of the slice that knows about the provider
@@ -193,6 +198,7 @@ export const createAgentConnectionSlice: StateCreator<
 	isStreaming: false,
 	providerConfig: null,
 	currentAbortController: null,
+	notificationInterval: undefined,
 	responseProcessors: initializeResponseProcessorRegistry(
 		defaultResponseProcessors as ResponseProcessor<StructuredResponseType>[]
 	),
@@ -411,11 +417,23 @@ export const createAgentConnectionSlice: StateCreator<
 			throw new Error('No LLM provider configured');
 		}
 
+		// Augment params for Mastra provider to include resourceId & threadId
+		let voiceParams: VoiceParams = params;
+		if (config.provider === 'mastra') {
+			const resourceId = getCedarState('userId') as string | undefined;
+			const threadId = getCedarState('threadId') as string | undefined;
+			voiceParams = {
+				...params,
+				resourceId,
+				threadId,
+			} as typeof voiceParams;
+		}
+
 		try {
 			const provider = getProviderImplementation(config);
 			// Type assertion is safe after runtime validation
 			const response = await provider.voiceLLM(
-				params as unknown as never,
+				voiceParams as unknown as never,
 				config as never
 			);
 
@@ -671,6 +689,52 @@ export const createAgentConnectionSlice: StateCreator<
 		const { currentAbortController } = get();
 		if (currentAbortController) {
 			currentAbortController.abort();
+		}
+	},
+
+	/* ------------------------------------------------------------------
+	 * Notification polling for Mastra threads
+	 * ------------------------------------------------------------------*/
+
+	subscribeToNotifications: () => {
+		if (get().notificationInterval !== undefined) return; // already polling
+
+		const provider = get().providerConfig;
+		if (!provider || provider.provider !== 'mastra') return;
+
+		const baseURL = provider.baseURL;
+		const threadId = getCedarState('threadId') as string | undefined;
+		if (!threadId) return;
+
+		const endpoint = `${baseURL}/chat/notifications`;
+
+		get().notificationInterval = window.setInterval(async () => {
+			try {
+				const response = await fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ threadId }),
+				});
+
+				if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+				const data = await response.json();
+				if (Array.isArray(data?.notifications)) {
+					for (const msg of data.notifications) {
+						get().addMessage(msg);
+					}
+				}
+			} catch (err) {
+				console.warn('Notification polling error:', err);
+			}
+		}, 60000);
+	},
+
+	unsubscribeFromNotifications: () => {
+		const id = get().notificationInterval;
+		if (id !== undefined) {
+			clearInterval(id);
+			set({ notificationInterval: undefined });
 		}
 	},
 });

@@ -25,7 +25,7 @@ export interface VoiceLLMResponse extends LLMResponse {
 }
 
 // Voice parameters for LLM calls
-export interface VoiceParams {
+export interface VoiceParams extends BaseParams {
 	audioData: Blob;
 	voiceSettings: {
 		language: string;

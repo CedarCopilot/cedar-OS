@@ -57,7 +57,24 @@ const TooltipMenuSpell: React.FC<TooltipMenuSpellProps> = ({
 		if (!selection || selection.rangeCount === 0) return null;
 
 		const range = selection.getRangeAt(0);
-		const rect = range.getBoundingClientRect();
+		let rect = range.getBoundingClientRect();
+
+		// Fallback for input/textarea where range rect may be 0,0,0,0
+		if (
+			(rect.x === 0 && rect.y === 0 && rect.width === 0 && rect.height === 0) ||
+			(rect.top === 0 &&
+				rect.left === 0 &&
+				rect.bottom === 0 &&
+				rect.right === 0)
+		) {
+			const active = document.activeElement as HTMLElement | null;
+			if (
+				active &&
+				(active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
+			) {
+				rect = active.getBoundingClientRect();
+			}
+		}
 
 		// Store the range and text for later use
 		selectionRangeRef.current = range.cloneRange();
