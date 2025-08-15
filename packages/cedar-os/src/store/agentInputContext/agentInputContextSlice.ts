@@ -225,13 +225,13 @@ export const createAgentInputContextSlice: StateCreator<
 type ElementType<T> = T extends readonly (infer E)[] ? E : T;
 
 /**
- * Subscribe to local state changes and update additional context
- * @param localState - The local state to subscribe to
- * @param mapFn - Function to map local state to context entries
- * @param options - Optional configuration for icon, color, and label extraction
+ * Subscribe the agent's context to a Cedar state
+ * @param stateKey - The key of the state to subscribe to
+ * @param mapFn - A function that maps the state to a record of context entries
+ * @param options - Optional configuration for the context entries
  */
-export function useSubscribeInputContext<T>(
-	localState: T,
+export function useSubscribeStateToInputContext<T>(
+	stateKey: string,
 	mapFn: (state: T) => Record<string, unknown>,
 	options?: {
 		icon?: ReactNode;
@@ -246,32 +246,44 @@ export function useSubscribeInputContext<T>(
 		(s) => s.updateAdditionalContext
 	);
 
-	// Helper to extract label from an item
-	const getLabel = (item: unknown): string => {
-		const { labelField } = options || {};
-
-		if (typeof labelField === 'function') {
-			return labelField(item as ElementType<T>);
-		}
-
-		// For objects, try to extract label from field
-		if (typeof item === 'object' && item !== null) {
-			const obj = item as Record<string, unknown>;
-
-			if (typeof labelField === 'string' && labelField in obj) {
-				return String(obj[labelField]);
-			}
-
-			// Default label extraction for objects
-			return String(obj.title || obj.label || obj.name || obj.id || item);
-		}
-
-		// For primitives, convert to string
-		return String(item);
-	};
+	// Subscribe to the cedar state value
+	const stateValue = useCedarStore(
+		(s) => s.registeredStates[stateKey]?.value as T | undefined
+	);
 
 	useEffect(() => {
-		const mapped = mapFn(localState);
+		// Helper to extract label from an item (depends on options)
+		const getLabel = (item: unknown): string => {
+			const { labelField } = options || {};
+
+			if (typeof labelField === 'function') {
+				return labelField(item as ElementType<T>);
+			}
+
+			// For objects, try to extract label from field
+			if (typeof item === 'object' && item !== null) {
+				const obj = item as Record<string, unknown>;
+
+				if (typeof labelField === 'string' && labelField in obj) {
+					return String(obj[labelField]);
+				}
+
+				// Default label extraction for objects
+				return String(obj.title || obj.label || obj.name || obj.id || item);
+			}
+
+			// For primitives, convert to string
+			return String(item);
+		};
+
+		if (stateValue === undefined) {
+			console.warn(
+				`[useSubscribeStateToInputContext] State with key "${stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
+			);
+			return;
+		}
+
+		const mapped = mapFn(stateValue);
 		const normalized: Record<string, unknown> = {};
 
 		// Normalize all values to arrays for consistent handling
@@ -338,7 +350,7 @@ export function useSubscribeInputContext<T>(
 		} else {
 			updateAdditionalContext(normalized);
 		}
-	}, [localState, mapFn, updateAdditionalContext, options]);
+	}, [stateValue, mapFn, updateAdditionalContext, options, stateKey]);
 }
 
 // Enhanced hook to render additionalContext entries

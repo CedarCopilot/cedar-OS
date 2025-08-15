@@ -43,7 +43,7 @@ import {
 	MouseEvent as SpellMouseEvent,
 	useRegisterState,
 	useStateBasedMentionProvider,
-	useSubscribeInputContext,
+	useSubscribeStateToInputContext,
 	type CedarStore,
 } from 'cedar-os';
 import {
@@ -543,31 +543,24 @@ function FlowCanvas() {
 function SelectedNodesPanel() {
 	const [selected, setSelected] = React.useState<Node<FeatureNodeData>[]>([]);
 
-	// First subscription - for numSelectedNodes (order: 1)
-	useSubscribeInputContext(
-		selected,
-		(nodes) => ({
-			numSelectedNodes: nodes.length,
-		}),
-		{
-			icon: <Box />,
-			color: '#8B5CF6', // Purple color for selected nodes
-			labelField: (item) => item.toString(),
-			order: 2, // This will appear first
-		}
-	);
+	useRegisterState<Node<FeatureNodeData>[]>({
+		key: 'selectedNodes',
+		value: selected,
+		setValue: setSelected,
+		description: 'Selected nodes',
+	});
 
-	// Second subscription - for selectedNodes (order: 2)
-	useSubscribeInputContext(
-		selected,
+	// First subscription - for numSelectedNodes (order: 1)
+	useSubscribeStateToInputContext<Node<FeatureNodeData>[]>(
+		'selectedNodes',
 		(nodes) => ({
 			selectedNodes: nodes,
 		}),
 		{
 			icon: <Box />,
 			color: '#8B5CF6', // Purple color for selected nodes
-			labelField: (item) => item.data.title,
-			order: 1, // This will appear second
+			labelField: (item) => item?.data?.title,
+			order: 2, // This will appear first
 		}
 	);
 

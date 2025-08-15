@@ -34,12 +34,11 @@ export { useCedarState } from '@/store/stateSlice/useCedarState';
 // Export context management
 export {
 	useRenderAdditionalContext,
-	useSubscribeInputContext,
+	useSubscribeStateToInputContext,
 } from '@/store/agentInputContext/agentInputContextSlice';
 
 // Export mention provider functionality
 export {
-	useMentionProvider,
 	useMentionProviders,
 	useMentionProvidersByTrigger,
 	useStateBasedMentionProvider,
