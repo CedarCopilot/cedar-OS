@@ -45,7 +45,7 @@ const CustomSlider: React.FC<{
 	label?: string;
 	styling: { darkMode: boolean; color: string; accentColor: string };
 }> = ({ min, max, step, value, unit, label, styling }) => {
-	const percent = ((value - min) / (max - min)) * 100;
+	const percent = max === min ? 0 : ((value - min) / (max - min)) * 100;
 
 	return (
 		<div className='relative flex flex-col items-center w-full'>
