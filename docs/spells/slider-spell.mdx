@@ -1,0 +1,581 @@
+---
+title: 'Slider Spell'
+description: 'A horizontal slider interface that appears at the cursor for precise value adjustments'
+icon: 'sliders'
+---
+
+# Slider Spell
+
+The `SliderSpell` component creates an interactive horizontal slider that appears at the cursor position, perfect for making precise numerical adjustments. It features smooth mouse-based control, customizable ranges, and integrates seamlessly with Cedar's hold-mode activation pattern.
+
+## Features
+
+- **Mouse-Driven Control**: Horizontal mouse movement directly controls slider value
+- **Hold Mode Integration**: Activates on key/mouse hold, executes on release
+- **Customizable Ranges**: Configure min, max, step, and units
+- **Visual Feedback**: Real-time value display above slider thumb
+- **Smart Positioning**: Appears above cursor, centered horizontally
+- **Theme Integration**: Adapts to Cedar's light/dark mode
+- **Smooth Animations**: Container3D styling with smooth transitions
+
+## Installation
+
+```tsx
+import { SliderSpell } from 'cedar-os-components/spells';
+```
+
+## Basic Usage
+
+```tsx
+import { SliderSpell } from 'cedar-os-components/spells';
+import { ActivationMode } from 'cedar-os';
+
+function MyComponent() {
+	const handleSliderComplete = (value: number, store: CedarStore) => {
+		console.log('Selected value:', value);
+		// Use the value in your application
+		updateOpacity(value / 100);
+	};
+
+	return (
+		<SliderSpell
+			spellId='opacity-slider'
+			sliderConfig={{
+				min: 0,
+				max: 100,
+				step: 1,
+				unit: '%',
+				label: 'Opacity',
+			}}
+			activationConditions={{
+				events: ['o'],
+				mode: ActivationMode.HOLD,
+			}}
+			onComplete={handleSliderComplete}
+		/>
+	);
+}
+```
+
+**Usage:** Hold 'O' key and move mouse horizontally to adjust opacity from 0-100%.
+
+## Props
+
+### SliderSpell Props
+
+| Prop                   | Type                     | Required | Description                               |
+| ---------------------- | ------------------------ | -------- | ----------------------------------------- |
+| `spellId`              | `string`                 | Yes      | Unique identifier for this spell instance |
+| `sliderConfig`         | `SliderConfig`           | No       | Configuration for the slider              |
+| `onComplete`           | `(value, store) => void` | Yes      | Callback when value is confirmed          |
+| `activationConditions` | `ActivationConditions`   | Yes      | Conditions that trigger the slider        |
+
+### SliderConfig Interface
+
+```tsx
+interface SliderConfig {
+	/** Minimum value for the slider (default: 0) */
+	min?: number;
+
+	/** Maximum value for the slider (default: 100) */
+	max?: number;
+
+	/** Step increment for the slider (default: 1) */
+	step?: number;
+
+	/** Label to display below the slider (optional) */
+	label?: string;
+
+	/** Unit to display after the value (default: '%') */
+	unit?: string;
+}
+```
+
+## Hold Mode Pattern
+
+The SliderSpell is designed for hold-mode interaction, providing natural and efficient value selection:
+
+```tsx
+activationConditions={{
+  events: ['s'],
+  mode: ActivationMode.HOLD
+}}
+```
+
+**User flow:**
+
+1. Hold key (or right-click) to activate slider
+2. Move mouse horizontally to adjust value
+3. Release to confirm selection and execute callback
+4. Press ESC while holding to cancel
+
+## Advanced Examples
+
+### Volume Control
+
+Create a volume slider with audio feedback:
+
+```tsx
+const volumeSlider = (
+	<SliderSpell
+		spellId='volume-control'
+		sliderConfig={{
+			min: 0,
+			max: 100,
+			step: 5,
+			unit: '%',
+			label: 'Volume',
+		}}
+		activationConditions={{
+			events: ['v'],
+			mode: ActivationMode.HOLD,
+		}}
+		onComplete={(value, store) => {
+			// Update audio volume
+			const audio = document.querySelector('audio');
+			if (audio) {
+				audio.volume = value / 100;
+			}
+
+			// Store in preferences
+			localStorage.setItem('volume', value.toString());
+
+			// Optional: Show confirmation
+			store.addMessage({
+				content: `Volume set to ${value}%`,
+				role: 'system',
+			});
+		}}
+	/>
+);
+```
+
+### Color Opacity Adjuster
+
+Adjust transparency for design tools:
+
+```tsx
+const opacitySlider = (
+	<SliderSpell
+		spellId='opacity-adjuster'
+		sliderConfig={{
+			min: 0,
+			max: 255,
+			step: 1,
+			unit: '',
+			label: 'Alpha Channel',
+		}}
+		activationConditions={{
+			events: ['a', 'right-click'],
+			mode: ActivationMode.HOLD,
+		}}
+		onComplete={(value, store) => {
+			// Update selected element opacity
+			const selectedElement = document.querySelector('.selected');
+			if (selectedElement) {
+				selectedElement.style.opacity = (value / 255).toString();
+			}
+
+			// Update design state
+			store.setCedarState('selectedOpacity', value);
+		}}
+	/>
+);
+```
+
+### Temperature Sensor Reading
+
+For scientific or IoT applications:
+
+```tsx
+const temperatureSlider = (
+	<SliderSpell
+		spellId='temperature-setter'
+		sliderConfig={{
+			min: -20,
+			max: 40,
+			step: 0.5,
+			unit: '°C',
+			label: 'Target Temperature',
+		}}
+		activationConditions={{
+			events: ['t'],
+			mode: ActivationMode.HOLD,
+		}}
+		onComplete={async (value, store) => {
+			try {
+				// Send to IoT device
+				await fetch('/api/thermostat', {
+					method: 'POST',
+					body: JSON.stringify({ targetTemp: value }),
+				});
+
+				// Confirm with AI assistant
+				await store.sendMessage({
+					content: `Set thermostat to ${value}°C`,
+					role: 'user',
+				});
+			} catch (error) {
+				console.error('Failed to set temperature:', error);
+			}
+		}}
+	/>
+);
+```
+
+### Multiple Sliders System
+
+Coordinate multiple sliders for complex adjustments:
+
+```tsx
+function ColorAdjustmentSystem() {
+	const [currentColor, setCurrentColor] = useState({ r: 128, g: 128, b: 128 });
+
+	const updateColorChannel =
+		(channel: 'r' | 'g' | 'b') => (value: number, store: CedarStore) => {
+			const newColor = { ...currentColor, [channel]: value };
+			setCurrentColor(newColor);
+
+			// Apply to selected element
+			const element = document.querySelector('.color-target');
+			if (element) {
+				element.style.backgroundColor = `rgb(${newColor.r}, ${newColor.g}, ${newColor.b})`;
+			}
+		};
+
+	return (
+		<>
+			{/* Red Channel */}
+			<SliderSpell
+				spellId='red-channel'
+				sliderConfig={{ min: 0, max: 255, unit: '', label: 'Red' }}
+				activationConditions={{ events: ['r'], mode: ActivationMode.HOLD }}
+				onComplete={updateColorChannel('r')}
+			/>
+
+			{/* Green Channel */}
+			<SliderSpell
+				spellId='green-channel'
+				sliderConfig={{ min: 0, max: 255, unit: '', label: 'Green' }}
+				activationConditions={{ events: ['g'], mode: ActivationMode.HOLD }}
+				onComplete={updateColorChannel('g')}
+			/>
+
+			{/* Blue Channel */}
+			<SliderSpell
+				spellId='blue-channel'
+				sliderConfig={{ min: 0, max: 255, unit: '', label: 'Blue' }}
+				activationConditions={{ events: ['b'], mode: ActivationMode.HOLD }}
+				onComplete={updateColorChannel('b')}
+			/>
+		</>
+	);
+}
+```
+
+### Dynamic Range Slider
+
+Adjust slider range based on context:
+
+```tsx
+function DynamicSlider({
+	mode,
+}: {
+	mode: 'percentage' | 'pixels' | 'degrees';
+}) {
+	const sliderConfig = useMemo(() => {
+		switch (mode) {
+			case 'percentage':
+				return { min: 0, max: 100, step: 1, unit: '%' };
+			case 'pixels':
+				return { min: 0, max: 1920, step: 1, unit: 'px' };
+			case 'degrees':
+				return { min: 0, max: 360, step: 1, unit: '°' };
+			default:
+				return { min: 0, max: 100, step: 1, unit: '%' };
+		}
+	}, [mode]);
+
+	return (
+		<SliderSpell
+			spellId={`dynamic-slider-${mode}`}
+			sliderConfig={sliderConfig}
+			activationConditions={{
+				events: ['d'],
+				mode: ActivationMode.HOLD,
+			}}
+			onComplete={(value, store) => {
+				console.log(`${mode} value:`, value);
+				// Handle based on current mode
+			}}
+		/>
+	);
+}
+```
+
+## Mouse Sensitivity
+
+The slider uses a sensitivity system to map mouse movement to value changes:
+
+```tsx
+// Default sensitivity: 300 pixels for full range
+const sensitivity = 300;
+const valueRange = max - min;
+const deltaValue = (mouseMovement / sensitivity) * valueRange;
+```
+
+### Customizing Sensitivity
+
+While not directly configurable, you can adjust effective sensitivity by modifying your range:
+
+```tsx
+// More sensitive (smaller movements = bigger changes)
+sliderConfig={{ min: 0, max: 10, step: 0.1 }}
+
+// Less sensitive (larger movements needed)
+sliderConfig={{ min: 0, max: 1000, step: 10 }}
+```
+
+## Visual Behavior
+
+### Positioning
+
+The slider appears above the cursor, centered horizontally:
+
+- **Mouse Events**: Positioned at cursor location
+- **Keyboard Events**: Positioned at viewport center
+- **Above Cursor**: Positioned with 8px gap above cursor
+- **Centered**: Horizontally centered on activation point
+
+### Value Display
+
+- **Real-time Updates**: Value shown above slider thumb
+- **Unit Display**: Configured unit appears after value
+- **Theme Adaptive**: Colors adapt to light/dark mode
+- **Smooth Transitions**: No jarring animations, just smooth updates
+
+### Styling Integration
+
+The component uses Cedar's styling system:
+
+- **Container3D**: 3D-styled slider track and thumb
+- **Theme Colors**: Respects dark/light mode preferences
+- **Consistent Typography**: Matches Cedar's text styling
+- **Backdrop Blur**: Subtle backdrop blur for better visibility
+
+## Interaction Details
+
+### Mouse Control
+
+- **Horizontal Movement**: Only horizontal mouse movement affects value
+- **Relative Positioning**: Movement relative to activation point
+- **Continuous Updates**: Value updates in real-time during movement
+- **Clamping**: Values automatically clamped to min/max range
+- **Step Snapping**: Values snap to configured step increments
+
+### Keyboard Support
+
+- **ESC**: Cancel slider without executing callback
+- **Hold Pattern**: Must hold activation key throughout interaction
+- **Release to Confirm**: Release key to execute callback with final value
+
+### Edge Cases
+
+- **Viewport Boundaries**: Slider stays within viewport bounds
+- **Rapid Movement**: Handles fast mouse movements smoothly
+- **Step Precision**: Ensures values align with step configuration
+
+## Best Practices
+
+### 1. Choose Appropriate Ranges
+
+```tsx
+// ✅ Good: Reasonable range for the use case
+sliderConfig={{ min: 0, max: 100, step: 5 }} // Volume control
+
+// ❌ Avoid: Excessive precision
+sliderConfig={{ min: 0, max: 100, step: 0.001 }} // Too precise for UI
+```
+
+### 2. Use Meaningful Units
+
+```tsx
+// ✅ Good: Clear units
+sliderConfig={{ unit: '%' }}   // Percentage
+sliderConfig={{ unit: 'px' }}  // Pixels
+sliderConfig={{ unit: '°' }}   // Degrees
+
+// ❌ Avoid: Ambiguous or missing units
+sliderConfig={{ unit: '' }}    // What does this number mean?
+```
+
+### 3. Logical Key Bindings
+
+```tsx
+// ✅ Good: Mnemonic key bindings
+events: ['v']; // Volume
+events: ['o']; // Opacity
+events: ['s']; // Size/Scale
+
+// ❌ Avoid: Random key assignments
+events: ['x']; // For volume control?
+```
+
+### 4. Handle Errors Gracefully
+
+```tsx
+onComplete: async (value, store) => {
+	try {
+		await updateSetting(value);
+	} catch (error) {
+		console.error('Update failed:', error);
+		// Provide user feedback
+		store.addMessage({
+			content: 'Failed to update setting. Please try again.',
+			role: 'system',
+		});
+	}
+};
+```
+
+### 5. Provide Visual Context
+
+```tsx
+// Include labels for clarity
+sliderConfig={{
+  min: 0,
+  max: 100,
+  unit: '%',
+  label: 'Volume' // Helps users understand what they're adjusting
+}}
+```
+
+## Performance Considerations
+
+### Efficient Updates
+
+- **Throttled Rendering**: Value updates are smooth but not excessive
+- **Ref-based State**: Uses refs to avoid unnecessary re-renders
+- **Conditional Rendering**: Only renders when active
+- **Memory Cleanup**: Automatically cleans up event listeners
+
+### Event Handling
+
+- **Single Listener**: Uses efficient event delegation
+- **Debounced Actions**: Prevents spam during rapid movements
+- **Optimized Calculations**: Minimal computation per mouse move
+
+## Accessibility
+
+### Keyboard Navigation
+
+- The slider is primarily mouse-driven but keyboard accessible
+- ESC key provides clear exit path
+- Hold pattern is intuitive for keyboard users
+
+### Screen Reader Support
+
+Consider providing alternative interfaces for screen readers:
+
+```tsx
+// Provide aria-label context
+<div aria-label={`Adjust ${label} from ${min} to ${max} ${unit}`}>
+	<SliderSpell {...props} />
+</div>
+```
+
+### Alternative Access
+
+Provide multiple ways to adjust values:
+
+```tsx
+function AccessibleSlider() {
+	return (
+		<>
+			<SliderSpell {...sliderProps} />
+
+			{/* Alternative input for precise entry */}
+			<input
+				type='number'
+				min={min}
+				max={max}
+				step={step}
+				aria-label='Precise value entry'
+			/>
+		</>
+	);
+}
+```
+
+## Common Patterns
+
+### Media Controls
+
+```tsx
+// Volume, playback speed, seek position
+const mediaSliders = [
+	{ key: 'v', label: 'Volume', min: 0, max: 100, unit: '%' },
+	{ key: 's', label: 'Speed', min: 0.25, max: 2, unit: 'x', step: 0.25 },
+	{ key: 't', label: 'Position', min: 0, max: duration, unit: 's' },
+];
+```
+
+### Design Tools
+
+```tsx
+// Size, opacity, rotation, spacing
+const designSliders = [
+	{ key: 'w', label: 'Width', min: 10, max: 500, unit: 'px' },
+	{ key: 'h', label: 'Height', min: 10, max: 500, unit: 'px' },
+	{ key: 'a', label: 'Alpha', min: 0, max: 255, unit: '' },
+	{ key: 'r', label: 'Rotation', min: 0, max: 360, unit: '°' },
+];
+```
+
+### Scientific Instruments
+
+```tsx
+// Temperature, pressure, flow rate
+const instrumentSliders = [
+	{ key: 't', label: 'Temperature', min: -273, max: 1000, unit: '°C' },
+	{ key: 'p', label: 'Pressure', min: 0, max: 10, unit: 'bar' },
+	{ key: 'f', label: 'Flow Rate', min: 0, max: 100, unit: 'L/min' },
+];
+```
+
+## Troubleshooting
+
+### Slider not appearing
+
+- Check that spell ID is unique
+- Verify activation conditions are correct
+- Ensure component is mounted
+- Check for conflicting event handlers
+
+### Values not updating
+
+- Verify mouse movement is being detected
+- Check min/max/step configuration
+- Ensure onComplete callback is defined
+- Check for JavaScript errors
+
+### Position issues
+
+- Verify cursor position detection
+- Check for CSS transforms on parent elements
+- Ensure proper z-index for visibility
+- Check viewport boundary calculations
+
+### Performance problems
+
+- Reduce update frequency if needed
+- Check for memory leaks in callbacks
+- Verify event listeners are cleaned up
+- Monitor re-render frequency
+
+## Related Components
+
+- [RadialMenuSpell](/spells/radial-menu) - Circular menu for multiple actions
+- [TooltipMenuSpell](/spells/tooltip-menu) - Context menu for text selections
+- [QuestioningSpell](/spells/questioning-spell) - Interactive cursor for exploration
+- [Creating Custom Spells](/spells/creating-custom-spells) - Build your own spell components
