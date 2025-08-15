@@ -1,45 +1,47 @@
-import { CedarStore } from '@/store/types';
-import type { Message } from './types';
-import { getCedarState, useCedarStore } from '@/store/CedarStore';
+import { CedarStore } from '@/store/CedarOSTypes';
+import type { Message } from '@/store/messages/MessageTypes';
+import {
+	getCedarState,
+	setCedarState,
+	useCedarStore,
+} from '@/store/CedarStore';
+import { v4 } from 'uuid';
 
 // -------------------------------------------------
 // Type definitions
 // -------------------------------------------------
 export interface MessageStorageBaseAdapter {
-	loadMessages(
-		userId: string | null | undefined,
-		threadId: string
-	): Promise<Message[]>;
+	loadMessages?(userId: string, threadId: string): Promise<Message[]>;
 	// Returns the message that was persisted
-	persistMessage(
-		userId: string | null | undefined,
+	persistMessage?(
+		userId: string,
 		threadId: string,
 		message: Message
 	): Promise<Message>;
 	// Optional thread operations
-	listThreads?(userId?: string | null): Promise<MessageThreadMeta[]>;
+	listThreads?(userId: string): Promise<MessageThreadMeta[]>;
 	createThread?(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string,
 		meta: MessageThreadMeta
 	): Promise<MessageThreadMeta>;
 	updateThread?(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string,
 		meta: MessageThreadMeta
 	): Promise<MessageThreadMeta>;
 	deleteThread?(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string
 	): Promise<MessageThreadMeta | undefined>;
 	// Optional message-level operations
 	updateMessage?(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string,
 		message: Message
 	): Promise<Message>;
 	deleteMessage?(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string,
 		messageId: string
 	): Promise<Message | undefined>;
@@ -82,18 +84,13 @@ export type MessageStorageConfig =
 // Adapter factories
 // -------------------------------------------------
 
-const defaultUser = 'defaultUser';
-const defaultThread = 'defaultThread';
-
 const createMessageStorageLocalAdapter = (
 	opts: LocalAdapterOptions = {}
 ): MessageStorageLocalAdapter => {
 	const prefix = opts.key ?? 'cedar';
-	const uidOrDefault = (uid?: string | null) => uid || defaultUser;
-	const threadsKey = (userId?: string | null) =>
-		`${prefix}-threads-${uidOrDefault(userId)}`;
-	const threadKey = (userId: string | null | undefined, threadId: string) =>
-		`${prefix}-thread-${uidOrDefault(userId)}-${threadId || defaultThread}`;
+	const threadsKey = (userId: string) => `${prefix}-threads-${userId}`;
+	const threadKey = (userId: string, threadId: string) =>
+		`${prefix}-thread-${userId}-${threadId}`;
 
 	const persistThreadMeta = (userId: string, list: MessageThreadMeta[]) => {
 		localStorage.setItem(threadsKey(userId), JSON.stringify(list));
@@ -115,7 +112,8 @@ const createMessageStorageLocalAdapter = (
 		},
 		async persistMessage(userId, threadId, message) {
 			try {
-				const existingMessages = await this.loadMessages(userId, threadId);
+				const existingMessages =
+					(await this.loadMessages?.(userId, threadId)) ?? [];
 				const updatedMessages = [...existingMessages, message];
 				localStorage.setItem(
 					threadKey(userId, threadId),
@@ -131,7 +129,7 @@ const createMessageStorageLocalAdapter = (
 				const metaList = await this.listThreads?.(userId);
 				if (metaList && !metaList.some((m) => m.id === threadId)) {
 					metaList.push(meta);
-					persistThreadMeta(userId ?? defaultUser, metaList);
+					persistThreadMeta(userId, metaList);
 				}
 			} catch {
 				/* ignore */
@@ -145,7 +143,7 @@ const createMessageStorageLocalAdapter = (
 					const idx = metaList.findIndex((m) => m.id === threadId);
 					if (idx === -1) metaList.push(meta);
 					else metaList[idx] = { ...metaList[idx], ...meta };
-					persistThreadMeta(userId ?? defaultUser, metaList);
+					persistThreadMeta(userId, metaList);
 				}
 			} catch {
 				/* ignore */
@@ -160,7 +158,7 @@ const createMessageStorageLocalAdapter = (
 					const idx = metaList.findIndex((m) => m.id === threadId);
 					if (idx !== -1) removed = metaList[idx];
 					const newList = metaList.filter((m) => m.id !== threadId);
-					persistThreadMeta(userId ?? defaultUser, newList);
+					persistThreadMeta(userId, newList);
 					localStorage.removeItem(threadKey(userId, threadId));
 				}
 			} catch {
@@ -170,7 +168,7 @@ const createMessageStorageLocalAdapter = (
 		},
 		async updateMessage(userId, threadId, updatedMsg) {
 			try {
-				const msgs = await this.loadMessages(userId, threadId);
+				const msgs = (await this.loadMessages?.(userId, threadId)) ?? [];
 				const newMsgs = msgs.map((m) =>
 					m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m
 				);
@@ -186,7 +184,7 @@ const createMessageStorageLocalAdapter = (
 		async deleteMessage(userId, threadId, messageId) {
 			let removed: Message | undefined;
 			try {
-				const msgs = await this.loadMessages(userId, threadId);
+				const msgs = (await this.loadMessages?.(userId, threadId)) ?? [];
 				removed = msgs.find((m) => m.id === messageId);
 				const newMsgs = msgs.filter((m) => m.id !== messageId);
 				localStorage.setItem(
@@ -238,16 +236,13 @@ export interface MessageThreadMeta {
 export interface MessageStorageState {
 	messageStorageAdapter: MessageStorageAdapter | undefined;
 	setMessageStorageAdapter: (cfg?: MessageStorageConfig) => void;
-	loadMessageStorageMessages: () => Promise<void>;
-	persistMessageStorageMessage: (
-		message: Message,
-		autoCreateThread?: boolean
-	) => Promise<void>;
-	loadMessageStorageThreads: () => Promise<void>;
+	persistMessageStorageMessage: (message: Message) => Promise<void>;
+	initializeChat: (params?: {
+		userId?: string | null;
+		threadId?: string | null;
+	}) => Promise<void>;
 	// Thread-related state and methods
-	messageCurrentThreadId: string | null;
 	messageThreads: MessageThreadMeta[];
-	setMessageCurrentThreadId: (id: string | null) => void;
 	setMessageThreads: (threads: MessageThreadMeta[]) => void;
 }
 
@@ -270,63 +265,48 @@ export function getMessageStorageState(
 	let adapter: MessageStorageAdapter | undefined = undefined;
 
 	// Function to load threads and handle automatic thread selection
-	const loadAndSelectThreads = async (userId: string | null) => {
-		if (!adapter || !adapter.listThreads) return;
+	const loadAndSelectThreads = async (
+		userId: string | null,
+		autoCreateThread: boolean = true
+	): Promise<string | null> => {
+		if (!adapter || !adapter.listThreads || !userId) return null;
 
 		try {
-			const threads = await adapter.listThreads(userId);
+			let threads = await adapter.listThreads(userId);
 			const state = get();
 
-			// Update threads list
-			if (state.setMessageThreads) {
-				state.setMessageThreads(threads);
+			// Auto-create a thread if none exist
+			if (threads.length === 0 && autoCreateThread && adapter.createThread) {
+				const newThreadId = `thread-${Date.now()}-${Math.random()
+					.toString(36)
+					.substring(2, 9)}`;
+				const newMeta: MessageThreadMeta = {
+					id: newThreadId,
+					title: 'New Chat',
+					updatedAt: new Date().toISOString(),
+				};
+				try {
+					await adapter.createThread(userId, newThreadId, newMeta);
+					// Reload threads after creation
+					threads = await adapter.listThreads(userId);
+				} catch (error) {
+					console.warn('Failed to auto-create thread:', error);
+				}
 			}
+
+			state.setMessageThreads(threads);
 
 			// Handle thread selection if no thread is currently selected
-			if (!state.messageCurrentThreadId) {
-				let threadToSelect: string | null = null;
-
-				if (threads.length > 0) {
-					// Select first available thread
-					threadToSelect = threads[0].id;
-				} else if (threads.length === 0) {
-					// Fallback to default thread
-					threadToSelect = defaultThread;
-				}
-
-				if (threadToSelect && state.setMessageCurrentThreadId) {
-					state.setMessageCurrentThreadId(threadToSelect);
-				}
+			const currentThreadId = getCedarState('threadId') as string | null;
+			if (!currentThreadId && threads.length > 0) {
+				const threadToSelect = threads[0].id;
+				setCedarState('threadId', threadToSelect);
+				return threadToSelect;
 			}
 		} catch (error) {
-			// Gracefully handle errors - continue with current/default thread
 			console.warn('Failed to load threads:', error);
 		}
-	};
-
-	const attemptHydrate = () => {
-		if (!adapter) return;
-		try {
-			const state = get();
-			const uid = getCedarState('userId') as string | null;
-			console.log('uid', uid);
-			const tid = state.messageCurrentThreadId;
-
-			const threadToLoad = tid || defaultThread;
-
-			adapter
-				.loadMessages(uid, threadToLoad)
-				.then((msgs) => {
-					if (msgs.length) {
-						useCedarStore.getState().setMessages(msgs);
-					}
-				})
-				.catch(() => {
-					// Ignore errors during hydration
-				});
-		} catch {
-			// Ignore errors during hydration (e.g., store not fully initialized)
-		}
+		return null;
 	};
 
 	return {
@@ -336,53 +316,22 @@ export function getMessageStorageState(
 			adapter = createMessageStorageAdapter(cfg);
 
 			set({ messageStorageAdapter: adapter });
-
-			const uid = getCedarState('userId') as string | null;
-
-			// Load threads and messages with the new adapter
-			loadAndSelectThreads(uid);
-			attemptHydrate();
 		},
-		loadMessageStorageMessages: async (): Promise<void> => {
-			if (!adapter) return;
-			const uid = getCedarState('userId') as string | null;
-			const tid = get().messageCurrentThreadId;
-			const threadToLoad = tid || defaultThread;
-			const msgs = await adapter.loadMessages(uid, threadToLoad);
-			if (msgs.length) {
-				useCedarStore.getState().setMessages(msgs);
-			}
-		},
-		persistMessageStorageMessage: async (
-			message: Message,
-			autoCreateThread = true
-		): Promise<void> => {
-			if (!adapter) return;
+		persistMessageStorageMessage: async (message: Message): Promise<void> => {
+			if (!adapter?.persistMessage) return;
 
-			const state = get();
 			const uid = getCedarState('userId') as string | null;
-			const tid = state.messageCurrentThreadId || defaultThread;
+			const tid = (getCedarState('threadId') as string | null) || v4();
 
-			// Optionally create thread if it doesn't exist
-			if (autoCreateThread && adapter.listThreads) {
-				try {
-					const threads = await adapter.listThreads(uid);
-					const exists = threads.some((t: MessageThreadMeta) => t.id === tid);
-					if (!exists && adapter.createThread) {
-						const meta: MessageThreadMeta = {
-							id: tid,
-							title: (message.content ?? 'Chat').slice(0, 40),
-							updatedAt: new Date().toISOString(),
-						};
-						await adapter.createThread(uid, tid, meta);
-					}
-				} catch {
-					/* ignore */
-				}
-			}
+			// Only persist if we have user ID
+			if (!uid) return;
+
+			// Thread creation responsibility moved to loadAndSelectThreads
 
 			// Persist the message itself
-			await adapter.persistMessage(uid, tid, message);
+			if (adapter.persistMessage) {
+				await adapter.persistMessage!(uid, tid, message);
+			}
 
 			// Update thread meta while preserving original title
 			if (adapter.updateThread) {
@@ -392,25 +341,47 @@ export function getMessageStorageState(
 				const meta: MessageThreadMeta = {
 					id: tid,
 					title:
-						existingMeta?.title ?? (message.content ?? 'Chat').slice(0, 40),
+						existingMeta?.title || (message.content || 'Chat').slice(0, 40),
 					updatedAt: new Date().toISOString(),
 				};
 				await adapter.updateThread(uid, tid, meta);
 			}
 
-			// Refresh thread list in the store
-			await loadAndSelectThreads(uid);
+			// Refresh thread list (no auto-creation here – already handled earlier)
+			await loadAndSelectThreads(uid, false);
 		},
-		loadMessageStorageThreads: async (): Promise<void> => {
-			const uid = getCedarState('userId') as string | null;
-			await loadAndSelectThreads(uid);
+		initializeChat: async (params) => {
+			// Use provided values or fall back to Cedar state
+			const uid = params?.userId || (getCedarState('userId') as string | null);
+			const tidFromParams =
+				params?.threadId || (getCedarState('threadId') as string | null);
+
+			// Load threads first
+			const threadId = await loadAndSelectThreads(uid, true);
+
+			// Use the provided threadId or get the current one after thread selection
+			const tid = tidFromParams || threadId;
+			if (tid) {
+				setCedarState('threadId', tid);
+			}
+
+			// Clear existing messages first
+			useCedarStore.getState().setMessages([]);
+
+			// Then load messages for the selected thread
+			if (!adapter || !adapter.loadMessages || !uid || !tid) return;
+
+			try {
+				const msgs = await adapter.loadMessages(uid, tid);
+				if (msgs.length) {
+					useCedarStore.getState().setMessages(msgs);
+				}
+			} catch (error) {
+				console.warn('Failed to load messages during initialization:', error);
+			}
 		},
 		// Thread-related state and methods
-		messageCurrentThreadId: null,
 		messageThreads: [],
-		setMessageCurrentThreadId: (id: string | null) => {
-			set({ messageCurrentThreadId: id });
-		},
 		setMessageThreads: (threads: MessageThreadMeta[]) => {
 			set({ messageThreads: threads });
 		},

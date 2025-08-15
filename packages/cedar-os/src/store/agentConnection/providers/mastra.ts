@@ -1,12 +1,10 @@
 import type {
+	InferProviderConfig,
 	MastraParams,
 	ProviderImplementation,
-	InferProviderConfig,
 	StructuredParams,
-	VoiceParams,
-	VoiceLLMResponse,
-} from '../types';
-import { handleEventStream } from '../agentUtils';
+} from '@/store/agentConnection/AgentConnectionTypes';
+import { handleEventStream } from '@/store/agentConnection/agentUtils';
 
 type MastraConfig = InferProviderConfig<'mastra'>;
 
@@ -137,7 +135,7 @@ export const mastraProvider: ProviderImplementation<
 	},
 
 	voiceLLM: async (params, config) => {
-		const { audioData, voiceSettings, context } = params;
+		const { audioData, voiceSettings, context, ...rest } = params;
 
 		const headers: Record<string, string> = {};
 
@@ -158,6 +156,15 @@ export const mastraProvider: ProviderImplementation<
 		formData.append('settings', JSON.stringify(voiceSettings));
 		if (context) {
 			formData.append('context', context);
+		}
+
+		for (const [key, value] of Object.entries(rest)) {
+			if (value === undefined || value === null) continue;
+			if (typeof value === 'object') {
+				formData.append(key, JSON.stringify(value));
+			} else {
+				formData.append(key, String(value));
+			}
 		}
 
 		const response = await fetch(fullUrl, {
@@ -227,4 +234,32 @@ export const mastraProvider: ProviderImplementation<
 	handleStreamResponse: (chunk) => {
 		return { type: 'chunk', content: chunk };
 	},
+};
+
+/**
+ * All event types emitted by a Mastra agent stream.
+ */
+export type MastraStreamedResponseType =
+	| 'start'
+	| 'step-start'
+	| 'tool-call'
+	| 'tool-result'
+	| 'step-finish'
+	| 'tool-output'
+	| 'step-result'
+	| 'step-output'
+	| 'finish';
+
+/**
+ * Strongly-typed wrapper around a Mastra structured response message.
+ * Extends Cedar's `CustomMessage` so it is compatible with the message system.
+ */
+export type MastraStreamedResponse<
+	T extends MastraStreamedResponseType = MastraStreamedResponseType
+> = {
+	type: T;
+	runId: string;
+	from: string;
+	// TODO: update once Mastra releases new types
+	payload: Record<string, unknown>;
 };

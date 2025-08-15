@@ -31,7 +31,8 @@
 				"pages": [
 					"agent-backend-connection/agent-backend-connection",
 					"agent-backend-connection/mastra",
-					"agent-backend-connection/custom"
+					"agent-backend-connection/custom",
+					"agent-backend-connection/custom-response-processing"
 				]
 			},
 			{
@@ -75,9 +76,16 @@
 				]
 			},
 			{
-				"group": "Spells (Coming Soon)",
+				"group": "Spells",
 				"icon": "wand-magic-sparkles",
-				"pages": ["spells/spells", "spells/radial-menu"]
+				"pages": [
+					"spells/spells",
+					"spells/creating-custom-spells",
+					"spells/spell-architecture",
+					"spells/radial-menu",
+					"spells/questioning-spell",
+					"spells/tooltip-menu"
+				]
 			},
 			{
 				"group": "External Integrations (Coming Soon)",
@@ -98,6 +106,11 @@
 				"group": "Learn more about Cedar ❤️🌳",
 				"icon": "pen",
 				"pages": ["blog/index"]
+			},
+			{
+				"group": "Components",
+				"icon": "puzzle-piece",
+				"pages": ["components/typewriter-text", "components/markdown-renderer"]
 			},
 			{
 				"group": "Changelog",

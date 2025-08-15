@@ -1,0 +1,601 @@
+---
+title: 'Tooltip Menu Spell'
+description: 'A contextual menu that appears when text is selected'
+icon: 'bars'
+---
+
+# Tooltip Menu Spell
+
+The `TooltipMenuSpell` component creates a contextual menu that automatically appears when text is selected, perfect for text editing, AI-powered transformations, and quick actions on selected content. It can also spawn floating input fields for more complex interactions.
+
+## Features
+
+- **Automatic Text Selection Detection**: Appears when text is selected
+- **Smart Positioning**: Positions above selection, adjusts to stay on screen
+- **Floating Input Support**: Can spawn input fields for complex queries
+- **AI Integration**: Direct access to Cedar store for AI operations
+- **Selection Preservation**: Maintains text selection during interactions
+- **Flexible Actions**: Support for immediate actions or input-based workflows
+
+## Installation
+
+```tsx
+import { TooltipMenuSpell } from 'cedar-os-components/spells';
+```
+
+## Basic Usage
+
+```tsx
+import {
+	TooltipMenuSpell,
+	type ExtendedTooltipMenuItem,
+} from 'cedar-os-components/spells';
+import { Copy, Edit, Sparkles } from 'lucide-react';
+
+function MyEditor() {
+	const menuItems: ExtendedTooltipMenuItem[] = [
+		{
+			title: 'Copy',
+			icon: Copy,
+			onInvoke: (store) => {
+				const selection = window.getSelection()?.toString();
+				if (selection) {
+					navigator.clipboard.writeText(selection);
+				}
+			},
+		},
+		{
+			title: 'Improve',
+			icon: Sparkles,
+			onInvoke: async (store) => {
+				const selection = window.getSelection()?.toString();
+				if (selection) {
+					await store.sendMessage({
+						content: `Improve this text: ${selection}`,
+						role: 'user',
+					});
+				}
+			},
+		},
+		{
+			title: 'Ask AI',
+			icon: Edit,
+			spawnsInput: true, // This will open a floating input
+			onInvoke: () => {}, // Not called when spawnsInput is true
+		},
+	];
+
+	return (
+		<>
+			<TooltipMenuSpell spellId='text-menu' items={menuItems} />
+
+			<div className='prose'>
+				<p>Select any text in this paragraph to see the tooltip menu appear.</p>
+				<p>The menu provides quick actions for the selected text.</p>
+			</div>
+		</>
+	);
+}
+```
+
+## Props
+
+### TooltipMenuSpell Props
+
+| Prop                   | Type                        | Required | Default        | Description                                 |
+| ---------------------- | --------------------------- | -------- | -------------- | ------------------------------------------- |
+| `spellId`              | `string`                    | Yes      | -              | Unique identifier for this spell instance   |
+| `items`                | `ExtendedTooltipMenuItem[]` | Yes      | -              | Menu items to display                       |
+| `activationConditions` | `ActivationConditions`      | No       | Text selection | Custom activation conditions                |
+| `stream`               | `boolean`                   | No       | `true`         | Whether to use streaming for floating input |
+
+### ExtendedTooltipMenuItem Interface
+
+```tsx
+interface ExtendedTooltipMenuItem extends TooltipMenuItem {
+	/** Display title */
+	title: string;
+
+	/** Lucide icon component */
+	icon: LucideIcon;
+
+	/** Callback when item is clicked */
+	onInvoke: (store: CedarStore) => void;
+
+	/** If true, spawns floating input instead of immediate action */
+	spawnsInput?: boolean;
+}
+```
+
+## Advanced Examples
+
+### AI Writing Assistant
+
+Create a comprehensive writing assistant:
+
+```tsx
+import { Bold, Italic, Sparkles, Languages, BookOpen, Zap } from 'lucide-react';
+
+const writingAssistantItems: ExtendedTooltipMenuItem[] = [
+	{
+		title: 'Improve',
+		icon: Sparkles,
+		onInvoke: async (store) => {
+			const text = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `Improve this text while maintaining its meaning: ${text}`,
+				role: 'user',
+			});
+		},
+	},
+	{
+		title: 'Simplify',
+		icon: Zap,
+		onInvoke: async (store) => {
+			const text = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `Simplify this text for better readability: ${text}`,
+				role: 'user',
+			});
+		},
+	},
+	{
+		title: 'Translate',
+		icon: Languages,
+		spawnsInput: true, // Opens input for target language
+	},
+	{
+		title: 'Expand',
+		icon: BookOpen,
+		onInvoke: async (store) => {
+			const text = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `Expand on this idea with more detail: ${text}`,
+				role: 'user',
+			});
+		},
+	},
+	{
+		title: 'Make Bold',
+		icon: Bold,
+		onInvoke: () => {
+			document.execCommand('bold', false);
+		},
+	},
+	{
+		title: 'Custom',
+		icon: Edit,
+		spawnsInput: true, // Opens input for custom instructions
+	},
+];
+
+<TooltipMenuSpell spellId='writing-assistant' items={writingAssistantItems} />;
+```
+
+### Code Editor Actions
+
+Add code-specific actions:
+
+```tsx
+import { Code, Bug, Lightbulb, FileText, Copy, Play } from 'lucide-react';
+
+const codeEditorItems: ExtendedTooltipMenuItem[] = [
+	{
+		title: 'Explain',
+		icon: Lightbulb,
+		onInvoke: async (store) => {
+			const code = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `Explain this code:\n\`\`\`\n${code}\n\`\`\``,
+				role: 'user',
+			});
+		},
+	},
+	{
+		title: 'Find Bugs',
+		icon: Bug,
+		onInvoke: async (store) => {
+			const code = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `Find potential bugs in this code:\n\`\`\`\n${code}\n\`\`\``,
+				role: 'user',
+			});
+		},
+	},
+	{
+		title: 'Add Comments',
+		icon: FileText,
+		onInvoke: async (store) => {
+			const code = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `Add helpful comments to this code:\n\`\`\`\n${code}\n\`\`\``,
+				role: 'user',
+			});
+		},
+	},
+	{
+		title: 'Optimize',
+		icon: Zap,
+		onInvoke: async (store) => {
+			const code = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `Optimize this code for performance:\n\`\`\`\n${code}\n\`\`\``,
+				role: 'user',
+			});
+		},
+	},
+	{
+		title: 'Copy',
+		icon: Copy,
+		onInvoke: () => {
+			const code = window.getSelection()?.toString();
+			if (code) navigator.clipboard.writeText(code);
+		},
+	},
+	{
+		title: 'Run',
+		icon: Play,
+		spawnsInput: true, // Opens input for runtime parameters
+	},
+];
+```
+
+### Research Assistant
+
+Help with research and fact-checking:
+
+```tsx
+import { Search, BookOpen, Quote, Link, CheckCircle } from 'lucide-react';
+
+const researchItems: ExtendedTooltipMenuItem[] = [
+	{
+		title: 'Fact Check',
+		icon: CheckCircle,
+		onInvoke: async (store) => {
+			const claim = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `Fact-check this claim and provide sources: "${claim}"`,
+				role: 'user',
+			});
+		},
+	},
+	{
+		title: 'Find Sources',
+		icon: Search,
+		onInvoke: async (store) => {
+			const topic = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `Find reputable sources about: ${topic}`,
+				role: 'user',
+			});
+		},
+	},
+	{
+		title: 'Summarize',
+		icon: BookOpen,
+		onInvoke: async (store) => {
+			const text = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `Summarize this text in 2-3 sentences: ${text}`,
+				role: 'user',
+			});
+		},
+	},
+	{
+		title: 'Generate Citation',
+		icon: Quote,
+		spawnsInput: true, // Opens input for citation style (APA, MLA, etc.)
+	},
+	{
+		title: 'Related Topics',
+		icon: Link,
+		onInvoke: async (store) => {
+			const topic = window.getSelection()?.toString();
+			await store.sendMessage({
+				content: `What are related topics to explore about: ${topic}`,
+				role: 'user',
+			});
+		},
+	},
+];
+```
+
+### Dynamic Menu Items
+
+Generate menu items based on context:
+
+```tsx
+function ContextualTooltipMenu() {
+	const [documentType, setDocumentType] = useState('general');
+
+	const menuItems = useMemo(() => {
+		const baseItems: ExtendedTooltipMenuItem[] = [
+			{
+				title: 'Copy',
+				icon: Copy,
+				onInvoke: () => {
+					navigator.clipboard.writeText(
+						window.getSelection()?.toString() || ''
+					);
+				},
+			},
+		];
+
+		if (documentType === 'legal') {
+			baseItems.push({
+				title: 'Define Term',
+				icon: Book,
+				onInvoke: async (store) => {
+					const term = window.getSelection()?.toString();
+					await store.sendMessage({
+						content: `Define this legal term: ${term}`,
+						role: 'user',
+					});
+				},
+			});
+		}
+
+		if (documentType === 'technical') {
+			baseItems.push({
+				title: 'Explain Concept',
+				icon: Lightbulb,
+				onInvoke: async (store) => {
+					const concept = window.getSelection()?.toString();
+					await store.sendMessage({
+						content: `Explain this technical concept in simple terms: ${concept}`,
+						role: 'user',
+					});
+				},
+			});
+		}
+
+		return baseItems;
+	}, [documentType]);
+
+	return <TooltipMenuSpell spellId='contextual-menu' items={menuItems} />;
+}
+```
+
+## Floating Input Integration
+
+When an item has `spawnsInput: true`, it opens a floating input field:
+
+### How It Works
+
+1. User selects text
+2. Tooltip menu appears
+3. User clicks item with `spawnsInput: true`
+4. Menu disappears, floating input appears
+5. Selected text is automatically added to input
+6. User can modify or add to the query
+7. On submit, message is sent to Cedar store
+
+### Example with Floating Input
+
+```tsx
+const translationItem: ExtendedTooltipMenuItem = {
+	title: 'Translate',
+	icon: Languages,
+	spawnsInput: true, // This triggers floating input
+	onInvoke: () => {}, // Not called when spawnsInput is true
+};
+
+// When user clicks this item:
+// 1. Floating input appears
+// 2. Selected text is pre-filled
+// 3. User can type: "to Spanish"
+// 4. Full query sent: "[selected text] to Spanish"
+```
+
+## Positioning Behavior
+
+The tooltip menu intelligently positions itself:
+
+1. **Default Position**: Above the selected text, centered
+2. **Edge Detection**: Adjusts if too close to viewport edges
+3. **Padding**: Maintains 10px minimum distance from edges
+4. **Menu Dimensions**: Calculates based on item count (48px per item)
+
+```tsx
+// Position calculation (simplified)
+const rect = selection.getRangeAt(0).getBoundingClientRect();
+const position = {
+	x: rect.left + rect.width / 2, // Center horizontally
+	y: rect.top - 10, // 10px above selection
+};
+```
+
+## Customization
+
+### Custom Activation
+
+While text selection is the default, you can customize activation:
+
+```tsx
+import { MouseEvent, Hotkey } from 'cedar-os';
+
+<TooltipMenuSpell
+	spellId='custom-menu'
+	items={items}
+	activationConditions={{
+		events: [
+			SelectionEvent.TEXT_SELECT,
+			'ctrl+m', // Also activate with Ctrl+M
+		],
+		mode: ActivationMode.TOGGLE,
+	}}
+/>;
+```
+
+### Disable Streaming
+
+For non-AI actions, disable streaming:
+
+```tsx
+<TooltipMenuSpell
+	spellId='quick-actions'
+	items={items}
+	stream={false} // Disable streaming for floating input
+/>
+```
+
+## Best Practices
+
+### 1. Logical Item Order
+
+Arrange items by frequency of use:
+
+```tsx
+// ✅ Good: Common actions first
+const items = [
+  { title: 'Copy', ... },      // Most common
+  { title: 'Improve', ... },    // Frequently used
+  { title: 'Translate', ... },  // Sometimes used
+  { title: 'Custom', ... }      // Advanced option
+];
+```
+
+### 2. Clear Icons
+
+Use recognizable icons that match the action:
+
+```tsx
+// ✅ Good: Clear icon-action relationship
+{ title: 'Copy', icon: Copy }
+{ title: 'Translate', icon: Languages }
+{ title: 'Search', icon: Search }
+
+// ❌ Avoid: Ambiguous icons
+{ title: 'Process', icon: Circle }
+{ title: 'Action', icon: Square }
+```
+
+### 3. Preserve Selection
+
+Don't clear selection unnecessarily:
+
+```tsx
+// ✅ Good: Preserve selection for potential follow-up
+onInvoke: async (store) => {
+  const text = window.getSelection()?.toString();
+  // Don't clear selection here
+  await store.sendMessage({...});
+}
+
+// ❌ Avoid: Clearing selection prematurely
+onInvoke: async (store) => {
+  window.getSelection()?.removeAllRanges(); // Too early!
+  // User might want to perform another action
+}
+```
+
+### 4. Handle Edge Cases
+
+Always check for valid selection:
+
+```tsx
+onInvoke: async (store) => {
+  const selection = window.getSelection()?.toString();
+
+  if (!selection || selection.trim().length === 0) {
+    // Handle empty selection gracefully
+    return;
+  }
+
+  // Process valid selection
+  await store.sendMessage({...});
+}
+```
+
+## Technical Details
+
+### Selection Management
+
+The component maintains selection state using refs:
+
+```tsx
+const selectionRangeRef = useRef<Range | null>(null);
+const selectedTextRef = useRef<string>('');
+
+// Stores selection when menu appears
+selectionRangeRef.current = range.cloneRange();
+selectedTextRef.current = selection.toString();
+```
+
+### Event Handling
+
+- **Text Selection**: Detected via `SelectionEvent.TEXT_SELECT`
+- **Position Calculation**: Based on selection bounding rect
+- **Menu Dismissal**: Click outside or press ESC
+- **Selection Preservation**: Maintained until action completes
+
+### Performance
+
+- **Debounced Selection**: Prevents excessive re-renders
+- **Conditional Rendering**: Only renders when active
+- **Ref-based State**: Avoids unnecessary re-renders
+- **Lazy Input Creation**: Floating input created on demand
+
+## Accessibility
+
+### Keyboard Support
+
+- Text selection via keyboard works normally
+- Menu items should be keyboard navigable
+- ESC key closes menu and floating input
+
+### Screen Reader Considerations
+
+```tsx
+// Provide aria-labels for actions
+const accessibleItems: ExtendedTooltipMenuItem[] = [
+	{
+		title: 'Copy',
+		icon: Copy,
+		onInvoke: () => {
+			// Announce action to screen readers
+			const announcement = document.createElement('div');
+			announcement.setAttribute('role', 'status');
+			announcement.setAttribute('aria-live', 'polite');
+			announcement.textContent = 'Text copied to clipboard';
+			document.body.appendChild(announcement);
+			setTimeout(() => announcement.remove(), 1000);
+
+			navigator.clipboard.writeText(selection);
+		},
+	},
+];
+```
+
+## Troubleshooting
+
+### Menu not appearing
+
+- Verify text selection is working
+- Check that spell ID is unique
+- Ensure component is mounted
+- Verify no CSS `user-select: none` on text
+
+### Position issues
+
+- Check for CSS transforms on parent elements
+- Verify viewport calculations
+- Ensure menu has proper z-index
+
+### Floating input issues
+
+- Verify `spawnsInput` is set correctly
+- Check Cedar store is accessible
+- Ensure `setOverrideInputContent` is available
+
+### Selection lost
+
+- Check for conflicting event handlers
+- Verify `preventDefaultEvents` setting
+- Ensure no other components clear selection
+
+## Related Components
+
+- [RadialMenuSpell](/spells/radial-menu) - Circular menu for general actions
+- [QuestioningSpell](/spells/questioning-spell) - Interactive cursor for exploration
+- [Creating Custom Spells](/spells/creating-custom-spells) - Build your own spell components

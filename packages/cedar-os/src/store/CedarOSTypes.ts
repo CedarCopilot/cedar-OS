@@ -1,10 +1,11 @@
 import { StateSlice } from '@/store/stateSlice/stateSlice';
 import { AgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
-import { StylingConfig, StylingSlice } from './stylingSlice';
-import { MessagesSlice } from './messages/messagesSlice';
-import { AgentConnectionSlice } from './agentConnection/agentConnectionSlice';
-import { VoiceSlice } from './voice/voiceSlice';
-import { DebuggerSlice } from './debugger/debuggerSlice';
+import { StylingConfig, StylingSlice } from '@/store/stylingSlice';
+import { MessagesSlice } from '@/store/messages/messagesSlice';
+import { AgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
+import { VoiceSlice } from '@/store/voice/voiceSlice';
+import { DebuggerSlice } from '@/store/debugger/debuggerSlice';
+import { SpellSlice } from '@/store/spellSlice/spellSlice';
 
 /**
  * The main Cedar store type that combines all slices
@@ -16,7 +17,8 @@ export interface CedarStore
 		MessagesSlice,
 		AgentConnectionSlice,
 		VoiceSlice,
-		DebuggerSlice {}
+		DebuggerSlice,
+		SpellSlice {}
 
 // Re-export StylingConfig for convenience
 export type { StylingConfig };

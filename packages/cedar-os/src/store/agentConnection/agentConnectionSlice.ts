@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
-import type { CedarStore } from '../types';
-import { getProviderImplementation } from './providers/index';
+import type { CedarStore } from '@/store/CedarOSTypes';
+import { getProviderImplementation } from '@/store/agentConnection/providers/index';
 import type {
 	AISDKParams,
 	AISDKStructuredParams,
@@ -16,10 +16,17 @@ import type {
 	StructuredParams,
 	VoiceParams,
 	VoiceLLMResponse,
-} from './types';
+	ResponseProcessor,
+	ResponseProcessorRegistry,
+	StructuredResponseType,
+} from '@/store/agentConnection/AgentConnectionTypes';
 import { useCedarStore } from '@/store/CedarStore';
 import { getCedarState } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';
+import {
+	defaultResponseProcessors,
+	initializeResponseProcessorRegistry,
+} from './responseProcessors/initializeResponseProcessorRegistry';
 
 // Parameters for sending a message
 export interface SendMessageParams {
@@ -55,6 +62,7 @@ export interface AgentConnectionSlice {
 	isStreaming: boolean;
 	providerConfig: ProviderConfig | null;
 	currentAbortController: AbortController | null;
+	responseProcessors: ResponseProcessorRegistry;
 
 	// Core methods - properly typed based on current provider config
 	callLLM: <T extends ProviderConfig = ProviderConfig>(
@@ -87,7 +95,16 @@ export interface AgentConnectionSlice {
 
 	// High-level methods that use callLLM/streamLLM
 	sendMessage: (params?: SendMessageParams) => Promise<void>;
-	handleLLMResponse: (items: (string | object)[]) => void;
+	handleLLMResponse: (
+		items: (string | StructuredResponseType)[]
+	) => Promise<void>;
+
+	// Response processor methods
+	registerResponseProcessor: <T extends StructuredResponseType>(
+		processor: ResponseProcessor<T>
+	) => void;
+	getResponseProcessors: (type: string) => ResponseProcessor | undefined;
+	processStructuredResponse: (obj: StructuredResponseType) => Promise<boolean>;
 
 	// Configuration methods
 	setProviderConfig: (config: ProviderConfig) => void;
@@ -98,6 +115,11 @@ export interface AgentConnectionSlice {
 
 	// Utility methods
 	cancelStream: () => void;
+
+	// Notifications
+	notificationInterval?: number;
+	subscribeToNotifications: () => void;
+	unsubscribeFromNotifications: () => void;
 }
 
 // Create a typed version of the slice that knows about the provider
@@ -165,7 +187,6 @@ Return only the improved prompt without explanations or meta-commentary.`;
 		return response.content;
 	}
 };
-
 export const createAgentConnectionSlice: StateCreator<
 	CedarStore,
 	[],
@@ -177,6 +198,10 @@ export const createAgentConnectionSlice: StateCreator<
 	isStreaming: false,
 	providerConfig: null,
 	currentAbortController: null,
+	notificationInterval: undefined,
+	responseProcessors: initializeResponseProcessorRegistry(
+		defaultResponseProcessors as ResponseProcessor<StructuredResponseType>[]
+	),
 
 	// Core methods with runtime type checking
 	callLLM: async (
@@ -392,11 +417,23 @@ export const createAgentConnectionSlice: StateCreator<
 			throw new Error('No LLM provider configured');
 		}
 
+		// Augment params for Mastra provider to include resourceId & threadId
+		let voiceParams: VoiceParams = params;
+		if (config.provider === 'mastra') {
+			const resourceId = getCedarState('userId') as string | undefined;
+			const threadId = getCedarState('threadId') as string | undefined;
+			voiceParams = {
+				...params,
+				resourceId,
+				threadId,
+			} as typeof voiceParams;
+		}
+
 		try {
 			const provider = getProviderImplementation(config);
 			// Type assertion is safe after runtime validation
 			const response = await provider.voiceLLM(
-				params as unknown as never,
+				voiceParams as unknown as never,
 				config as never
 			);
 
@@ -407,80 +444,79 @@ export const createAgentConnectionSlice: StateCreator<
 	},
 
 	// Handle LLM response
-	handleLLMResponse: (itemsToProcess: (string | object)[]) => {
+	handleLLMResponse: async (itemsToProcess) => {
 		const state = get();
 
-		itemsToProcess.forEach((item) => {
+		for (const item of itemsToProcess) {
 			if (typeof item === 'string') {
 				// Handle text content - append to latest message
 				state.appendToLatestMessage(item, !state.isStreaming);
 			} else if (item && typeof item === 'object') {
-				// Handle structured objects
-				const structuredResponse = item as Record<string, unknown>;
+				const structuredResponse = item;
 
-				if (
-					'type' in structuredResponse &&
-					typeof structuredResponse.type === 'string'
-				) {
-					switch (structuredResponse.type) {
-						case 'action': {
-							// Execute the custom setter with the provided parameters
-							if (
-								'stateKey' in structuredResponse &&
-								'setterKey' in structuredResponse &&
-								typeof structuredResponse.stateKey === 'string' &&
-								typeof structuredResponse.setterKey === 'string'
-							) {
-								const args =
-									'args' in structuredResponse &&
-									Array.isArray(structuredResponse.args)
-										? structuredResponse.args
-										: [];
-								state.executeCustomSetter(
-									structuredResponse.stateKey,
-									structuredResponse.setterKey,
-									...args
-								);
-							}
-							break;
-						}
-						case 'message': {
-							// Add as a message with specific role/content
-							const role =
-								'role' in structuredResponse &&
-								typeof structuredResponse.role === 'string'
-									? structuredResponse.role
-									: 'assistant';
-							const content =
-								'content' in structuredResponse &&
-								typeof structuredResponse.content === 'string'
-									? structuredResponse.content
-									: JSON.stringify(structuredResponse);
-							// Map system role to assistant if needed
-							const messageRole = role === 'system' ? 'assistant' : role;
-							const message = {
-								role: messageRole as 'user' | 'assistant' | 'bot',
-								type: 'text' as const,
-								content,
-							};
-							state.addMessage(message, !state.isStreaming);
-							break;
-						}
-						default:
-							// TODO: Check for registered generative UI handlers for other types
-							console.log(
-								'Unhandled structured response type:',
-								structuredResponse.type,
-								structuredResponse
-							);
-							break;
-					}
-				} else {
-					// Handle objects without explicit type (e.g., OpenAI delta objects)
-					console.log('Unhandled object response:', structuredResponse);
+				// Try to process with registered response processors (including defaults)
+				const processed = await state.processStructuredResponse(
+					structuredResponse
+				);
+
+				if (!processed) {
+					// No processor handled this response, log it and add it to the chat
+					state.addMessage({
+						role: 'bot',
+						...structuredResponse,
+					});
 				}
 			}
+		}
+	},
+
+	// Response processor methods
+	registerResponseProcessor: <T extends StructuredResponseType>(
+		processor: ResponseProcessor<T>
+	) => {
+		set((state) => {
+			const type = processor.type;
+			return {
+				responseProcessors: {
+					...state.responseProcessors,
+					[type]: processor,
+				} as ResponseProcessorRegistry,
+			};
 		});
+	},
+
+	getResponseProcessors: (type: string) => {
+		return get().responseProcessors[type];
+	},
+
+	processStructuredResponse: async (obj) => {
+		const state = get();
+
+		if (!obj.type || typeof obj.type !== 'string') {
+			return false;
+		}
+
+		const processor = state.getResponseProcessors(obj.type);
+
+		if (!processor) {
+			return false;
+		}
+
+		// Validate if needed
+		if (processor.validate && !processor.validate(obj)) {
+			return false;
+		}
+
+		try {
+			await processor.execute(obj as StructuredResponseType, state);
+			return true;
+		} catch (error) {
+			console.error(
+				`Error executing response processor for type ${obj.type}:`,
+				error
+			);
+			return false;
+		}
 	},
 
 	sendMessage: async (params?: SendMessageParams) => {
@@ -520,6 +556,10 @@ export const createAgentConnectionSlice: StateCreator<
 				temperature,
 			};
 
+			const threadId =
+				params?.threadId || (getCedarState('threadId') as string | null);
+			const userId = params?.userId || getCedarState('userId');
+
 			// Add provider-specific params
 			switch (config.provider) {
 				case 'openai':
@@ -535,7 +575,8 @@ export const createAgentConnectionSlice: StateCreator<
 						prompt: editorContent,
 						additionalContext: sanitizeJson(state.additionalContext),
 						route: route || `${chatPath}`,
-						resourceId: (params?.userId || getCedarState('userId')) as string,
+						resourceId: userId,
+						threadId,
 					};
 					break;
 				case 'ai-sdk':
@@ -546,7 +587,8 @@ export const createAgentConnectionSlice: StateCreator<
 						...llmParams,
 						prompt: editorContent,
 						additionalContext: sanitizeJson(state.additionalContext),
-						userId: (params?.userId || getCedarState('userId')) as string,
+						userId,
+						threadId,
 					};
 					break;
 			}
@@ -556,15 +598,17 @@ export const createAgentConnectionSlice: StateCreator<
 				// Capture current message count so we know which ones are new during the stream
 				const startIdx = get().messages.length;
 
-				const streamResponse = state.streamLLM(llmParams, (event) => {
+				const streamResponse = state.streamLLM(llmParams, async (event) => {
 					switch (event.type) {
 						case 'chunk':
 							// Process single text chunk as array of one
-							state.handleLLMResponse([event.content]);
+							await state.handleLLMResponse([event.content]);
 							break;
 						case 'object':
-							// Process single object as array of one
-							state.handleLLMResponse([event.object]);
+							// Process object(s) - handle both single and array
+							await state.handleLLMResponse(
+								Array.isArray(event.object) ? event.object : [event.object]
+							);
 							break;
 						case 'done':
 							// Stream completed - no additional processing needed
@@ -589,12 +633,14 @@ export const createAgentConnectionSlice: StateCreator<
 
 				// Process response content as array of one
 				if (response.content) {
-					state.handleLLMResponse([response.content]);
+					await state.handleLLMResponse([response.content]);
 				}
 
 				// Process structured output if present
 				if (response.object) {
-					state.handleLLMResponse([response.object]);
+					await state.handleLLMResponse(
+						Array.isArray(response.object) ? response.object : [response.object]
+					);
 				}
 			}
 
@@ -643,6 +689,52 @@ export const createAgentConnectionSlice: StateCreator<
 		const { currentAbortController } = get();
 		if (currentAbortController) {
 			currentAbortController.abort();
+		}
+	},
+
+	/* ------------------------------------------------------------------
+	 * Notification polling for Mastra threads
+	 * ------------------------------------------------------------------*/
+
+	subscribeToNotifications: () => {
+		if (get().notificationInterval !== undefined) return; // already polling
+
+		const provider = get().providerConfig;
+		if (!provider || provider.provider !== 'mastra') return;
+
+		const baseURL = provider.baseURL;
+		const threadId = getCedarState('threadId') as string | undefined;
+		if (!threadId) return;
+
+		const endpoint = `${baseURL}/chat/notifications`;
+
+		get().notificationInterval = window.setInterval(async () => {
+			try {
+				const response = await fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ threadId }),
+				});
+
+				if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+				const data = await response.json();
+				if (Array.isArray(data?.notifications)) {
+					for (const msg of data.notifications) {
+						get().addMessage(msg);
+					}
+				}
+			} catch (err) {
+				console.warn('Notification polling error:', err);
+			}
+		}, 60000);
+	},
+
+	unsubscribeFromNotifications: () => {
+		const id = get().notificationInterval;
+		if (id !== undefined) {
+			clearInterval(id);
+			set({ notificationInterval: undefined });
 		}
 	},
 });

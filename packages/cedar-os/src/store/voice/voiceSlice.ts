@@ -1,6 +1,9 @@
 import { StateCreator } from 'zustand';
-import type { CedarStore } from '../types';
-import type { VoiceLLMResponse } from '../agentConnection/types';
+import type { CedarStore } from '@/store/CedarOSTypes';
+import type {
+	StructuredResponseType,
+	VoiceLLMResponse,
+} from '@/store/agentConnection/AgentConnectionTypes';
 
 export interface VoiceState {
 	// Voice state
@@ -218,6 +221,7 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 				audioData,
 				voiceSettings,
 				context: contextString,
+				prompt: '',
 			});
 
 			// Handle the response using the new handleLLMVoice function
@@ -279,7 +283,7 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 			}
 
 			// Build items array for handleLLMResponse
-			const items: (string | object)[] = [];
+			const items: (string | StructuredResponseType)[] = [];
 
 			// This should be fixed tbh. HandleLLMResponse should be able to handle this, but due to current streaming limitations.
 
@@ -288,15 +292,19 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 				items.push(response.content);
 			}
 
-			// Add object if present
+			// Add object if present - cast to StructuredResponseType for compatibility
 			if (response.object) {
-				items.push(response.object);
+				if (Array.isArray(response.object)) {
+					items.push(...response.object);
+				} else {
+					items.push(response.object);
+				}
 			}
 
 			// Delegate message parsing to handleLLMResponse if we have items
 			if (items.length > 0) {
 				const { handleLLMResponse } = get();
-				handleLLMResponse(items);
+				await handleLLMResponse(items);
 			}
 
 			// Set processing state to false when voice processing completes successfully

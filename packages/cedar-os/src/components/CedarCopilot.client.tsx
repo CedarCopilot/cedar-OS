@@ -2,27 +2,37 @@
 
 import React, { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
-import type { ProviderConfig } from '@/store/agentConnection/types';
-import { useCedarState } from '@/store/stateSlice/useCedarState';
+import type {
+	ProviderConfig,
+	ResponseProcessor,
+} from '@/store/agentConnection/AgentConnectionTypes';
+import type { MessageRenderer } from '@/store/messages/MessageTypes';
 import { MessageStorageConfig } from '@/store/messages/messageStorage';
 import type { VoiceState } from '@/store/voice/voiceSlice';
+import { useCedarState } from '@/store/stateSlice/useCedarState';
 
 export interface CedarCopilotProps {
 	children: React.ReactNode;
 	productId?: string | null;
 	userId?: string | null;
+	threadId?: string | null;
 	llmProvider?: ProviderConfig;
 	messageStorage?: MessageStorageConfig;
 	voiceSettings?: Partial<VoiceState['voiceSettings']>;
+	responseProcessors?: ResponseProcessor[];
+	messageRenderers?: MessageRenderer[];
 }
 
 // Client-side component with useEffect
 export function CedarCopilotClient({
 	children,
 	userId = null,
+	threadId = null,
 	llmProvider,
 	messageStorage,
 	voiceSettings,
+	responseProcessors = [],
+	messageRenderers = [],
 }: CedarCopilotProps) {
 	// Voice settings
 	const updateVoiceSettings = useCedarStore(
@@ -43,28 +53,76 @@ export function CedarCopilotClient({
 		}
 	}, [llmProvider, setProviderConfig]);
 
-	// User ID
-	const [, setCedarUserId] = useCedarState<string>('userId', userId ?? '');
+	// ─── userId ────────────────────────────────────────────────
+	const [cedarUserId, setCedarUserId] = useCedarState<string>(
+		'userId',
+		userId ?? ''
+	);
+
 	useEffect(() => {
 		if (userId !== null) {
 			setCedarUserId(userId);
 		}
 	}, [userId, setCedarUserId]);
 
-	// Message storage
+	// ─── threadId ──────────────────────────────────────────────
+	const [cedarThreadId, setCedarThreadId] = useCedarState<string>(
+		'threadId',
+		threadId ?? ''
+	);
+
 	useEffect(() => {
-		if (messageStorage) {
-			useCedarStore.getState().setMessageStorageAdapter(messageStorage);
-			useCedarStore.getState().loadMessageStorageThreads?.();
-			useCedarStore.getState().loadMessageStorageMessages?.();
+		if (threadId !== null) {
+			setCedarThreadId(threadId);
 		}
+	}, [threadId, setCedarThreadId]);
+
+	useEffect(() => {
+		useCedarStore.getState().initializeChat?.({
+			userId: cedarUserId,
+			threadId: cedarThreadId,
+		});
+	}, [cedarUserId, cedarThreadId]);
+
+	// Combined message storage initialization and updates
+	useEffect(() => {
+		if (!messageStorage) return;
+		useCedarStore.getState().setMessageStorageAdapter(messageStorage);
 	}, [messageStorage]);
+
+	// Response processors
+	useEffect(() => {
+		const store = useCedarStore.getState();
+
+		responseProcessors.forEach((processor) => {
+			store.registerResponseProcessor(processor as ResponseProcessor);
+		});
+	}, [responseProcessors]);
+
+	// Message renderers
+	useEffect(() => {
+		const store = useCedarStore.getState();
+
+		messageRenderers.forEach((renderer) => {
+			store.registerMessageRenderer(renderer as MessageRenderer);
+		});
+
+		// Cleanup on unmount
+		return () => {
+			messageRenderers.forEach((renderer) => {
+				store.unregisterMessageRenderer(renderer.type, renderer.namespace);
+			});
+		};
+	}, [messageRenderers]);
 
 	console.log('CedarCopilot', {
 		userId,
+		threadId,
 		llmProvider,
 		voiceSettings,
 		messageStorage,
+		responseProcessors,
+		messageRenderers,
 	});
 
 	return <>{children}</>;

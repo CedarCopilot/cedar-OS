@@ -58,13 +58,22 @@
 		"nodemailer": "^6.9.7"
 	},
 	"devDependencies": {
+		"@babel/preset-env": "^7.28.0",
+		"@babel/preset-react": "^7.27.1",
+		"@babel/preset-typescript": "^7.27.1",
 		"@eslint/eslintrc": "^3",
 		"@tailwindcss/postcss": "^4",
+		"@testing-library/jest-dom": "^6.6.4",
+		"@types/jest": "^30.0.0",
 		"@types/node": "^20",
 		"@types/react": "^18",
 		"@types/react-dom": "^18",
+		"babel-jest": "^30.0.5",
 		"eslint": "^9",
 		"eslint-config-next": "15.3.5",
+		"identity-obj-proxy": "^3.0.0",
+		"jest": "^30.0.5",
+		"jest-environment-jsdom": "^30.0.5",
 		"tailwindcss": "^4",
 		"tw-animate-css": "^1.3.5",
 		"typescript": "^5"

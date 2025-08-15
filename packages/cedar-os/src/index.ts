@@ -58,7 +58,7 @@ export type {
 	MentionItem,
 	MentionProvider,
 	StateBasedMentionProviderConfig,
-} from '@/store/agentInputContext/types';
+} from '@/store/agentInputContext/AgentInputContextTypes';
 
 // Export message types
 export type {
@@ -72,7 +72,6 @@ export type {
 	MessageByType,
 	MessageInput,
 	MessageRenderer,
-	MessageRendererConfig,
 	MessageRendererRegistry,
 	MessageRole,
 	MultipleChoiceMessage,
@@ -85,11 +84,11 @@ export type {
 	TodoListItem,
 	TodoListMessage,
 	TypedMessage,
-} from '@/store/messages/types';
+} from '@/store/messages/MessageTypes';
 
 // Export types
 export type { StylingSlice } from '@/store/stylingSlice';
-export type { CedarStore } from '@/store/types';
+export type { CedarStore } from '@/store/CedarOSTypes';
 
 // Export agent connection types
 export type {
@@ -105,15 +104,38 @@ export type {
 	StreamEvent,
 	StreamHandler,
 	StreamResponse,
-} from '@/store/agentConnection/types';
+} from '@/store/agentConnection/AgentConnectionTypes';
 
-// Export SendMessageParams from the slice
-export type { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
+// Export SendMessageParams and response processor types from the slice
+export type {
+	BaseStructuredResponseType,
+	DefaultStructuredResponseType,
+	CustomStructuredResponseType,
+	StructuredResponseType,
+	ResponseProcessor,
+	ResponseProcessorRegistry,
+} from '@/store/agentConnection/AgentConnectionTypes';
+
+// Export Mastra message types
+export type {
+	MastraStreamedResponse,
+	MastraStreamedResponseType,
+} from '@/store/agentConnection/providers/mastra';
+
+// Export progress update response processor
+export type {
+	ProgressUpdateResponse,
+	ProgressUpdateResponsePayload,
+} from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 
 // Export storage configuration types
 export type {
-	MessageStorageBaseAdapter,
 	MessageStorageConfig,
+	MessageThreadMeta,
+	MessageStorageCustomAdapter,
+	MessageStorageLocalAdapter,
+	MessageStorageNoopAdapter,
+	MessageStorageAdapter,
 } from '@/store/messages/messageStorage';
 
 // Export voice components and types
@@ -130,9 +152,51 @@ export {
 	useChatInput,
 	useDebugger,
 	useMessages,
+	useSpell,
+	useSpells,
 	useStyling,
 	useVoice,
 } from '@/store/CedarStore';
+
+// Export action response processor hooks
+export {
+	ActionResponsePayload,
+	ActionResponse,
+	ActionResponseFor,
+	createActionResponseProcessor,
+	createResponseProcessor,
+} from '@/store/agentConnection/responseProcessors/createResponseProcessor';
+
+// Export message renderer factory function
+export {
+	createMessageRenderer,
+	ActionMessage,
+	ActionMessageFor,
+	createActionMessageRenderer,
+} from '@/store/messages/renderers/createMessageRenderer';
+
+// Export spell system types and utilities
+export {
+	Hotkey,
+	MouseEvent,
+	SelectionEvent,
+	ActivationMode,
+} from '@/store/spellSlice/SpellTypes';
+
+export type {
+	ActivationConditions,
+	ActivationEvent,
+	ActivationState,
+	HotkeyCombo,
+	CommonHotkeyCombo,
+} from '@/store/spellSlice/SpellTypes';
+
+export type { SpellSlice } from '@/store/spellSlice/spellSlice';
+
+export type {
+	UseSpellOptions,
+	UseSpellReturn,
+} from '@/store/spellSlice/useSpell';
 
 // Export Tiptap components
 export {

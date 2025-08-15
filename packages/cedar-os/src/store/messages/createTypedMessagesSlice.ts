@@ -3,9 +3,9 @@ import type {
 	BaseMessage,
 	DefaultMessage,
 	MessageByType,
-	MessageRendererConfig,
+	MessageRenderer,
 	MessageRole,
-} from './types';
+} from '@/store/messages/MessageTypes';
 
 /**
  * Type Safety Note:
@@ -41,7 +41,7 @@ export interface TypedMessagesSlice<M extends BaseMessage = DefaultMessage> {
 	showChat: boolean;
 
 	// Message renderer registry
-	messageRenderers: Map<string, MessageRendererConfig<any>>;
+	messageRenderers: Map<string, MessageRenderer<any>>;
 
 	// Fully typed actions
 	addMessage: <T extends M['type']>(
@@ -63,11 +63,11 @@ export interface TypedMessagesSlice<M extends BaseMessage = DefaultMessage> {
 
 	// Renderer management
 	registerMessageRenderer: <T extends M['type']>(
-		config: MessageRendererConfig<MessageByType<T, M>>
+		config: MessageRenderer<MessageByType<T, M>>
 	) => void;
 
 	unregisterMessageRenderer: (type: string) => void;
-	getMessageRenderer: (type: string) => MessageRendererConfig | undefined;
+	getMessageRenderer: (type: string) => MessageRenderer | undefined;
 
 	// Utility methods
 	getMessageById: (id: string) => M | undefined;
@@ -158,11 +158,11 @@ export function createTypedMessagesSlice<
 
 		// Renderer management
 		registerMessageRenderer: <T extends M['type']>(
-			config: MessageRendererConfig<MessageByType<T, M>>
+			config: MessageRenderer<MessageByType<T, M>>
 		) => {
 			set((state: TypedMessagesSlice<M>) => {
 				const newRenderers = new Map(state.messageRenderers);
-				newRenderers.set(config.type, config as MessageRendererConfig<any>);
+				newRenderers.set(config.type, config);
 				return { messageRenderers: newRenderers };
 			});
 		},

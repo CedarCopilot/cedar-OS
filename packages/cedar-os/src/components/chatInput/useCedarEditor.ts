@@ -1,5 +1,5 @@
 import { useCedarStore, useChatInput } from '@/store/CedarStore';
-import type { CedarStore } from '@/store/types';
+import type { CedarStore } from '@/store/CedarOSTypes';
 import Document from '@tiptap/extension-document';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useEditor } from '@tiptap/react';
@@ -12,6 +12,7 @@ import { AddedText, RemovedText } from '@/components/chatInput/DiffExtension';
 
 import { useEffect, useState } from 'react';
 import mentionSuggestion from '@/components/chatInput/mentionSuggestion';
+import { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
 
 interface UseCedarEditorOptions {
 	placeholder?: string;
@@ -19,6 +20,7 @@ interface UseCedarEditorOptions {
 	onFocus?: () => void;
 	onBlur?: () => void;
 	stream?: boolean;
+	sendMessageParams?: Partial<SendMessageParams>;
 }
 
 export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
@@ -28,6 +30,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 		onFocus,
 		onBlur,
 		stream = true,
+		sendMessageParams,
 	} = options;
 
 	const sendMessage = useCedarStore((state: CedarStore) => state.sendMessage);
@@ -244,7 +247,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 			if (onSubmit) {
 				onSubmit(textContent);
 			} else {
-				sendMessage({ stream });
+				sendMessage({ stream, ...sendMessageParams });
 			}
 
 			editor.commands.clearContent();

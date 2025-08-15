@@ -77,7 +77,7 @@ interface LLMResponse {
 		totalTokens: number;
 	};
 	metadata?: Record<string, unknown>; // Optional metadata (model, id, etc.)
-	object?: unknown; // For structured output
+	object?: StructuredResponseType | StructuredResponseType[]; // For structured output (See How Responses are Processed)
 }
 ```
 

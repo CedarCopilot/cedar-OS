@@ -1,0 +1,328 @@
+---
+title: 'How Responses are Processed (and Custom Processing)'
+description: 'Learn how Cedar deals with all structured objects returned from the backend.'
+---
+
+Cedar allows you to completely customize how structured responses from your agent backend are processed. This is the system through which messages are added to the chat, state actions are executed, or any decisions are made on how to deal with responses from the backend.
+
+Note: This system closely mirrors the architecture of [Custom Message Rendering](/chat/custom-message-rendering).
+
+## LLM Response Structure
+
+When your agent backend returns responses, they follow the `LLMResponse` interface:
+
+```tsx
+interface LLMResponse {
+	content: string; // Text content from the LLM
+	usage?: {
+		promptTokens: number;
+		completionTokens: number;
+		totalTokens: number;
+	};
+	metadata?: Record<string, unknown>; // Additional metadata
+	// The object field contains structured output when using JSON Schema or Zod
+	object?: StructuredResponseType | StructuredResponseType[];
+}
+```
+
+The **`object` field** is where Cedar looks for structured responses to process. It can contain:
+
+- A single `StructuredResponseType` object
+- An array of `StructuredResponseType` objects for multiple operations
+- `undefined` if no structured output was generated
+
+Only objects in the `object` field are processed by the response processing system. The `content` field is always added to the chat by default as a simple text message.
+
+## Base Response Type
+
+All structured responses in Cedar extend the `BaseStructuredResponseType` interface:
+
+```tsx
+interface BaseStructuredResponseType {
+	type: string; // String identifier for processor matching
+	content?: string; // Optional text content
+}
+```
+
+## Requirements for Custom Response Processing
+
+To use the custom response processing system, your response objects must have a `type` field. This field determines which processor will be used to handle the response.
+
+```tsx
+// Valid response - has required 'type' field
+{
+  type: 'notification',
+  content: 'Task completed successfully',
+  level: 'success'
+}
+
+// Invalid - missing 'type' field
+{
+  content: 'This response will be added as a regular message'
+}
+```
+
+## Response Processor Interface
+
+Cedar uses a strongly typed `ResponseProcessor` interface that ensures type safety throughout the processing pipeline:
+
+```tsx
+export interface ResponseProcessor<
+	T extends StructuredResponseType = StructuredResponseType
+> {
+	type: string; // Must match the response type
+	namespace?: string; // Optional organization namespace
+	execute: (obj: T, store: CedarStore) => void | Promise<void>; // Receives narrowly typed response
+	validate?: (obj: StructuredResponseType) => obj is T; // Receives broadly typed response for validation
+}
+```
+
+**Key typing features:**
+
+- The `execute` function receives your **narrowly typed custom response** (e.g., `NotificationResponse`)
+- The `validate` function receives the **broadly typed `StructuredResponseType`** for runtime validation
+
+## Custom Response Type Definition
+
+Cedar exports a `CustomStructuredResponseType<T, P>` type that allows you to create type-safe custom responses:
+
+```tsx
+import { CustomStructuredResponseType } from 'cedar-os';
+
+// T = type string, P = additional properties
+export type CustomStructuredResponseType<
+	T extends string,
+	P extends object = Record<string, never>
+> = BaseStructuredResponseType & { type: T } & P;
+
+// Example usage
+type NotificationResponse = CustomStructuredResponseType<
+	'notification',
+	{
+		level: 'info' | 'success' | 'warning' | 'error';
+	}
+>;
+
+type StateUpdateResponse = CustomStructuredResponseType<
+	'state-update',
+	{
+		key: string;
+		value: any;
+		timestamp: string;
+	}
+>;
+```
+
+## Response Processor Factory Function
+
+Cedar exports a `createResponseProcessor` factory function to create type-safe processors:
+
+```tsx
+import { createResponseProcessor } from 'cedar-os';
+
+// Create a processor with full type safety
+const NotificationProcessor = createResponseProcessor<NotificationResponse>({
+	type: 'notification',
+	namespace: 'my-app',
+	execute: (obj, store) => {
+		// obj is narrowly typed as NotificationResponse
+		showToast(obj.content, obj.level);
+		store.addMessage({
+			type: 'text',
+			role: 'assistant',
+			content: `📢 ${obj.content}`,
+		});
+	},
+	validate: (obj): obj is NotificationResponse => {
+		// obj is broadly typed as StructuredResponseType for validation
+		return obj.type === 'notification' && 'level' in obj;
+	},
+});
+```
+
+## How Response Processing Works Internally
+
+When a response comes back from the backend, Cedar uses the following process:
+
+1. **Response Reception**: The system receives the LLM response and checks for structured objects in the `object` field
+2. **Type Detection**: If an object exists, the system examines its `type` field
+3. **Processor Lookup**: The system searches for a registered processor that matches the response type
+4. **Validation**: If a processor is found and has a validation function, it checks if the response structure is valid
+5. **Processing**: If validation passes (or no validation exists), the processor's `execute` function is called
+6. **Override Behavior**: This is the ONLY thing that runs - it completely overrides default behavior, so if you want to add the message to chat, you must do so manually in your processor
+
+## Full Implementation Examples
+
+```tsx
+import {
+	createResponseProcessor,
+	CustomStructuredResponseType,
+} from 'cedar-os';
+
+// Define custom response type
+type UnregisteredResponseType = CustomStructuredResponseType<
+	'unregistered_event',
+	{ level: string }
+>;
+
+// Create the processor
+const responseProcessor = createResponseProcessor<UnregisteredResponseType>({
+	type: 'unregistered_event',
+	namespace: 'product-roadmap',
+	execute: (obj, store) => {
+		// Custom processing logic
+		console.log('🔥 Unregistered event', obj);
+
+		// Manually add to chat if desired
+		store.addMessage({
+			type: 'text',
+			role: 'assistant',
+			content: `Received ${obj.type} with level: ${obj.level}`,
+		});
+	},
+	validate: (obj): obj is UnregisteredResponseType => {
+		return obj.type === 'unregistered_event' && 'level' in obj;
+	},
+});
+
+// Register with CedarCopilot
+<CedarCopilot
+	responseProcessors={[responseProcessor]}
+	// ... other props
+>
+	{children}
+</CedarCopilot>;
+```
+
+## Default Response Types and Processors
+
+Cedar automatically handles these response types with default behavior. Each type has a corresponding default processor:
+
+### `"message"` Type
+
+- **Behavior**: Adds text messages directly to chat with specified role
+- **Properties**: `content: string`, `role?: 'user' | 'assistant' | 'bot'`
+- **Default Processor**: `messageResponseProcessor` adds messages to chat
+
+```tsx
+// Default messageResponseProcessor implementation
+const messageResponseProcessor = {
+	type: 'message',
+	execute: (obj, store) => {
+		store.addMessage({
+			role: obj.role || 'assistant',
+			content: obj.content,
+			type: 'text',
+		});
+	},
+};
+```
+
+### `"action"` Type
+
+- **Behavior**: Executes state actions via custom setters and adds action message to chat
+- **Properties**: `stateKey: string`, `setterKey: string`, `args?: unknown[]`
+- **Default Processor**: `actionResponseProcessor` executes state actions and adds to chat
+
+```tsx
+// Default actionResponseProcessor implementation
+const actionResponseProcessor = {
+	type: 'action',
+	namespace: 'default',
+	execute: async (obj, store) => {
+		// Execute the state action
+		const args = Array.isArray(obj.args) ? obj.args : [];
+		store.executeCustomSetter(obj.stateKey, obj.setterKey, ...args);
+
+		// Add action message to chat
+		store.addMessage(obj as unknown as MessageInput);
+	},
+	validate: (obj): obj is ActionResponse =>
+		obj.type === 'action' &&
+		'stateKey' in obj &&
+		'setterKey' in obj &&
+		typeof obj.stateKey === 'string' &&
+		typeof obj.setterKey === 'string',
+};
+```
+
+**Action Factory Functions**: Cedar provides special factory functions for action responses:
+
+```tsx
+import { createActionResponseProcessor, ActionResponseFor } from 'cedar-os';
+
+// Specific action response type using helper
+type UpdateCounterResponse = ActionResponseFor<
+	'counter', // StateKey
+	'increment', // SetterKey
+	[number] // Args
+>;
+
+// Create custom action processor with filtering
+const CounterActionProcessor =
+	createActionResponseProcessor<UpdateCounterResponse>({
+		namespace: 'counter',
+		setterKey: 'increment', // Only handle increment actions
+		execute: (obj, store) => {
+			// Custom processing logic
+			const amount = obj.args?.[0] || 1;
+			store.executeCustomSetter('counter', 'increment', amount);
+
+			// Custom message instead of default
+			store.addMessage({
+				type: 'text',
+				role: 'assistant',
+				content: `✅ Counter incremented by ${amount}. New value: ${
+					store.getState().counter.value
+				}`,
+			});
+		},
+	});
+```
+
+### `"progress_update"` Type
+
+- **Behavior**: Updates existing progress messages or creates new ones with state tracking
+- **Properties**: `text: string`, `state: 'in_progress' | 'complete' | 'error'`
+- **Default Processor**: `progressUpdateResponseProcessor` manages progress message lifecycle
+
+```tsx
+// Default progressUpdateResponseProcessor implementation
+const progressUpdateResponseProcessor = {
+	type: 'progress_update',
+	execute: (obj, store) => {
+		const existingMessage = store.findProgressMessage(obj.text);
+
+		if (existingMessage) {
+			store.updateMessage(existingMessage.id, {
+				metadata: { ...existingMessage.metadata, state: obj.state },
+			});
+		} else {
+			store.addMessage({
+				type: 'progress_update',
+				role: 'assistant',
+				content: obj.text,
+				metadata: { state: obj.state },
+			});
+		}
+	},
+};
+```
+
+**⚠️ Important**: If you override any of these default types, you lose the built-in behavior. Since processors completely override default handling, ensure your custom implementation covers all functionality you need, including adding messages to the chat if desired.
+
+## Recommended File Structure
+
+Cedar encourages organizing custom processors in dedicated files for easier maintenance and debugging:
+
+```
+src/
+  cedar-os/
+    processors/
+      responseProcessors.ts   // All custom response processors
+      index.ts               // Export registration function
+  components/
+    Layout.tsx              // Register processors with CedarCopilot
+```
+
+This structure keeps all Cedar-related logic organized under a `cedar-os` directory, making it easier to maintain, debug, and ensure consistency across your application. Remember that processors completely override default behavior, so plan your implementations to handle all the functionality you need.
