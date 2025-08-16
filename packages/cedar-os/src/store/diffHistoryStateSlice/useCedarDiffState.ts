@@ -45,6 +45,7 @@ export function useCedarDiffState<T extends BasicStateValue>(
 	const setDiffHistoryState = useCedarStore((s) => s.setDiffHistoryState);
 	const getDiffHistoryState = useCedarStore((s) => s.getDiffHistoryState);
 	const getCleanState = useCedarStore((s) => s.getCleanState);
+	const setDiffState = useCedarStore((s) => s.setDiffState);
 
 	useEffect(() => {
 		const existingDiffState = getDiffHistoryState<T>(key);
@@ -57,6 +58,7 @@ export function useCedarDiffState<T extends BasicStateValue>(
 			const initialDiffHistoryState: DiffHistoryState<T> = {
 				diffState: initialDiffState,
 				history: [initialDiffState],
+				redoStack: [],
 				diffMode,
 			};
 			setDiffHistoryState(key, initialDiffHistoryState);
@@ -83,33 +85,9 @@ export function useCedarDiffState<T extends BasicStateValue>(
 				schema: effectiveSchema,
 			});
 
-			// Update the diff history state
-			const currentDiffHistoryState = getDiffHistoryState<T>(key);
-			if (currentDiffHistoryState) {
-				const {
-					diffState: currentDiffState,
-					history,
-					diffMode: currentDiffMode,
-				} = currentDiffHistoryState;
-
-				// Create new diff state
-				const newDiffState: DiffState<T> = {
-					oldState: currentDiffState.newState, // Previous newState becomes oldState
-					newState: newValue,
-					isDiffMode: true, // Any change operation sets this to true
-				};
-
-				// Update history by adding the new diff state
-				const newHistory = [...history, newDiffState];
-
-				const updatedDiffHistoryState: DiffHistoryState<T> = {
-					diffState: newDiffState,
-					history: newHistory,
-					diffMode: currentDiffMode,
-				};
-
-				setDiffHistoryState(key, updatedDiffHistoryState);
-			}
+			// Use the new setDiffState method to handle diff state updates
+			// Any change through this setter is considered a diff change (isDiffChange = true)
+			setDiffState<T>(key, newValue, true);
 		},
 		[
 			key,
@@ -117,8 +95,7 @@ export function useCedarDiffState<T extends BasicStateValue>(
 			description,
 			customSetters,
 			effectiveSchema,
-			getDiffHistoryState,
-			setDiffHistoryState,
+			setDiffState,
 		]
 	);
 
