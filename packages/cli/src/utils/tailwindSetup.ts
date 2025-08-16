@@ -8,8 +8,8 @@ import path from 'path';
 import * as p from '@clack/prompts';
 import { spinner, confirm } from '@clack/prompts';
 import pc from 'picocolors';
-import { detectPackageManager } from './detectPackageManager';
 import { runCommand } from './runCommand';
+import { detectPackageManager } from './detectPackageManager';
 
 interface TailwindConfig {
 	hasTailwind: boolean;
@@ -56,7 +56,7 @@ export async function detectTailwindCSS(): Promise<TailwindConfig> {
 			hasConfig: !!configPath,
 			configPath,
 		};
-	} catch (error) {
+	} catch {
 		// If we can't read package.json, assume no Tailwind
 		return {
 			hasTailwind: false,
@@ -153,7 +153,7 @@ export async function updateTailwindConfig(
 			);
 			console.log(pc.cyan(`   './${componentDir}/**/*.{js,ts,jsx,tsx}'`));
 		}
-	} catch (error) {
+	} catch {
 		console.log(
 			pc.yellow('⚠️  Could not update Tailwind config automatically.')
 		);
