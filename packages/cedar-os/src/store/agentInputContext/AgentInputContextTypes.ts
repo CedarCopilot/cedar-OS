@@ -81,3 +81,13 @@ export interface StateBasedMentionProviderConfig {
 	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
 }
+
+/**
+ * Represents a subscribed setter for agent toolsets
+ */
+export interface SubscribedSetter {
+	name: string;
+	description: string;
+	stateKey: string;
+	schema?: Record<string, unknown>; // Serialized Zod schema
+}

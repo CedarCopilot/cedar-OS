@@ -23,6 +23,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
 	FeatureNode,
 	FeatureNodeData,
+	FeatureNodeDataSchema,
 } from '@/app/examples/product-roadmap/components/FeatureNode';
 import { FloatingMenu } from '@/app/examples/product-roadmap/components/FloatingMenu';
 import {
@@ -43,6 +44,7 @@ import {
 	MouseEvent as SpellMouseEvent,
 	useRegisterState,
 	useStateBasedMentionProvider,
+	useSubscribeSetterToInputContext,
 	useSubscribeStateToInputContext,
 	type CedarStore,
 } from 'cedar-os';
@@ -59,6 +61,7 @@ import {
 import { motion } from 'motion/react';
 import { TooltipMenu } from '@/inputs/TooltipMenu';
 import RadialMenuSpell from '@/spells/RadialMenuSpell';
+import z from 'zod';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)
@@ -92,6 +95,9 @@ function FlowCanvas() {
 			addNode: {
 				name: 'addNode',
 				description: 'Add a new node to the roadmap',
+				argsSchema: z.object({
+					node: FeatureNodeDataSchema.partial(),
+				}),
 				parameters: [
 					{
 						name: 'node',
@@ -296,6 +302,8 @@ function FlowCanvas() {
 			},
 		},
 	});
+
+	useSubscribeSetterToInputContext('nodes', 'addNode');
 
 	useRegisterState({
 		key: 'edges',

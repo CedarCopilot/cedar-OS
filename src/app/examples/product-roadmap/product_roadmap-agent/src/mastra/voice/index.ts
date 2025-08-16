@@ -57,8 +57,6 @@ export async function handleVoiceMessage(c: Context) {
 			maxTokens: 500,
 		});
 
-		console.log('response', response.text);
-
 		// Convert response to speech using OpenAI TTS
 		const speechStream = await voice.speak(response.text, {
 			voice: settings.voiceId || 'alloy', // Default to 'alloy' voice

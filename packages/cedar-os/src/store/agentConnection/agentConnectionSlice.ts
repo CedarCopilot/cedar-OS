@@ -22,7 +22,6 @@ import type {
 } from '@/store/agentConnection/AgentConnectionTypes';
 import { useCedarStore } from '@/store/CedarStore';
 import { getCedarState } from '@/store/CedarStore';
-import { sanitizeJson } from '@/utils/sanitizeJson';
 import {
 	defaultResponseProcessors,
 	initializeResponseProcessorRegistry,
@@ -564,29 +563,52 @@ export const createAgentConnectionSlice: StateCreator<
 			switch (config.provider) {
 				case 'openai':
 				case 'anthropic':
-					llmParams = { ...llmParams, model: model || 'gpt-4o-mini' };
+					const functions = state.transformSettersToFunctions();
+
+					llmParams = {
+						...llmParams,
+						model: model || 'gpt-4o-mini',
+						...(functions.length > 0 && {
+							functions,
+							function_call: 'auto',
+						}),
+					};
 					break;
 				case 'mastra':
 					const chatPath = config.chatPath || '/chat';
+					const serializedSetters = state.serializeSetters();
+					const enhancedContextString = state.stringifyAdditionalContext();
 
 					llmParams = {
 						...llmParams,
 						// we're overriding the prompt since we pass in additionalContext as a raw object.
 						prompt: editorContent,
-						additionalContext: sanitizeJson(state.additionalContext),
+						additionalContext: JSON.parse(enhancedContextString),
+						toolsets: serializedSetters,
 						route: route || `${chatPath}`,
 						resourceId: userId,
 						threadId,
 					};
 					break;
 				case 'ai-sdk':
-					llmParams = { ...llmParams, model: model || 'openai/gpt-4o-mini' };
+					const tools = state.transformSettersToFunctions();
+
+					llmParams = {
+						...llmParams,
+						model: model || 'openai/gpt-4o-mini',
+						...(tools.length > 0 && { tools }),
+					};
 					break;
 				case 'custom':
+					const customSerializedSetters = state.serializeSetters();
+					const customEnhancedContextString =
+						state.stringifyAdditionalContext();
+
 					llmParams = {
 						...llmParams,
 						prompt: editorContent,
-						additionalContext: sanitizeJson(state.additionalContext),
+						additionalContext: JSON.parse(customEnhancedContextString),
+						toolsets: customSerializedSetters,
 						userId,
 						threadId,
 					};

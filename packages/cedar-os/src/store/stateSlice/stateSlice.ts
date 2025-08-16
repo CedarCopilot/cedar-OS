@@ -42,6 +42,8 @@ export interface Setter<
 	name: string;
 	description: string;
 	parameters?: SetterParameter[];
+	/** Optional Zod schema describing the argument tuple accepted by this setter */
+	argsSchema?: ZodSchema<Args>;
 	execute: SetterFunction<T, Args>;
 }
 

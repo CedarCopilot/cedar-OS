@@ -5,11 +5,13 @@ import type {
 	AdditionalContext,
 	ContextEntry,
 	MentionProvider,
+	SubscribedSetter,
 } from '@/store/agentInputContext/AgentInputContextTypes';
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useMemo, useRef } from 'react';
 import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 export type ChatInput = JSONContent;
 
 // Define the agent input context slice
@@ -30,7 +32,7 @@ export interface AgentInputContextSlice {
 	removeContextEntry: (key: string, entryId: string) => void;
 	clearContextBySource: (source: ContextEntry['source']) => void;
 	clearMentions: () => void;
-	updateAdditionalContext: (context: Record<string, any>) => void;
+	updateAdditionalContext: (context: Record<string, unknown>) => void;
 
 	// Mention providers registry
 	mentionProviders: Map<string, MentionProvider>;
@@ -38,10 +40,26 @@ export interface AgentInputContextSlice {
 	unregisterMentionProvider: (providerId: string) => void;
 	getMentionProvidersByTrigger: (trigger: string) => MentionProvider[];
 
+	// Subscribed setters for agent toolsets
+	subscribedSetters: Record<string, SubscribedSetter>;
+	addSubscribedSetter: (setter: SubscribedSetter) => void;
+	removeSubscribedSetter: (setterName: string) => void;
+	clearSubscribedSetters: () => void;
+	getSubscribedSetters: () => Record<string, SubscribedSetter>;
+
 	// New stringify functions
 	stringifyEditor: () => string;
 	stringifyInputContext: () => string;
 	stringifyAdditionalContext: () => string;
+
+	// Serialization methods for different provider formats
+	serializeSetters: () => Record<string, SubscribedSetter>;
+	transformSettersToFunctions: () => Array<{
+		type: 'function';
+		name: string;
+		description: string;
+		parameters: Record<string, unknown>;
+	}>;
 }
 
 // Create the agent input context slice
@@ -55,6 +73,7 @@ export const createAgentInputContextSlice: StateCreator<
 	overrideInputContent: { input: null },
 	additionalContext: {},
 	mentionProviders: new Map(),
+	subscribedSetters: {},
 
 	setChatInputContent: (content) => {
 		set({ chatInputContent: content });
@@ -160,6 +179,31 @@ export const createAgentInputContextSlice: StateCreator<
 		);
 	},
 
+	addSubscribedSetter: (setter) => {
+		set((state) => ({
+			subscribedSetters: {
+				...state.subscribedSetters,
+				[setter.name]: setter,
+			},
+		}));
+	},
+
+	removeSubscribedSetter: (setterName) => {
+		set((state) => {
+			const remaining = { ...state.subscribedSetters };
+			delete remaining[setterName];
+			return { subscribedSetters: remaining };
+		});
+	},
+
+	clearSubscribedSetters: () => {
+		set({ subscribedSetters: {} });
+	},
+
+	getSubscribedSetters: () => {
+		return get().subscribedSetters;
+	},
+
 	stringifyEditor: () => {
 		const content = get().chatInputContent;
 		if (!content) return '';
@@ -202,10 +246,28 @@ export const createAgentInputContextSlice: StateCreator<
 	},
 
 	stringifyAdditionalContext: () => {
-		const context = get().additionalContext;
+		const state = get();
+		const context = state.additionalContext;
+		const registeredStates = state.registeredStates;
 
-		// Sanitize context before stringifying
-		const sanitizedContext = sanitizeJson(context);
+		// Enhance context with schemas from registered states
+		const enhancedContext: Record<string, unknown> = {};
+		Object.entries(context).forEach(([key, contextEntries]) => {
+			if (Array.isArray(contextEntries)) {
+				const registeredState = registeredStates[key];
+				enhancedContext[key] = contextEntries.map((entry: unknown) => ({
+					...(entry as Record<string, unknown>),
+					...(registeredState?.schema && {
+						schema: zodToJsonSchema(registeredState.schema),
+					}),
+				}));
+			} else {
+				enhancedContext[key] = contextEntries;
+			}
+		});
+
+		// Sanitize enhanced context before stringifying
+		const sanitizedContext = sanitizeJson(enhancedContext);
 		return JSON.stringify(sanitizedContext, null, 2);
 	},
 
@@ -218,6 +280,90 @@ export const createAgentInputContextSlice: StateCreator<
 		result += `Additional Context: ${contextString}`;
 
 		return result;
+	},
+
+	serializeSetters: () => {
+		const state = get();
+		return state.subscribedSetters;
+	},
+
+	transformSettersToFunctions: () => {
+		const state = get();
+		const subscribedSetters = state.subscribedSetters;
+
+		return Object.values(subscribedSetters).map((setter) => {
+			// Default parameters for OpenAI function format
+			let parameters: Record<string, unknown> = {
+				type: 'object',
+				properties: {},
+				required: [],
+			};
+
+			// Use the schema directly if it exists - it's already in JSON Schema format
+			if (setter.schema) {
+				// Ensure the schema is properly formatted for OpenAI
+				if (setter.schema.type === 'object' && setter.schema.properties) {
+					// Deep clone to avoid mutating the original
+					parameters = JSON.parse(JSON.stringify(setter.schema));
+
+					// Ensure required is an array at the top level
+					if (!Array.isArray(parameters.required)) {
+						if (
+							parameters.required &&
+							typeof parameters.required === 'object'
+						) {
+							// Convert object with numeric keys to array
+							const requiredObj = parameters.required as Record<
+								string,
+								unknown
+							>;
+							const requiredArray: string[] = [];
+							const keys = Object.keys(requiredObj).sort(
+								(a, b) => Number(a) - Number(b)
+							);
+							for (const key of keys) {
+								if (!isNaN(Number(key))) {
+									requiredArray.push(requiredObj[key] as string);
+								}
+							}
+							parameters.required = requiredArray;
+						} else {
+							parameters.required = [];
+						}
+					}
+
+					// Remove any $schema or other non-OpenAI properties
+					delete parameters.$schema;
+					delete parameters.definitions;
+					delete parameters.$ref;
+					delete parameters.$defs;
+					delete parameters.additionalProperties;
+				} else {
+					console.warn(
+						`[transformSettersToFunctions] Schema for setter "${setter.name}" is not in expected object format:`,
+						setter.schema
+					);
+				}
+			} else {
+				console.warn(
+					`[transformSettersToFunctions] No schema found for setter "${setter.name}"`
+				);
+			}
+
+			const functionDef = {
+				type: 'function' as const,
+				name: setter.name,
+				description: setter.description || `Execute ${setter.name}`,
+				parameters,
+			};
+
+			console.log(
+				`[DEBUG] Function definition for "${setter.name}":`,
+				JSON.stringify(functionDef, null, 2)
+			);
+
+			return functionDef;
+		});
 	},
 });
 
@@ -372,4 +518,199 @@ export function useRenderAdditionalContext(
 		});
 		return elements;
 	}, [additionalContext, renderers]);
+}
+
+/**
+ * Subscribe a specific custom setter from a Cedar state to the agent's toolset
+ * @param stateKey - The key of the state to get the setter from
+ * @param setterName - The name of the specific setter to subscribe
+ */
+export function useSubscribeSetterToInputContext(
+	stateKey: string,
+	setterName: string
+): void {
+	const addSubscribedSetter = useCedarStore((s) => s.addSubscribedSetter);
+	const removeSubscribedSetter = useCedarStore((s) => s.removeSubscribedSetter);
+	const subscribedRef = useRef(false);
+
+	// Check if the setter exists without subscribing to the entire object
+	const setterExists = useCedarStore((s) => {
+		const state = s.registeredStates[stateKey];
+		return Boolean(state?.customSetters?.[setterName]);
+	});
+
+	useEffect(() => {
+		// Only subscribe once when the setter becomes available
+		if (!setterExists || subscribedRef.current) {
+			return;
+		}
+
+		// Get the setter directly from store without causing re-renders
+		const store = useCedarStore.getState();
+		const setter =
+			store.registeredStates[stateKey]?.customSetters?.[setterName];
+
+		if (!setter) {
+			console.warn(
+				`[useSubscribeSetterToContext] Setter "${setterName}" not found in state "${stateKey}".`
+			);
+			return;
+		}
+
+		if (!setter.argsSchema) {
+			console.warn(
+				`[useSubscribeSetterToContext] Setter "${setterName}" in state "${stateKey}" has no Zod argsSchema. This is required for agent toolsets.`
+			);
+			return;
+		}
+
+		// Serialize the Zod schema properly
+		let serializedSchema: Record<string, unknown> | undefined;
+		try {
+			// Use minimal options for zodToJsonSchema to avoid refs
+			serializedSchema = zodToJsonSchema(setter.argsSchema, {
+				$refStrategy: 'none',
+				removeAdditionalStrategy: 'passthrough',
+				target: 'openApi3',
+			}) as Record<string, unknown>;
+
+			console.log(`[DEBUG] Raw Zod schema:`, setter.argsSchema);
+			console.log(
+				`[DEBUG] Serialized schema for "${setterName}":`,
+				JSON.stringify(serializedSchema, null, 2)
+			);
+
+			// Clean up the schema for OpenAI function calling
+			if (serializedSchema) {
+				// Remove any top-level properties that OpenAI doesn't support
+				delete serializedSchema.$schema;
+				delete serializedSchema.definitions;
+				delete serializedSchema.$defs;
+				delete serializedSchema.$ref;
+				delete serializedSchema.additionalProperties;
+
+				// Ensure it's an object type
+				if (!serializedSchema.type) {
+					serializedSchema.type = 'object';
+				}
+
+				// Ensure properties exist
+				if (!serializedSchema.properties) {
+					serializedSchema.properties = {};
+				}
+
+				// Ensure required is an array
+				if (!serializedSchema.required) {
+					serializedSchema.required = [];
+				} else if (!Array.isArray(serializedSchema.required)) {
+					serializedSchema.required = [];
+				}
+
+				// Clean nested properties recursively
+				const cleanProperties = (obj: unknown): unknown => {
+					if (typeof obj !== 'object' || obj === null) return obj;
+
+					// Handle arrays properly
+					if (Array.isArray(obj)) {
+						return obj.map((item) => cleanProperties(item));
+					}
+
+					const cleaned = { ...(obj as Record<string, unknown>) };
+					delete cleaned.$ref;
+					delete cleaned.$defs;
+					delete cleaned.definitions;
+					delete cleaned.$schema;
+
+					// Fix required fields that might have been converted to objects
+					if (
+						cleaned.required &&
+						typeof cleaned.required === 'object' &&
+						!Array.isArray(cleaned.required)
+					) {
+						// Convert object with numeric keys back to array
+						const requiredObj = cleaned.required as Record<string, unknown>;
+						const requiredArray: string[] = [];
+						const keys = Object.keys(requiredObj).sort(
+							(a, b) => Number(a) - Number(b)
+						);
+						for (const key of keys) {
+							if (!isNaN(Number(key))) {
+								requiredArray.push(requiredObj[key] as string);
+							}
+						}
+						cleaned.required = requiredArray;
+					}
+
+					// Recursively clean nested objects
+					for (const key of Object.keys(cleaned)) {
+						if (typeof cleaned[key] === 'object' && cleaned[key] !== null) {
+							cleaned[key] = cleanProperties(cleaned[key]);
+						}
+					}
+
+					return cleaned;
+				};
+
+				serializedSchema = cleanProperties(serializedSchema) as Record<
+					string,
+					unknown
+				>;
+			}
+
+			// Validate the schema is suitable for OpenAI
+			if (serializedSchema && serializedSchema.type !== 'object') {
+				console.warn(
+					`[useSubscribeSetterToInputContext] Schema for setter "${setterName}" is not object type (${serializedSchema.type}). This may cause issues with function calling.`
+				);
+			}
+
+			// Check if properties are empty
+			if (serializedSchema && serializedSchema.type === 'object') {
+				const properties = serializedSchema.properties as
+					| Record<string, unknown>
+					| undefined;
+				if (!properties || Object.keys(properties).length === 0) {
+					console.warn(
+						`[useSubscribeSetterToInputContext] Schema for setter "${setterName}" has empty properties.`,
+						'Original Zod schema:',
+						setter.argsSchema
+					);
+				} else {
+					console.log(
+						`[DEBUG] Schema properties for "${setterName}":`,
+						Object.keys(properties)
+					);
+				}
+			}
+		} catch (error) {
+			console.error(
+				`[useSubscribeSetterToInputContext] Error serializing schema for setter "${setterName}":`,
+				error
+			);
+			serializedSchema = undefined;
+		}
+
+		// Add the specific setter to the subscribed setters
+		const subscribedSetter: SubscribedSetter = {
+			name: setterName,
+			description: setter.description,
+			stateKey: stateKey,
+			schema: serializedSchema,
+		};
+
+		addSubscribedSetter(subscribedSetter);
+		subscribedRef.current = true;
+
+		// Cleanup function to remove the specific setter when component unmounts
+		return () => {
+			removeSubscribedSetter(setterName);
+			subscribedRef.current = false;
+		};
+	}, [
+		stateKey,
+		setterName,
+		setterExists,
+		addSubscribedSetter,
+		removeSubscribedSetter,
+	]);
 }
