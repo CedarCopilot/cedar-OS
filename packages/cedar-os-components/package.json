@@ -1,6 +1,6 @@
 {
 	"name": "cedar-os-components",
-	"version": "0.0.4",
+	"version": "0.0.8",
 	"description": "A collection of React components for building conversational AI interfaces with Cedar OS",
 	"main": "dist/index.js",
 	"module": "dist/index.esm.js",
@@ -12,7 +12,7 @@
 		"build": "tsup",
 		"dev": "tsup --watch",
 		"prepublishOnly": "npm run build",
-		"p": "pnpm install && npm run build && npm version patch && npm publish"
+		"p": "npm install && npm run build && npm version patch && npm publish"
 	},
 	"keywords": [
 		"react",
@@ -41,7 +41,7 @@
 		"react-markdown": "^8.0.7",
 		"remark-gfm": "^3.0.1",
 		"uuid": "^9.0.0",
-		"cedar-os": "latest"
+		"cedar-os": "*"
 	},
 	"devDependencies": {
 		"@types/diff": "^5.0.9",

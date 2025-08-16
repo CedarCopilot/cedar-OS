@@ -23,7 +23,7 @@
 			{
 				"group": "Getting Started",
 				"icon": "play",
-				"pages": ["getting-started/getting-started"]
+				"pages": ["getting-started/getting-started", "getting-started/cli", "getting-started/organizing-a-cedar-project"]
 			},
 			{
 				"group": "Connecting to an Agent",

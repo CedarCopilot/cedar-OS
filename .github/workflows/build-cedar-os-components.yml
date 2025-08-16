@@ -1,0 +1,32 @@
+name: Cedar OS Components Build
+
+on:
+  pull_request:
+    paths:
+      - 'packages/cedar-os-components/**'
+      - '.github/workflows/build-cedar-os-components.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install root dependencies (npm)
+        run: npm install --no-audit --prefer-offline
+
+      - name: Install cedar-os-components dependencies (npm)
+        working-directory: packages/cedar-os-components
+        run: npm install --no-audit --prefer-offline
+
+      - name: Build cedar-os-components package (npm)
+        working-directory: packages/cedar-os-components
+        run: npm run build
