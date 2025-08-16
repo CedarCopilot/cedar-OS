@@ -8,6 +8,7 @@ import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnect
 import { createVoiceSlice } from '@/store/voice/voiceSlice';
 import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
 import { createSpellSlice } from '@/store/spellSlice/spellSlice';
+import { createDiffHistorySlice } from '@/store/diffHistoryStateSlice';
 
 // Create the combined store (default for backwards compatibility)
 export const useCedarStore = create<CedarStore>()((...a) => ({
@@ -19,6 +20,7 @@ export const useCedarStore = create<CedarStore>()((...a) => ({
 	...createVoiceSlice(...a),
 	...createDebuggerSlice(...a),
 	...createSpellSlice(...a),
+	...createDiffHistorySlice(...a),
 }));
 
 export const useMessages = () => ({
@@ -69,6 +71,18 @@ export const setCedarState: CedarStore['setCedarState'] = (key, value) =>
 // Export the extensible store creator
 export { createCedarStore } from '@/store/createCedarStore';
 export type { CreateCedarStoreOptions } from '@/store/createCedarStore';
+
+// Export diff state types and hooks
+export type {
+	DiffMode,
+	DiffState,
+	DiffHistoryState,
+	DiffHistorySlice,
+} from '@/store/diffHistoryStateSlice';
+export {
+	useCedarDiffState,
+	createDiffHistorySlice,
+} from '@/store/diffHistoryStateSlice';
 
 // Export the typed messages slice creator
 export { createTypedMessagesSlice } from '@/store/messages/createTypedMessagesSlice';
@@ -172,4 +186,13 @@ export const useSpells = () => ({
 	deactivateSpell: useCedarStore((state) => state.deactivateSpell),
 	toggleSpell: useCedarStore((state) => state.toggleSpell),
 	clearSpells: useCedarStore((state) => state.clearSpells),
+});
+
+// Export a hook for diff history functionality
+export const useDiffHistory = () => ({
+	diffHistoryStates: useCedarStore((state) => state.diffHistoryStates),
+
+	getDiffHistoryState: useCedarStore((state) => state.getDiffHistoryState),
+	setDiffHistoryState: useCedarStore((state) => state.setDiffHistoryState),
+	getCleanState: useCedarStore((state) => state.getCleanState),
 });

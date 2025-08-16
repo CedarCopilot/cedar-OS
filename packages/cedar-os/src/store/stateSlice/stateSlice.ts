@@ -15,6 +15,7 @@ export type BasicStateValue =
 	| object
 	| unknown[]
 	| undefined
+	| null
 	| void;
 
 // Setter types

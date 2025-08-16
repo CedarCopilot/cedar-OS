@@ -40,6 +40,7 @@ import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import {
 	ActivationMode,
 	Hotkey,
+	registerState,
 	MouseEvent as SpellMouseEvent,
 	useRegisterState,
 	useStateBasedMentionProvider,
@@ -543,19 +544,13 @@ function FlowCanvas() {
 function SelectedNodesPanel() {
 	const [selected, setSelected] = React.useState<Node<FeatureNodeData>[]>([]);
 
-	// First subscription - for numSelectedNodes (order: 1)
-	useSubscribeInputContext(
-		selected,
-		(nodes) => ({
-			numSelectedNodes: nodes.length,
-		}),
-		{
-			icon: <Box />,
-			color: '#8B5CF6', // Purple color for selected nodes
-			labelField: (item) => item.toString(),
-			order: 2, // This will appear first
-		}
-	);
+	registerState({
+		key: 'numOfSelectedNodes',
+		value: selected.length,
+		description: 'Number of selected nodes',
+	});
+
+	// useSubscribeInputContext({ stateKey: 'numOfSelectedNodes' });
 
 	// Second subscription - for selectedNodes (order: 2)
 	useSubscribeInputContext(
