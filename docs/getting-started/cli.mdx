@@ -1,0 +1,134 @@
+---
+title: 'Cedar CLI Guide'
+description: 'Available CLI commands to create with, add, and become more advanced with Cedar'
+---
+
+The Cedar CLI is a command-line tool that makes it easy to create new Cedar projects or add Cedar components to existing ones. It intelligently detects your environment and guides you through the setup process.
+
+<Info>
+	Because Cedar downloads files locally, it is recommended to always run these
+	commands on a clean branch in case any components get overwritten.
+</Info>
+
+## Quick Start
+
+For most users, simply run:
+
+```bash
+npx cedar-os-cli plant-seed
+```
+
+This will launch the smart `plant-seed` command that detects your environment and does the right thing automatically to add Cedar to your project. It guides you through all the steps you need.
+
+## Available Commands
+
+### `cedar plant-seed` (Recommended)
+
+The smart command that automatically detects your environment and takes the appropriate action:
+
+- **New project**: Offers template selection → Creates project → Installs Cedar
+- **Existing Next.js/React project**: Detects and just adds Cedar and its dependencies
+
+**Usage:**
+
+```bash
+npx cedar-os-cli plant-seed [options]
+```
+
+**Options:**
+
+- `-p, --project-name <name>` - Project directory name (prompts if not provided)
+- `-y, --yes` - Skip all prompts and use defaults (Mastra template for new projects)
+
+### `cedar add-sapling`
+
+Installs the latest version of Cedar-OS and optionally downloads Cedar UI components. Use to refresh your environment after Cedar updaes.
+
+**Usage:**
+
+```bash
+cedar add-sapling [options]
+```
+
+**Options:**
+
+- `-d, --dir <path>` - Installation directory (default: `src/cedar/components`)
+- `-c, --components <names...>` - Specific components to install
+- `-a, --all` - Install all available components
+- `-y, --yes` - Skip confirmation prompts and auto-install dependencies
+
+### `cedar pluck-component`
+
+Downloads specific Cedar components locally from an existing npm installation. Use this when you've installed `cedar-os-components` via npm but want to customize specific components.
+
+**Usage:**
+
+```bash
+cedar pluck-component [options]
+```
+
+**Options:**
+
+- `-d, --dir <path>` - Installation directory (default: `src/cedar/components`)
+- `-c, --components <names...>` - Specific components to download
+- `-a, --all` - Download all available components
+- `-y, --yes` - Skip confirmation prompts
+
+## Installation Options for Cedar-OS Components
+
+Our UI components (chat, spells, etc.) are published in an npm package called `cedar-os-components`. However, we also offer the option of downloading them locally (shadcn style) for full customization without relying on configurations. When running any of the above commands, you'll be asked to choose:
+
+1. **Local installation (shadcn style)** - Downloads component source files locally
+
+   - ✅ Full control and customization
+   - ✅ No external dependencies after installation
+   - ❌ Manual updates required
+
+2. **NPM package installation** - Installs from `cedar-os-components` package
+   - ✅ Easier updates
+   - ✅ No local files to maintain
+   - ❌ Less customization flexibility
+
+## Project Templates
+
+When creating new projects, you can choose from several templates, or a blank NextJS component with all dependencies installed:
+
+### Blank Cedar Project
+
+- **What:** Next.js app with Cedar components (no backend)
+- **Includes:** Basic Cedar setup using OpenAI API directly
+- **Repository:** [cedar-blank](https://github.com/CedarCopilot/cedar-blank)
+
+### Mastra Blank
+
+- **What:** Next.js app with Mastra backend scaffolding
+- **Includes:** Monorepo structure, automatic backend connection setup, minimal Cedar integration
+- **Repository:** [cedar-mastra-blank](https://github.com/CedarCopilot/cedar-mastra-blank)
+
+### Mastra Reference Repo
+
+- **What:** Complete Cedar implementation with Mastra backend
+- **Includes:** All Cedar features, backend integration, example implementations
+- **Best for:** Learning Cedar features (or if anything in our docs is confusing)
+- **Repository:** [cedar-mastra-starter](https://github.com/CedarCopilot/cedar-mastra-starter)
+
+### Installation Fails
+
+If automatic installation fails, the CLI will show manual installation steps:
+
+```bash
+# Manual Next.js creation
+npx create-next-app@latest my-project
+cd my-project
+npx cedar-os-cli add-sapling
+
+# Or follow the manual installation guide
+```
+
+## Next Steps
+
+After using the CLI:
+
+1. **Configure your Cedar setup** following the [organizing a Cedar project](/getting-started/organizing-a-cedar-project) guide
+2. **Set up your backend connection** with [agent backend connection](/agent-backend-connection/agent-backend-connection)
+3. **Customize your chat interface** using [chat components](/chat/chat-components)
