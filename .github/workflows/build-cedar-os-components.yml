@@ -21,11 +21,16 @@ jobs:
           cache: 'npm'
 
       - name: Install root dependencies (npm)
-        run: npm install --no-audit --prefer-offline
+        run: npm install --no-audit
 
       - name: Install cedar-os-components dependencies (npm)
         working-directory: packages/cedar-os-components
-        run: npm install --no-audit --prefer-offline
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --no-audit
+          # Force reinstall rollup to fix native binary issues
+          npm uninstall rollup
+          npm install rollup --no-audit
 
       - name: Build cedar-os-components package (npm)
         working-directory: packages/cedar-os-components

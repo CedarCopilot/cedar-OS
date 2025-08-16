@@ -11,8 +11,6 @@ Mastra is a full-featured typescript framework to build agents. It provides memo
 	Cedar-OS with Mastra, run a Mastra server and point Cedar-OS at it.{' '}
 </Info>
 
-**Want to skip the docs?** Clone the [cedar-mastra-starter](https://github.com/CedarCopilot/cedar-mastra-starter) starter repository and to interactively explore the possible interactions between Mastra and Cedar.
-
 ## Initial Configuration
 
 <Steps>
@@ -24,6 +22,7 @@ Run `plant-seed` and select either:
 If you already have a Mastra backend, use the **blank frontend cedar repo** option instead.
 
 For reference, you can still follow the official Mastra guide: [Install using the `create-mastra` CLI](https://mastra.ai/en/docs/getting-started/installation#install-using-the-create-mastra-cli).
+
 </Step>
 
 <Step title="Wrap your app with CedarCopilot">
@@ -35,15 +34,16 @@ function App() {
 	return (
 		<CedarCopilot
 			llmProvider={{
-					provider: 'mastra',
-					baseURL: 'http://localhost:4111', // default dev port for Mastra
-					apiKey: process.env.NEXT_PUBLIC_MASTRA_API_KEY, // optional — only for backend auth
-				}}>
+				provider: 'mastra',
+				baseURL: 'http://localhost:4111', // default dev port for Mastra
+				apiKey: process.env.NEXT_PUBLIC_MASTRA_API_KEY, // optional — only for backend auth
+			}}>
 			<YourApp />
 		</CedarCopilot>
-	); 
+	);
 }
 ```
+
 </Step>
 
 <Step title="Configure Mastra endpoints to talk to Cedar">
@@ -73,6 +73,7 @@ registerApiRoute('/chat/stream', {
 	},
 });
 ```
+
 </Step>
 
 <Step title="Add Cedar Chat">
