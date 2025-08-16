@@ -4,7 +4,15 @@
 			"name": "cedar-caption-chat",
 			"type": "chatComponents",
 			"dependencies": ["react", "lucide-react", "uuid"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": [
+				"cedar-os",
+				"floating-container",
+				"chat-input",
+				"container-3d",
+				"container-3d-button",
+				"caption-messages",
+				"keyboard-shortcut"
+			],
 			"files": ["CedarCaptionChat.tsx"],
 			"meta": {
 				"importName": "CedarCaptionChat",
@@ -16,7 +24,14 @@
 			"name": "floating-cedar-chat",
 			"type": "chatComponents",
 			"dependencies": ["react", "lucide-react", "motion/react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": [
+				"cedar-os",
+				"chat-input",
+				"chat-bubbles",
+				"collapsed-chat-button",
+				"container-3d",
+				"floating-container"
+			],
 			"files": ["FloatingCedarChat.tsx"],
 			"meta": {
 				"importName": "FloatingCedarChat",
@@ -28,7 +43,14 @@
 			"name": "side-panel-cedar-chat",
 			"type": "chatComponents",
 			"dependencies": ["react", "lucide-react", "motion/react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": [
+				"cedar-os",
+				"side-panel-container",
+				"collapsed-chat-button",
+				"chat-input",
+				"chat-bubbles",
+				"container-3d"
+			],
 			"files": ["SidePanelCedarChat.tsx"],
 			"meta": {
 				"importName": "SidePanelCedarChat",
@@ -40,7 +62,11 @@
 			"name": "chat-input",
 			"type": "chatInput",
 			"dependencies": ["react", "lucide-react", "motion/react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": [
+				"cedar-os",
+				"context-badge-row",
+				"container-3d-button"
+			],
 			"files": ["ChatInput.tsx", "ChatInput.css", "index.ts"],
 			"meta": {
 				"importName": "ChatInput",
@@ -64,7 +90,15 @@
 			"name": "caption-messages",
 			"type": "chatMessages",
 			"dependencies": ["react", "lucide-react", "motion-plus-react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": [
+				"cedar-os",
+				"flat-3d-button",
+				"flat-3d-container",
+				"shimmer-text",
+				"keyboard-shortcut",
+				"slider-3d",
+				"typewriter-text"
+			],
 			"files": ["CaptionMessages.tsx"],
 			"meta": {
 				"importName": "CaptionMessages",
@@ -76,7 +110,7 @@
 			"name": "chat-bubbles",
 			"type": "chatMessages",
 			"dependencies": ["react", "motion/react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": ["cedar-os", "chat-renderer"],
 			"files": ["ChatBubbles.tsx"],
 			"meta": {
 				"importName": "ChatBubbles",
@@ -88,7 +122,14 @@
 			"name": "chat-renderer",
 			"type": "chatMessages",
 			"dependencies": ["react", "react-markdown", "motion-plus-react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": [
+				"cedar-os",
+				"dialogue-options",
+				"multiple-choice",
+				"todo-list",
+				"flat-3d-container",
+				"markdown-renderer"
+			],
 			"files": ["ChatRenderer.tsx"],
 			"meta": {
 				"importName": "ChatRenderer",
@@ -100,7 +141,7 @@
 			"name": "dialogue-options",
 			"type": "chatMessages",
 			"dependencies": ["react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": ["cedar-os", "flat-3d-button"],
 			"files": ["DialogueOptions.tsx"],
 			"meta": {
 				"importName": "DialogueOptions",
@@ -112,7 +153,7 @@
 			"name": "multiple-choice",
 			"type": "chatMessages",
 			"dependencies": ["react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": ["cedar-os", "flat-3d-button"],
 			"files": ["MultipleChoice.tsx"],
 			"meta": {
 				"importName": "MultipleChoice",
@@ -124,7 +165,7 @@
 			"name": "storyline",
 			"type": "chatMessages",
 			"dependencies": ["react", "framer-motion"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": ["cedar-os", "storyline-edge"],
 			"files": ["Storyline.tsx"],
 			"meta": {
 				"importName": "Storyline",
@@ -170,7 +211,7 @@
 			"name": "collapsed-chat-button",
 			"type": "chatMessages",
 			"dependencies": ["react", "lucide-react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": ["cedar-os", "container-3d-button", "inset-glow"],
 			"files": ["structural/CollapsedChatButton.tsx"],
 			"meta": {
 				"importName": "CollapsedChatButton",
@@ -194,7 +235,7 @@
 			"name": "container-3d-button",
 			"type": "containers",
 			"dependencies": ["react", "motion/react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": ["cedar-os", "container-3d", "glowing-mesh"],
 			"files": ["Container3DButton.tsx"],
 			"meta": {
 				"importName": "Container3DButton",
@@ -206,7 +247,7 @@
 			"name": "flat-3d-button",
 			"type": "containers",
 			"dependencies": ["react", "motion/react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": ["cedar-os", "flat-3d-container"],
 			"files": ["Flat3dButton.tsx"],
 			"meta": {
 				"importName": "Flat3dButton",
@@ -236,6 +277,18 @@
 				"importName": "GlassyPaneContainer",
 				"displayName": "Glassy Pane Container",
 				"description": "Glass morphism container component"
+			}
+		},
+		{
+			"name": "floating-chat-input",
+			"type": "chatInput",
+			"dependencies": ["react", "lucide-react", "motion/react"],
+			"registryDependencies": ["cedar-os", "chat-input"],
+			"files": ["FloatingChatInput.tsx"],
+			"meta": {
+				"importName": "FloatingChatInput",
+				"displayName": "Floating Chat Input",
+				"description": "Floating chat input with positioning and auto-close"
 			}
 		},
 		{
@@ -334,7 +387,7 @@
 			"name": "typewriter-text",
 			"type": "text",
 			"dependencies": ["react", "motion/react"],
-			"registryDependencies": ["cedar-os"],
+			"registryDependencies": ["cedar-os", "markdown-renderer"],
 			"files": ["TypewriterText.tsx"],
 			"meta": {
 				"importName": "TypewriterText",
@@ -420,6 +473,46 @@
 				"importName": "MarkdownRenderer",
 				"displayName": "Markdown Renderer",
 				"description": "Chat markdown rendering component"
+			}
+		},
+		{
+			"name": "questioning-spell",
+			"type": "spells",
+			"dependencies": ["react", "lucide-react", "motion/react"],
+			"registryDependencies": ["cedar-os", "floating-chat-input"],
+			"files": ["QuestioningSpell.tsx"],
+			"meta": {
+				"importName": "QuestioningSpell",
+				"displayName": "Questioning Spell",
+				"description": "Interactive questioning spell component"
+			}
+		},
+		{
+			"name": "radial-menu-spell",
+			"type": "spells",
+			"dependencies": ["react", "lucide-react", "motion/react"],
+			"registryDependencies": ["cedar-os", "container-3d"],
+			"files": ["RadialMenuSpell.tsx"],
+			"meta": {
+				"importName": "RadialMenuSpell",
+				"displayName": "Radial Menu Spell",
+				"description": "Radial menu spell with customizable actions"
+			}
+		},
+		{
+			"name": "tooltip-menu-spell",
+			"type": "spells",
+			"dependencies": ["react", "lucide-react", "motion/react"],
+			"registryDependencies": [
+				"cedar-os",
+				"tooltip-menu",
+				"floating-chat-input"
+			],
+			"files": ["TooltipMenuSpell.tsx"],
+			"meta": {
+				"importName": "TooltipMenuSpell",
+				"displayName": "Tooltip Menu Spell",
+				"description": "Tooltip menu spell for contextual actions"
 			}
 		}
 	]

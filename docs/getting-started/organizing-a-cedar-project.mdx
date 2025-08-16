@@ -1,0 +1,88 @@
+Cedar is opinionated on the best way to organize files and folders for the optimal development experience. Following these conventions will help with debugging, observability, and onboarding new team members to your Cedar implementation. This is based on our experience building copilots in customers' products with necessary two-way visibility.
+
+## Recommended File Structure
+
+We recommend creating a dedicated `cedar/` folder at the same level as your `app/` directory (in Next.js projects) or equivalent in other frameworks:
+
+```
+your-project/
+├── app/                    # Your Next.js app directory
+├── cedar/                  # Cedar configuration and components
+   ├── components/         # Directory for all downloaded cedar components
+   ├── messageStorageAdapter.ts
+   ├── messageRenderers.ts
+   └── responseHandlers.ts
+├── package.json
+└── ...
+```
+
+## Configuration Philosophy
+
+The core principle is that **configuration should be centralized, but logic can live wherever it makes business sense**.
+
+### ✅ Recommended Pattern
+
+- Define all Cedar configurations in the `cedar/` folder
+- Import and pass configuration objects directly to `CedarCopilot` during initialization
+- Keep configuration objects in dedicated files for better organization and debugging
+
+```tsx
+// cedar/messageRenderers.ts
+export const messageRenderers = {
+	// Your custom message renderers
+};
+
+// cedar/responseHandlers.ts
+export const responseHandlers = {
+	// Your response handling logic
+};
+
+// In your main component
+import { messageRenderers } from '../cedar/messageRenderers';
+import { responseHandlers } from '../cedar/responseHandlers';
+
+<CedarCopilot
+	messageRenderers={messageRenderers}
+	responseHandlers={responseHandlers}
+	// other props...
+/>;
+```
+
+### ❌ Anti-Pattern: Hooks Everywhere
+
+We discourage using hooks scattered throughout your application for Cedar configuration because:
+
+- Components may mount at unexpected times
+- Harder to trace the source of bugs
+- Reduced observability for new developers
+- Inconsistent initialization timing
+
+### Exception: State-Related Functionality
+
+The centralized configuration pattern has one important exception: **state-related functionality must be defined where the state lives**.
+
+When registering state with Cedar, this must happen in the component code that owns that state:
+
+```tsx
+// This MUST happen in the component where the state is defined
+const [myState, setMyState] = useState();
+
+// Register with Cedar in the same component
+useRegisterState('myState', myState, setMyState);
+```
+
+## Benefits of This Approach
+
+1. **Better Debugging**: All Cedar configuration is in one predictable location
+2. **Improved Observability**: New team members know exactly where to look for Cedar setup
+3. **Consistent Initialization**: Configuration is passed directly during component initialization
+4. **Easier Maintenance**: Changes to Cedar behavior are centralized and easier to track
+
+## Getting Started
+
+1. Create a `cedar/` folder in your project root
+2. Move your Cedar configurations into dedicated files within this folder
+3. Import these configurations and pass them directly to `CedarCopilot`
+4. Keep state registration in component code where the state is defined
+
+This organization pattern will scale with your project and make Cedar integration more maintainable over time.

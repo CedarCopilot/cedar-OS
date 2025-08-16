@@ -1,0 +1,63 @@
+{
+	"name": "cedar-os-components",
+	"version": "0.0.4",
+	"description": "A collection of React components for building conversational AI interfaces with Cedar OS",
+	"main": "dist/index.js",
+	"module": "dist/index.esm.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsup",
+		"dev": "tsup --watch",
+		"prepublishOnly": "npm run build",
+		"p": "pnpm install && npm run build && npm version patch && npm publish"
+	},
+	"keywords": [
+		"react",
+		"components",
+		"ui",
+		"cedar-os",
+		"chat",
+		"ai",
+		"conversational-interface",
+		"typescript"
+	],
+	"author": "Cedar OS",
+	"license": "MIT",
+	"peerDependencies": {
+		"react": ">=17.0.0",
+		"react-dom": ">=17.0.0"
+	},
+	"dependencies": {
+		"@radix-ui/react-slot": "^1.0.2",
+		"class-variance-authority": "^0.7.0",
+		"diff": "^5.1.0",
+		"framer-motion": "^11.0.0",
+		"lucide-react": "^0.263.1",
+		"motion": "^10.16.2",
+		"motion-plus-react": "^1.0.0",
+		"react-markdown": "^8.0.7",
+		"remark-gfm": "^3.0.1",
+		"uuid": "^9.0.0",
+		"cedar-os": "latest"
+	},
+	"devDependencies": {
+		"@types/diff": "^5.0.9",
+		"@types/react": "^18.2.55",
+		"@types/react-dom": "^18.2.19",
+		"@types/uuid": "^9.0.7",
+		"tsup": "^8.3.6",
+		"typescript": "^5.3.3"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/CedarCopilot/cedar-OS.git",
+		"directory": "packages/cedar-os-components"
+	},
+	"bugs": {
+		"url": "https://github.com/CedarCopilot/cedar-OS/issues"
+	},
+	"homepage": "https://docs.cedarcopilot.com/getting-started/getting-started"
+}
