@@ -7,22 +7,26 @@ Agent Input Context allows you to provide additional information to your AI agen
 
 This includes application state, user data, conversation history, and any other contextual information that helps the agent provide better responses.
 
+The underlying source of truth for this information is [Cedar state](/state-access/agentic-state-access), so it is helpful to understand how that works first.
+
 ## How It Works
 
 When a user sends a message, Cedar automatically gathers context from various sources:
 
-1. **Registered State**: Application state you've made available to the agent via `useCedarState`
-2. **Mentions**: Specific data the user has referenced with @ mentions
-3. **Additional Context**: Context entries you've manually added
+1. **Subscribed States**: Application state you've made available to the agent via `useCedarState` and subscribed to via `useSubscribeStateToInputContext`
+2. **Mentions**: Specific data the user has referenced with @ mentions (registered using `useStateBasedMentionProvider`)
+3. **Additional Context**: Context entries you've manually added (via `addContextEntry`)
 4. **Chat Input Content**: The current editor content with mentions
 
 Cedar provides several methods to stringify and access this context for your AI agents.
 
 # Adding Context
 
+> **Prerequisite** – Before you can add any context or mentions _you must register the relevant React state in Cedar_ using either [`useRegisterState`](/state-access/agentic-state-access#useRegisterState-Hook) or [`useCedarState`](/state-access/agentic-state-access#useCedarState). All examples below assume that registration step has already happened (or they demonstrate it explicitly).
+
 ## Mentions System
 
-Cedar's mention system allows users to reference specific data using @ symbols. You can create mention providers that let users easily reference state or custom data:
+Cedar's mention system allows users to reference specific data using @ symbols. You can create mention providers that let users easily reference state data:
 
 ```tsx
 import { useStateBasedMentionProvider } from 'cedar-os';
@@ -54,21 +58,26 @@ For detailed information about mentions, including custom providers, multiple tr
 
 ## State Subscription
 
-Automatically sync your specific cedarStates to the agent input context using `useSubscribeInputContext`:
+Keep a Cedar state continuously in sync with the agent input context via `useSubscribeStateToInputContext`:
 
 ```tsx
-import { useSubscribeInputContext } from 'cedar-os';
-import { useState } from 'react';
+import { useCedarState, useSubscribeStateToInputContext } from 'cedar-os';
+import { Settings } from 'lucide-react';
 
 function AutoSyncChat() {
-	const [appState, setAppState] = useState({
-		currentTab: 'dashboard',
-		selectedItems: ['item1', 'item2'],
-	});
+	// 1) Register / create the state in Cedar
+	const [appState, setAppState] = useCedarState(
+		'appState',
+		{
+			currentTab: 'dashboard',
+			selectedItems: ['item1', 'item2'],
+		},
+		'UI navigation & selection info'
+	);
 
-	// Automatically sync state to context
-	useSubscribeInputContext(
-		appState,
+	// 2) Subscribe that state to the agent context
+	useSubscribeStateToInputContext(
+		'appState',
 		(state) => ({
 			'app-state': [
 				{

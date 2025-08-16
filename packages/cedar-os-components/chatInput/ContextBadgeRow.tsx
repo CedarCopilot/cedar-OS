@@ -21,6 +21,11 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 		// Try to find a provider that might have created this entry
 		const provider = mentionProviders.get(key);
 
+		// Respect visibility flag
+		if (entry.metadata?.showInChat === false) {
+			return null;
+		}
+
 		// Use custom renderer if available
 		if (provider?.renderContextBadge) {
 			return provider.renderContextBadge(entry);

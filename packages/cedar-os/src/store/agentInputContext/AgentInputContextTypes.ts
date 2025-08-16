@@ -11,6 +11,8 @@ export interface ContextEntry {
 		label?: string;
 		icon?: ReactNode;
 		color?: string; // Hex color
+		/** Whether this entry should be shown in the chat UI (ContextBadgeRow). Defaults to true */
+		showInChat?: boolean;
 		order?: number; // Order for display (lower numbers appear first)
 		[key: string]: unknown;
 	};
@@ -33,6 +35,8 @@ export interface MentionItem {
 	metadata?: {
 		icon?: ReactNode;
 		color?: string; // Hex color
+		/** Whether this mention item should be shown as a badge after insertion (default true) */
+		showInChat?: boolean;
 		[key: string]: unknown;
 	};
 	providerId?: string; // Internal use only

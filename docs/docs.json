@@ -48,15 +48,6 @@
 				]
 			},
 			{
-				"group": "Agent Input Context",
-				"icon": "at",
-				"pages": [
-					"agent-input-context/agent-input-context",
-					"agent-input-context/mentions",
-					"agent-input-context/subscribing-state"
-				]
-			},
-			{
 				"group": "Agentic State",
 				"icon": "database",
 				"pages": [
@@ -65,6 +56,16 @@
 					"state-access/diff-history-manager"
 				]
 			},
+			{
+				"group": "Agent Input Context",
+				"icon": "at",
+				"pages": [
+					"agent-input-context/agent-input-context",
+					"agent-input-context/mentions",
+					"agent-input-context/subscribing-state"
+				]
+			},
+
 			{
 				"group": "Voice (Beta)",
 				"icon": "microphone",
