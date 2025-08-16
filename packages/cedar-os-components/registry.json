@@ -23,7 +23,7 @@
 		{
 			"name": "floating-cedar-chat",
 			"type": "chatComponents",
-			"dependencies": ["react", "lucide-react", "motion/react"],
+			"dependencies": ["react", "lucide-react", "motion"],
 			"registryDependencies": [
 				"cedar-os",
 				"chat-input",
@@ -42,7 +42,7 @@
 		{
 			"name": "side-panel-cedar-chat",
 			"type": "chatComponents",
-			"dependencies": ["react", "lucide-react", "motion/react"],
+			"dependencies": ["react", "lucide-react", "motion"],
 			"registryDependencies": [
 				"cedar-os",
 				"side-panel-container",
@@ -61,7 +61,7 @@
 		{
 			"name": "chat-input",
 			"type": "chatInput",
-			"dependencies": ["react", "lucide-react", "motion/react"],
+			"dependencies": ["react", "lucide-react", "motion"],
 			"registryDependencies": [
 				"cedar-os",
 				"context-badge-row",
@@ -109,7 +109,7 @@
 		{
 			"name": "chat-bubbles",
 			"type": "chatMessages",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"registryDependencies": ["cedar-os", "chat-renderer"],
 			"files": ["ChatBubbles.tsx"],
 			"meta": {
@@ -187,7 +187,7 @@
 		{
 			"name": "streaming-text",
 			"type": "chatMessages",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"files": ["StreamingText.tsx"],
 			"meta": {
 				"importName": "StreamingText",
@@ -222,7 +222,7 @@
 		{
 			"name": "container-3d",
 			"type": "containers",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["Container3D.tsx"],
 			"meta": {
@@ -234,7 +234,7 @@
 		{
 			"name": "container-3d-button",
 			"type": "containers",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"registryDependencies": ["cedar-os", "container-3d", "glowing-mesh"],
 			"files": ["Container3DButton.tsx"],
 			"meta": {
@@ -246,7 +246,7 @@
 		{
 			"name": "flat-3d-button",
 			"type": "containers",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"registryDependencies": ["cedar-os", "flat-3d-container"],
 			"files": ["Flat3dButton.tsx"],
 			"meta": {
@@ -258,7 +258,7 @@
 		{
 			"name": "flat-3d-container",
 			"type": "containers",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["Flat3dContainer.tsx"],
 			"meta": {
@@ -270,7 +270,7 @@
 		{
 			"name": "glassy-pane-container",
 			"type": "containers",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["GlassyPaneContainer.tsx"],
 			"meta": {
@@ -282,7 +282,7 @@
 		{
 			"name": "floating-chat-input",
 			"type": "chatInput",
-			"dependencies": ["react", "lucide-react", "motion/react"],
+			"dependencies": ["react", "lucide-react", "motion"],
 			"registryDependencies": ["cedar-os", "chat-input"],
 			"files": ["FloatingChatInput.tsx"],
 			"meta": {
@@ -305,7 +305,7 @@
 		{
 			"name": "glowing-mesh",
 			"type": "ornaments",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"files": ["GlowingMesh.tsx"],
 			"meta": {
 				"importName": "GlowingMesh",
@@ -316,7 +316,7 @@
 		{
 			"name": "glowing-mesh-gradient",
 			"type": "ornaments",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"files": ["GlowingMeshGradient.tsx"],
 			"meta": {
 				"importName": "GlowingMeshGradient",
@@ -327,7 +327,7 @@
 		{
 			"name": "gradient-mesh",
 			"type": "ornaments",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["GradientMesh.tsx"],
 			"meta": {
@@ -339,7 +339,7 @@
 		{
 			"name": "inset-glow",
 			"type": "ornaments",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["InsetGlow.tsx"],
 			"meta": {
@@ -351,7 +351,7 @@
 		{
 			"name": "floating-container",
 			"type": "structural",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"files": ["FloatingContainer.tsx"],
 			"meta": {
 				"importName": "FloatingContainer",
@@ -362,7 +362,7 @@
 		{
 			"name": "side-panel-container",
 			"type": "structural",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["SidePanelContainer.tsx"],
 			"meta": {
@@ -374,7 +374,7 @@
 		{
 			"name": "shimmer-text",
 			"type": "text",
-			"dependencies": ["react", "motion/react", "lucide-react"],
+			"dependencies": ["react", "motion", "lucide-react"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["ShimmerText.tsx"],
 			"meta": {
@@ -386,7 +386,7 @@
 		{
 			"name": "typewriter-text",
 			"type": "text",
-			"dependencies": ["react", "motion/react"],
+			"dependencies": ["react", "motion"],
 			"registryDependencies": ["cedar-os", "markdown-renderer"],
 			"files": ["TypewriterText.tsx"],
 			"meta": {
@@ -409,12 +409,7 @@
 		{
 			"name": "slider-3d",
 			"type": "ui",
-			"dependencies": [
-				"react",
-				"motion/react",
-				"motion-plus-react",
-				"lucide-react"
-			],
+			"dependencies": ["react", "motion", "motion-plus-react", "lucide-react"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["Slider3D.tsx"],
 			"meta": {
@@ -442,7 +437,7 @@
 		{
 			"name": "diff-container",
 			"type": "diffs",
-			"dependencies": ["react", "lucide-react", "motion/react"],
+			"dependencies": ["react", "lucide-react", "motion"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["DiffContainer.tsx"],
 			"meta": {
@@ -454,7 +449,7 @@
 		{
 			"name": "diff-text",
 			"type": "diffs",
-			"dependencies": ["react", "motion/react", "diff"],
+			"dependencies": ["react", "motion", "diff"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["DiffText.tsx"],
 			"meta": {
@@ -478,7 +473,7 @@
 		{
 			"name": "questioning-spell",
 			"type": "spells",
-			"dependencies": ["react", "lucide-react", "motion/react"],
+			"dependencies": ["react", "lucide-react", "motion"],
 			"registryDependencies": ["cedar-os", "floating-chat-input"],
 			"files": ["QuestioningSpell.tsx"],
 			"meta": {
@@ -490,7 +485,7 @@
 		{
 			"name": "radial-menu-spell",
 			"type": "spells",
-			"dependencies": ["react", "lucide-react", "motion/react"],
+			"dependencies": ["react", "lucide-react", "motion"],
 			"registryDependencies": ["cedar-os", "container-3d"],
 			"files": ["RadialMenuSpell.tsx"],
 			"meta": {
@@ -502,7 +497,7 @@
 		{
 			"name": "tooltip-menu-spell",
 			"type": "spells",
-			"dependencies": ["react", "lucide-react", "motion/react"],
+			"dependencies": ["react", "lucide-react", "motion"],
 			"registryDependencies": [
 				"cedar-os",
 				"tooltip-menu",
