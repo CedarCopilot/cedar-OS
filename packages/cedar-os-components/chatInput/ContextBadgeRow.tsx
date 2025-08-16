@@ -4,9 +4,9 @@ import {
 	useRenderAdditionalContext,
 	ContextEntry,
 	withClassName,
+	type CedarEditor as Editor,
 } from 'cedar-os';
 import { X } from 'lucide-react';
-import type { CedarEditor as Editor } from 'cedar-os';
 
 interface ContextBadgeRowProps {
 	editor?: Editor | null;

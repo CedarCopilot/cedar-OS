@@ -5,7 +5,7 @@
 
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
-import { initCommand, InitOptions } from './commands/init';
+import { addSaplingCommand, AddSaplingOptions } from './commands/add-sapling';
 
 // ---------------------------------------------
 // Detect if the current directory is a Next.js
@@ -39,7 +39,7 @@ export function isReactProject(cwd: string = process.cwd()): boolean {
 		);
 		return (
 			(pkg.dependencies?.react !== undefined ||
-			pkg.devDependencies?.react !== undefined) &&
+				pkg.devDependencies?.react !== undefined) &&
 			// Exclude Next.js projects (already handled separately)
 			pkg.dependencies?.next === undefined &&
 			pkg.devDependencies?.next === undefined
@@ -51,9 +51,9 @@ export function isReactProject(cwd: string = process.cwd()): boolean {
 
 // ---------------------------------------------
 // Run the Cedar component installer (init).
-// We call the existing initCommand so the
+// We call the existing add-sapling so the
 // logic stays in one place.
 // ---------------------------------------------
-export async function runCedarAdd(opts: InitOptions): Promise<void> {
-	await initCommand(opts);
+export async function runCedarAdd(opts: AddSaplingOptions): Promise<void> {
+	await addSaplingCommand(opts);
 }

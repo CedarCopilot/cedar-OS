@@ -1,3 +1,9 @@
+// packages/cli/src/utils/downloadComponents/registry.ts
+// --------------------------------------------------
+// Component registry and dependency management
+// Handles fetching component metadata and resolving dependencies
+// --------------------------------------------------
+
 import fetch from 'node-fetch';
 
 // Match the registry structure from cedar-os-components
@@ -13,8 +19,10 @@ export interface ComponentRegistryEntry {
 		| 'structural'
 		| 'text'
 		| 'ui'
-		| 'diffs';
+		| 'diffs'
+		| 'spells';
 	dependencies?: string[];
+	registryDependencies?: string[]; // Other cedar components this component depends on
 	files: string[];
 	meta: {
 		importName: string;
@@ -29,6 +37,7 @@ export interface ComponentInfo {
 	description: string;
 	files: string[];
 	dependencies?: string[];
+	registryDependencies?: string[]; // Other cedar components this component depends on
 	importName: string;
 	displayName: string;
 }
@@ -70,7 +79,7 @@ async function fetchRegistry(): Promise<ComponentRegistryEntry[]> {
 	}
 }
 
-// Helper function to get file path based on component type (from registry.ts)
+// Helper function to get file path based on component type
 function getFilePath(
 	type: ComponentRegistryEntry['type'],
 	fileName: string
@@ -86,6 +95,7 @@ function getFilePath(
 		text: 'text',
 		ui: 'ui',
 		diffs: 'diffs',
+		spells: 'spells',
 	};
 
 	return `${typeMap[type]}/${fileName}`;
@@ -101,6 +111,7 @@ function registryEntryToComponentInfo(
 		description: entry.meta.description,
 		files: entry.files.map((file) => getFilePath(entry.type, file)),
 		dependencies: entry.dependencies,
+		registryDependencies: entry.registryDependencies,
 		importName: entry.meta.importName,
 		displayName: entry.meta.displayName,
 	};
@@ -158,5 +169,33 @@ export async function getCategories(): Promise<Record<string, string>> {
 		text: 'Text Components',
 		ui: 'UI Components',
 		diffs: 'Diff Components',
+		spells: 'Spell Components',
 	};
+}
+
+// Recursively resolve all component dependencies
+export async function resolveComponentDependencies(
+	componentNames: string[]
+): Promise<string[]> {
+	const registry = await fetchRegistry();
+	const resolved = new Set<string>();
+	const toResolve = [...componentNames];
+
+	while (toResolve.length > 0) {
+		const current = toResolve.pop()!;
+		if (resolved.has(current)) continue;
+
+		resolved.add(current);
+
+		const component = registry.find((c) => c.name === current);
+		if (component?.registryDependencies) {
+			for (const dep of component.registryDependencies) {
+				if (!resolved.has(dep) && dep !== 'cedar-os') {
+					toResolve.push(dep);
+				}
+			}
+		}
+	}
+
+	return Array.from(resolved);
 }

@@ -25,6 +25,7 @@
 				"./packages/cedar-os-components/*"
 			],
 			"cedar-os": ["./packages/cedar-os/src"],
+			"cedar-os-components": ["./packages/cedar-os-components"],
 			"react": ["./node_modules/@types/react"]
 		}
 	},

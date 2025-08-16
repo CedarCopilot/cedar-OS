@@ -1,0 +1,53 @@
+name: Require Registry Update
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  registry-check:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for diff
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+
+      - name: Check for new TSX files and registry.json updates
+        id: registry_check
+        run: |
+          git fetch origin +refs/heads/${{ github.event.pull_request.base.ref }}:refs/remotes/origin/${{ github.event.pull_request.base.ref }}
+          base_sha=$(git merge-base origin/${{ github.event.pull_request.base.ref }} HEAD)
+          head_sha=$(git rev-parse HEAD)
+
+          echo "Base SHA: $base_sha"
+          echo "Head SHA: $head_sha"
+
+          # Check for new or renamed TSX files in cedar-os-components package
+          new_tsx_files=$(git diff --name-status "$base_sha" "$head_sha" | grep -E '^[AR].*packages/cedar-os-components/.*\.tsx$' | wc -l)
+          echo "new_tsx_count=$new_tsx_files" >> $GITHUB_OUTPUT
+
+          # Check if registry.json was modified
+          registry_modified=$(git diff --name-only "$base_sha" "$head_sha" | grep '^packages/cedar-os-components/registry\.json$' | wc -l)
+          echo "registry_modified=$registry_modified" >> $GITHUB_OUTPUT
+
+          echo "New TSX files: $new_tsx_files"
+          echo "Registry modified: $registry_modified"
+
+          # If new or renamed TSX files were added but registry.json wasn't modified, fail the check
+          if [ "$new_tsx_files" -gt 0 ] && [ "$registry_modified" -eq 0 ]; then
+            echo "❌ New or renamed TSX component files were detected but packages/cedar-os-components/registry.json was not updated." >&2
+            echo "Please update the registry.json file to include the new/renamed component(s)." >&2
+            echo "Changed TSX files:" >&2
+            git diff --name-status "$base_sha" "$head_sha" | grep -E '^[AR].*packages/cedar-os-components/.*\.tsx$' | awk '{print "  - " $1 " " $2}' >&2
+            exit 1
+          elif [ "$new_tsx_files" -gt 0 ] && [ "$registry_modified" -gt 0 ]; then
+            echo "✅ TSX components changed and registry.json updated."
+          else
+            echo "ℹ️ No new or renamed TSX files in cedar-os-components package."
+          fi
