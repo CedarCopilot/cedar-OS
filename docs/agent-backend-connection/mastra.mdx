@@ -16,17 +16,19 @@ Mastra is a full-featured typescript framework to build agents. It provides memo
 ## Initial Configuration
 
 <Steps>
-<Step title="Spin up a Mastra backend">
-Follow the official guide: [Install using the `create-mastra` CLI](https://mastra.ai/en/docs/getting-started/installation#install-using-the-create-mastra-cli).
+<Step title="Set up your project">
+Run `plant-seed` and select either:
+- **Mastra starter** - for a complete setup with both frontend and backend
+- **Mastra reference repo** - to see a full implementation example
+
+If you already have a Mastra backend, use the **blank frontend cedar repo** option instead.
+
+For reference, you can still follow the official Mastra guide: [Install using the `create-mastra` CLI](https://mastra.ai/en/docs/getting-started/installation#install-using-the-create-mastra-cli).
 </Step>
 
-<Step title='Understand Cedar-Backend Communication'>
-	Understand how Cedar speaks to your backend, including default API routes,
-	return types, etc. - [Agent Backend
-	Connection](https://docs.cedarcopilot.com/agent-backend-connection/agent-backend-connection)
-</Step>
+<Step title="Wrap your app with CedarCopilot">
+Wrap your application with the CedarCopilot provider to connect to your Mastra backend:
 
-<Step title="Point Cedar-OS at your backend">
 ```tsx
 import { CedarCopilot } from 'cedar-os';
 function App() {
@@ -41,10 +43,12 @@ function App() {
 		</CedarCopilot>
 	); 
 }
-````
+```
 </Step>
 
-<Step title="Backend Configuration">
+<Step title="Configure Mastra endpoints to talk to Cedar">
+Configure your Mastra backend to work with Cedar by following the Mastra-specific configuration options: [Mastra Configuration Options](https://docs.cedarcopilot.com/agent-backend-connection/agent-backend-connection#mastra-configuration-options)
+
 [Register API routes](https://mastra.ai/en/examples/deployment/custom-api-route) in your Mastra server so Cedar's chat components have something to talk to:
 
 ```ts mastra/src/index.ts
@@ -69,7 +73,6 @@ registerApiRoute('/chat/stream', {
 	},
 });
 ```
-
 </Step>
 
 <Step title="Add Cedar Chat">
