@@ -23,7 +23,11 @@
 			{
 				"group": "Getting Started",
 				"icon": "play",
-				"pages": ["getting-started/getting-started", "getting-started/cli", "getting-started/organizing-a-cedar-project"]
+				"pages": [
+					"getting-started/getting-started",
+					"getting-started/cli",
+					"getting-started/organizing-a-cedar-project"
+				]
 			},
 			{
 				"group": "Connecting to an Agent",
@@ -134,7 +138,7 @@
 			},
 			{
 				"label": "Discord",
-				"href": "https://discord.gg/k97ygzPD",
+				"href": "https://discord.gg/4AWawRjNdZ",
 				"icon": "discord"
 			}
 		]
