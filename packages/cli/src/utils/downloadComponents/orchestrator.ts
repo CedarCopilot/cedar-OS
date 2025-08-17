@@ -67,10 +67,16 @@ export async function downloadComponentsFlow(
 	if (options.all) {
 		selectedComponents = allComponents;
 	} else if (options.components && options.components.length > 0) {
-		// Filter to only requested components
-		selectedComponents = allComponents.filter((comp: ComponentInfo) =>
-			options.components!.includes(comp.name)
-		);
+		// Map user-provided identifiers (may be importName, displayName, or registry name)
+		const normalize = (str: string) =>
+			str.toLowerCase().replace(/[^a-z0-9]/g, '');
+		const requested = options.components!.map(normalize);
+		selectedComponents = allComponents.filter((comp: ComponentInfo) => {
+			const candidates = [comp.name, comp.importName, comp.displayName].filter(
+				Boolean
+			);
+			return candidates.some((c) => requested.includes(normalize(c)));
+		});
 	} else if (!options.yes) {
 		// Interactive selection
 		selectedComponents = await selectComponents(allComponents, {

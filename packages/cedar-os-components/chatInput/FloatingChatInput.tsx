@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { ChatInput } from './ChatInput';
-import { cn } from '../../cedar-os/src/styles/stylingUtils';
+import { cn } from 'cedar-os';
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 

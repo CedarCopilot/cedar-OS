@@ -70,7 +70,7 @@ export async function installTailwindCSS(): Promise<boolean> {
 	const { manager, installCmd } = detectPackageManager();
 	const devFlag = manager === 'npm' ? '--save-dev' : '-D';
 
-	const deps = ['tailwindcss', 'postcss', 'autoprefixer'];
+	const deps = ['@tailwindcss/postcss', 'tailwindcss'];
 
 	const installSpin = spinner();
 	installSpin.start(`Installing Tailwind CSS using ${manager}...`);
@@ -90,22 +90,82 @@ export async function installTailwindCSS(): Promise<boolean> {
 
 // Initialize Tailwind configuration
 export async function initializeTailwindConfig(): Promise<boolean> {
-	const { manager } = detectPackageManager();
-	const runCmd = manager === 'npm' ? 'npx' : manager;
-
 	const initSpin = spinner();
 	initSpin.start('Initializing Tailwind CSS configuration...');
 
 	try {
-		await runCommand(runCmd, ['tailwindcss', 'init', '-p'], {
-			stdio: 'ignore',
-		});
+		// Create postcss.config.mjs with the new @tailwindcss/postcss plugin
+		const postcssConfig = `const config = {
+  plugins: ["@tailwindcss/postcss"],
+};
+
+export default config;`;
+
+		await fs.writeFile(
+			path.join(process.cwd(), 'postcss.config.mjs'),
+			postcssConfig,
+			'utf-8'
+		);
+
 		initSpin.stop('✅ Tailwind configuration created!');
 		return true;
 	} catch (error) {
 		initSpin.stop('❌ Failed to initialize Tailwind configuration');
 		console.error(pc.red('Error initializing Tailwind:'), error);
 		return false;
+	}
+}
+
+// Add Tailwind import to global CSS file
+export async function addTailwindImportToCSS(): Promise<void> {
+	const commonCssFiles = [
+		'src/styles/globals.css',
+		'src/app/globals.css',
+		'styles/globals.css',
+		'app/globals.css',
+		'src/index.css',
+		'index.css',
+	];
+
+	let cssFilePath: string | undefined;
+	
+	// Find existing CSS file
+	for (const filePath of commonCssFiles) {
+		const fullPath = path.join(process.cwd(), filePath);
+		try {
+			await fs.access(fullPath);
+			cssFilePath = fullPath;
+			break;
+		} catch {
+			// File doesn't exist, continue checking
+		}
+	}
+
+	if (!cssFilePath) {
+		console.log(pc.yellow('⚠️  Could not find a global CSS file.'));
+		console.log(pc.gray('   Please add the following to your main CSS file:'));
+		console.log(pc.cyan('   @import "tailwindcss";'));
+		return;
+	}
+
+	try {
+		let cssContent = await fs.readFile(cssFilePath, 'utf-8');
+		
+		// Check if Tailwind import already exists
+		if (cssContent.includes('@import "tailwindcss"') || cssContent.includes("@import 'tailwindcss'")) {
+			console.log(pc.green('✅ Tailwind import already exists in CSS'));
+			return;
+		}
+
+		// Add import to the top of the file
+		cssContent = `@import "tailwindcss";\n\n${cssContent}`;
+		
+		await fs.writeFile(cssFilePath, cssContent, 'utf-8');
+		console.log(pc.green(`✅ Added Tailwind import to ${path.relative(process.cwd(), cssFilePath)}`));
+	} catch {
+		console.log(pc.yellow('⚠️  Could not update CSS file automatically.'));
+		console.log(pc.gray('   Please add the following to your main CSS file:'));
+		console.log(pc.cyan('   @import "tailwindcss";'));
 	}
 }
 
@@ -198,10 +258,9 @@ export async function ensureTailwindSetup(componentDir: string): Promise<void> {
 				pc.cyan(
 					`   ${manager} ${
 						manager === 'npm' ? 'install' : 'add'
-					} ${devFlag} tailwindcss postcss autoprefixer`
+					} ${devFlag} @tailwindcss/postcss tailwindcss`
 				)
 			);
-			console.log(pc.cyan(`   npx tailwindcss init -p`));
 			console.log(
 				pc.gray(
 					'\n   Then add Cedar components to your tailwind.config.js content array:'
@@ -217,27 +276,20 @@ export async function ensureTailwindSetup(componentDir: string): Promise<void> {
 			process.exit(1);
 		}
 
-		// Initialize config if it doesn't exist
-		if (!tailwindInfo.hasConfig) {
-			const initialized = await initializeTailwindConfig();
-			if (!initialized) {
-				console.log(
-					pc.yellow('⚠️  Please run "npx tailwindcss init -p" manually.')
-				);
-			}
+		// Initialize PostCSS config
+		const initialized = await initializeTailwindConfig();
+		if (!initialized) {
+			console.log(pc.yellow('⚠️  Please create postcss.config.mjs manually.'));
 		}
+
+		// Add Tailwind import to CSS
+		await addTailwindImportToCSS();
 
 		// Update config to include Cedar paths
 		await updateTailwindConfig(componentDir);
 
 		// Show CSS import instructions
 		console.log(pc.green('\n✅ Tailwind CSS setup complete!'));
-		console.log(
-			pc.gray('\n   Make sure to import Tailwind CSS in your global CSS file:')
-		);
-		console.log(pc.cyan('   @tailwind base;'));
-		console.log(pc.cyan('   @tailwind components;'));
-		console.log(pc.cyan('   @tailwind utilities;'));
 	} else {
 		console.log(pc.green('✅ Tailwind CSS detected'));
 

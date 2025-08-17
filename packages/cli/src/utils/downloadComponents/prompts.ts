@@ -66,9 +66,9 @@ export async function selectComponents(
 		.filter(([, comps]) => comps.length > 0)
 		.flatMap(([category, comps]) => [
 			{
-				value: `__category_${category}`,
+				type: 'separator',
+				value: '',
 				label: pc.bold(pc.cyan(`── ${categories[category]} ──`)),
-				hint: '',
 			},
 			...comps.map((comp) => ({
 				value: comp.name,
@@ -79,9 +79,7 @@ export async function selectComponents(
 
 	const selected = await multiselect({
 		message: 'Select components to install:',
-		options: componentOptions.filter(
-			(opt) => !opt.value.startsWith('__category_')
-		),
+		options: componentOptions,
 		initialValues: options.preselected || [],
 	});
 
