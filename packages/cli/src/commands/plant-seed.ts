@@ -180,7 +180,7 @@ export async function plantSeedCommand(opts: PlantSeedOptions) {
 				})),
 				{
 					value: 'none',
-					label: 'None (Standard Next.js app)',
+					label: 'Initialize a standard Next.js app with Cedar installed',
 				},
 			];
 
@@ -188,7 +188,7 @@ export async function plantSeedCommand(opts: PlantSeedOptions) {
 			const templateChoice = await select({
 				message: 'Choose a project template:',
 				options: templateOptions,
-				initialValue: 'mastra', // Default to Mastra (recommended)
+				initialValue: 'mastra-blank', // Default to Mastra (recommended)
 			});
 
 			if (isCancel(templateChoice)) {

@@ -22,10 +22,14 @@ export interface PluckComponentOptions {
 
 // Main pluck-component command function
 export async function pluckComponentCommand(options: PluckComponentOptions) {
-	intro(pc.bgMagenta(pc.black(' cedar pluck-component ')));
-	console.log(pc.green('Pluck components from cedar-os-components package!'));
-	console.log(
-		pc.cyan('🌿 Download specific components locally for full customization...')
+	intro(
+		pc.bgMagenta(pc.black(' cedar pluck-component ')) +
+			'\n' +
+			pc.green('Pluck components from cedar-os-components package!') +
+			'\n' +
+			pc.cyan(
+				'🌿 Download specific components locally for full customization...'
+			)
 	);
 
 	try {

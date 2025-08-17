@@ -17,7 +17,7 @@
 // --------------------------------------------------
 
 import * as p from '@clack/prompts';
-import { intro, outro, spinner, select } from '@clack/prompts';
+import { intro, outro, spinner } from '@clack/prompts';
 import pc from 'picocolors';
 import {
 	downloadComponentsFlow,
@@ -28,63 +28,6 @@ import {
 import { detectPackageManager } from '../utils/detectPackageManager';
 import { runCommand } from '../utils/runCommand';
 import { ensureTailwindSetup } from '../utils/tailwindSetup';
-
-// Handle npm-based installation
-async function handleNpmInstallation() {
-	const depSpin = spinner();
-	depSpin.start('Installing cedar-os-components from npm...');
-
-	const { manager } = detectPackageManager();
-	const installCmd = manager === 'npm' ? 'install' : 'add';
-
-	try {
-		await runCommand(manager, [installCmd, 'cedar-os-components@latest'], {
-			stdio: 'ignore',
-		});
-		depSpin.stop('✅ cedar-os-components installed successfully!');
-	} catch (error) {
-		depSpin.stop('❌ Failed to install cedar-os-components');
-		console.error(pc.red('Error installing package:'), error);
-		process.exit(1);
-	}
-
-	// Also ensure cedar-os is installed
-	const cedarSpin = spinner();
-	cedarSpin.start('Ensuring cedar-os is installed...');
-	try {
-		await runCommand(manager, [installCmd, 'cedar-os@latest'], {
-			stdio: 'ignore',
-		});
-		cedarSpin.stop('✅ cedar-os installed successfully!');
-	} catch (error) {
-		cedarSpin.stop('❌ Failed to install cedar-os');
-		console.error(pc.red('Error installing package:'), error);
-		process.exit(1);
-	}
-
-	// Show next steps for npm installation
-	console.log('\n' + pc.bold('✨ Cedar components installed successfully!'));
-	console.log('\n' + pc.bold('Next steps:'));
-	console.log(pc.gray('• Import components directly from the package:'));
-	console.log(
-		pc.cyan(
-			'  import { FloatingCedarChat } from "cedar-os-components/chatComponents";'
-		)
-	);
-	console.log(
-		pc.cyan('  import { ChatInput } from "cedar-os-components/chatInput";')
-	);
-	console.log(
-		pc.cyan('  import { Container3D } from "cedar-os-components/containers";')
-	);
-	console.log(pc.gray('  ...and more'));
-	console.log(
-		'\n' +
-			pc.gray('📖 Learn more: ') +
-			pc.cyan('https://docs.cedarcopilot.com/getting-started/getting-started')
-	);
-	outro(pc.green('Happy coding! 🚀'));
-}
 
 // -----------------------------
 export interface AddSaplingOptions {
@@ -105,41 +48,10 @@ export async function addSaplingCommand(options: AddSaplingOptions) {
 	console.log(pc.green("Welcome to Cedar-OS, let's get you set up!"));
 
 	try {
+		// STEP 1: INSTALLATION MODE (LOCAL ONLY)
 		// ==========================================================================
-		// STEP 1: PROMPT FOR INSTALLATION TYPE
-		// ==========================================================================
-		let installationType: 'local' | 'npm' = 'local';
-
-		if (!options.yes) {
-			const installChoice = await select({
-				message: 'How would you like to install Cedar components?',
-				options: [
-					{
-						value: 'local',
-						label: 'Download components locally (shadcn style)',
-						hint: 'Full control and customization',
-					},
-					{
-						value: 'npm',
-						label: 'Install cedar-os-components from npm',
-						hint: 'Easier updates, no local files',
-					},
-				],
-				initialValue: 'local',
-			});
-
-			if (p.isCancel(installChoice)) {
-				p.cancel('Operation cancelled.');
-				process.exit(0);
-			}
-
-			installationType = installChoice as 'local' | 'npm';
-		}
-
-		// If npm installation, handle it separately
-		if (installationType === 'npm') {
-			return await handleNpmInstallation();
-		}
+		// The CLI previously allowed installing cedar-os-components from npm directly.
+		// We now enforce local source downloads only, so we skip the old prompt/branch.
 
 		// Otherwise continue with local installation
 		console.log(

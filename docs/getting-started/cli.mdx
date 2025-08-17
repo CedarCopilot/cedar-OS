@@ -74,20 +74,15 @@ cedar pluck-component [options]
 - `-a, --all` - Download all available components
 - `-y, --yes` - Skip confirmation prompts
 
-## Installation Options for Cedar-OS Components
+You can either:
 
-Our UI components (chat, spells, etc.) are published in an npm package called `cedar-os-components`. However, we also offer the option of downloading them locally (shadcn style) for full customization without relying on configurations. When running any of the above commands, you'll be asked to choose:
+- Pass one or more component names with `-c` to download them directly, e.g.
 
-1. **Local installation (shadcn style)** - Downloads component source files locally
+```bash
+cedar pluck-component -c FloatingCedarChat TooltipMenu
+```
 
-   - ✅ Full control and customization
-   - ✅ No external dependencies after installation
-   - ❌ Manual updates required
-
-2. **NPM package installation** - Installs from `cedar-os-components` package
-   - ✅ Easier updates
-   - ✅ No local files to maintain
-   - ❌ Less customization flexibility
+- Omit `-c` to open an interactive list where you can select components.
 
 ## Project Templates
 

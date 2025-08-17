@@ -22,6 +22,10 @@ export function detectPackageManager(): {
 		return { manager: 'bun', installCmd: ['install'] };
 	}
 
+	if (fs.existsSync(path.join(cwd, 'package-lock.json'))) {
+		return { manager: 'npm', installCmd: ['install'] };
+	}
+
 	// Check if package managers are available in PATH
 	try {
 		spawnSync('pnpm', ['--version'], { stdio: 'ignore' });

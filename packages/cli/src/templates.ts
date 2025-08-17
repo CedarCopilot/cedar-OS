@@ -25,7 +25,7 @@ const getBlankProjectNextSteps = (
 			manager === 'npm' ? 'npm run dev' : `${manager} dev`
 		)}`,
 		pc.green(
-			'\n🎉 Cedar chat should work! This version has no backend - it uses the OpenAI API directly.'
+			'\n🎉 Cedar chat should work! This uses the OpenAI API directly. It can be configured to talk to any backend.'
 		),
 	];
 };
@@ -66,13 +66,6 @@ const getMastraReferenceNextSteps = (
 
 // Template registry - easily extensible for new templates
 export const TEMPLATES: Record<string, Template> = {
-	mastra: {
-		name: 'Cedar + Mastra reference repo',
-		description: 'Reference repo with all Cedar features',
-		url: 'https://github.com/CedarCopilot/cedar-mastra-starter',
-		includesCedar: true,
-		getNextSteps: getMastraReferenceNextSteps,
-	},
 	blank: {
 		name: 'Blank Cedar project',
 		description: 'Next.js app with Cedar (no backend)',
@@ -81,11 +74,18 @@ export const TEMPLATES: Record<string, Template> = {
 		getNextSteps: getBlankProjectNextSteps,
 	},
 	'mastra-blank': {
-		name: 'Cedar + Mastra blank',
+		name: 'Cedar + Mastra',
 		description: 'Next.js app with Mastra backend as monorepo',
 		url: 'https://github.com/CedarCopilot/cedar-mastra-blank',
 		includesCedar: true,
 		getNextSteps: getMastraProjectNextSteps,
+	},
+	mastra: {
+		name: 'Cedar + Mastra reference repo',
+		description: 'Reference repo with all Cedar features',
+		url: 'https://github.com/CedarCopilot/cedar-mastra-starter',
+		includesCedar: true,
+		getNextSteps: getMastraReferenceNextSteps,
 	},
 };
 
