@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+import { compare, Operation } from 'fast-json-patch';
 
 /**
  * DiffHistorySlice manages diffs so that we can render changes and let the user accept, reject, and manage them.
@@ -13,6 +14,7 @@ export interface DiffState<T = unknown> {
 	oldState: T;
 	newState: T;
 	isDiffMode: boolean;
+	patches?: Operation[]; // JSON patches describing the changes from oldState to newState
 }
 
 export interface DiffHistoryState<T = unknown> {
@@ -103,33 +105,22 @@ export const createDiffHistorySlice: StateCreator<
 		const updatedHistory = [...history, originalDiffState];
 
 		// Step 2: Create the new diffState based on isDiffChange flag
-		let newDiffState: DiffState<T>;
+		// Determine oldState: if isDiffChange and not previously in diff mode, use previous newState
+		// Otherwise keep the original oldState
+		const oldStateForDiff =
+			isDiffChange && !originalDiffState.isDiffMode
+				? originalDiffState.newState
+				: originalDiffState.oldState;
 
-		if (isDiffChange) {
-			// Determine the oldState based on the original diffState's isDiffMode
-			let oldStateForNewDiff: T;
+		// Generate patches to describe the changes
+		const patches = compare(oldStateForDiff as object, newState as object);
 
-			if (!originalDiffState.isDiffMode) {
-				// If original was not in diff mode, use the previous newState as oldState
-				oldStateForNewDiff = originalDiffState.newState;
-			} else {
-				// If original was in diff mode, keep the previous oldState
-				oldStateForNewDiff = originalDiffState.oldState;
-			}
-
-			newDiffState = {
-				oldState: oldStateForNewDiff,
-				newState: newState,
-				isDiffMode: true, // Set to true since this is a diff change
-			};
-		} else {
-			// If not a diff change, just update the newState while keeping oldState
-			newDiffState = {
-				oldState: originalDiffState.oldState,
-				newState: newState,
-				isDiffMode: false, // Not a diff change
-			};
-		}
+		const newDiffState: DiffState<T> = {
+			oldState: oldStateForDiff,
+			newState: newState,
+			isDiffMode: isDiffChange,
+			patches,
+		};
 
 		// Create the updated diff history state
 		const updatedDiffHistoryState: DiffHistoryState<T> = {
@@ -157,14 +148,16 @@ export const createDiffHistorySlice: StateCreator<
 		const { diffState, history, diffMode } = currentDiffHistoryState;
 
 		// Accept changes by copying newState into oldState (sync states)
+		// No patches needed as states are now identical
 		const acceptedDiffState: DiffState = {
 			oldState: diffState.newState, // Copy newState to oldState
 			newState: diffState.newState, // Keep newState as is
 			isDiffMode: false, // No longer in diff mode
+			patches: [], // Empty patches as states are synced
 		};
 
-		// Save the accepted state to history
-		const updatedHistory = [...history, acceptedDiffState];
+		// Save the current diff state to history before accepting
+		const updatedHistory = [...history, diffState];
 
 		const updatedDiffHistoryState: DiffHistoryState = {
 			diffState: acceptedDiffState,
@@ -193,14 +186,16 @@ export const createDiffHistorySlice: StateCreator<
 		const { diffState, history, diffMode } = currentDiffHistoryState;
 
 		// Reject changes by copying oldState into newState (revert to old state)
+		// No patches needed as states are now identical
 		const rejectedDiffState: DiffState = {
 			oldState: diffState.oldState, // Keep oldState as is
 			newState: diffState.oldState, // Copy oldState to newState
 			isDiffMode: false, // No longer in diff mode
+			patches: [], // Empty patches as states are synced
 		};
 
-		// Save the rejected state to history
-		const updatedHistory = [...history, rejectedDiffState];
+		// Save the current diff state to history before rejecting
+		const updatedHistory = [...history, diffState];
 
 		const updatedDiffHistoryState: DiffHistoryState = {
 			diffState: rejectedDiffState,

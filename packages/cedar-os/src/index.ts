@@ -203,6 +203,7 @@ export type {
 	DiffState,
 	DiffHistoryState,
 	DiffHistorySlice,
+	Operation,
 } from '@/store/diffHistoryStateSlice';
 
 // Export Tiptap components
