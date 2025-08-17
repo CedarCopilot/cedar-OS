@@ -716,7 +716,7 @@ describe('DiffHistorySlice', () => {
 					patches: [],
 				},
 				history: [],
-				redoStack: undefined as any, // Simulating undefined redo stack
+				redoStack: [],
 				diffMode: 'defaultAccept',
 			};
 
@@ -1068,5 +1068,852 @@ describe('DiffHistorySlice', () => {
 			// Should not have patch for unchanged field
 			expect(patchPaths).not.toContain('/settings/notifications');
 		});
+	});
+});
+
+describe('applyPatchesToDiffState', () => {
+	it('should warn and return early if no existing state', () => {
+		const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+		const patches: Operation[] = [
+			{ op: 'add', path: '/newField', value: 'test' },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('nonExistent', patches, true);
+		});
+
+		expect(consoleWarnSpy).toHaveBeenCalledWith(
+			'No diff history state found for key: nonExistent'
+		);
+		consoleWarnSpy.mockRestore();
+	});
+
+	it('should apply patches to newState and update diff state', () => {
+		interface TestData {
+			name: string;
+			age: number;
+			items?: string[];
+		}
+
+		const initialState: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: { name: 'Alice', age: 25 },
+				newState: { name: 'Alice', age: 25 },
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('patchApplyKey', initialState);
+		});
+
+		// Apply patches to modify the state
+		const patches: Operation[] = [
+			{ op: 'replace', path: '/name', value: 'Bob' },
+			{ op: 'replace', path: '/age', value: 30 },
+			{ op: 'add', path: '/items', value: ['item1', 'item2'] },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('patchApplyKey', patches, false);
+		});
+
+		const result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('patchApplyKey');
+
+		// Check that patches were applied to newState
+		expect(result?.diffState.newState).toEqual({
+			name: 'Bob',
+			age: 30,
+			items: ['item1', 'item2'],
+		});
+
+		// oldState should remain unchanged since isDiffChange is false
+		expect(result?.diffState.oldState).toEqual({ name: 'Alice', age: 25 });
+
+		// Should not be in diff mode
+		expect(result?.diffState.isDiffMode).toBe(false);
+
+		// History should contain the original state
+		expect(result?.history).toHaveLength(1);
+		expect(result?.history[0]).toEqual(initialState.diffState);
+
+		// Redo stack should be cleared
+		expect(result?.redoStack).toEqual([]);
+	});
+
+	it('should handle array operations correctly', () => {
+		interface ArrayTestData {
+			nodes: Array<{ id: string; name: string }>;
+			tags: string[];
+		}
+
+		const initialState: DiffHistoryState<ArrayTestData> = {
+			diffState: {
+				oldState: {
+					nodes: [
+						{ id: '1', name: 'Node 1' },
+						{ id: '2', name: 'Node 2' },
+					],
+					tags: ['tag1', 'tag2'],
+				},
+				newState: {
+					nodes: [
+						{ id: '1', name: 'Node 1' },
+						{ id: '2', name: 'Node 2' },
+					],
+					tags: ['tag1', 'tag2'],
+				},
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('arrayPatchKey', initialState);
+		});
+
+		// Apply patches for array operations
+		const patches: Operation[] = [
+			// Add to end of array using -
+			{ op: 'add', path: '/nodes/-', value: { id: '3', name: 'Node 3' } },
+			// Remove first tag
+			{ op: 'remove', path: '/tags/0' },
+			// Replace a node's name
+			{ op: 'replace', path: '/nodes/1/name', value: 'Updated Node 2' },
+			// Add a new tag at specific index
+			{ op: 'add', path: '/tags/1', value: 'tag3' },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('arrayPatchKey', patches, true);
+		});
+
+		const result = useCedarStore
+			.getState()
+			.getDiffHistoryState<ArrayTestData>('arrayPatchKey');
+
+		// Verify array operations were applied correctly
+		expect(result?.diffState.newState.nodes).toEqual([
+			{ id: '1', name: 'Node 1' },
+			{ id: '2', name: 'Updated Node 2' },
+			{ id: '3', name: 'Node 3' },
+		]);
+
+		expect(result?.diffState.newState.tags).toEqual(['tag2', 'tag3']);
+
+		// Since isDiffChange is true and not previously in diff mode,
+		// oldState should be the previous newState
+		expect(result?.diffState.oldState).toEqual({
+			nodes: [
+				{ id: '1', name: 'Node 1' },
+				{ id: '2', name: 'Node 2' },
+			],
+			tags: ['tag1', 'tag2'],
+		});
+
+		expect(result?.diffState.isDiffMode).toBe(true);
+	});
+
+	it('should handle complex nested patches', () => {
+		interface ComplexData {
+			user: {
+				profile: {
+					name: string;
+					settings: {
+						theme: string;
+						notifications: {
+							email: boolean;
+							push: boolean;
+						};
+					};
+				};
+			};
+			data: Record<string, unknown>;
+		}
+
+		const initialState: DiffHistoryState<ComplexData> = {
+			diffState: {
+				oldState: {
+					user: {
+						profile: {
+							name: 'John',
+							settings: {
+								theme: 'light',
+								notifications: {
+									email: true,
+									push: false,
+								},
+							},
+						},
+					},
+					data: { key1: 'value1' },
+				},
+				newState: {
+					user: {
+						profile: {
+							name: 'John',
+							settings: {
+								theme: 'light',
+								notifications: {
+									email: true,
+									push: false,
+								},
+							},
+						},
+					},
+					data: { key1: 'value1' },
+				},
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'holdAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('complexPatchKey', initialState);
+		});
+
+		// Apply complex nested patches
+		const patches: Operation[] = [
+			{ op: 'replace', path: '/user/profile/name', value: 'Jane' },
+			{ op: 'replace', path: '/user/profile/settings/theme', value: 'dark' },
+			{
+				op: 'replace',
+				path: '/user/profile/settings/notifications/push',
+				value: true,
+			},
+			{ op: 'add', path: '/data/key2', value: 'value2' },
+			{ op: 'remove', path: '/data/key1' },
+			{ op: 'add', path: '/data/nested', value: { deep: { value: 123 } } },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('complexPatchKey', patches, false);
+		});
+
+		const result = useCedarStore
+			.getState()
+			.getDiffHistoryState<ComplexData>('complexPatchKey');
+
+		// Verify complex patches were applied correctly
+		expect(result?.diffState.newState).toEqual({
+			user: {
+				profile: {
+					name: 'Jane',
+					settings: {
+						theme: 'dark',
+						notifications: {
+							email: true,
+							push: true,
+						},
+					},
+				},
+			},
+			data: {
+				key2: 'value2',
+				nested: { deep: { value: 123 } },
+			},
+		});
+
+		// oldState should remain unchanged since isDiffChange is false
+		expect(result?.diffState.oldState).toEqual(initialState.diffState.oldState);
+	});
+
+	it('should maintain isDiffChange behavior consistent with setDiffState', () => {
+		interface TestData {
+			value: number;
+		}
+
+		// Test 1: isDiffChange=true when not previously in diff mode
+		const initialState1: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: { value: 1 },
+				newState: { value: 2 },
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('diffBehaviorKey1', initialState1);
+		});
+
+		const patches1: Operation[] = [{ op: 'replace', path: '/value', value: 3 }];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('diffBehaviorKey1', patches1, true);
+		});
+
+		const result1 = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('diffBehaviorKey1');
+
+		// When isDiffChange=true and not previously in diff mode,
+		// oldState should be previous newState
+		expect(result1?.diffState.oldState).toEqual({ value: 2 });
+		expect(result1?.diffState.newState).toEqual({ value: 3 });
+		expect(result1?.diffState.isDiffMode).toBe(true);
+
+		// Test 2: isDiffChange=true when already in diff mode
+		const initialState2: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: { value: 10 },
+				newState: { value: 20 },
+				isDiffMode: true,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'holdAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('diffBehaviorKey2', initialState2);
+		});
+
+		const patches2: Operation[] = [
+			{ op: 'replace', path: '/value', value: 30 },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('diffBehaviorKey2', patches2, true);
+		});
+
+		const result2 = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('diffBehaviorKey2');
+
+		// When already in diff mode, oldState should remain the same
+		expect(result2?.diffState.oldState).toEqual({ value: 10 });
+		expect(result2?.diffState.newState).toEqual({ value: 30 });
+		expect(result2?.diffState.isDiffMode).toBe(true);
+	});
+
+	it('should generate correct diff patches after applying input patches', () => {
+		interface TestData {
+			name: string;
+			count: number;
+			items: string[];
+		}
+
+		const initialState: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: { name: 'Original', count: 0, items: [] },
+				newState: { name: 'Modified', count: 5, items: ['a', 'b'] },
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('diffPatchGenKey', initialState);
+		});
+
+		const inputPatches: Operation[] = [
+			{ op: 'replace', path: '/count', value: 10 },
+			{ op: 'add', path: '/items/-', value: 'c' },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('diffPatchGenKey', inputPatches, false);
+		});
+
+		const result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('diffPatchGenKey');
+
+		// Verify that diff patches are generated between oldState and new patched state
+		expect(result?.diffState.patches).toBeDefined();
+		expect(result?.diffState.patches?.length).toBeGreaterThan(0);
+
+		// The patches should describe the changes from oldState to newState
+		const patchPaths = result?.diffState.patches?.map((p) => p.path) || [];
+		expect(patchPaths).toContain('/name'); // Original -> Modified
+		expect(patchPaths).toContain('/count'); // 0 -> 10
+		// Items patches will be more complex due to array changes
+	});
+
+	it('should clear redo stack when applying patches', () => {
+		interface TestData {
+			value: string;
+		}
+
+		const redoState: DiffState<TestData> = {
+			oldState: { value: 'redo-old' },
+			newState: { value: 'redo-new' },
+			isDiffMode: false,
+			patches: [],
+		};
+
+		const initialState: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: { value: 'current-old' },
+				newState: { value: 'current-new' },
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [redoState],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('redoClearKey', initialState);
+		});
+
+		const patches: Operation[] = [
+			{ op: 'replace', path: '/value', value: 'patched' },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('redoClearKey', patches, false);
+		});
+
+		const result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('redoClearKey');
+
+		// Redo stack should be cleared after applying patches
+		expect(result?.redoStack).toEqual([]);
+	});
+
+	it('should save original diffState to history before applying patches', () => {
+		interface TestData {
+			id: number;
+			status: string;
+		}
+
+		const originalDiffState: DiffState<TestData> = {
+			oldState: { id: 1, status: 'pending' },
+			newState: { id: 1, status: 'active' },
+			isDiffMode: true,
+			patches: [
+				{ op: 'replace', path: '/status', value: 'active' },
+			] as Operation[],
+		};
+
+		const initialState: DiffHistoryState<TestData> = {
+			diffState: originalDiffState,
+			history: [],
+			redoStack: [],
+			diffMode: 'holdAccept',
+		};
+
+		act(() => {
+			useCedarStore.getState().setDiffHistoryState('historyKey', initialState);
+		});
+
+		const patches: Operation[] = [
+			{ op: 'replace', path: '/id', value: 2 },
+			{ op: 'replace', path: '/status', value: 'completed' },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('historyKey', patches, false);
+		});
+
+		const result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('historyKey');
+
+		// History should contain the original diff state
+		expect(result?.history).toHaveLength(1);
+		expect(result?.history[0]).toEqual(originalDiffState);
+
+		// New state should have patches applied
+		expect(result?.diffState.newState).toEqual({
+			id: 2,
+			status: 'completed',
+		});
+	});
+
+	it('should handle empty patches array', () => {
+		interface TestData {
+			value: string;
+		}
+
+		const initialState: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: { value: 'old' },
+				newState: { value: 'new' },
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('emptyPatchKey', initialState);
+		});
+
+		const patches: Operation[] = [];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('emptyPatchKey', patches, false);
+		});
+
+		const result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('emptyPatchKey');
+
+		// State should remain unchanged when no patches are applied
+		expect(result?.diffState.newState).toEqual({ value: 'new' });
+		expect(result?.diffState.oldState).toEqual({ value: 'old' });
+
+		// History should still be updated
+		expect(result?.history).toHaveLength(1);
+	});
+
+	it('should handle copy and move operations', () => {
+		interface TestData {
+			source: { value: string };
+			target?: { value: string };
+			array: string[];
+		}
+
+		const initialState: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: {
+					source: { value: 'original' },
+					array: ['a', 'b', 'c'],
+				},
+				newState: {
+					source: { value: 'original' },
+					array: ['a', 'b', 'c'],
+				},
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore.getState().setDiffHistoryState('copyMoveKey', initialState);
+		});
+
+		const patches: Operation[] = [
+			// Copy operation
+			{ op: 'copy', from: '/source', path: '/target' },
+			// Move operation in array
+			{ op: 'move', from: '/array/2', path: '/array/0' },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('copyMoveKey', patches, true);
+		});
+
+		const result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('copyMoveKey');
+
+		// Verify copy operation
+		expect(result?.diffState.newState.target).toEqual({ value: 'original' });
+		expect(result?.diffState.newState.source).toEqual({ value: 'original' });
+
+		// Verify move operation (c moved to beginning)
+		expect(result?.diffState.newState.array).toEqual(['c', 'a', 'b']);
+
+		expect(result?.diffState.isDiffMode).toBe(true);
+	});
+
+	it('should handle test operation in patches', () => {
+		interface TestData {
+			value: string;
+			count: number;
+		}
+
+		const initialState: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: { value: 'test', count: 5 },
+				newState: { value: 'test', count: 5 },
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore.getState().setDiffHistoryState('testOpKey', initialState);
+		});
+
+		// Patches with test operation followed by replace
+		const patches: Operation[] = [
+			{ op: 'test', path: '/value', value: 'test' }, // This should pass
+			{ op: 'replace', path: '/value', value: 'updated' },
+			{ op: 'test', path: '/count', value: 5 }, // This should pass
+			{ op: 'replace', path: '/count', value: 10 },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('testOpKey', patches, false);
+		});
+
+		const result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('testOpKey');
+
+		// Verify patches were applied after test operations passed
+		expect(result?.diffState.newState).toEqual({
+			value: 'updated',
+			count: 10,
+		});
+	});
+});
+
+describe('Integration: applyPatchesToDiffState with other methods', () => {
+	it('should work with acceptAllDiffs after applying patches', () => {
+		interface TestData {
+			name: string;
+			items: string[];
+		}
+
+		const initialState: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: { name: 'Initial', items: [] },
+				newState: { name: 'Initial', items: [] },
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('integrationKey1', initialState);
+		});
+
+		// Apply patches to create a diff
+		const patches: Operation[] = [
+			{ op: 'replace', path: '/name', value: 'Updated' },
+			{ op: 'add', path: '/items/-', value: 'item1' },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('integrationKey1', patches, true);
+		});
+
+		// Accept the diffs
+		act(() => {
+			useCedarStore.getState().acceptAllDiffs('integrationKey1');
+		});
+
+		const result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('integrationKey1');
+
+		// After accepting, both states should be synced
+		expect(result?.diffState.oldState).toEqual({
+			name: 'Updated',
+			items: ['item1'],
+		});
+		expect(result?.diffState.newState).toEqual({
+			name: 'Updated',
+			items: ['item1'],
+		});
+		expect(result?.diffState.isDiffMode).toBe(false);
+	});
+
+	it('should work with undo/redo after applying patches', () => {
+		interface TestData {
+			value: number;
+		}
+
+		const initialState: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: { value: 1 },
+				newState: { value: 1 },
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('undoRedoPatchKey', initialState);
+		});
+
+		// Apply first set of patches
+		const patches1: Operation[] = [{ op: 'replace', path: '/value', value: 2 }];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('undoRedoPatchKey', patches1, false);
+		});
+
+		// Apply second set of patches
+		const patches2: Operation[] = [{ op: 'replace', path: '/value', value: 3 }];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('undoRedoPatchKey', patches2, false);
+		});
+
+		// Undo once
+		act(() => {
+			useCedarStore.getState().undo('undoRedoPatchKey');
+		});
+
+		let result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('undoRedoPatchKey');
+
+		expect(result?.diffState.newState).toEqual({ value: 2 });
+
+		// Undo again
+		act(() => {
+			useCedarStore.getState().undo('undoRedoPatchKey');
+		});
+
+		result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('undoRedoPatchKey');
+
+		expect(result?.diffState.newState).toEqual({ value: 1 });
+
+		// Redo
+		act(() => {
+			useCedarStore.getState().redo('undoRedoPatchKey');
+		});
+
+		result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('undoRedoPatchKey');
+
+		expect(result?.diffState.newState).toEqual({ value: 2 });
+	});
+
+	it('should handle alternating between setDiffState and applyPatchesToDiffState', () => {
+		interface TestData {
+			name: string;
+			count: number;
+		}
+
+		const initialState: DiffHistoryState<TestData> = {
+			diffState: {
+				oldState: { name: 'Start', count: 0 },
+				newState: { name: 'Start', count: 0 },
+				isDiffMode: false,
+				patches: [],
+			},
+			history: [],
+			redoStack: [],
+			diffMode: 'defaultAccept',
+		};
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffHistoryState('alternatingKey', initialState);
+		});
+
+		// Use setDiffState
+		act(() => {
+			useCedarStore
+				.getState()
+				.setDiffState('alternatingKey', { name: 'Middle', count: 5 }, true);
+		});
+
+		let result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('alternatingKey');
+
+		expect(result?.diffState.newState).toEqual({ name: 'Middle', count: 5 });
+		expect(result?.diffState.isDiffMode).toBe(true);
+
+		// Use applyPatchesToDiffState
+		const patches: Operation[] = [
+			{ op: 'replace', path: '/name', value: 'End' },
+			{ op: 'replace', path: '/count', value: 10 },
+		];
+
+		act(() => {
+			useCedarStore
+				.getState()
+				.applyPatchesToDiffState('alternatingKey', patches, false);
+		});
+
+		result = useCedarStore
+			.getState()
+			.getDiffHistoryState<TestData>('alternatingKey');
+
+		expect(result?.diffState.newState).toEqual({ name: 'End', count: 10 });
+		expect(result?.diffState.isDiffMode).toBe(false);
+
+		// History should contain both previous states
+		expect(result?.history).toHaveLength(2);
 	});
 });

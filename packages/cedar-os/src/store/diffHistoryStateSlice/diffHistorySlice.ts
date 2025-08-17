@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { compare, Operation } from 'fast-json-patch';
+import { compare, Operation, applyPatch } from 'fast-json-patch';
 
 /**
  * DiffHistorySlice manages diffs so that we can render changes and let the user accept, reject, and manage them.
@@ -37,6 +37,13 @@ export interface DiffHistorySlice {
 
 	// New setDiffState method
 	setDiffState: <T>(key: string, newState: T, isDiffChange: boolean) => void;
+
+	// Apply patches to diff state
+	applyPatchesToDiffState: (
+		key: string,
+		patches: Operation[],
+		isDiffChange: boolean
+	) => void;
 
 	// Diff management methods
 	acceptAllDiffs: (key: string) => boolean;
@@ -120,6 +127,77 @@ export const createDiffHistorySlice: StateCreator<
 			newState: newState,
 			isDiffMode: isDiffChange,
 			patches,
+		};
+
+		// Create the updated diff history state
+		const updatedDiffHistoryState: DiffHistoryState<T> = {
+			diffState: newDiffState,
+			history: updatedHistory,
+			redoStack: [], // Clear redo stack on new changes
+			diffMode: diffMode, // Keep the same diff mode
+		};
+
+		// Update the store
+		get().setDiffHistoryState(key, updatedDiffHistoryState);
+	},
+
+	applyPatchesToDiffState: <T>(
+		key: string,
+		patches: Operation[],
+		isDiffChange: boolean
+	) => {
+		const currentDiffHistoryState = get().getDiffHistoryState<T>(key);
+
+		// If no existing state, we can't proceed
+		if (!currentDiffHistoryState) {
+			console.warn(`No diff history state found for key: ${key}`);
+			return;
+		}
+
+		const {
+			diffState: originalDiffState,
+			history,
+			diffMode,
+		} = currentDiffHistoryState;
+
+		// Step 1: Save the original diffState to history
+		const updatedHistory = [...history, originalDiffState];
+
+		// Step 2: Apply patches to the current newState to get the updated state
+		// Create a deep copy of the current newState to avoid mutations
+		const currentNewState = JSON.parse(
+			JSON.stringify(originalDiffState.newState)
+		);
+
+		// Apply the patches to get the new state
+		const patchResult = applyPatch(
+			currentNewState,
+			patches,
+			false, // Don't validate (for performance)
+			false // Don't mutate the original
+		);
+
+		const updatedNewState = patchResult.newDocument as T;
+
+		// Step 3: Create the new diffState based on isDiffChange flag
+		// Determine oldState: if isDiffChange and not previously in diff mode, use previous newState
+		// Otherwise keep the original oldState
+		const oldStateForDiff =
+			isDiffChange && !originalDiffState.isDiffMode
+				? originalDiffState.newState
+				: originalDiffState.oldState;
+
+		// Generate patches to describe the changes from oldState to the new patched state
+		const diffPatches = compare(
+			oldStateForDiff as object,
+			updatedNewState as object
+		);
+
+		const newDiffState: DiffState<T> = {
+			oldState: oldStateForDiff,
+			newState: updatedNewState,
+			isDiffMode: isDiffChange,
+			patches: diffPatches,
 		};
 
 		// Create the updated diff history state
