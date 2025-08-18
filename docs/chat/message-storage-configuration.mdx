@@ -5,6 +5,12 @@ description: 'Configure how Cedar persists chat messages and manages threads'
 
 Cedar provides a flexible storage system for managing chat messages with automatic persistence and **automatic thread management**. By default, Cedar uses **no storage** - no persistence unless you configure a storage adapter.
 
+<Warning>
+	**Storage Requirements:** Message persistence requires both `userId` and
+	`threadId` to be set. Without these IDs, storage operations are skipped and
+	messages remain in memory only.
+</Warning>
+
 # Quick Start
 
 Cedar works out of the box with no storage (no persistence). To enable persistence, configure a storage adapter.
@@ -111,43 +117,40 @@ Implement your own storage solution by providing a custom adapter:
 <CodeGroup>
 
 ```typescript Interface
-interface BaseStorageAdapter {
+interface MessageStorageBaseAdapter {
 	// Required methods
-	loadMessages(
-		userId: string | null | undefined,
-		threadId: string
-	): Promise<Message[]>;
+	loadMessages(userId: string, threadId: string): Promise<Message[]>;
 	persistMessage(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string,
 		message: Message
 	): Promise<Message>; // returns the saved message
 
 	// Optional thread methods
-	listThreads?(userId?: string | null): Promise<ThreadMeta[]>;
+	listThreads?(userId: string): Promise<MessageThreadMeta[]>;
 	createThread?(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string,
-		meta: ThreadMeta
-	): Promise<ThreadMeta>; // returns new meta
+		meta: MessageThreadMeta
+	): Promise<MessageThreadMeta>; // returns new meta
 	updateThread?(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string,
-		meta: ThreadMeta
-	): Promise<ThreadMeta>; // returns updated meta
+		meta: MessageThreadMeta
+	): Promise<MessageThreadMeta>; // returns updated meta
 	deleteThread?(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string
-	): Promise<ThreadMeta | undefined>; // returns deleted meta (optional)
+	): Promise<MessageThreadMeta | undefined>; // returns deleted meta (optional)
 
 	// Optional message methods
 	updateMessage?(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string,
 		message: Message
 	): Promise<Message>; // returns updated message
 	deleteMessage?(
-		userId: string | null | undefined,
+		userId: string,
 		threadId: string,
 		messageId: string
 	): Promise<Message | undefined>; // returns deleted message (optional)
@@ -193,56 +196,111 @@ function App() {
 
 ## How Default Message Storage Works
 
-Cedar automatically handles message storage operations in the following way:
+Cedar preconfigures several storage methods that orchestrate your adapter's functionality. Understanding these helps you work with Cedar's storage system effectively.
 
-**Thread & Message Loading:**
+### Preconfigured Storage Methods
 
-- **When user ID changes**: Automatically loads all threads for that user
-- **When storage adapter changes**: Loads threads from the new storage system
-- **When the thread ID changes**: Automatically loads in all messages for that thread
+<Note>
+	Cedar provides these methods out of the box. These methods are automatically
+	called by Cedar at appropriate times - you don't need to call them directly.
+	To customize their behavior, you can override them in your implementation.
+</Note>
+
+#### 1. `initializeChat({threadId?: string, userId?: string})`
+
+This method orchestrates the initial loading of threads and messages. It's automatically called:
+
+- When the message storage adapter is first set
+- When userId or threadId changes in Cedar state
+
+Here's what it does with your adapter:
+
+```typescript
+// Cedar's initializeChat flow:
+1. Get userId (from params or Cedar state)
+2. Get threadId (from params or Cedar state)
+3. Call adapter.listThreads(userId) to load user's threads
+4. If no thread is selected and threads exist:
+   - Automatically select the first thread
+5. If **no threads exist** and `adapter.createThread` is available:
+   - A brand-new thread is created (ID `thread-{timestamp}-{rand}`)
+   - The new thread metadata is persisted via `adapter.createThread`
+   - Cedar sets this new ID in state
+6. Use the provided threadId OR the auto-selected / newly-created threadId
+7. Clear any existing messages in the UI
+8. If both userId and threadId exist:
+   - Call adapter.loadMessages(userId, threadId)
+   - Display the loaded messages
+```
+
+#### 2. `persistMessageStorageMessage(message)`
+
+This method handles message persistence with intelligent thread management:
+
+```typescript
+// Cedar's persistMessageStorageMessage flow:
+1. Get userId from Cedar state (skip entire process if no userId)
+2. Get threadId from Cedar state
+3. Call adapter.persistMessage(userId, threadId, message)
+4. If adapter.updateThread is available:
+   - Update thread metadata (preserving original title if exists)
+   - Set updatedAt to current timestamp
+5. Reload and refresh the thread list via loadAndSelectThreads()
+```
+
+#### 3. `sendMessage()` Storage Actions
+
+When a user sends a message, Cedar performs these storage operations:
+
+```typescript
+// Cedar's sendMessage storage flow:
+1. Add user message to UI via addMessage()
+   - addMessage() automatically calls persistMessageStorageMessage()
+   - This triggers the persistence flow described above
+2. When assistant responds:
+   - For non-streaming: Add response via addMessage() (auto-persisted)
+   - For streaming:
+     - Append content to messages during stream
+     - Persist all new messages after stream completes
+```
 
 <Info>
 	Best practice: make your **load** endpoints idempotent. Implementations of
-	`listThreads` or `loadMessages`should **NOT** perform any mutations such as
+	`listThreads` or `loadMessages` should **NOT** perform any mutations such as
 	creating threads or messages. Cedar may call these functions multiple times
 	during normal operation; if they create data each time you could end up with
 	duplicated threads or messages.
 </Info>
 
-**Message Persistence & Thread Updates:**
+### Automatic Behaviors
 
-- **User messages**: Persisted immediately when sent via `sendMessage()` (internally calls `store.persistMessage`).
-- **Assistant responses**:
-  - **Non-streaming**: Persisted right after the LLM reply finishes.
-  - **Streaming**: Buffered during streaming and persisted once when the stream ends.
-- **Automatic thread meta update**: Every persisted message refreshes the thread’s `updatedAt` and `lastMessage` fields. The thread title is **always** the very first message in the thread and is never overwritten.
+**Thread & Message Loading:**
+
+- **When storage adapter is set**: Adapter is configured but chat initialization happens separately
+- **When user ID or thread ID changes**: Triggers `initializeChat` which:
+  - Loads all threads for the user
+  - May auto-select first thread if none selected
+  - Loads messages for the selected thread
+- **When userId is undefined**: Storage operations are skipped entirely
+- **When threadId is undefined**: A new UUID is generated during message persistence
 
 # User and Thread Management
 
 <Info>
-	User ID and thread ID are automatically sent to the backend for Mastra and
-	Custom backends. See Agent Backend Connection docs for more details.
+	User ID and thread ID are both stored as Cedar State variables and are
+	automatically sent to the backend for Mastra and Custom backends. See Agent
+	Backend Connection docs for more details.
 </Info>
 
-**Setting User ID:**
-User ID is treated internally as just another Cedar State. If at runtime you want to override the user ID when using `callLLM`, it is also available on the `SendMessageParams` type
+### Setting User ID
 
-<CodeGroup>
+User ID is a Cedar State variable that can be set in two ways:
 
-```typescript Using Store
-import { useCedarStore } from 'cedar-os';
+**Method 1**: Initial Configuration (Recommended)
 
-function LoginHandler({ userId }: { userId: string }) {
-	const store = useCedarStore();
+Pass the user ID directly to CedarCopilot as a prop. This is the simplest and most common approach:
 
-	// Set user context - Cedar will load this user's threads
-	store.getState().setCedarState('userId', userId);
-
-	return <YourChatComponent />;
-}
-```
-
-```typescript Initial Configuration
+```typescript
 import { CedarCopilot } from 'cedar-os';
 
 function App({ userId }: { userId: string }) {
@@ -258,20 +316,116 @@ function App({ userId }: { userId: string }) {
 }
 ```
 
+<Note>
+	When you pass `userId` to CedarCopilot, it automatically: - Registers it as a
+	Cedar State variable (null values become empty strings) - Triggers
+	`initializeChat` which loads threads for that user - Makes it available
+	throughout your app via Cedar State
+</Note>
+
+**Method 2**: Dynamic Setting via State APIs
+
+Use this when you need to change users at runtime (e.g., after login, user switching):
+
+<CodeGroup>
+
+```typescript Using setCedarState
+import { setCedarState } from 'cedar-os';
+
+function LoginHandler() {
+	const handleLogin = async (credentials) => {
+		const user = await loginUser(credentials);
+
+		// Set user ID - Cedar will load this user's threads
+		setCedarState('userId', user.id);
+	};
+
+	return <LoginForm onSubmit={handleLogin} />;
+}
+```
+
+```typescript Using useCedarState Hook
+import { useCedarState } from 'cedar-os';
+
+function UserSwitcher() {
+	const [userId, setUserId] = useCedarState('userId', null);
+
+	const switchUser = (newUserId: string) => {
+		// This will trigger thread reload for the new user
+		setUserId(newUserId);
+	};
+
+	return (
+		<select onChange={(e) => switchUser(e.target.value)}>
+			<option value='user-1'>User 1</option>
+			<option value='user-2'>User 2</option>
+		</select>
+	);
+}
+```
+
+```typescript Getting Current User
+import { getCedarState } from 'cedar-os';
+
+function CurrentUserDisplay() {
+	const userId = getCedarState('userId');
+
+	return <div>Current user: {userId || 'Not logged in'}</div>;
+}
+```
+
 </CodeGroup>
 
-**Setting Thread ID:**
-By default, Cedar will use the thread ID stored in the store. If at runtime you want to override the thread ID when using `callLLM`, it is also available on the `SendMessageParams` type
+When the user ID changes:
+
+1. Cedar loads threads for the new user
+2. If no thread is selected, may auto-select first thread (if `listThreads` is implemented)
+3. Messages are cleared and reloaded based on the user's threads
+
+### Setting Thread ID
+
+Thread ID is a Cedar State variable that can be set in three ways:
+
+**Method 1**: Initial Configuration
+
+Pass the thread ID directly to CedarCopilot as a prop. This is useful when you want to start with a specific thread:
 
 ```typescript
-import { useCedarStore } from 'cedar-os';
+import { CedarCopilot } from 'cedar-os';
+
+function App({ userId, threadId }: { userId: string; threadId: string }) {
+	return (
+		<CedarCopilot
+			userId={userId}
+			threadId={threadId} // Set initial thread ID
+			messageStorage={{
+				type: 'local',
+			}}>
+			<YourChatComponent />
+		</CedarCopilot>
+	);
+}
+```
+
+<Note>
+	Like userId, threadId is registered as a Cedar State variable with null values
+	converted to empty strings. This triggers `initializeChat` to load messages
+	for the specified thread.
+</Note>
+
+**Method 2**: Explicit Setting (User Control)
+
+Use this when users manually select threads, navigate to specific conversations, or create new threads at runtime:
+
+<CodeGroup>
+
+```typescript Using Store API
+import { setCedarState } from 'cedar-os';
 
 function ConversationSwitcher() {
-	const store = useCedarStore();
-
 	const switchToThread = (threadId: string) => {
 		// Cedar will save current thread and load the new one
-		store.getState().setCurrentThreadId(threadId);
+		setCedarState('threadId', threadId);
 	};
 
 	return (
@@ -287,13 +441,77 @@ function ConversationSwitcher() {
 }
 ```
 
-## Error Handling
+```typescript Using Hook
+import { useCedarState } from 'cedar-os';
 
-Cedar's storage system is designed to fail gracefully:
+function ConversationManager() {
+	const [threadId, setThreadId] = useCedarState('threadId', null);
 
-- **Storage failures** are silently caught to prevent UI crashes
-- **Failed loads** return empty arrays rather than throwing errors
-- **Malformed data** is handled with safe fallbacks
+	return (
+		<div>
+			<p>Current thread: {threadId || 'No thread selected'}</p>
+			<button onClick={() => setThreadId('new-thread-123')}>
+				Start New Thread
+			</button>
+		</div>
+	);
+}
+```
+
+```typescript Programmatic Control
+// From anywhere in your application
+import { setCedarState, getCedarState } from 'cedar-os';
+
+// Set a specific thread
+setCedarState('threadId', 'thread-abc-123');
+
+// Get current thread
+const currentThread = getCedarState('threadId');
+
+// Navigate to a thread from URL params
+const threadFromUrl = searchParams.get('thread');
+if (threadFromUrl) {
+	setCedarState('threadId', threadFromUrl);
+}
+```
+
+</CodeGroup>
+
+**Method 3**: Automatic Selection via `listThreads`
+
+If you implement the `listThreads` method in your storage adapter, Cedar will automatically select the first available thread when no thread is currently selected. This is perfect for app initialization:
+
+```typescript
+const myStorageAdapter = {
+	async listThreads(userId) {
+		// Return user's threads from your backend/database
+		return [
+			{
+				id: 'thread-1',
+				title: 'General Chat',
+				updatedAt: '2024-01-20T10:00:00Z',
+			},
+			{
+				id: 'thread-2',
+				title: 'Project Discussion',
+				updatedAt: '2024-01-19T15:30:00Z',
+			},
+		];
+	},
+	// ... other required methods
+};
+
+// When storage adapter is set or threads are loaded:
+// - If threadId is null AND threads exist
+// - Cedar automatically calls: setCedarState('threadId', threads[0].id)
+// - In this example, 'thread-1' would be selected
+```
+
+When the thread ID changes (via any method), Cedar automatically:
+
+1. Clears the current messages from the UI
+2. Loads messages for the new thread from storage
+3. Updates the UI with the new thread's messages
 
 ## Next Steps
 

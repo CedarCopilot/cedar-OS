@@ -4,9 +4,9 @@ import {
 	useRenderAdditionalContext,
 	ContextEntry,
 	withClassName,
+	type CedarEditor as Editor,
 } from 'cedar-os';
 import { X } from 'lucide-react';
-import type { CedarEditor as Editor } from 'cedar-os';
 
 interface ContextBadgeRowProps {
 	editor?: Editor | null;
@@ -20,6 +20,11 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 	const renderContextBadge = (key: string, entry: ContextEntry) => {
 		// Try to find a provider that might have created this entry
 		const provider = mentionProviders.get(key);
+
+		// Respect visibility flag
+		if (entry.metadata?.showInChat === false) {
+			return null;
+		}
 
 		// Use custom renderer if available
 		if (provider?.renderContextBadge) {

@@ -25,7 +25,7 @@ export interface VoiceLLMResponse extends LLMResponse {
 }
 
 // Voice parameters for LLM calls
-export interface VoiceParams {
+export interface VoiceParams extends BaseParams {
 	audioData: Blob;
 	voiceSettings: {
 		language: string;
@@ -42,7 +42,10 @@ export interface VoiceParams {
 
 export type StreamEvent =
 	| { type: 'chunk'; content: string }
-	| { type: 'object'; object: StructuredResponseType }
+	| {
+			type: 'object';
+			object: StructuredResponseType | StructuredResponseType[];
+	  }
 	| { type: 'done'; completedItems: (string | object)[] }
 	| { type: 'error'; error: Error }
 	| { type: 'metadata'; data: unknown };

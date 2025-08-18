@@ -65,6 +65,16 @@ export function useStateBasedMentionProvider(
 	);
 
 	useEffect(() => {
+		// Warn if the state key is not registered in Cedar Store
+		const cedarStateExists = Boolean(
+			useCedarStore.getState().registeredStates[config.stateKey]
+		);
+		if (!cedarStateExists) {
+			console.warn(
+				`[useStateBasedMentionProvider] State with key "${config.stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
+			);
+		}
+
 		const provider: MentionProvider & { icon?: ReactNode; color?: string } = {
 			id: config.stateKey, // Use stateKey as provider ID
 			trigger: config.trigger || '@',
@@ -128,27 +138,6 @@ export function useStateBasedMentionProvider(
 			unregisterMentionProvider(config.stateKey);
 		};
 	}, [config, registerMentionProvider, unregisterMentionProvider]);
-}
-
-/**
- * Hook to register a custom mention provider
- * For advanced use cases where you need full control over the provider
- */
-export function useMentionProvider(provider: MentionProvider): void {
-	const registerMentionProvider = useCedarStore(
-		(s) => s.registerMentionProvider
-	);
-	const unregisterMentionProvider = useCedarStore(
-		(s) => s.unregisterMentionProvider
-	);
-
-	useEffect(() => {
-		registerMentionProvider(provider);
-
-		return () => {
-			unregisterMentionProvider(provider.id);
-		};
-	}, [provider, registerMentionProvider, unregisterMentionProvider]);
 }
 
 /**

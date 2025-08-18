@@ -37,15 +37,17 @@ import {
 import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
+import { TooltipMenu } from '@/inputs/TooltipMenu';
+import RadialMenuSpell from '@/spells/RadialMenuSpell';
 import {
 	ActivationMode,
+	addDiffToArrayObjs,
 	Hotkey,
-	registerState,
 	MouseEvent as SpellMouseEvent,
 	useRegisterDiffState,
-	addDiffToArrayObjs,
+	useRegisterState,
 	useStateBasedMentionProvider,
-	useSubscribeInputContext,
+	useSubscribeStateToInputContext,
 	type CedarStore,
 } from 'cedar-os';
 import {
@@ -59,8 +61,6 @@ import {
 	Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { TooltipMenu } from '@/inputs/TooltipMenu';
-import RadialMenuSpell from '@/spells/RadialMenuSpell';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)
@@ -450,25 +450,24 @@ function FlowCanvas() {
 function SelectedNodesPanel() {
 	const [selected, setSelected] = React.useState<Node<FeatureNodeData>[]>([]);
 
-	registerState({
-		key: 'numOfSelectedNodes',
-		value: selected.length,
-		description: 'Number of selected nodes',
+	useRegisterState<Node<FeatureNodeData>[]>({
+		key: 'selectedNodes',
+		value: selected,
+		setValue: setSelected,
+		description: 'Selected nodes',
 	});
 
-	// useSubscribeInputContext({ stateKey: 'numOfSelectedNodes' });
-
-	// Second subscription - for selectedNodes (order: 2)
-	useSubscribeInputContext(
-		selected,
+	// First subscription - for numSelectedNodes (order: 1)
+	useSubscribeStateToInputContext<Node<FeatureNodeData>[]>(
+		'selectedNodes',
 		(nodes) => ({
 			selectedNodes: nodes,
 		}),
 		{
 			icon: <Box />,
 			color: '#8B5CF6', // Purple color for selected nodes
-			labelField: (item) => item.data.title,
-			order: 1, // This will appear second
+			labelField: (item) => item?.data?.title,
+			order: 2, // This will appear first
 		}
 	);
 

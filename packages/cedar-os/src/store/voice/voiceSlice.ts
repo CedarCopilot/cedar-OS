@@ -221,6 +221,7 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 				audioData,
 				voiceSettings,
 				context: contextString,
+				prompt: '',
 			});
 
 			// Handle the response using the new handleLLMVoice function

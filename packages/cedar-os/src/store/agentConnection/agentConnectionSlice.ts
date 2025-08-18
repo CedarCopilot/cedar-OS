@@ -115,6 +115,11 @@ export interface AgentConnectionSlice {
 
 	// Utility methods
 	cancelStream: () => void;
+
+	// Notifications
+	notificationInterval?: number;
+	subscribeToNotifications: () => void;
+	unsubscribeFromNotifications: () => void;
 }
 
 // Create a typed version of the slice that knows about the provider
@@ -144,6 +149,7 @@ export const createAgentConnectionSlice: StateCreator<
 	isStreaming: false,
 	providerConfig: null,
 	currentAbortController: null,
+	notificationInterval: undefined,
 	responseProcessors: initializeResponseProcessorRegistry(
 		defaultResponseProcessors as ResponseProcessor<StructuredResponseType>[]
 	),
@@ -362,11 +368,23 @@ export const createAgentConnectionSlice: StateCreator<
 			throw new Error('No LLM provider configured');
 		}
 
+		// Augment params for Mastra provider to include resourceId & threadId
+		let voiceParams: VoiceParams = params;
+		if (config.provider === 'mastra') {
+			const resourceId = getCedarState('userId') as string | undefined;
+			const threadId = getCedarState('threadId') as string | undefined;
+			voiceParams = {
+				...params,
+				resourceId,
+				threadId,
+			} as typeof voiceParams;
+		}
+
 		try {
 			const provider = getProviderImplementation(config);
 			// Type assertion is safe after runtime validation
 			const response = await provider.voiceLLM(
-				params as unknown as never,
+				voiceParams as unknown as never,
 				config as never
 			);
 
@@ -409,26 +427,12 @@ export const createAgentConnectionSlice: StateCreator<
 	) => {
 		set((state) => {
 			const type = processor.type;
-
-			const entry: ResponseProcessor<T> = {
-				...processor,
+			return {
+				responseProcessors: {
+					...state.responseProcessors,
+					[type]: processor,
+				} as ResponseProcessorRegistry,
 			};
-
-			const existing = state.responseProcessors[type] as
-				| ResponseProcessor
-				| undefined;
-
-			// Replace if no existing
-			if (!existing) {
-				return {
-					responseProcessors: {
-						...state.responseProcessors,
-						[type]: entry,
-					} as ResponseProcessorRegistry,
-				};
-			}
-
-			return {};
 		});
 	},
 
@@ -503,7 +507,8 @@ export const createAgentConnectionSlice: StateCreator<
 				temperature,
 			};
 
-			const threadId = params?.threadId || get().messageCurrentThreadId;
+			const threadId =
+				params?.threadId || (getCedarState('threadId') as string | null);
 			const userId = params?.userId || getCedarState('userId');
 
 			// Add provider-specific params
@@ -551,8 +556,10 @@ export const createAgentConnectionSlice: StateCreator<
 							await state.handleLLMResponse([event.content]);
 							break;
 						case 'object':
-							// Process single object as array of one
-							await state.handleLLMResponse([event.object]);
+							// Process object(s) - handle both single and array
+							await state.handleLLMResponse(
+								Array.isArray(event.object) ? event.object : [event.object]
+							);
 							break;
 						case 'done':
 							// Stream completed - no additional processing needed
@@ -633,6 +640,52 @@ export const createAgentConnectionSlice: StateCreator<
 		const { currentAbortController } = get();
 		if (currentAbortController) {
 			currentAbortController.abort();
+		}
+	},
+
+	/* ------------------------------------------------------------------
+	 * Notification polling for Mastra threads
+	 * ------------------------------------------------------------------*/
+
+	subscribeToNotifications: () => {
+		if (get().notificationInterval !== undefined) return; // already polling
+
+		const provider = get().providerConfig;
+		if (!provider || provider.provider !== 'mastra') return;
+
+		const baseURL = provider.baseURL;
+		const threadId = getCedarState('threadId') as string | undefined;
+		if (!threadId) return;
+
+		const endpoint = `${baseURL}/chat/notifications`;
+
+		get().notificationInterval = window.setInterval(async () => {
+			try {
+				const response = await fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ threadId }),
+				});
+
+				if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+				const data = await response.json();
+				if (Array.isArray(data?.notifications)) {
+					for (const msg of data.notifications) {
+						get().addMessage(msg);
+					}
+				}
+			} catch (err) {
+				console.warn('Notification polling error:', err);
+			}
+		}, 60000);
+	},
+
+	unsubscribeFromNotifications: () => {
+		const id = get().notificationInterval;
+		if (id !== undefined) {
+			clearInterval(id);
+			set({ notificationInterval: undefined });
 		}
 	},
 });

@@ -1,0 +1,44 @@
+{
+	"compilerOptions": {
+		"target": "ES2020",
+		"lib": ["DOM", "DOM.Iterable", "ES2020"],
+		"allowJs": true,
+		"skipLibCheck": true,
+		"skipDefaultLibCheck": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
+		"noFallthroughCasesInSwitch": true,
+		"module": "ESNext",
+		"moduleResolution": "node",
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": false,
+		"declaration": true,
+		"declarationMap": true,
+		"outDir": "dist",
+		"jsx": "react-jsx",
+		"baseUrl": ".",
+		"paths": {
+			"cedar-os-components": ["./index"],
+			"cedar-os-components/*": ["./*"],
+			"cedar-os": ["../cedar-os/src/index"],
+			"cedar-os/*": ["../cedar-os/src/*"],
+			"@/components/*": ["../cedar-os/src/components/*"],
+			"@/store/*": ["../cedar-os/src/store/*"],
+			"@/styles/*": ["../cedar-os/src/styles/*"],
+			"@/utils/*": ["../cedar-os/src/utils/*"],
+			"@/*": ["../cedar-os/src/*", "./*"]
+		}
+	},
+	"include": ["**/*.ts", "**/*.tsx"],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"**/*.test.ts",
+		"**/*.test.tsx",
+		"**/*.spec.ts",
+		"**/*.spec.tsx"
+	]
+}

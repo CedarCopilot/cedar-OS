@@ -97,13 +97,21 @@ export const createMessagesSlice: StateCreator<
 			const state = get();
 			const messages = state.messages;
 			const latestMessage = messages[messages.length - 1];
-			const updatedLatestMessage = {
-				...latestMessage,
-				content: latestMessage.content + content,
-			};
-			if (latestMessage && latestMessage.role === 'assistant') {
+
+			// Only append if the latest message is 'text' type and not a user message
+			if (
+				latestMessage &&
+				latestMessage.role !== 'user' &&
+				latestMessage.type === 'text'
+			) {
+				const updatedLatestMessage = {
+					...latestMessage,
+					content: latestMessage.content + content,
+				};
 				state.updateMessage(latestMessage.id, updatedLatestMessage);
+				return updatedLatestMessage;
 			} else {
+				// Create a new text message if latest is not text type or not assistant role
 				return state.addMessage(
 					{
 						role: 'assistant',
@@ -113,7 +121,6 @@ export const createMessagesSlice: StateCreator<
 					isComplete
 				);
 			}
-			return updatedLatestMessage;
 		},
 		updateMessage: (id: string, updates: Partial<Message>) => {
 			set((state) => ({

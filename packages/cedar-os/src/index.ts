@@ -43,12 +43,11 @@ export {
 // Export context management
 export {
 	useRenderAdditionalContext,
-	useSubscribeInputContext,
+	useSubscribeStateToInputContext,
 } from '@/store/agentInputContext/agentInputContextSlice';
 
 // Export mention provider functionality
 export {
-	useMentionProvider,
 	useMentionProviders,
 	useMentionProvidersByTrigger,
 	useStateBasedMentionProvider,
@@ -132,7 +131,10 @@ export type {
 } from '@/store/agentConnection/providers/mastra';
 
 // Export progress update response processor
-export type { ProgressUpdateResponse } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
+export type {
+	ProgressUpdateResponse,
+	ProgressUpdateResponsePayload,
+} from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 
 // Export storage configuration types
 export type {

@@ -23,7 +23,11 @@
 			{
 				"group": "Getting Started",
 				"icon": "play",
-				"pages": ["getting-started/getting-started"]
+				"pages": [
+					"getting-started/getting-started",
+					"getting-started/cli",
+					"getting-started/organizing-a-cedar-project"
+				]
 			},
 			{
 				"group": "Connecting to an Agent",
@@ -48,15 +52,6 @@
 				]
 			},
 			{
-				"group": "Agent Input Context",
-				"icon": "at",
-				"pages": [
-					"agent-input-context/agent-input-context",
-					"agent-input-context/mentions",
-					"agent-input-context/subscribing-state"
-				]
-			},
-			{
 				"group": "Agentic State",
 				"icon": "database",
 				"pages": [
@@ -65,6 +60,16 @@
 					"state-access/diff-history-manager"
 				]
 			},
+			{
+				"group": "Agent Input Context",
+				"icon": "at",
+				"pages": [
+					"agent-input-context/agent-input-context",
+					"agent-input-context/mentions",
+					"agent-input-context/subscribing-state"
+				]
+			},
+
 			{
 				"group": "Voice (Beta)",
 				"icon": "microphone",
@@ -83,6 +88,7 @@
 					"spells/creating-custom-spells",
 					"spells/spell-architecture",
 					"spells/radial-menu",
+					"spells/slider-spell",
 					"spells/questioning-spell",
 					"spells/tooltip-menu"
 				]
@@ -132,7 +138,7 @@
 			},
 			{
 				"label": "Discord",
-				"href": "https://discord.gg/k97ygzPD",
+				"href": "https://discord.gg/4AWawRjNdZ",
 				"icon": "discord"
 			}
 		]

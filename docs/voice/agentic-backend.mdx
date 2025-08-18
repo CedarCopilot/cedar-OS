@@ -41,7 +41,10 @@ The voice system sends a `multipart/form-data` POST request to your configured e
 FormData {
   audio: Blob,      // WebM format with Opus codec
   settings: string, // JSON string of voice settings
-  context: string   // JSON string of additional context
+  context: string,  // JSON string of additional context
+  // Additional dynamic parameters may be included
+  // based on the specific voice request configuration
+  // These params extend BaseParams that are sent to regular chat endpoints
 }
 ```
 
