@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { compare, Operation, applyPatch } from 'fast-json-patch';
 import type { CedarStore } from '@/store/CedarOSTypes';
+import type { BasicStateValue } from '@/store/stateSlice/stateSlice';
 
 /**
  * DiffHistorySlice manages diffs so that we can render changes and let the user accept, reject, and manage them.
@@ -63,6 +64,7 @@ export interface DiffHistorySlice {
 	executeDiffSetter: (
 		key: string,
 		setterKey: string,
+		options?: { isDiff?: boolean },
 		...args: unknown[]
 	) => void;
 
@@ -224,16 +226,81 @@ export const createDiffHistorySlice: StateCreator<
 	},
 
 	executeDiffSetter: (
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_key: string,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_setterKey: string,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		..._args: unknown[]
+		key: string,
+		setterKey: string,
+		options: { isDiff?: boolean } = {},
+		...args: unknown[]
 	) => {
-		// This is a placeholder - the actual implementation is in createCedarStore
-		// where it has access to both stateSlice and diffHistorySlice
-		console.warn('executeDiffSetter should be overridden in createCedarStore');
+		const isDiff = options.isDiff ?? false;
+		const currentDiffHistoryState = get().getDiffHistoryState(key);
+
+		// If no diff history state exists for this key, we can't proceed
+		if (!currentDiffHistoryState) {
+			console.warn(`No diff history state found for key: ${key}`);
+			return;
+		}
+
+		// Get the current newState to execute the setter on
+		const currentNewState = currentDiffHistoryState.diffState.newState;
+
+		// We need to get the registered state to access the custom setter
+		const registeredState = get().registeredStates?.[key];
+		if (!registeredState) {
+			console.warn(`No registered state found for key: ${key}`);
+			return;
+		}
+
+		const customSetters = registeredState.customSetters;
+		if (!customSetters || !customSetters[setterKey]) {
+			console.warn(`Custom setter "${setterKey}" not found for state "${key}"`);
+			return;
+		}
+
+		// Create a temporary state holder to capture the result
+		const resultState: BasicStateValue = currentNewState as BasicStateValue;
+
+		// I don't think this actually happens, but is good backup vvv
+
+		// // Store the original setCedarState and setValue to intercept calls
+		// const originalSetCedarState = get().setCedarState;
+		// const originalSetValue = registeredState.setValue;
+
+		// // Temporarily override setCedarState to capture the result
+		// // This is needed because custom setters often call setCedarState internally
+		// get().setCedarState = (stateKey: string, newValue: BasicStateValue) => {
+		// 	if (stateKey === key) {
+		// 		resultState = newValue;
+		// 	}
+		// };
+
+		// // Also override setValue if it exists
+		// if (originalSetValue) {
+		// 	registeredState.setValue = (newValue: unknown) => {
+		// 		resultState = newValue as BasicStateValue;
+		// 	};
+		// }
+
+		try {
+			// Execute the custom setter
+			const setter = customSetters[setterKey];
+			setter.execute(currentNewState as BasicStateValue, ...args);
+
+			// // Restore original functions
+			// get().setCedarState = originalSetCedarState;
+			// if (originalSetValue) {
+			// 	registeredState.setValue = originalSetValue;
+			// }
+
+			// Now call setDiffState with the captured result
+			get().setDiffState(key, resultState, isDiff);
+		} catch (error) {
+			// // Restore original functions in case of error
+			// get().setCedarState = originalSetCedarState;
+			// if (originalSetValue) {
+			// 	registeredState.setValue = originalSetValue;
+			// }
+			console.error(`Error executing diff setter for "${key}":`, error);
+		}
 	},
 
 	applyPatchesToDiffState: <T>(

@@ -105,7 +105,7 @@ function FlowCanvas() {
 						description: 'The node to add',
 					},
 				],
-				execute: (currentNodes, node) => {
+				execute: (currentNodes, setValue, node) => {
 					const nodes = currentNodes as Node<FeatureNodeData>[];
 					const nodeData = node as Node<FeatureNodeData>;
 					const newNode: Node<FeatureNodeData> = {
@@ -121,8 +121,8 @@ function FlowCanvas() {
 							comments: nodeData.data.comments || [],
 						},
 					};
-					// The setValue here is the enhanced setValue from the hook
-					setNodes([...nodes, newNode]);
+					// Use the setValue parameter instead of setNodes directly
+					setValue([...nodes, newNode]);
 				},
 			},
 			removeNode: {
@@ -135,11 +135,11 @@ function FlowCanvas() {
 						description: 'The ID of the node to remove',
 					},
 				],
-				execute: async (currentNodes, id) => {
+				execute: async (currentNodes, setValue, id) => {
 					const nodeId = id as string;
 					const nodes = currentNodes as Node<FeatureNodeData>[];
-					// Mark as removed - the computeState will add the diff marker
-					setNodes(nodes.filter((node) => node.id !== nodeId));
+					// Use setValue parameter instead of setNodes
+					setValue(nodes.filter((node) => node.id !== nodeId));
 				},
 			},
 			changeNode: {
@@ -152,11 +152,11 @@ function FlowCanvas() {
 						description: 'The updated node data',
 					},
 				],
-				execute: (currentNodes, newNode) => {
+				execute: (currentNodes, setValue, newNode) => {
 					const nodes = currentNodes as Node<FeatureNodeData>[];
 					const updatedNode = newNode as Node<FeatureNodeData>;
-					// Update the node - computeState will add the diff marker
-					setNodes(
+					// Use setValue parameter instead of setNodes
+					setValue(
 						nodes.map((node) =>
 							node.id === updatedNode.id ? updatedNode : node
 						)

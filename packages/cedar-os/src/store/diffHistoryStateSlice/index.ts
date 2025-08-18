@@ -28,3 +28,8 @@ export {
 	type RegisterDiffStateConfig,
 	type DiffStateReturn,
 } from './useRegisterDiffState';
+export {
+	useRegisterCedarDiffState,
+	type RegisterCedarDiffStateConfig,
+	type CedarDiffStateReturn,
+} from './useRegisterCedarDiffState';

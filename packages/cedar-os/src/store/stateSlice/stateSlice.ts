@@ -196,6 +196,16 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		 * @param value The new value to set.
 		 */
 		setCedarState: <T extends BasicStateValue>(key: string, value: T) => {
+			// Check if this state is tracked in diffHistory
+			const diffHistoryState = get().getDiffHistoryState?.(key);
+			if (diffHistoryState) {
+				// Use setDiffState for diff-tracked states
+				// Default to isDiffChange = true when setting through setCedarState
+				get().setDiffState(key, value, true);
+				return;
+			}
+
+			// Original implementation for non-diff-tracked states
 			const existingState = get().registeredStates[key];
 			if (!existingState) {
 				console.warn(`State with key "${key}" not found.`);
@@ -280,9 +290,18 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		 * Execute a named custom setter for a registered state.
 		 */
 		executeCustomSetter: (params: ExecuteCustomSetterParams) => {
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { key, setterKey, options = {}, args = [] } = params;
-			// Note: options will be used for features like diff tracking
+
+			// Check if this state is tracked in diffHistory
+			const diffHistoryState = get().getDiffHistoryState?.(key);
+			if (diffHistoryState) {
+				// Use executeDiffSetter for diff-tracked states
+				const isDiff = options.isDiff ?? false;
+				get().executeDiffSetter(key, setterKey, { isDiff }, ...args);
+				return;
+			}
+
+			// Original implementation for non-diff-tracked states
 			const existingState = get().registeredStates[key];
 			if (!existingState) {
 				console.warn(`State with key "${key}" not found.`);
@@ -313,7 +332,6 @@ export function isRegisteredState<T>(
 		'schema' in value
 	);
 }
-
 /**
  * Hook that registers a state in the Cedar store.
  * This is a hook version of registerState that handles the useEffect internally,
