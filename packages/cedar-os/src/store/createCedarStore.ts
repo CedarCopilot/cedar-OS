@@ -1,51 +1,58 @@
+import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
+import { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
+import type { CedarStore } from '@/store/CedarOSTypes';
+import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
+import { createDiffHistorySlice } from '@/store/diffHistoryStateSlice/diffHistorySlice';
+import { createMessagesSlice } from '@/store/messages/messagesSlice';
+import { createSpellSlice } from '@/store/spellSlice/spellSlice';
+import { createStateSlice } from '@/store/stateSlice/stateSlice';
+import { createStylingSlice } from '@/store/stylingSlice';
+import { createVoiceSlice } from '@/store/voice/voiceSlice';
 import { create, StateCreator } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
-import { createStylingSlice } from '@/store/stylingSlice';
-import { createStateSlice } from '@/store/stateSlice/stateSlice';
-import { createMessagesSlice } from '@/store/messages/messagesSlice';
-import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
-import type { CedarStore } from '@/store/CedarOSTypes';
-import { createSpellSlice } from '@/store/spellSlice/spellSlice';
 
 // Type helper to extract state from StateCreator
-type ExtractState<S> = S extends StateCreator<infer T, any, any, any>
-	? T
-	: never;
+type ExtractState<S> = S extends StateCreator<infer T, [], [], []> ? T : never;
 
 // Type helper to merge multiple slices
-type MergeSlices<T extends readonly StateCreator<any, any, any, any>[]> =
-	T extends readonly [
-		...infer Rest extends StateCreator<any, any, any, any>[],
-		infer Last extends StateCreator<any, any, any, any>
-	]
-		? ExtractState<Last> & MergeSlices<Rest>
-		: {};
+type MergeSlices<
+	T extends readonly StateCreator<CedarStore, [], [], unknown>[]
+> = T extends readonly [
+	...infer Rest extends StateCreator<CedarStore, [], [], unknown>[],
+	infer Last extends StateCreator<CedarStore, [], [], unknown>
+]
+	? ExtractState<Last> & MergeSlices<Rest>
+	: unknown;
 
-// Default slices that are always included (except messages)
-const createDefaultSlices = (set: any, get: any, api: any) => ({
-	...createStylingSlice(set, get, api),
-	...createAgentInputContextSlice(set, get, api),
-	...createStateSlice(set, get, api),
-	...createAgentConnectionSlice(set, get, api),
-	...createMessagesSlice(set, get, api),
-	...createSpellSlice(set, get, api),
+// Default slices that are always included
+const createDefaultSlices: StateCreator<CedarStore, [], [], CedarStore> = (
+	...a
+) => ({
+	...createStylingSlice(...a),
+	...createAgentInputContextSlice(...a),
+	...createStateSlice(...a),
+	...createAgentConnectionSlice(...a),
+	...createMessagesSlice(...a),
+	...createSpellSlice(...a),
+	...createDiffHistorySlice(...a),
+	...createVoiceSlice(...a),
+	...createDebuggerSlice(...a),
 });
 
 // Options for creating a Cedar store
 export interface CreateCedarStoreOptions<
-	TSlices extends readonly StateCreator<any, any, any, any>[] = []
+	TSlices extends readonly StateCreator<CedarStore, [], [], unknown>[] = []
 > {
 	extend?: TSlices;
 	persistOptions?: {
 		name?: string;
-		partialize?: (state: any) => any;
+		partialize?: (state: CedarStore) => Partial<CedarStore>;
 	};
 }
 
 // Create Cedar store with optional extensions
 export function createCedarStore<
-	TSlices extends readonly StateCreator<any, any, any, any>[] = []
+	TSlices extends readonly StateCreator<CedarStore, [], [], unknown>[] = []
 >(options?: CreateCedarStoreOptions<TSlices>) {
 	const { extend = [], persistOptions = {} } = options || {};
 
@@ -62,7 +69,10 @@ export function createCedarStore<
 
 				// Apply extended slices (they will override if they have the same properties)
 				for (const slice of extend) {
-					state = { ...state, ...slice(set, get, api) };
+					const sliceResult = slice(set, get, api);
+					if (sliceResult && typeof sliceResult === 'object') {
+						state = { ...state, ...sliceResult };
+					}
 				}
 
 				return state as ExtendedState;
@@ -80,4 +90,4 @@ export function createCedarStore<
 }
 
 // Default export for basic usage - creates a store with default slices
-export const createDefaultCedarStore = () => createCedarStore();
+export const createDefaultCedarStore = createCedarStore();

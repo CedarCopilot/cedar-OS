@@ -107,31 +107,6 @@ export interface StateSlice {
 	setCedarState: <T extends BasicStateValue>(key: string, value: T) => void;
 }
 
-// Helper function to notify diffHistorySlice of state changes
-const notifyDiffHistorySlice = <T extends BasicStateValue>(
-	store: CedarStore,
-	key: string,
-	newValue: T
-) => {
-	// Check if this state is tracked in diffHistorySlice
-	const diffHistoryState = store.getDiffHistoryState?.<T>(key);
-	if (diffHistoryState) {
-		// Update the diff state with the new value
-		store.setDiffState?.<T>(key, newValue, true);
-
-		// Also update the registered state in stateSlice with the clean state
-		// This ensures the state slice always has the clean/computed state
-		const cleanState = store.getCleanState?.<T>(key);
-		if (cleanState !== undefined && cleanState !== newValue) {
-			// Avoid infinite loop by checking if the clean state is different
-			store.registeredStates[key] = {
-				...store.registeredStates[key],
-				value: cleanState,
-			};
-		}
-	}
-};
-
 // Create the registered state slice
 export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 	set,
@@ -173,8 +148,6 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 					} as Partial<CedarStore>;
 				});
 
-				// Notify diffHistorySlice if it's tracking this state
-				notifyDiffHistorySlice(get() as CedarStore, config.key, config.value);
 				return;
 			}
 
@@ -199,9 +172,6 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 					},
 				} as Partial<CedarStore>;
 			});
-
-			// Notify diffHistorySlice if it's tracking this state
-			notifyDiffHistorySlice(get() as CedarStore, config.key, config.value);
 		},
 
 		getState: (key: string): registeredState | undefined => {
@@ -236,9 +206,6 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 						},
 					} as Partial<CedarStore>)
 			);
-
-			// Notify diffHistorySlice of the change
-			notifyDiffHistorySlice(get() as CedarStore, key, value);
 
 			// Call external setter if provided
 			if (existingState.setValue) {

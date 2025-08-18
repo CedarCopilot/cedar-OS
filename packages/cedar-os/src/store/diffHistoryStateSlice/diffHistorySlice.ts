@@ -1,7 +1,6 @@
 import { StateCreator } from 'zustand';
 import { compare, Operation, applyPatch } from 'fast-json-patch';
 import type { CedarStore } from '@/store/CedarOSTypes';
-import type { BasicStateValue } from '@/store/stateSlice/stateSlice';
 
 /**
  * DiffHistorySlice manages diffs so that we can render changes and let the user accept, reject, and manage them.
@@ -60,6 +59,13 @@ export interface DiffHistorySlice {
 	// New setDiffState method
 	setDiffState: <T>(key: string, newState: T, isDiffChange: boolean) => void;
 
+	// Execute custom setter for diff-tracked states
+	executeDiffSetter: (
+		key: string,
+		setterKey: string,
+		...args: unknown[]
+	) => void;
+
 	// Apply patches to diff state
 	applyPatchesToDiffState: (
 		key: string,
@@ -75,24 +81,6 @@ export interface DiffHistorySlice {
 	undo: (key: string) => boolean;
 	redo: (key: string) => boolean;
 }
-
-// Helper function to sync clean state back to stateSlice
-const syncToStateSlice = (
-	store: CedarStore,
-	key: string,
-	cleanState: unknown
-) => {
-	// Get the current registered state
-	const registeredState = store.registeredStates?.[key];
-	if (registeredState && registeredState.value !== cleanState) {
-		// Update the registered state value directly
-		// We cast to BasicStateValue since we know it came from a valid state
-		store.registeredStates[key] = {
-			...registeredState,
-			value: cleanState as BasicStateValue,
-		};
-	}
-};
 
 export const createDiffHistorySlice: StateCreator<
 	CedarStore,
@@ -116,12 +104,6 @@ export const createDiffHistorySlice: StateCreator<
 				[key]: diffHistoryState as DiffHistoryState<unknown>,
 			},
 		}));
-
-		// Sync the clean state to stateSlice
-		const cleanState = get().getCleanState<T>(key);
-		if (cleanState !== undefined) {
-			syncToStateSlice(get() as CedarStore, key, cleanState);
-		}
 	},
 
 	getCleanState: <T>(key: string): T | undefined => {
@@ -239,6 +221,19 @@ export const createDiffHistorySlice: StateCreator<
 
 		// Update the store
 		get().setDiffHistoryState(key, updatedDiffHistoryState);
+	},
+
+	executeDiffSetter: (
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		_key: string,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		_setterKey: string,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		..._args: unknown[]
+	) => {
+		// This is a placeholder - the actual implementation is in createCedarStore
+		// where it has access to both stateSlice and diffHistorySlice
+		console.warn('executeDiffSetter should be overridden in createCedarStore');
 	},
 
 	applyPatchesToDiffState: <T>(
