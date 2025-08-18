@@ -59,6 +59,11 @@ export function TextLengthSection() {
 		console.log('Text length slider completed:', wordCount, 'words');
 	};
 
+	const handleRangeSliderChange = (value: number) => {
+		setWordCount(value);
+		setIsSliderActive(true);
+	};
+
 	const handleRangeSliderComplete = (value: number, optionIndex: number) => {
 		setWordCount(value);
 		setIsSliderActive(false);
@@ -374,6 +379,7 @@ export function TextLengthSection() {
 					proportionalSpacing: false,
 				}}
 				onComplete={handleRangeSliderComplete}
+				onChange={handleRangeSliderChange}
 			/>
 		</>
 	);

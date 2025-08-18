@@ -39,6 +39,8 @@ export interface RangeSliderSpellProps {
 	rangeSliderConfig: RangeSliderConfig;
 	/** Callback when slider value is confirmed */
 	onComplete: (value: number, optionIndex: number, store: CedarStore) => void;
+	/** Optional callback during slider movement */
+	onChange?: (value: number, optionIndex: number) => void;
 	/** Activation conditions for the spell */
 	activationConditions: ActivationConditions;
 }
@@ -47,6 +49,7 @@ const RangeSliderSpell: React.FC<RangeSliderSpellProps> = ({
 	spellId,
 	rangeSliderConfig,
 	onComplete,
+	onChange,
 	activationConditions,
 }) => {
 	const { styling } = useStyling();
@@ -125,7 +128,12 @@ const RangeSliderSpell: React.FC<RangeSliderSpellProps> = ({
 
 	useEffect(() => {
 		indexRef.current = currentIndex;
-	}, [currentIndex]);
+		// Call onChange callback when index changes
+		if (onChange && sliderPosition) {
+			const option = options[currentIndex];
+			onChange(option.value, currentIndex);
+		}
+	}, [currentIndex, onChange, sliderPosition, options]);
 
 	// Use the spell hook
 	useSpell({
