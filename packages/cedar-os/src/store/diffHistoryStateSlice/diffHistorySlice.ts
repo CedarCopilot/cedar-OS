@@ -1,5 +1,7 @@
 import { StateCreator } from 'zustand';
 import { compare, Operation, applyPatch } from 'fast-json-patch';
+import type { CedarStore } from '@/store/CedarOSTypes';
+import type { BasicStateValue } from '@/store/stateSlice/stateSlice';
 
 /**
  * DiffHistorySlice manages diffs so that we can render changes and let the user accept, reject, and manage them.
@@ -9,6 +11,16 @@ import { compare, Operation, applyPatch } from 'fast-json-patch';
  */
 
 export type DiffMode = 'defaultAccept' | 'holdAccept';
+
+/**
+ * Function that computes the final state based on old and new states.
+ * Can be used to add diff markers or transform the state before setting.
+ */
+export type ComputeStateFunction<T = unknown> = (
+	oldState: T,
+	newState: T,
+	patches: Operation[]
+) => T;
 
 export interface DiffState<T = unknown> {
 	oldState: T;
@@ -22,6 +34,7 @@ export interface DiffHistoryState<T = unknown> {
 	history: DiffState<T>[];
 	redoStack: DiffState<T>[];
 	diffMode: DiffMode;
+	computeState?: ComputeStateFunction<T>;
 }
 
 export interface DiffHistorySlice {
@@ -34,6 +47,15 @@ export interface DiffHistorySlice {
 		diffHistoryState: DiffHistoryState<T>
 	) => void;
 	getCleanState: <T>(key: string) => T | undefined;
+
+	// Get computed state (with computeState applied if available)
+	getComputedState: <T>(key: string) => T | undefined;
+
+	// Register computeState function for a key
+	setComputeStateFunction: <T>(
+		key: string,
+		computeState: ComputeStateFunction<T> | undefined
+	) => void;
 
 	// New setDiffState method
 	setDiffState: <T>(key: string, newState: T, isDiffChange: boolean) => void;
@@ -54,8 +76,26 @@ export interface DiffHistorySlice {
 	redo: (key: string) => boolean;
 }
 
+// Helper function to sync clean state back to stateSlice
+const syncToStateSlice = (
+	store: CedarStore,
+	key: string,
+	cleanState: unknown
+) => {
+	// Get the current registered state
+	const registeredState = store.registeredStates?.[key];
+	if (registeredState && registeredState.value !== cleanState) {
+		// Update the registered state value directly
+		// We cast to BasicStateValue since we know it came from a valid state
+		store.registeredStates[key] = {
+			...registeredState,
+			value: cleanState as BasicStateValue,
+		};
+	}
+};
+
 export const createDiffHistorySlice: StateCreator<
-	DiffHistorySlice,
+	CedarStore,
 	[],
 	[],
 	DiffHistorySlice
@@ -73,9 +113,15 @@ export const createDiffHistorySlice: StateCreator<
 		set((state) => ({
 			diffHistoryStates: {
 				...state.diffHistoryStates,
-				[key]: diffHistoryState,
+				[key]: diffHistoryState as DiffHistoryState<unknown>,
 			},
 		}));
+
+		// Sync the clean state to stateSlice
+		const cleanState = get().getCleanState<T>(key);
+		if (cleanState !== undefined) {
+			syncToStateSlice(get() as CedarStore, key, cleanState);
+		}
 	},
 
 	getCleanState: <T>(key: string): T | undefined => {
@@ -93,6 +139,44 @@ export const createDiffHistorySlice: StateCreator<
 		}
 	},
 
+	getComputedState: <T>(key: string): T | undefined => {
+		const diffHistoryState = get().getDiffHistoryState<T>(key);
+		if (!diffHistoryState) return undefined;
+
+		const { diffState, computeState } = diffHistoryState;
+
+		// If there's a computeState function, apply it
+		if (computeState) {
+			const patches = compare(
+				diffState.oldState as object,
+				diffState.newState as object
+			);
+			return computeState(diffState.oldState, diffState.newState, patches);
+		}
+
+		// Otherwise return the clean state
+		return get().getCleanState<T>(key);
+	},
+
+	setComputeStateFunction: <T>(
+		key: string,
+		computeState: ComputeStateFunction<T> | undefined
+	) => {
+		const currentDiffHistoryState = get().getDiffHistoryState<T>(key);
+		if (!currentDiffHistoryState) {
+			console.warn(`No diff history state found for key: ${key}`);
+			return;
+		}
+
+		// Update the diff history state with the new computeState function
+		const updatedDiffHistoryState: DiffHistoryState<T> = {
+			...currentDiffHistoryState,
+			computeState,
+		};
+
+		get().setDiffHistoryState(key, updatedDiffHistoryState);
+	},
+
 	setDiffState: <T>(key: string, newState: T, isDiffChange: boolean) => {
 		const currentDiffHistoryState = get().getDiffHistoryState<T>(key);
 
@@ -106,12 +190,27 @@ export const createDiffHistorySlice: StateCreator<
 			diffState: originalDiffState,
 			history,
 			diffMode,
+			computeState,
 		} = currentDiffHistoryState;
 
 		// Step 1: Save the original diffState to history
 		const updatedHistory = [...history, originalDiffState];
 
-		// Step 2: Create the new diffState based on isDiffChange flag
+		// Step 2: Apply computeState if available
+		let finalNewState = newState;
+		if (computeState) {
+			const patches = compare(
+				originalDiffState.oldState as object,
+				newState as object
+			);
+			finalNewState = computeState(
+				originalDiffState.oldState,
+				newState,
+				patches
+			);
+		}
+
+		// Step 3: Create the new diffState based on isDiffChange flag
 		// Determine oldState: if isDiffChange and not previously in diff mode, use previous newState
 		// Otherwise keep the original oldState
 		const oldStateForDiff =
@@ -120,11 +219,11 @@ export const createDiffHistorySlice: StateCreator<
 				: originalDiffState.oldState;
 
 		// Generate patches to describe the changes
-		const patches = compare(oldStateForDiff as object, newState as object);
+		const patches = compare(oldStateForDiff as object, finalNewState as object);
 
 		const newDiffState: DiffState<T> = {
 			oldState: oldStateForDiff,
-			newState: newState,
+			newState: finalNewState,
 			isDiffMode: isDiffChange,
 			patches,
 		};
@@ -135,6 +234,7 @@ export const createDiffHistorySlice: StateCreator<
 			history: updatedHistory,
 			redoStack: [], // Clear redo stack on new changes
 			diffMode: diffMode, // Keep the same diff mode
+			computeState, // Preserve the computeState function
 		};
 
 		// Update the store
@@ -158,6 +258,7 @@ export const createDiffHistorySlice: StateCreator<
 			diffState: originalDiffState,
 			history,
 			diffMode,
+			computeState,
 		} = currentDiffHistoryState;
 
 		// Step 1: Save the original diffState to history
@@ -177,7 +278,20 @@ export const createDiffHistorySlice: StateCreator<
 			false // Don't mutate the original
 		);
 
-		const updatedNewState = patchResult.newDocument as T;
+		let updatedNewState = patchResult.newDocument as T;
+
+		// Apply computeState if available
+		if (computeState) {
+			const computePatches = compare(
+				originalDiffState.oldState as object,
+				updatedNewState as object
+			);
+			updatedNewState = computeState(
+				originalDiffState.oldState,
+				updatedNewState,
+				computePatches
+			);
+		}
 
 		// Step 3: Create the new diffState based on isDiffChange flag
 		// Determine oldState: if isDiffChange and not previously in diff mode, use previous newState
@@ -206,6 +320,7 @@ export const createDiffHistorySlice: StateCreator<
 			history: updatedHistory,
 			redoStack: [], // Clear redo stack on new changes
 			diffMode: diffMode, // Keep the same diff mode
+			computeState, // Preserve the computeState function
 		};
 
 		// Update the store
@@ -223,7 +338,8 @@ export const createDiffHistorySlice: StateCreator<
 			return false;
 		}
 
-		const { diffState, history, diffMode } = currentDiffHistoryState;
+		const { diffState, history, diffMode, computeState } =
+			currentDiffHistoryState;
 
 		// Accept changes by copying newState into oldState (sync states)
 		// No patches needed as states are now identical
@@ -242,6 +358,7 @@ export const createDiffHistorySlice: StateCreator<
 			history: updatedHistory,
 			redoStack: currentDiffHistoryState.redoStack || [], // Preserve redo stack
 			diffMode: diffMode,
+			computeState, // Preserve the computeState function
 		};
 
 		// Update the store
@@ -261,7 +378,8 @@ export const createDiffHistorySlice: StateCreator<
 			return false;
 		}
 
-		const { diffState, history, diffMode } = currentDiffHistoryState;
+		const { diffState, history, diffMode, computeState } =
+			currentDiffHistoryState;
 
 		// Reject changes by copying oldState into newState (revert to old state)
 		// No patches needed as states are now identical
@@ -280,6 +398,7 @@ export const createDiffHistorySlice: StateCreator<
 			history: updatedHistory,
 			redoStack: currentDiffHistoryState.redoStack || [], // Preserve redo stack
 			diffMode: diffMode,
+			computeState, // Preserve the computeState function
 		};
 
 		// Update the store
@@ -304,6 +423,7 @@ export const createDiffHistorySlice: StateCreator<
 			history,
 			redoStack = [],
 			diffMode,
+			computeState,
 		} = currentDiffHistoryState;
 
 		// Pop the last state from history
@@ -322,6 +442,7 @@ export const createDiffHistorySlice: StateCreator<
 			history: newHistory,
 			redoStack: newRedoStack,
 			diffMode: diffMode,
+			computeState, // Preserve the computeState function
 		};
 
 		// Update the store
@@ -347,6 +468,7 @@ export const createDiffHistorySlice: StateCreator<
 			history,
 			redoStack,
 			diffMode,
+			computeState,
 		} = currentDiffHistoryState;
 
 		// Pop the last state from redo stack
@@ -365,6 +487,7 @@ export const createDiffHistorySlice: StateCreator<
 			history: newHistory,
 			redoStack: newRedoStack,
 			diffMode: diffMode,
+			computeState, // Preserve the computeState function
 		};
 
 		// Update the store

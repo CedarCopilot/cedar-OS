@@ -30,7 +30,15 @@ export { createStylingSlice } from '@/store/stylingSlice';
 // Export state management
 export { useRegisterState } from '@/store/stateSlice/stateSlice';
 export { useCedarState } from '@/store/stateSlice/useCedarState';
-export { useCedarDiffState } from '@/store/diffHistoryStateSlice';
+export {
+	useCedarDiffState,
+	useRegisterDiffState,
+	registerDiffState,
+	addDiffToArrayObjs,
+	type RegisterDiffStateConfig,
+	type DiffStateReturn,
+	type ComputeStateFunction,
+} from '@/store/diffHistoryStateSlice';
 
 // Export context management
 export {
@@ -159,19 +167,25 @@ export {
 
 // Export action response processor hooks
 export {
+	createActionResponseProcessor,
+	createResponseProcessor,
+} from '@/store/agentConnection/responseProcessors/createResponseProcessor';
+
+export type {
 	ActionResponsePayload,
 	ActionResponse,
 	ActionResponseFor,
-	createActionResponseProcessor,
-	createResponseProcessor,
 } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
 
 // Export message renderer factory function
 export {
 	createMessageRenderer,
+	createActionMessageRenderer,
+} from '@/store/messages/renderers/createMessageRenderer';
+
+export type {
 	ActionMessage,
 	ActionMessageFor,
-	createActionMessageRenderer,
 } from '@/store/messages/renderers/createMessageRenderer';
 
 // Export spell system types and utilities

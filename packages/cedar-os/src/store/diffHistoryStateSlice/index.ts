@@ -1,5 +1,10 @@
 // Export types
-export type { DiffMode, DiffState, DiffHistoryState } from './diffHistorySlice';
+export type {
+	DiffMode,
+	DiffState,
+	DiffHistoryState,
+	ComputeStateFunction,
+} from './diffHistorySlice';
 
 // Re-export Operation type from fast-json-patch for convenience
 export type { Operation } from 'fast-json-patch';
@@ -8,5 +13,18 @@ export type { Operation } from 'fast-json-patch';
 export { createDiffHistorySlice } from './diffHistorySlice';
 export type { DiffHistorySlice } from './diffHistorySlice';
 
-// Export hook
+// Export hooks
 export { useCedarDiffState } from './useCedarDiffState';
+export {
+	useSubscribeToDiffValue,
+	useSubscribeToDiffValues,
+	type DiffValue,
+	type UseSubscribeToDiffValueOptions,
+} from './useSubscribeToDiffValue';
+export {
+	useRegisterDiffState,
+	registerDiffState,
+	addDiffToArrayObjs,
+	type RegisterDiffStateConfig,
+	type DiffStateReturn,
+} from './useRegisterDiffState';
