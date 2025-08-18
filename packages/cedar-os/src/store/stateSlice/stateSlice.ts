@@ -4,8 +4,8 @@ import { StateCreator } from 'zustand';
 import { CedarStore } from '@/store/CedarOSTypes';
 import type { ZodSchema } from 'zod';
 import { z } from 'zod/v4';
-import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
+import { useEffect } from 'react';
 
 // Define types that our state values can be
 export type BasicStateValue =
@@ -43,11 +43,11 @@ export interface ExecuteCustomSetterParams {
 // A setter function that takes an input value and the current state to produce updates
 export type BaseSetter<T = BasicStateValue> = (state: T) => void;
 
-// A setter function that takes an input value and the current state to produce updates
+// A setter function that takes the current state, setValue function, and additional args
 export type SetterFunction<
 	T = BasicStateValue,
 	Args extends unknown[] = unknown[]
-> = (state: T, ...args: Args) => void;
+> = (state: T, setValue: (newValue: T) => void, ...args: Args) => void;
 
 // Setter object that includes both metadata and execution function
 export interface Setter<
@@ -90,8 +90,8 @@ export interface StateSlice {
 	registerState: <T extends BasicStateValue>(config: {
 		key: string;
 		value: T;
-		// Primary state updater: (inputValue, currentState)
-		setValue?: SetterFunction<T>;
+		// Primary state updater - external React setState function
+		setValue?: BaseSetter<T>;
 		description?: string;
 		schema?: ZodSchema<T>;
 		customSetters?: Record<string, Setter<T>>;
@@ -128,7 +128,7 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		registerState: <T extends BasicStateValue>(config: {
 			key: string;
 			value: T;
-			setValue?: SetterFunction<T>;
+			setValue?: BaseSetter<T>;
 			description?: string;
 			schema?: ZodSchema<T>;
 			customSetters?: Record<string, Setter<T>>;
@@ -315,7 +315,10 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 				return;
 			}
 			const setter = setters[setterKey];
-			setter.execute(existingState.value, ...args);
+			const setValueFunc = (newValue: BasicStateValue) => {
+				get().setCedarState(key, newValue);
+			};
+			setter.execute(existingState.value, setValueFunc, ...args);
 		},
 	};
 };
@@ -349,7 +352,7 @@ export function isRegisteredState<T>(
 export function useRegisterState<T extends BasicStateValue>(config: {
 	key: string;
 	value: T;
-	setValue?: SetterFunction<T>;
+	setValue?: BaseSetter<T>;
 	description?: string;
 	schema?: ZodSchema<T>;
 	customSetters?: Record<string, Setter<T>>;

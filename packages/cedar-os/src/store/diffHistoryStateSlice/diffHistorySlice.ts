@@ -257,48 +257,21 @@ export const createDiffHistorySlice: StateCreator<
 		}
 
 		// Create a temporary state holder to capture the result
-		const resultState: BasicStateValue = currentNewState as BasicStateValue;
+		let resultState: BasicStateValue = currentNewState as BasicStateValue;
 
-		// I don't think this actually happens, but is good backup vvv
-
-		// // Store the original setCedarState and setValue to intercept calls
-		// const originalSetCedarState = get().setCedarState;
-		// const originalSetValue = registeredState.setValue;
-
-		// // Temporarily override setCedarState to capture the result
-		// // This is needed because custom setters often call setCedarState internally
-		// get().setCedarState = (stateKey: string, newValue: BasicStateValue) => {
-		// 	if (stateKey === key) {
-		// 		resultState = newValue;
-		// 	}
-		// };
-
-		// // Also override setValue if it exists
-		// if (originalSetValue) {
-		// 	registeredState.setValue = (newValue: unknown) => {
-		// 		resultState = newValue as BasicStateValue;
-		// 	};
-		// }
+		// Create a setValue function that will be passed to the custom setter
+		const setValueFunc = (newValue: BasicStateValue) => {
+			resultState = newValue;
+		};
 
 		try {
-			// Execute the custom setter
+			// Execute the custom setter with current state, setValue, and args
 			const setter = customSetters[setterKey];
-			setter.execute(currentNewState as BasicStateValue, ...args);
-
-			// // Restore original functions
-			// get().setCedarState = originalSetCedarState;
-			// if (originalSetValue) {
-			// 	registeredState.setValue = originalSetValue;
-			// }
+			setter.execute(currentNewState as BasicStateValue, setValueFunc, ...args);
 
 			// Now call setDiffState with the captured result
 			get().setDiffState(key, resultState, isDiff);
 		} catch (error) {
-			// // Restore original functions in case of error
-			// get().setCedarState = originalSetCedarState;
-			// if (originalSetValue) {
-			// 	registeredState.setValue = originalSetValue;
-			// }
 			console.error(`Error executing diff setter for "${key}":`, error);
 		}
 	},
