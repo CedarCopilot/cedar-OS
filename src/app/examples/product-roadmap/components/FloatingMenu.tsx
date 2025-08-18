@@ -99,7 +99,11 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
 					diff: 'added' as const,
 				},
 			};
-			executeCustomSetter('nodes', 'addNode', newNode);
+			executeCustomSetter({
+				key: 'nodes',
+				setterKey: 'addNode',
+				args: [newNode],
+			});
 			setShowAddMenu(false);
 		},
 		[executeCustomSetter]

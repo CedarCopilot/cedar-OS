@@ -8,7 +8,13 @@ export const actionResponseProcessor: ResponseProcessor<ActionResponse> = {
 	namespace: 'default',
 	execute: async (obj, store) => {
 		const args = 'args' in obj && Array.isArray(obj.args) ? obj.args : [];
-		store.executeCustomSetter(obj.stateKey, obj.setterKey, ...args);
+		// Pass options with isDiff set to true for action responses
+		store.executeCustomSetter({
+			key: obj.stateKey,
+			setterKey: obj.setterKey,
+			options: { isDiff: true },
+			args,
+		});
 		store.addMessage(obj as unknown as MessageInput);
 	},
 	validate: (obj): obj is ActionResponse =>

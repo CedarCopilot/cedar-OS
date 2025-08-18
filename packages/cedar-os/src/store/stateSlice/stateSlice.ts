@@ -25,6 +25,20 @@ export interface SetterParameter {
 	optional?: boolean;
 }
 
+// Options for executeCustomSetter
+export interface ExecuteCustomSetterOptions {
+	isDiff?: boolean;
+	[key: string]: unknown;
+}
+
+// Parameters for executeCustomSetter
+export interface ExecuteCustomSetterParams {
+	key: string;
+	setterKey: string;
+	options?: ExecuteCustomSetterOptions;
+	args?: unknown[];
+}
+
 // A setter function that takes an input value and the current state to produce updates
 export type BaseSetter<T = BasicStateValue> = (state: T) => void;
 
@@ -87,15 +101,9 @@ export interface StateSlice {
 	addCustomSetters: (key: string, setters: Record<string, Setter>) => boolean;
 	/**
 	 * Execute a named custom setter for a state.
-	 * @param key The state key.
-	 * @param setterKey The custom setter key.
-	 * @param args Arguments to pass to the custom setter.
+	 * @param params Object containing key, setterKey, optional options, and optional args
 	 */
-	executeCustomSetter: (
-		key: string,
-		setterKey: string,
-		...args: unknown[]
-	) => void;
+	executeCustomSetter: (params: ExecuteCustomSetterParams) => void;
 	/** Retrieves the stored value for a given state key */
 	getCedarState: (key: string) => BasicStateValue | undefined;
 	/**
@@ -268,11 +276,10 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		/**
 		 * Execute a named custom setter for a registered state.
 		 */
-		executeCustomSetter: (
-			key: string,
-			setterKey: string,
-			...args: unknown[]
-		) => {
+		executeCustomSetter: (params: ExecuteCustomSetterParams) => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { key, setterKey, options = {}, args = [] } = params;
+			// Note: options will be used for features like diff tracking
 			const existingState = get().registeredStates[key];
 			if (!existingState) {
 				console.warn(`State with key "${key}" not found.`);
