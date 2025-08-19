@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { cn, useStyling } from 'cedar-os';
+import { cn, useStyling, useCedarStore } from 'cedar-os';
 import type { CedarStore } from 'cedar-os';
 
 export interface TooltipMenuItem {
@@ -58,7 +58,12 @@ export const TooltipMenu: React.FC<TooltipMenuProps> = ({
 	}, [onClose]);
 
 	const handleItemClick = (item: TooltipMenuItem) => {
+		// Call the item's onInvoke function with the Cedar store
+		item.onInvoke(useCedarStore.getState());
+
+		// Also call the optional onItemClick prop if provided
 		onItemClick?.(item);
+
 		onClose();
 	};
 

@@ -40,7 +40,6 @@ import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import {
 	ActivationMode,
 	Hotkey,
-	MouseEvent as SpellMouseEvent,
 	useRegisterState,
 	useStateBasedMentionProvider,
 	useSubscribeStateToInputContext,
@@ -515,9 +514,23 @@ function FlowCanvas() {
 			{edgeMenu && (
 				<TooltipMenu
 					position={{ x: edgeMenu.x, y: edgeMenu.y }}
-					onDelete={onDeleteEdge}
-					onReverse={onDirectionChange}
-					onEdit={() => openEditLabel(edgeMenu.edge)}
+					items={[
+						{
+							title: 'Edit Label',
+							icon: '✏️',
+							onInvoke: () => openEditLabel(edgeMenu.edge),
+						},
+						{
+							title: 'Reverse Direction',
+							icon: '🔄',
+							onInvoke: onDirectionChange,
+						},
+						{
+							title: 'Delete Edge',
+							icon: '🗑️',
+							onInvoke: onDeleteEdge,
+						},
+					]}
 					onClose={() => setEdgeMenu(null)}
 				/>
 			)}
@@ -690,7 +703,7 @@ export default function ProductMapPage() {
 						},
 					]}
 					activationConditions={{
-						events: [SpellMouseEvent.RIGHT_CLICK, Hotkey.R],
+						events: [Hotkey.R],
 						mode: ActivationMode.HOLD, // Hold mode for radial menu
 					}}
 				/>

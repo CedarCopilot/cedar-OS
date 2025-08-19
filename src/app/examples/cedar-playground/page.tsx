@@ -4,7 +4,11 @@ import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import { useState } from 'react';
 import { type CedarStore, ActivationMode } from 'cedar-os';
 import SliderSpell from '@/spells/SliderSpell';
-import { AgentBackendConnectionSection, ChatSection } from './sections';
+import {
+	AgentBackendConnectionSection,
+	ChatSection,
+	TextLengthSection,
+} from './sections';
 
 export default function CedarPlaygroundPage() {
 	const [activeChatTab, setActiveChatTab] = useState('caption');
@@ -84,6 +88,9 @@ export default function CedarPlaygroundPage() {
 			<AgentBackendConnectionSection />
 
 			<ChatSection activeTab={activeChatTab} onTabChange={setActiveChatTab} />
+
+			<TextLengthSection />
+
 			{/* 
 			<StateAccessSection /> */}
 

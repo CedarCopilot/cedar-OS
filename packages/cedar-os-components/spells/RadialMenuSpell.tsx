@@ -163,6 +163,40 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 			setHoverIndex(getIndexFromAngle(angleDeg));
 		};
 
+		const handleClick = (e: MouseEvent) => {
+			// Only handle left clicks
+			if (e.button !== 0) return;
+
+			const dx = e.clientX - menuPosition.x;
+			const dy = e.clientY - menuPosition.y;
+			const distance = Math.sqrt(dx * dx + dy * dy);
+
+			if (distance < INNER_RADIUS) {
+				// Clicked in cancel zone - close menu without executing
+				setHoverIndex(null);
+				setMenuPosition(null);
+				return;
+			}
+
+			// Determine which item was clicked
+			const angleRad = Math.atan2(-dy, dx);
+			const angleDeg = radToDeg(angleRad);
+			const clickedIndex = getIndexFromAngle(angleDeg);
+
+			if (
+				clickedIndex !== null &&
+				clickedIndex >= 0 &&
+				clickedIndex < items.length
+			) {
+				// Execute the clicked item's action
+				items[clickedIndex].onInvoke(useCedarStore.getState());
+			}
+
+			// Close the menu
+			setHoverIndex(null);
+			setMenuPosition(null);
+		};
+
 		const handleEscape = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
 				// Clear selection and close without executing
@@ -172,13 +206,15 @@ const RadialMenuSpell: React.FC<RadialMenuSpellProps> = ({
 		};
 
 		window.addEventListener('mousemove', handleMouseMove);
+		window.addEventListener('click', handleClick);
 		window.addEventListener('keydown', handleEscape);
 
 		return () => {
 			window.removeEventListener('mousemove', handleMouseMove);
+			window.removeEventListener('click', handleClick);
 			window.removeEventListener('keydown', handleEscape);
 		};
-	}, [menuPosition]);
+	}, [menuPosition, items]);
 
 	// Don't render if menu is not active
 	if (!menuPosition) return null;

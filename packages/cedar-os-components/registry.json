@@ -396,6 +396,18 @@
 			}
 		},
 		{
+			"name": "phantom-text",
+			"type": "text",
+			"dependencies": ["react"],
+			"registryDependencies": ["cedar-os"],
+			"files": ["PhantomText.tsx"],
+			"meta": {
+				"importName": "PhantomText",
+				"displayName": "Phantom Text",
+				"description": "Placeholder text generator with specified word count"
+			}
+		},
+		{
 			"name": "keyboard-shortcut",
 			"type": "ui",
 			"dependencies": ["react"],

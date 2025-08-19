@@ -112,7 +112,7 @@ export const ShimmerText: React.FC<ShimmerTextProps> = ({
 				{text.split('').map((char, index) => (
 					<motion.span
 						key={`${state}-${index}`}
-						className='whitespace-pre text-md'
+						className='whitespace-pre'
 						initial={{ color: isError ? errorColor : grey }}
 						animate={
 							isComplete
