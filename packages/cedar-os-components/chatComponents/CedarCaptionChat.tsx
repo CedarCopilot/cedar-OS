@@ -57,7 +57,11 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 				diff: 'added' as const,
 			},
 		};
-		executeCustomSetter('nodes', 'addNode', newFeature);
+		executeCustomSetter({
+			key: 'nodes',
+			setterKey: 'addNode',
+			args: [newFeature],
+		});
 	}, []);
 
 	const handleAddIssue = useCallback(() => {
@@ -76,17 +80,29 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 				diff: 'added' as const,
 			},
 		};
-		executeCustomSetter('nodes', 'addNode', newIssue);
+		executeCustomSetter({
+			key: 'nodes',
+			setterKey: 'addNode',
+			args: [newIssue],
+		});
 	}, []);
 
 	const handleAcceptAllDiffs = useCallback(() => {
 		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
-		executeCustomSetter('nodes', 'acceptAllDiffs');
+		executeCustomSetter({
+			key: 'nodes',
+			setterKey: 'acceptAllDiffs',
+			args: [],
+		});
 	}, []);
 
 	const handleRejectAllDiffs = useCallback(() => {
 		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
-		executeCustomSetter('nodes', 'rejectAllDiffs');
+		executeCustomSetter({
+			key: 'nodes',
+			setterKey: 'rejectAllDiffs',
+			args: [],
+		});
 	}, []);
 
 	return (
