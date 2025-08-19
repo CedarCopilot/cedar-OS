@@ -72,7 +72,7 @@ const RangeSliderSpell: React.FC<RangeSliderSpellProps> = ({
 
 	// Calculate positions for each option - only once!
 	const optionPositions = useMemo(() => {
-		const padding = 3; // 5% padding on each side
+		const padding = 3; // 3% padding on each side
 		const usableRange = 100 - padding * 2; // 90% usable range
 
 		if (proportionalSpacing && options.length > 1) {
@@ -107,7 +107,7 @@ const RangeSliderSpell: React.FC<RangeSliderSpellProps> = ({
 	}, [currentOption, unit]);
 
 	// Render icon helper
-	const renderIcon = (option: RangeOption, size: number = 18) => {
+	const renderIcon = (option: RangeOption) => {
 		const icon = option.icon;
 		if (!icon) return null;
 
@@ -117,8 +117,7 @@ const RangeSliderSpell: React.FC<RangeSliderSpellProps> = ({
 		} else {
 			// Lucide icon
 			return React.createElement(icon, {
-				size,
-				className: `w-${size / 4} h-${size / 4}`,
+				className: 'w-3.5 h-3.5 mr-1',
 			});
 		}
 	};
@@ -136,7 +135,7 @@ const RangeSliderSpell: React.FC<RangeSliderSpellProps> = ({
 	}, [currentIndex, onChange, sliderPosition, options]);
 
 	// Use the spell hook
-	useSpell({
+	const { deactivate } = useSpell({
 		id: spellId,
 		activationConditions,
 		onActivate: (state) => {
@@ -202,10 +201,9 @@ const RangeSliderSpell: React.FC<RangeSliderSpellProps> = ({
 
 		const handleEscape = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
-				// Reset to initial index and close
+				// Reset to initial index and properly deactivate the spell
 				setCurrentIndex(initialIndex);
-				setSliderPosition(null);
-				setInitialMouseX(null);
+				deactivate();
 			}
 		};
 

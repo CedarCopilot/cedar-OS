@@ -254,7 +254,7 @@ const SliderSpell: React.FC<SliderSpellProps> = ({
 	}, [sliderValue, onChange, sliderPosition]);
 
 	// Use the spell hook
-	useSpell({
+	const { deactivate } = useSpell({
 		id: spellId,
 		activationConditions,
 		onActivate: (state) => {
@@ -311,10 +311,9 @@ const SliderSpell: React.FC<SliderSpellProps> = ({
 
 		const handleEscape = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
-				// Reset to initial value and close
+				// Reset to initial value and properly deactivate the spell
 				setSliderValue(initialValue);
-				setSliderPosition(null);
-				setInitialMouseX(null);
+				deactivate();
 			}
 		};
 

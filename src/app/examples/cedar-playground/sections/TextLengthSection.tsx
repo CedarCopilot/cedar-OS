@@ -1,20 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
 import GlassyPaneContainer from '@/containers/GlassyPaneContainer';
-import { PhantomText } from '@/text/PhantomText';
-import SliderSpell from '@/spells/SliderSpell';
-import RangeSliderSpell from '@/spells/RangeSliderSpell';
 import { DiffText } from '@/diffs/DiffText';
+import RangeSliderSpell from '@/spells/RangeSliderSpell';
+import SliderSpell from '@/spells/SliderSpell';
+import { PhantomText } from '@/text/PhantomText';
 import { ActivationMode, useRegisterState } from 'cedar-os';
 import {
-	Type,
-	FileText,
-	ScrollText,
 	BookOpen,
-	Newspaper,
+	FileText,
 	Library,
+	Newspaper,
+	ScrollText,
+	Type,
 } from 'lucide-react';
+import { useState } from 'react';
 
 export function TextLengthSection() {
 	const [wordCount, setWordCount] = useState(50);
