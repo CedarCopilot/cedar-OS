@@ -21,6 +21,15 @@
 				]
 			},
 			{
+				"group": "Examples",
+				"icon": "sparkles",
+				"pages": [
+					"examples/ai-native-email",
+					"examples/ai-native-canvas-flow",
+					"examples/no-chat-onboarding-agent"
+				]
+			},
+			{
 				"group": "Getting Started",
 				"icon": "play",
 				"pages": [
