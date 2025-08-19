@@ -5,6 +5,7 @@ import GlassyPaneContainer from '@/containers/GlassyPaneContainer';
 import { PhantomText } from '@/text/PhantomText';
 import SliderSpell from '@/spells/SliderSpell';
 import RangeSliderSpell from '@/spells/RangeSliderSpell';
+import { DiffText } from '@/diffs/DiffText';
 import { ActivationMode, useRegisterState } from 'cedar-os';
 import {
 	Type,
@@ -19,6 +20,15 @@ export function TextLengthSection() {
 	const [wordCount, setWordCount] = useState(50);
 	const [isSliderActive, setIsSliderActive] = useState(false);
 	const [textInput, setTextInput] = useState('');
+	const [diffOldText, setDiffOldText] = useState(
+		'The quick brown fox jumps over the lazy dog.'
+	);
+	const [diffNewText, setDiffNewText] = useState(
+		'The quick brown fox jumps over the lazy dog.'
+	);
+	const [diffMode, setDiffMode] = useState<'words' | 'chars'>('words');
+	const [showRemoved, setShowRemoved] = useState(true);
+	const [animateChanges, setAnimateChanges] = useState(true);
 
 	// Register the word count state for Cedar to access
 	useRegisterState({
@@ -285,6 +295,153 @@ export function TextLengthSection() {
 									Clear text
 								</button>
 							)}
+						</div>
+					</div>
+
+					{/* DiffText Test Section */}
+					<div className='space-y-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg'>
+						<h4 className='font-semibold text-gray-900 dark:text-white mb-3'>
+							🔄 DiffText Component Test
+						</h4>
+
+						{/* Controls */}
+						<div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+							<div className='space-y-2'>
+								<label className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+									Old Text:
+								</label>
+								<textarea
+									value={diffOldText}
+									onChange={(e) => setDiffOldText(e.target.value)}
+									className='w-full h-20 p-2 text-sm border rounded-lg bg-white dark:bg-gray-900 
+										text-gray-900 dark:text-white border-gray-300 dark:border-gray-600
+										focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+									placeholder='Enter old text...'
+								/>
+							</div>
+
+							<div className='space-y-2'>
+								<label className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+									New Text:
+								</label>
+								<textarea
+									value={diffNewText}
+									onChange={(e) => setDiffNewText(e.target.value)}
+									className='w-full h-20 p-2 text-sm border rounded-lg bg-white dark:bg-gray-900 
+										text-gray-900 dark:text-white border-gray-300 dark:border-gray-600
+										focus:ring-2 focus:ring-green-500 focus:border-transparent'
+									placeholder='Enter new text...'
+								/>
+							</div>
+						</div>
+
+						{/* Options */}
+						<div className='flex flex-wrap gap-4'>
+							<div className='flex items-center gap-2'>
+								<label className='text-sm text-gray-700 dark:text-gray-300'>
+									Diff Mode:
+								</label>
+								<select
+									value={diffMode}
+									onChange={(e) =>
+										setDiffMode(e.target.value as 'words' | 'chars')
+									}
+									className='px-3 py-1 text-sm border rounded-lg bg-white dark:bg-gray-900 
+										text-gray-900 dark:text-white border-gray-300 dark:border-gray-600'>
+									<option value='words'>Words</option>
+									<option value='chars'>Characters</option>
+								</select>
+							</div>
+
+							<label className='flex items-center gap-2 cursor-pointer'>
+								<input
+									type='checkbox'
+									checked={showRemoved}
+									onChange={(e) => setShowRemoved(e.target.checked)}
+									className='rounded border-gray-300 dark:border-gray-600'
+								/>
+								<span className='text-sm text-gray-700 dark:text-gray-300'>
+									Show Removed Text
+								</span>
+							</label>
+
+							<label className='flex items-center gap-2 cursor-pointer'>
+								<input
+									type='checkbox'
+									checked={animateChanges}
+									onChange={(e) => setAnimateChanges(e.target.checked)}
+									className='rounded border-gray-300 dark:border-gray-600'
+								/>
+								<span className='text-sm text-gray-700 dark:text-gray-300'>
+									Animate Changes
+								</span>
+							</label>
+						</div>
+
+						{/* Quick Examples */}
+						<div className='space-y-2'>
+							<p className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+								Quick Examples:
+							</p>
+							<div className='flex flex-wrap gap-2'>
+								<button
+									onClick={() => {
+										setDiffOldText(
+											'The quick brown fox jumps over the lazy dog.'
+										);
+										setDiffNewText(
+											'The quick brown fox leaps over the sleeping cat.'
+										);
+									}}
+									className='px-3 py-1 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'>
+									Word Changes
+								</button>
+								<button
+									onClick={() => {
+										setDiffOldText('Hello world!');
+										setDiffNewText('Hello beautiful world!!!');
+									}}
+									className='px-3 py-1 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors'>
+									Additions
+								</button>
+								<button
+									onClick={() => {
+										setDiffOldText('The complete sentence with many words.');
+										setDiffNewText('The sentence.');
+									}}
+									className='px-3 py-1 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors'>
+									Deletions
+								</button>
+								<button
+									onClick={() => {
+										setDiffOldText(
+											'React is a JavaScript library for building user interfaces.'
+										);
+										setDiffNewText(
+											'Vue is a progressive JavaScript framework for creating modern web applications.'
+										);
+									}}
+									className='px-3 py-1 text-xs bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors'>
+									Complex Changes
+								</button>
+							</div>
+						</div>
+
+						{/* Diff Result */}
+						<div className='p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700'>
+							<p className='text-xs font-medium text-gray-600 dark:text-gray-400 mb-2'>
+								Diff Result:
+							</p>
+							<div className='text-gray-900 dark:text-white leading-relaxed'>
+								<DiffText
+									oldText={diffOldText}
+									newText={diffNewText}
+									diffMode={diffMode}
+									showRemoved={showRemoved}
+									animateChanges={animateChanges}
+									className='text-base'
+								/>
+							</div>
 						</div>
 					</div>
 
