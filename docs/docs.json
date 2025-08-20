@@ -39,6 +39,13 @@
 				]
 			},
 			{
+				"group": "MCP Integration",
+				"icon": "robot",
+				"pages": [
+					"mcp-integration/mcp-server"
+				]
+			},
+			{
 				"group": "Connecting to an Agent",
 				"icon": "plug",
 				"pages": [
