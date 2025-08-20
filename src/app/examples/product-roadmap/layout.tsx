@@ -53,8 +53,7 @@ export default function ProductRoadmapLayout({
 	// };
 
 	const voiceSettings = {
-		useBrowserTTS: false,
-		stream: true,
+		useBrowserTTS: true,
 	};
 
 	const localStorageConfig: MessageStorageConfig = {
