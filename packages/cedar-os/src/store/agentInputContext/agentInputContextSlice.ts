@@ -251,7 +251,8 @@ export function useSubscribeStateToInputContext<T>(
 		(s) => s.updateAdditionalContext
 	);
 
-	// Subscribe to the cedar state value
+	// Subscribe to the cedar state value and check if state exists
+	const stateExists = useCedarStore((s) => stateKey in s.registeredStates);
 	const stateValue = useCedarStore(
 		(s) => s.registeredStates[stateKey]?.value as T | undefined
 	);
@@ -281,14 +282,15 @@ export function useSubscribeStateToInputContext<T>(
 			return String(item);
 		};
 
-		if (stateValue === undefined) {
+		// Check if state key exists (not just if value is undefined)
+		if (!stateExists) {
 			console.warn(
 				`[useSubscribeStateToInputContext] State with key "${stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
 			);
 			return;
 		}
 
-		const mapped = mapFn(stateValue);
+		const mapped = mapFn(stateValue as T);
 		const normalized: Record<string, unknown> = {};
 
 		// Normalize all values to arrays for consistent handling
@@ -355,7 +357,14 @@ export function useSubscribeStateToInputContext<T>(
 		} else {
 			updateAdditionalContext(normalized);
 		}
-	}, [stateValue, mapFn, updateAdditionalContext, options, stateKey]);
+	}, [
+		stateExists,
+		stateValue,
+		mapFn,
+		updateAdditionalContext,
+		options,
+		stateKey,
+	]);
 }
 
 // Enhanced hook to render additionalContext entries

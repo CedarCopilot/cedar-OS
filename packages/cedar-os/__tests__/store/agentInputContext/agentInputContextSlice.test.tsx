@@ -417,6 +417,50 @@ describe('AgentInputContextSlice', () => {
 			expect(Array.isArray(context.emptyItems)).toBe(true);
 		});
 
+		it('should handle null and undefined values in mapped result as empty arrays', () => {
+			// Register a state with some data
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'testState',
+					value: { someData: 'test' },
+					setValue: jest.fn(),
+				});
+			});
+
+			// Map function that returns null and undefined values
+			const mapFn = jest.fn(() => ({
+				nullValue: null,
+				undefinedValue: undefined,
+				validArray: [{ id: '1', title: 'Valid Item' }],
+				validSingle: { id: '2', title: 'Single Item' },
+			}));
+
+			renderHook(() => useSubscribeStateToInputContext('testState', mapFn));
+
+			expect(mapFn).toHaveBeenCalledWith({ someData: 'test' });
+
+			// Check that null and undefined values become empty arrays
+			const context = useCedarStore.getState().additionalContext;
+
+			// Null should become empty array
+			expect(context.nullValue).toBeDefined();
+			expect(context.nullValue).toEqual([]);
+			expect(Array.isArray(context.nullValue)).toBe(true);
+
+			// Undefined should become empty array
+			expect(context.undefinedValue).toBeDefined();
+			expect(context.undefinedValue).toEqual([]);
+			expect(Array.isArray(context.undefinedValue)).toBe(true);
+
+			// Valid array should remain as processed array
+			expect(context.validArray).toHaveLength(1);
+			expect(context.validArray[0].source).toBe('subscription');
+
+			// Valid single value should be wrapped in array
+			expect(context.validSingle).toHaveLength(1);
+			expect(context.validSingle[0].source).toBe('subscription');
+		});
+
 		it('should handle options with metadata', () => {
 			act(() => {
 				useCedarStore.getState().registerState({
@@ -449,6 +493,58 @@ describe('AgentInputContextSlice', () => {
 			expect(item.metadata?.color).toBe('#ff0000');
 			expect(item.metadata?.order).toBe(1);
 			expect(item.metadata?.showInChat).toBe(false);
+		});
+
+		it('should handle null state value as empty arrays', () => {
+			// Register a state with null value
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'nullState',
+					value: null,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: null) => ({
+				selectedNodes: state,
+			}));
+
+			renderHook(() => useSubscribeStateToInputContext('nullState', mapFn));
+
+			expect(mapFn).toHaveBeenCalledWith(null);
+
+			// Check that null state results in empty array context
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.selectedNodes).toBeDefined();
+			expect(context.selectedNodes).toEqual([]);
+			expect(Array.isArray(context.selectedNodes)).toBe(true);
+		});
+
+		it('should handle undefined state value as empty arrays', () => {
+			// Register a state with undefined value
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'undefinedState',
+					value: undefined,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: undefined) => ({
+				selectedItems: state,
+			}));
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('undefinedState', mapFn)
+			);
+
+			expect(mapFn).toHaveBeenCalledWith(undefined);
+
+			// Check that undefined state results in empty array context
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.selectedItems).toBeDefined();
+			expect(context.selectedItems).toEqual([]);
+			expect(Array.isArray(context.selectedItems)).toBe(true);
 		});
 
 		it('should warn when state is not found', () => {
