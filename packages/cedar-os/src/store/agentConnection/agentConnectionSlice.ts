@@ -573,7 +573,7 @@ export const createAgentConnectionSlice: StateCreator<
 						...llmParams,
 						// we're overriding the prompt since we pass in additionalContext as a raw object.
 						prompt: editorContent,
-						additionalContext: sanitizeJson(state.additionalContext),
+						additionalContext: state.stringifyAdditionalContext(),
 						route: route || `${chatPath}`,
 						resourceId: userId,
 						threadId,

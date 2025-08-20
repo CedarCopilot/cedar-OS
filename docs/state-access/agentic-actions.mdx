@@ -377,6 +377,80 @@ const registeredStates = useCedarStore((state) => state.registeredStates);
 console.log('Available actions:', registeredStates);
 ```
 
+## Automatic Setter Schema Distribution
+
+When you subscribe a state to input context using `useSubscribeStateToInputContext`, Cedar automatically includes the schemas of all custom setters for that state in the context sent to your agent. This enables your agent to understand what actions are available and their parameter requirements.
+
+### Setter Schema Structure
+
+The setter schemas are included in a top-level `setters` field alongside your subscribed state data:
+
+```json
+{
+	"nodes": [
+		// Your subscribed state data
+	],
+	"setters": {
+		"addNode": {
+			"name": "addNode",
+			"stateKey": "nodes",
+			"description": "Add a new node to the roadmap",
+			"parameters": [
+				{
+					"name": "node",
+					"type": "Node<FeatureNodeData>",
+					"description": "The node to add"
+				}
+			],
+			"schema": {
+				// Zod schema converted to JSON Schema format
+			}
+		},
+		"removeNode": {
+			"name": "removeNode",
+			"stateKey": "nodes",
+			"description": "Remove a node from the roadmap",
+			"parameters": [
+				{
+					"name": "id",
+					"type": "string",
+					"description": "The ID of the node to remove"
+				}
+			]
+		}
+	}
+}
+```
+
+### Zod Schema Integration
+
+If your custom setters include a `schema` field with a Zod schema, Cedar will automatically convert it to JSON Schema format using `zod-to-json-schema` and include it in the setter information. This provides your agent with precise type information for generating valid parameters.
+
+```tsx
+// In your useRegisterState hook call
+customSetters: {
+  addNode: {
+    name: 'addNode',
+    description: 'Add a new node to the roadmap',
+    schema: z.object({
+      node: z.object({
+        data: z.object({
+          title: z.string(),
+          description: z.string(),
+          status: z.enum(['done', 'planned', 'backlog', 'in progress']),
+          nodeType: z.literal('feature').default('feature')
+        })
+      })
+    }),
+    execute: (currentNodes, node) => {
+      // Implementation
+    }
+  }
+}
+```
+
+This automatic schema distribution ensures your agent always has up-to-date information about available actions and their requirements, enabling more accurate and reliable action execution.
+
 ## Next Steps
 
 - Learn about [State Access](/state-access/agentic-state-access) for more state management patterns
