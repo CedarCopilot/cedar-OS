@@ -137,8 +137,7 @@ export type {
 	MessageStorageAdapter,
 } from '@/store/messages/messageStorage';
 
-// Export voice components and types
-export { VoiceIndicator } from '@/store/voice/VoiceIndicator';
+// Export voice types
 export type { VoiceState } from '@/store/voice/voiceSlice';
 
 // Export all hooks and utilities from CedarStore
