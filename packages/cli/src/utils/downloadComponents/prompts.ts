@@ -61,13 +61,13 @@ export async function selectComponents(
 		return allComponents;
 	}
 
-	// Multi-select specific components
-	const componentOptions = Object.entries(componentsByCategory)
+	// Multi-select with pagination to handle large lists
+	const allComponentOptions = Object.entries(componentsByCategory)
 		.filter(([, comps]) => comps.length > 0)
 		.flatMap(([category, comps]) => [
 			{
 				type: 'separator',
-				value: '',
+				value: categories[category],
 				label: pc.bold(pc.cyan(`── ${categories[category]} ──`)),
 			},
 			...comps.map((comp) => ({
@@ -77,18 +77,81 @@ export async function selectComponents(
 			})),
 		]);
 
-	const selected = await multiselect({
-		message: 'Select components to install:',
-		options: componentOptions,
-		initialValues: options.preselected || [],
-	});
+	const ITEMS_PER_PAGE = 20;
+	const totalPages = Math.ceil(allComponentOptions.length / ITEMS_PER_PAGE);
+	const selectedComponentNames: string[] = [];
 
-	if (p.isCancel(selected)) {
-		return [];
+	let currentPage = 1;
+	let continueBrowsing = true;
+
+	while (continueBrowsing && currentPage <= totalPages) {
+		const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+		const endIndex = Math.min(
+			startIndex + ITEMS_PER_PAGE,
+			allComponentOptions.length
+		);
+		const pageOptions = allComponentOptions.slice(startIndex, endIndex);
+
+		const pageSelected = await multiselect({
+			message: `Select components to install (Page ${currentPage}/${totalPages}):`,
+			options: pageOptions,
+			initialValues: options.preselected || [],
+			required: false,
+		});
+
+		if (p.isCancel(pageSelected)) {
+			return [];
+		}
+
+		selectedComponentNames.push(...(pageSelected as string[]));
+
+		// Show navigation options if there are more pages
+		if (currentPage < totalPages) {
+			const navigationChoice = await select({
+				message: `You've selected ${selectedComponentNames.length} components so far. What would you like to do next?`,
+				options: [
+					{
+						value: 'next',
+						label: `Continue to next page (${currentPage + 1}/${totalPages})`,
+					},
+					{ value: 'skip', label: 'Skip to a specific page' },
+					{ value: 'done', label: 'Finish selection with current components' },
+				],
+			});
+
+			if (p.isCancel(navigationChoice)) {
+				return [];
+			}
+
+			if (navigationChoice === 'next') {
+				currentPage++;
+			} else if (navigationChoice === 'skip') {
+				const targetPage = await text({
+					message: `Enter page number (1-${totalPages}):`,
+					placeholder: String(currentPage + 1),
+					validate: (value) => {
+						const num = parseInt(value);
+						if (isNaN(num) || num < 1 || num > totalPages) {
+							return `Please enter a number between 1 and ${totalPages}`;
+						}
+					},
+				});
+
+				if (p.isCancel(targetPage)) {
+					return [];
+				}
+
+				currentPage = parseInt(targetPage);
+			} else {
+				continueBrowsing = false;
+			}
+		} else {
+			continueBrowsing = false;
+		}
 	}
 
 	return allComponents.filter((comp) =>
-		(selected as string[]).includes(comp.name)
+		selectedComponentNames.includes(comp.name)
 	);
 }
 

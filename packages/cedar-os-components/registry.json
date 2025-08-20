@@ -521,6 +521,18 @@
 				"displayName": "Tooltip Menu Spell",
 				"description": "Tooltip menu spell for contextual actions"
 			}
+		},
+		{
+			"name": "voice-indicator",
+			"type": "voice",
+			"dependencies": ["react", "motion", "lucide-react"],
+			"registryDependencies": ["cedar-os"],
+			"files": ["VoiceIndicator.tsx"],
+			"meta": {
+				"importName": "VoiceIndicator",
+				"displayName": "Voice Indicator",
+				"description": "Visual indicator for voice states (listening, speaking, errors)"
+			}
 		}
 	]
 }
