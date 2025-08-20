@@ -10,6 +10,7 @@ import { ReactNode, useMemo } from 'react';
 import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 export type ChatInput = JSONContent;
 
 // Define the agent input context slice
@@ -203,9 +204,32 @@ export const createAgentInputContextSlice: StateCreator<
 
 	stringifyAdditionalContext: () => {
 		const context = get().additionalContext;
+		// Collect setter schemas for each subscribed state (keys present in additionalContext)
+		const registeredStates = get().registeredStates;
+		const setters: Record<string, unknown> = {};
 
-		// Sanitize context before stringifying
-		const sanitizedContext = sanitizeJson(context);
+		Object.keys(context).forEach((stateKey) => {
+			const state = registeredStates[stateKey];
+			if (state?.customSetters) {
+				Object.entries(state.customSetters).forEach(([setterKey, setter]) => {
+					setters[setterKey] = {
+						name: setter.name,
+						stateKey,
+						description: setter.description,
+						parameters: setter.parameters,
+						schema: setter.schema
+							? zodToJsonSchema(setter.schema, setter.name)
+							: undefined,
+					};
+				});
+			}
+		});
+
+		// Merge original context with setter schemas
+		const mergedContext = { ...context, setters };
+
+		// Sanitize before stringifying
+		const sanitizedContext = sanitizeJson(mergedContext);
 		return JSON.stringify(sanitizedContext, null, 2);
 	},
 

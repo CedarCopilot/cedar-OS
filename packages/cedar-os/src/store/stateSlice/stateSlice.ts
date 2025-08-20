@@ -56,6 +56,8 @@ export interface Setter<
 	name: string;
 	description: string;
 	parameters?: SetterParameter[];
+	/** Optional Zod schema describing the input shape expected by this setter. Acts as an alternative to 'parameters'. */
+	schema?: ZodSchema;
 	execute: SetterFunction<T, Args>;
 }
 
