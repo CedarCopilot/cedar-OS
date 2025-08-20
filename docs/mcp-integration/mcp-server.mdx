@@ -10,13 +10,13 @@ Open your Cursor settings file (`~/.cursor/settings.json`) and add:
 
 ```json
 {
-  "mcpServers": {
-    "cedar": {
-      "command": "npx",
-      "args": ["@cedar/mcp-server"],
-      "env": {}
-    }
-  }
+	"mcpServers": {
+		"cedar": {
+			"command": "npx",
+			"args": ["@cedar/mcp-server"],
+			"env": {}
+		}
+	}
 }
 ```
 
@@ -56,6 +56,7 @@ Ask the MCP server natural language questions:
 ## Common Usage Patterns
 
 ### Component Implementation
+
 ```
 "Help me implement a floating chat component with Cedar"
 "Add voice capabilities to my Cedar chat interface"
@@ -64,6 +65,7 @@ Ask the MCP server natural language questions:
 ```
 
 ### Documentation Queries
+
 ```
 "Show me Cedar chat component documentation"
 "How do I configure streaming in Cedar?"
@@ -72,6 +74,7 @@ Ask the MCP server natural language questions:
 ```
 
 ### Integration Tasks
+
 ```
 "Connect my Cedar frontend to a Mastra agent"
 "Set up voice streaming with WebSockets"
@@ -82,13 +85,16 @@ Ask the MCP server natural language questions:
 ## Advanced Features
 
 ### Contextual Awareness
+
 The MCP server understands:
+
 - Your project structure and existing Cedar components
 - Current file context and imports
 - Project dependencies and configuration
 - Cedar best practices and patterns
 
 ### Specialized Modules
+
 - **Voice Expert**: Audio streaming, permissions, WebSocket configuration
 - **Spells Expert**: Spell creation, activation patterns, gesture handling
 - **Mastra Expert**: Agent connections, workflow setup, backend integration
@@ -97,18 +103,21 @@ The MCP server understands:
 ## Common Workflows
 
 ### Setting Up a New Project
+
 1. Initialize Cedar: `"Set up a new Cedar project with TypeScript"`
 2. Add chat: `"Add Cedar chat components to my app"`
 3. Configure backend: `"Connect to my Mastra agent backend"`
 4. Add voice: `"Implement voice capabilities"`
 
 ### Building Features
+
 1. Start simple: `"Create a basic chat interface"`
 2. Add interactivity: `"Add mention support to chat"`
 3. Enhance UX: `"Implement message streaming"`
 4. Add AI features: `"Create a questioning spell"`
 
 ### Debugging Issues
+
 - `"Debug WebSocket connection problems"`
 - `"Fix streaming message display"`
 - `"Resolve spell activation conflicts"`
@@ -133,16 +142,19 @@ The MCP server understands:
 ## Troubleshooting
 
 ### MCP Server Not Responding
+
 - Verify configuration in Cursor settings
 - Check Node.js is accessible
 - Restart Cursor after changes
 
 ### Incorrect Suggestions
+
 - Provide more project context
 - Specify Cedar version
 - Include relevant code snippets
 
 ### Performance Issues
+
 - Clear Cursor cache
 - Check internet connection
 - Update MCP server version
@@ -158,4 +170,4 @@ The MCP server understands:
 
 - [Cedar Discord Community](https://discord.gg/4AWawRjNdZ)
 - [GitHub Issues](https://github.com/CedarCopilot/cedar-OS/issues)
-- [Cedar Documentation](https://docs.cedar.ai)
+- [Cedar Documentation](https://docs.cedarcopilor.com)
