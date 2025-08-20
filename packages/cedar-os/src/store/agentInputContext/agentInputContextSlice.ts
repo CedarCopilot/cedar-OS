@@ -31,7 +31,7 @@ export interface AgentInputContextSlice {
 	removeContextEntry: (key: string, entryId: string) => void;
 	clearContextBySource: (source: ContextEntry['source']) => void;
 	clearMentions: () => void;
-	updateAdditionalContext: (context: Record<string, any>) => void;
+	updateAdditionalContext: (context: Record<string, unknown>) => void;
 
 	// Mention providers registry
 	mentionProviders: Map<string, MentionProvider>;
@@ -120,17 +120,22 @@ export const createAgentInputContextSlice: StateCreator<
 			Object.entries(context).forEach(([key, value]) => {
 				if (Array.isArray(value)) {
 					// Convert legacy array format to context entries
-					newContext[key] = value.map((item, index) => ({
-						id: item.id || `${key}-${index}`,
-						source: 'subscription' as const,
-						data: item,
-						metadata: {
-							label:
-								item.title || item.label || item.name || item.id || 'Unknown',
-							// Preserve any existing metadata including icon and color
-							...item.metadata,
-						},
-					}));
+					// Handle empty arrays by setting them explicitly
+					if (value.length === 0) {
+						newContext[key] = [];
+					} else {
+						newContext[key] = value.map((item, index) => ({
+							id: item.id || `${key}-${index}`,
+							source: 'subscription' as const,
+							data: item,
+							metadata: {
+								label:
+									item.title || item.label || item.name || item.id || 'Unknown',
+								// Preserve any existing metadata including icon and color
+								...item.metadata,
+							},
+						}));
+					}
 				}
 			});
 
