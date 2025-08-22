@@ -100,9 +100,8 @@ export const createAgentInputContextSlice: StateCreator<
 			const newContext: AdditionalContext = {};
 			Object.entries(state.additionalContext).forEach(([key, entries]) => {
 				const filtered = entries.filter((e) => e.source !== source);
-				if (filtered.length > 0) {
-					newContext[key] = filtered;
-				}
+				// Always retain the key in the context, even if no entries remain after filtering.
+				newContext[key] = filtered;
 			});
 			return { additionalContext: newContext };
 		});
