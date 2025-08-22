@@ -84,6 +84,16 @@ export async function handleEventStream(
 		try {
 			const parsed = JSON.parse(data);
 
+			// If the parsed value is a primitive (number, string, boolean, null),
+			// treat it as plain text content rather than a structured object.
+			// This handles cases where providers stream individual tokens like "292" or "•"
+			if (parsed === null || typeof parsed !== 'object') {
+				const processedContent = processContentChunk(String(parsed));
+				currentTextMessage += processedContent;
+				handler({ type: 'chunk', content: processedContent });
+				return;
+			}
+
 			// OpenAI format: {"choices": [{"delta": {...}}]}
 			if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
 				const delta = parsed.choices[0].delta;
