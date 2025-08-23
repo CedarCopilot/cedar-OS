@@ -9,9 +9,7 @@
 				"floating-container",
 				"chat-input",
 				"container-3d",
-				"container-3d-button",
-				"caption-messages",
-				"keyboard-shortcut"
+				"caption-messages"
 			],
 			"files": ["CedarCaptionChat.tsx"],
 			"meta": {
@@ -65,7 +63,8 @@
 			"registryDependencies": [
 				"cedar-os",
 				"context-badge-row",
-				"container-3d-button"
+				"container-3d-button",
+				"voice-indicator"
 			],
 			"files": ["ChatInput.tsx", "ChatInput.css", "index.ts"],
 			"meta": {
@@ -485,8 +484,8 @@
 		{
 			"name": "questioning-spell",
 			"type": "spells",
-			"dependencies": ["react", "lucide-react", "motion"],
-			"registryDependencies": ["cedar-os", "floating-chat-input"],
+			"dependencies": ["react", "lucide-react", "motion", "motion-plus-react"],
+			"registryDependencies": ["cedar-os"],
 			"files": ["QuestioningSpell.tsx"],
 			"meta": {
 				"importName": "QuestioningSpell",
@@ -504,6 +503,30 @@
 				"importName": "RadialMenuSpell",
 				"displayName": "Radial Menu Spell",
 				"description": "Radial menu spell with customizable actions"
+			}
+		},
+		{
+			"name": "slider-spell",
+			"type": "spells",
+			"dependencies": ["react", "lucide-react", "motion"],
+			"registryDependencies": ["cedar-os", "container-3d"],
+			"files": ["SliderSpell.tsx"],
+			"meta": {
+				"importName": "SliderSpell",
+				"displayName": "Slider Spell",
+				"description": "Interactive slider spell component"
+			}
+		},
+		{
+			"name": "range-slider-spell",
+			"type": "spells",
+			"dependencies": ["react", "lucide-react", "motion"],
+			"registryDependencies": ["cedar-os", "container-3d"],
+			"files": ["RangeSliderSpell.tsx"],
+			"meta": {
+				"importName": "RangeSliderSpell",
+				"displayName": "Range Slider Spell",
+				"description": "Range slider spell with customizable options"
 			}
 		},
 		{
