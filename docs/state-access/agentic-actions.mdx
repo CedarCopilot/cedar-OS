@@ -377,13 +377,13 @@ const registeredStates = useCedarStore((state) => state.registeredStates);
 console.log('Available actions:', registeredStates);
 ```
 
-## Automatic Setter Schema Distribution
+## Automatic Schema Distribution
 
-When you subscribe a state to input context using `useSubscribeStateToInputContext`, Cedar automatically includes the schemas of all custom setters for that state in the context sent to your agent. This enables your agent to understand what actions are available and their parameter requirements.
+When you subscribe a state to input context using `useSubscribeStateToInputContext`, Cedar automatically includes both the state's schema (if defined) and the schemas of all custom setters for that state in the context sent to your agent. This enables your agent to understand both the data structure and what actions are available.
 
 ### Setter Schema Structure
 
-The setter schemas are included in a top-level `setters` field alongside your subscribed state data:
+The setter and state schemas are included in top-level `setters` and `schemas` fields alongside your subscribed state data:
 
 ```json
 {
