@@ -33,7 +33,7 @@ That’s why we **give** you the code for all components, and why we allow you t
 
 As devs, once we have something working we can always look into the internals to trace through to understand and customise it. However, if we can’t get it to work, we don’t have anything to ground ourselves on why it’s not working.
 
-Since we’re using a shadcn style approach where you can download components, we recommend you to have a simple use case or completed component (if not downloadable, at least as an example)
+Since we’re using a shadcn style approach where you can download components, we recommend you to always have a completed component with a working feature as part of the registry (if not downloadable, at least as an example in the docs)
 
 ---
 
@@ -44,14 +44,6 @@ Please see our comprehensive architecture documentation to gain a high level und
 - **[Understanding Cedar Architecture (Advanced)](https://docs.cedarcopilot.com/introduction/understanding-cedar-architecture-advanced)** - Deep dive into Cedar's internal architecture, Zustand slices, and complete sendMessage flow with detailed examples
 - **[Understanding how Cedar creates requests](https://docs.cedarcopilot.com/agent-backend-connection/custom-request)**
 - **[Understanding how Cedar handles LLM Responses)](https://docs.cedarcopilot.com/agent-backend-connection/custom-response-processing)**
-
-This documentation covers:
-
-- The Zustand store structure and all core slices
-- Component architecture following shadcn-style philosophy
-- Complete walkthrough of how `sendMessage` works from state registration to AI response processing
-- Response processors and how to create custom ones
-- Key architectural benefits including type safety, modularity, and performance
 
 ---
 
