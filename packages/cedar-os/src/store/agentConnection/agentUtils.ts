@@ -51,9 +51,6 @@ export async function handleEventStream(
 	let isJsonBuffering = false;
 	let braceDepth = 0;
 	const MAX_JSON_BUFFER_SIZE = 1024 * 1024; // 1MB limit to prevent memory issues
-	
-	// Global buffer for accumulating content across SSE events
-	let globalBuffer = '';
 
 	/**
 	 * Parse Server-Sent Event format
@@ -212,8 +209,7 @@ export async function handleEventStream(
 			return;
 		}
 		
-		// Add to global buffer for cross-event JSON detection
-		globalBuffer += data;
+
 
 		// If we're in JSON buffering mode, accumulate chunks
 		if (isJsonBuffering) {
@@ -233,15 +229,12 @@ export async function handleEventStream(
 				jsonBuffer = '';
 				isJsonBuffering = false;
 				braceDepth = 0;
-				globalBuffer = '';
 				return;
 			}
 
 			// Try to parse the accumulated buffer
 			if (braceDepth === 0 && tryParseJsonBuffer()) {
-				// Successfully parsed, clear global buffer
-				globalBuffer = '';
-				return; // Successfully parsed and processed
+							return; // Successfully parsed and processed
 			}
 
 			// Still buffering, don't process as text yet

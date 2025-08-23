@@ -30,6 +30,27 @@ if (typeof globalThis.Response === 'undefined') {
       this.status = init.status || 200;
     }
   };
+  
+  // Mock ReadableStreamDefaultReader for testing
+  if (typeof globalThis.ReadableStreamDefaultReader === 'undefined') {
+    globalThis.ReadableStreamDefaultReader = class MockReadableStreamDefaultReader {
+      constructor(stream) {
+        this.stream = stream;
+      }
+      
+      async read() {
+        // Simulate reading from the stream
+        return { value: undefined, done: true };
+      }
+    };
+  }
+  
+  // Add getReader method to ReadableStream prototype
+  if (globalThis.ReadableStream && !globalThis.ReadableStream.prototype.getReader) {
+    globalThis.ReadableStream.prototype.getReader = function() {
+      return new globalThis.ReadableStreamDefaultReader(this);
+    };
+  }
 }
 
 // Mock localStorage

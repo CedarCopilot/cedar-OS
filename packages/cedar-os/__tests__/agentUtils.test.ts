@@ -7,23 +7,14 @@ const createMockResponse = (chunks: string[]): Response => {
 	
 	const stream = new ReadableStream({
 		start(controller) {
-			// Simulate streaming chunks with delays
-			const sendChunk = () => {
-				if (chunkIndex < chunks.length) {
-					const chunk = chunks[chunkIndex];
-					// Format as SSE event
-					const sseChunk = `data: ${chunk}\n\n`;
-					controller.enqueue(new TextEncoder().encode(sseChunk));
-					chunkIndex++;
-					
-					if (chunkIndex < chunks.length) {
-						setTimeout(sendChunk, 10);
-					} else {
-						controller.close();
-					}
-				}
-			};
-			sendChunk();
+			// Simulate streaming chunks synchronously for reliable testing
+			for (let i = 0; i < chunks.length; i++) {
+				const chunk = chunks[i];
+				// Format as SSE event
+				const sseChunk = `data: ${chunk}\n\n`;
+				controller.enqueue(new TextEncoder().encode(sseChunk));
+			}
+			controller.close();
 		}
 	});
 
