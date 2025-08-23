@@ -168,7 +168,8 @@ export async function handleEventStream(
 			}
 		} catch {
 			// Not valid JSON, treat as plain text content
-			if (data.trim() && data !== '[DONE]' && data !== 'done') {
+			// Note: Don't use data.trim() here as it would filter out space-only chunks
+			if (data && data !== '[DONE]' && data !== 'done') {
 				const processedContent = processContentChunk(data);
 				currentTextMessage += processedContent;
 				handler({ type: 'chunk', content: processedContent });
