@@ -17,32 +17,23 @@
 					"introduction/overview",
 					"introduction/philosophy",
 					"introduction/architecture",
-					"introduction/ai-native-experiences"
-				]
-			},
-			{
-				"group": "Examples",
-				"icon": "sparkles",
-				"pages": [
-					"examples/ai-native-email",
-					"examples/ai-native-canvas-flow",
-					"examples/no-chat-onboarding-agent"
+					"introduction/understanding-cedar-architecture-advanced",
+					"examples/demo-showcases"
 				]
 			},
 			{
 				"group": "Getting Started",
 				"icon": "play",
 				"pages": [
-					"getting-started/getting-started",
-					"getting-started/cli",
-					"getting-started/organizing-a-cedar-project"
-				]
-			},
-			{
-				"group": "MCP Integration",
-				"icon": "robot",
-				"pages": [
-					"mcp-integration/mcp-server"
+					{
+						"group": "Getting Started",
+						"pages": [
+							"getting-started/getting-started",
+							"getting-started/cli",
+							"getting-started/organizing-a-cedar-project",
+							"mcp-integration/mcp-server"
+						]
+					}
 				]
 			},
 			{
@@ -50,9 +41,15 @@
 				"icon": "plug",
 				"pages": [
 					"agent-backend-connection/agent-backend-connection",
-					"agent-backend-connection/mastra",
-					"agent-backend-connection/custom",
-					"agent-backend-connection/custom-response-processing"
+					"agent-backend-connection/custom-request",
+					"agent-backend-connection/custom-response-processing",
+					{
+						"group": "Mastra & custom backends",
+						"pages": [
+							"agent-backend-connection/mastra",
+							"agent-backend-connection/custom"
+						]
+					}
 				]
 			},
 			{
@@ -60,11 +57,16 @@
 				"icon": "message",
 				"pages": [
 					"chat/chat-overview",
-					"chat/streaming",
 					"chat/custom-message-rendering",
-					"chat/chat-components",
-					"chat/configuring-cedar-editor",
-					"chat/message-storage-configuration"
+					{
+						"group": "Chat (Advanced)",
+						"pages": [
+							"chat/streaming",
+							"chat/configuring-cedar-editor",
+							"chat/message-storage-configuration",
+							"chat/chat-components"
+						]
+					}
 				]
 			},
 			{
@@ -103,10 +105,15 @@
 					"spells/spells",
 					"spells/creating-custom-spells",
 					"spells/spell-architecture",
-					"spells/radial-menu",
-					"spells/slider-spell",
-					"spells/questioning-spell",
-					"spells/tooltip-menu"
+					{
+						"group": "Existing Spells",
+						"pages": [
+							"spells/radial-menu",
+							"spells/slider-spell",
+							"spells/questioning-spell",
+							"spells/tooltip-menu"
+						]
+					}
 				]
 			},
 			{

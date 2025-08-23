@@ -1,11 +1,15 @@
 ---
-title: 'How Responses are Processed (and Custom Processing)'
+title: 'Processing agent responses'
 description: 'Learn how Cedar deals with all structured objects returned from the backend.'
 ---
 
-Cedar allows you to completely customize how structured responses from your agent backend are processed. This is the system through which messages are added to the chat, state actions are executed, or any decisions are made on how to deal with responses from the backend.
+Cedar processes your agent responses via a switch statement based on the "type" field.
 
-Note: This system closely mirrors the architecture of [Custom Message Rendering](/chat/custom-message-rendering).
+This allows you to completely customize how structured responses from your agent backend are processed. This is the system through which messages are added to the chat, state actions are executed, or any decisions are made on how to deal with responses from the backend.
+
+<img src='/images/handlingLLMResponse.png' alt='Cedar-OS  Diagram' />
+
+Note: This system is how we run anything user customisable, such as [Custom Message Rendering](/chat/custom-message-rendering).
 
 ## LLM Response Structure
 
