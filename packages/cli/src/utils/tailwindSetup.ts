@@ -189,8 +189,9 @@ export async function updateTailwindConfig(
 
 		// Try to find the content array and add our paths
 		if (configContent.includes('content:')) {
-			// Check if our path is already there
-			if (!configContent.includes(componentDir)) {
+			// Check if our specific path is already there
+			const expectedPath = `'./${componentDir}/**/*.{js,ts,jsx,tsx}'`;
+			if (!configContent.includes(expectedPath)) {
 				// Find content array and add our path
 				configContent = configContent.replace(
 					/(content:\s*\[)/,
