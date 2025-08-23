@@ -211,9 +211,21 @@ export const createAgentInputContextSlice: StateCreator<
 		// Collect setter schemas for each subscribed state (keys present in additionalContext)
 		const registeredStates = get().registeredStates;
 		const setters: Record<string, unknown> = {};
+		const schemas: Record<string, unknown> = {};
 
 		Object.keys(context).forEach((stateKey) => {
 			const state = registeredStates[stateKey];
+
+			// Add state schema if it exists
+			if (state?.schema) {
+				schemas[stateKey] = {
+					stateKey,
+					description: state.description,
+					schema: zodToJsonSchema(state.schema, stateKey),
+				};
+			}
+
+			// Add custom setter schemas
 			if (state?.customSetters) {
 				Object.entries(state.customSetters).forEach(([setterKey, setter]) => {
 					setters[setterKey] = {
@@ -229,8 +241,8 @@ export const createAgentInputContextSlice: StateCreator<
 			}
 		});
 
-		// Merge original context with setter schemas
-		const mergedContext = { ...context, setters };
+		// Merge original context with setter schemas and state schemas
+		const mergedContext = { ...context, setters, schemas };
 
 		// Sanitize before stringifying
 		const sanitizedContext = sanitizeJson(mergedContext);

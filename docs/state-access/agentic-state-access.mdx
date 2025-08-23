@@ -71,7 +71,7 @@ interface RegisterStateOptions<T> {
 	value: T;
 	setValue?: (state: T, ...args: any[]) => void;
 	customSetters?: Record<string, Setter<T>>;
-	schema?: ZodSchema<T>;
+	schema?: ZodSchema<T>; // Automatically included in agent input context as JSON Schema
 }
 
 interface Setter<T, Args extends unknown[] = unknown[]> {
