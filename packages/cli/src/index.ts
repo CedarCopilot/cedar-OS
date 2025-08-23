@@ -25,7 +25,7 @@ program
 	.description('Add Cedar-OS components and package to your existing project')
 	.option(
 		'-d, --dir <path>',
-		'Installation directory (default: src/components/cedar-os)'
+		'Installation directory (default: src/cedar/components)'
 	)
 	.option(
 		'-c, --components <names...>',
