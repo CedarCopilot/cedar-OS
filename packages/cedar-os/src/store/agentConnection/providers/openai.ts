@@ -113,8 +113,6 @@ export const openAIProvider: ProviderImplementation<
 		};
 	},
 
-	// This can be safely removed
-
 	callLLMStructured: async (params, config) => {
 		const {
 			prompt,
