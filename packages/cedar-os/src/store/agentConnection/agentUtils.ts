@@ -97,6 +97,20 @@ export async function handleEventStream(
 	};
 
 	/**
+	 * Check if this is a Mastra-specific response
+	 * Mastra uses custom event types and structure
+	 */
+	const isMastraResponse = (obj: any): boolean => {
+		return (
+			obj.type &&
+			typeof obj.type === 'string' &&
+			['start', 'step-start', 'tool-call', 'tool-result', 'step-finish', 'tool-output', 'step-result', 'step-output', 'finish'].includes(obj.type) &&
+			obj.runId &&
+			obj.from
+		);
+	};
+
+	/**
 	 * Process a successfully parsed JSON object
 	 * Extracted from the main processDataContent function for reusability
 	 */
@@ -149,9 +163,11 @@ export async function handleEventStream(
 		// 2. Mastra/custom structured object handling
 		//    a) Inline object        -> {"type": "action", ... }
 		//    b) Nested under object  -> {"object": {"type": "action", ...}}
+		//    c) Mastra responses     -> {"type": "step-start", "runId": "...", "from": "...", "payload": {...}}
 		if (
 			parsed.type ||
-			(parsed.object && (parsed.object as { type?: string }).type)
+			(parsed.object && (parsed.object as { type?: string }).type) ||
+			isMastraResponse(parsed)
 		) {
 			const structuredObject = parsed.type
 				? parsed

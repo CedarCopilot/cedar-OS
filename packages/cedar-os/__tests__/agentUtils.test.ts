@@ -158,4 +158,31 @@ describe('handleEventStream - JSON Buffering', () => {
 		// Should fall back to text processing when buffer limit exceeded
 		expect(receivedEvents[0].type).toBe('chunk');
 	});
+
+	it('should handle Mastra-specific responses correctly', async () => {
+		const chunks = [
+			'{',
+			'"type": "step-start"',
+			', "runId": "test-123"',
+			', "from": "agent"',
+			', "payload": {"key": "value"}',
+			'}'
+		];
+
+		const response = createMockResponse(chunks);
+		await handleEventStream(response, handler);
+
+		// Should receive the complete Mastra object, not individual chunks
+		expect(receivedEvents).toHaveLength(2); // object + done
+		expect(receivedEvents[0]).toEqual({
+			type: 'object',
+			object: {
+				type: 'step-start',
+				runId: 'test-123',
+				from: 'agent',
+				payload: { key: 'value' }
+			}
+		});
+		expect(receivedEvents[1].type).toBe('done');
+	});
 });
