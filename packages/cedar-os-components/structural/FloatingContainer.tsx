@@ -49,14 +49,22 @@ export const FloatingContainer: React.FC<FloatingContainerProps> = ({
 		// For bottom-center, use ChatInputContainer defaults
 		if (effectivePosition === 'bottom-center') {
 			return {
-				width: initialWidth || Math.min(window.innerWidth - 32, 768), // max-w-3xl equivalent with padding
-				height: initialHeight || 'auto', // Let content determine height
+				width:
+					initialWidth ||
+					(typeof window !== 'undefined'
+						? Math.min(window.innerWidth - 32, 768)
+						: 600),
+				height: initialHeight || 'auto',
 			};
 		}
 
 		return {
-			width: initialWidth || window.innerWidth * 0.3,
-			height: initialHeight || window.innerHeight * 0.6,
+			width:
+				initialWidth ||
+				(typeof window !== 'undefined' ? window.innerWidth * 0.3 : 400),
+			height:
+				initialHeight ||
+				(typeof window !== 'undefined' ? window.innerHeight * 0.6 : 500),
 		};
 	};
 
@@ -67,6 +75,17 @@ export const FloatingContainer: React.FC<FloatingContainerProps> = ({
 	const [panelHeight, setPanelHeight] = useState(
 		typeof defaults.height === 'number' ? defaults.height : 500
 	);
+
+	// Update panel dimensions when dimensions prop changes
+	useEffect(() => {
+		const newDefaults = getDefaultDimensions();
+		if (typeof newDefaults.width === 'number') {
+			setPanelWidth(newDefaults.width);
+		}
+		if (typeof newDefaults.height === 'number') {
+			setPanelHeight(newDefaults.height);
+		}
+	}, [initialWidth, initialHeight, effectivePosition]);
 
 	// Calculate max dimensions based on position
 	const getMaxDimensions = () => {
@@ -260,7 +279,7 @@ export const FloatingContainer: React.FC<FloatingContainerProps> = ({
 	return (
 		<div
 			className={`${positionClasses} z-[9999] ${
-				effectivePosition === 'bottom-center' ? 'w-full max-w-3xl' : ''
+				effectivePosition === 'bottom-center' ? 'w-2xl max-w-3xl' : ''
 			} ${className}`}
 			style={containerStyle}>
 			<motion.div
