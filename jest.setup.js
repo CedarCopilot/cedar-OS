@@ -29,6 +29,14 @@ if (typeof globalThis.Response === 'undefined') {
       this.ok = init.status ? init.status >= 200 && init.status < 300 : true;
       this.status = init.status || 200;
     }
+    
+    // Add getReader method for streaming support
+    getReader() {
+      if (this.body && typeof this.body.getReader === 'function') {
+        return this.body.getReader();
+      }
+      return new globalThis.ReadableStreamDefaultReader(this.body);
+    }
   };
   
   // Mock ReadableStreamDefaultReader for testing
