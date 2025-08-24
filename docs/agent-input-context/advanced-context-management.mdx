@@ -1,0 +1,25 @@
+---
+title: 'Advanced Context Management'
+description: 'Handle complex state serialization and circular dependencies'
+---
+
+## Handling Circular Dependencies with sanitiseJson
+
+Cedar automatically applies `sanitiseJson` to your state when sending it as agent context, which intelligently handles circular dependencies by replacing them with reference paths (e.g., `"$ref:$.parent.child"`). If your backend has access to Cedar utilities, you can use `desanitiseJson` to restore the original object structure with all circular references intact.
+
+For cases where you need precise control over the JSON structure being sent, pre-stringify your state before adding it to the context. This bypasses automatic sanitization, ensuring the exact shape you define is transmitted to your agent backend. This approach is particularly useful when working with backends that don't support reference resolution or when you need to maintain specific data formats.
+
+```tsx
+useSubscribeStateToInputContext<typeof tableauData>(
+	'tableau-dashboard-data',
+	(state) => {
+		console.log('tableau-dashboard-data', state);
+		return {
+			tableauData: Flatten.stringify(state),
+		};
+	},
+	{
+		labelField: 'title',
+	}
+);
+```
