@@ -201,3 +201,6 @@ export {
 	Editor as CedarEditor,
 	EditorContent as CedarEditorContent,
 } from '@tiptap/react';
+
+// Export utility functions
+export { sanitizeJson, desanitizeJson } from '@/utils/sanitizeJson';
