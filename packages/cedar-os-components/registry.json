@@ -57,6 +57,23 @@
 			}
 		},
 		{
+			"name": "embedded-cedar-chat",
+			"type": "chatComponents",
+			"dependencies": ["react", "lucide-react", "motion"],
+			"registryDependencies": [
+				"cedar-os",
+				"chat-input",
+				"chat-bubbles",
+				"container-3d"
+			],
+			"files": ["EmbeddedCedarChat.tsx"],
+			"meta": {
+				"importName": "EmbeddedCedarChat",
+				"displayName": "Embedded Cedar Chat",
+				"description": "Embeddable chat component with customizable header and branding"
+			}
+		},
+		{
 			"name": "chat-input",
 			"type": "chatInput",
 			"dependencies": ["react", "lucide-react", "motion"],
