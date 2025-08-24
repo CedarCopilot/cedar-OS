@@ -84,7 +84,11 @@
 				"pages": [
 					"agent-input-context/agent-input-context",
 					"agent-input-context/mentions",
-					"agent-input-context/subscribing-state"
+					"agent-input-context/subscribing-state",
+					{
+						"group": "Advanced Context Management",
+						"pages": ["agent-input-context/advanced-context-management"]
+					}
 				]
 			},
 
