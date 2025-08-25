@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
  */
 export interface ContextEntry {
 	id: string;
-	source: 'mention' | 'subscription' | 'manual';
+	source: 'mention' | 'subscription' | 'manual' | 'function';
 	data: unknown;
 	metadata?: {
 		label?: string;

@@ -210,26 +210,25 @@ describe('AgentInputContextSlice', () => {
 			const context = useCedarStore.getState().additionalContext;
 			expect(context.testItems).toHaveLength(3);
 
-			// Check first item
-			expect(context.testItems[0]).toMatchObject({
+			// Check first item - updateAdditionalContext spreads the item directly
+			expect(context.testItems[0]).toEqual({
 				id: 'item1',
+				title: 'Item 1',
+				customData: 'test',
 				source: 'subscription',
-				data: { id: 'item1', title: 'Item 1', customData: 'test' },
-				metadata: { label: 'Item 1' },
 			});
 
-			// Check second item (uses name field)
-			expect(context.testItems[1]).toMatchObject({
+			// Check second item
+			expect(context.testItems[1]).toEqual({
 				id: 'item2',
+				name: 'Item 2',
 				source: 'subscription',
-				metadata: { label: 'Item 2' },
 			});
 
-			// Check third item (uses label field, generates ID)
-			expect(context.testItems[2]).toMatchObject({
-				id: 'testItems-2',
+			// Check third item
+			expect(context.testItems[2]).toEqual({
+				label: 'Item 3',
 				source: 'subscription',
-				metadata: { label: 'Item 3' },
 			});
 		});
 	});
@@ -362,6 +361,109 @@ describe('AgentInputContextSlice', () => {
 			expect(stringified).toContain('User Text: Test input');
 			expect(stringified).toContain('Additional Context:');
 		});
+
+		it('should simplify context structure in stringifyAdditionalContext', () => {
+			const testData = [
+				{ id: '1', name: 'Item 1', value: 100 },
+				{ id: '2', name: 'Item 2', value: 200 },
+			];
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext('multipleItems', testData, {
+						labelField: 'name',
+					});
+			});
+
+			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			const parsed = JSON.parse(stringified);
+
+			// Should be an array since there are multiple items
+			expect(Array.isArray(parsed.multipleItems)).toBe(true);
+			expect(parsed.multipleItems).toHaveLength(2);
+
+			// Each item should have simplified structure with just data and source
+			expect(parsed.multipleItems[0]).toEqual({
+				data: { id: '1', name: 'Item 1', value: 100 },
+				source: 'function',
+			});
+			expect(parsed.multipleItems[1]).toEqual({
+				data: { id: '2', name: 'Item 2', value: 200 },
+				source: 'function',
+			});
+
+			// Should not have id or metadata fields
+			expect(parsed.multipleItems[0]).not.toHaveProperty('id');
+			expect(parsed.multipleItems[0]).not.toHaveProperty('metadata');
+		});
+
+		it('should extract single-item arrays in stringifyAdditionalContext', () => {
+			const singleItem = { id: '1', name: 'Single Item', value: 42 };
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext('singleItem', singleItem, {
+						labelField: 'name',
+					});
+			});
+
+			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			const parsed = JSON.parse(stringified);
+
+			// Should be a single object, not an array
+			expect(Array.isArray(parsed.singleItem)).toBe(false);
+			expect(parsed.singleItem).toEqual({
+				data: { id: '1', name: 'Single Item', value: 42 },
+				source: 'function',
+			});
+
+			// Should not have id or metadata fields
+			expect(parsed.singleItem).not.toHaveProperty('id');
+			expect(parsed.singleItem).not.toHaveProperty('metadata');
+		});
+
+		it('should handle mixed sources in stringifyAdditionalContext', () => {
+			// Add context via putAdditionalContext (function source)
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('functionItems', {
+					id: '1',
+					name: 'Function Item',
+				});
+			});
+
+			// Add context via updateAdditionalContext (subscription source)
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext({
+					subscriptionItems: [
+						{
+							data: { id: 'sub1', title: 'Subscription Item' },
+							source: 'subscription',
+						},
+					],
+				});
+			});
+
+			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			const parsed = JSON.parse(stringified);
+
+			// Function source should be simplified and extracted (single item)
+			expect(parsed.functionItems).toEqual({
+				data: { id: '1', name: 'Function Item' },
+				source: 'function',
+			});
+
+			// Subscription source (legacy format) should be simplified and extracted (single item)
+			// Note: updateAdditionalContext creates entries in legacy format without data wrapper
+			expect(parsed.subscriptionItems).toEqual({
+				data: {
+					id: 'sub1',
+					title: 'Subscription Item',
+				},
+				source: 'subscription',
+			});
+		});
 	});
 
 	describe('putAdditionalContext method', () => {
@@ -439,6 +541,26 @@ describe('AgentInputContextSlice', () => {
 			const context = useCedarStore.getState().additionalContext;
 			expect(context.nullTest).toEqual([]);
 			expect(context.undefinedTest).toEqual([]);
+		});
+
+		it('should set source as "function" for putAdditionalContext entries', () => {
+			const testData = [
+				{ id: '1', name: 'Item 1' },
+				{ id: '2', name: 'Item 2' },
+			];
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext('functionSourceTest', testData, {
+						labelField: 'name',
+					});
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.functionSourceTest).toHaveLength(2);
+			expect(context.functionSourceTest[0].source).toBe('function');
+			expect(context.functionSourceTest[1].source).toBe('function');
 		});
 	});
 

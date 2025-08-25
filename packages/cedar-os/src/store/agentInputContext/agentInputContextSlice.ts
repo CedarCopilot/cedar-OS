@@ -57,6 +57,7 @@ function formatContextEntries<T>(
 		labelField?: string | ((item: T) => string);
 		order?: number;
 		showInChat?: boolean;
+		source?: ContextEntry['source'];
 	}
 ): ContextEntry[] {
 	// Handle null/undefined values
@@ -81,7 +82,7 @@ function formatContextEntries<T>(
 		// Create the context entry with clean separation of concerns
 		return {
 			id,
-			source: 'subscription' as const,
+			source: options?.source || ('subscription' as const),
 			data: item, // The original data, unchanged
 			metadata: {
 				label,
@@ -206,7 +207,7 @@ export const createAgentInputContextSlice: StateCreator<
 		get().clearContextBySource('mention');
 	},
 
-	// Legacy method - converts simple objects to context entries
+	// internal method to update the additional context
 	updateAdditionalContext: (context) => {
 		set((state) => {
 			const newContext = { ...state.additionalContext };
@@ -242,8 +243,11 @@ export const createAgentInputContextSlice: StateCreator<
 	) => {
 		set((state) => {
 			const newContext = { ...state.additionalContext };
-			// Format the entries using the common helper
-			const formattedEntries = formatContextEntries<T>(key, value, options);
+			// Format the entries using the common helper with "function" source
+			const formattedEntries = formatContextEntries<T>(key, value, {
+				...options,
+				source: 'function',
+			});
 			// Set the context for this key (replaces existing entries for this key)
 			newContext[key] = formattedEntries;
 			return { additionalContext: newContext };
@@ -321,6 +325,24 @@ export const createAgentInputContextSlice: StateCreator<
 		const setters: Record<string, unknown> = {};
 		const schemas: Record<string, unknown> = {};
 
+		// Process context to simplify structure
+		const simplifiedContext: Record<string, unknown> = {};
+		Object.entries(context).forEach(([key, entries]) => {
+			if (Array.isArray(entries)) {
+				// Extract just the data and source from each entry
+				const simplified = entries.map((entry) => ({
+					data: entry.data,
+					source: entry.source,
+				}));
+
+				// If array has single item, extract it
+				simplifiedContext[key] =
+					simplified.length === 1 ? simplified[0] : simplified;
+			} else {
+				simplifiedContext[key] = entries;
+			}
+		});
+
 		Object.keys(context).forEach((stateKey) => {
 			const state = registeredStates[stateKey];
 
@@ -349,8 +371,8 @@ export const createAgentInputContextSlice: StateCreator<
 			}
 		});
 
-		// Merge original context with setter schemas and state schemas
-		const mergedContext = { ...context, setters, schemas };
+		// Merge simplified context with setter schemas and state schemas
+		const mergedContext = { ...simplifiedContext, setters, schemas };
 
 		// Sanitize before stringifying
 		const sanitizedContext = sanitizeJson(mergedContext);
