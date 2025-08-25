@@ -232,7 +232,6 @@ export const createAgentInputContextSlice: StateCreator<
 						name: setter.name,
 						stateKey,
 						description: setter.description,
-						parameters: setter.parameters,
 						schema: setter.schema
 							? zodToJsonSchema(setter.schema, setter.name)
 							: undefined,
