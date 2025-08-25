@@ -72,6 +72,160 @@ describe('AgentInputContextSlice', () => {
 			expect(context.testKey[0]).toEqual(entry);
 		});
 
+		it('should store single context entry as single value', () => {
+			act(() => {
+				useCedarStore.getState().putAdditionalContext(
+					'singleKey',
+					{ value: 'single' },
+					{
+						labelField: 'value',
+					}
+				);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			const value = context.singleKey;
+
+			// Should be stored as single value, not array
+			expect(Array.isArray(value)).toBe(false);
+			expect((value as ContextEntry).source).toBe('function');
+			expect((value as ContextEntry).data).toEqual({ value: 'single' });
+		});
+
+		it('should preserve single-item arrays as arrays', () => {
+			// Pass a single-item array - should be preserved as array
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext(
+						'arrayTest',
+						[{ id: '1', name: 'Single Item' }],
+						{
+							labelField: 'name',
+						}
+					);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			const value = context.arrayTest;
+
+			// Should be preserved as array since input was [item]
+			expect(Array.isArray(value)).toBe(true);
+			const entries = value as ContextEntry[];
+			expect(entries.length).toBe(1);
+			expect(entries[0].source).toBe('function');
+			expect(entries[0].data).toEqual({ id: '1', name: 'Single Item' });
+			expect(entries[0].metadata?.label).toBe('Single Item');
+		});
+
+		it('should unwrap single non-array values to single ContextEntry', () => {
+			// Pass a single non-array value - should be unwrapped to single value
+			act(() => {
+				useCedarStore.getState().putAdditionalContext(
+					'singleTest',
+					{ id: '1', name: 'Single Item' },
+					{
+						labelField: 'name',
+					}
+				);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			const value = context.singleTest;
+
+			// Should be stored as single value since input was item (not [item])
+			expect(Array.isArray(value)).toBe(false);
+			const entry = value as ContextEntry;
+			expect(entry.source).toBe('function');
+			expect(entry.data).toEqual({ id: '1', name: 'Single Item' });
+			expect(entry.metadata?.label).toBe('Single Item');
+		});
+
+		it('should store multiple context entries as array', () => {
+			const entries = [
+				{ id: '1', name: 'First' },
+				{ id: '2', name: 'Second' },
+			];
+
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('multipleKey', entries, {
+					labelField: 'name',
+				});
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			const value = context.multipleKey;
+
+			// Should be stored as array
+			expect(Array.isArray(value)).toBe(true);
+			expect((value as ContextEntry[]).length).toBe(2);
+		});
+
+		it('should handle adding to single value context', () => {
+			// Start with a single value
+			act(() => {
+				useCedarStore.getState().putAdditionalContext(
+					'testKey',
+					{ id: '1', name: 'First' },
+					{
+						labelField: 'name',
+					}
+				);
+			});
+
+			let context = useCedarStore.getState().additionalContext;
+			expect(Array.isArray(context.testKey)).toBe(false);
+
+			// Add another entry
+			const newEntry: ContextEntry = {
+				id: 'second-entry',
+				source: 'manual',
+				data: { value: 'second' },
+				metadata: { label: 'Second Entry' },
+			};
+
+			act(() => {
+				useCedarStore.getState().addContextEntry('testKey', newEntry);
+			});
+
+			context = useCedarStore.getState().additionalContext;
+			// Should now be an array with both entries
+			expect(Array.isArray(context.testKey)).toBe(true);
+			expect((context.testKey as ContextEntry[]).length).toBe(2);
+		});
+
+		it('should handle removing from array to single value', () => {
+			// Start with multiple entries
+			const entries = [
+				{ id: '1', name: 'First' },
+				{ id: '2', name: 'Second' },
+			];
+
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('testKey', entries, {
+					labelField: 'name',
+				});
+			});
+
+			let context = useCedarStore.getState().additionalContext;
+			expect(Array.isArray(context.testKey)).toBe(true);
+			expect((context.testKey as ContextEntry[]).length).toBe(2);
+
+			// Remove one entry
+			act(() => {
+				const firstEntry = (context.testKey as ContextEntry[])[0];
+				useCedarStore.getState().removeContextEntry('testKey', firstEntry.id);
+			});
+
+			context = useCedarStore.getState().additionalContext;
+			// Should now be a single value
+			expect(Array.isArray(context.testKey)).toBe(false);
+			expect((context.testKey as ContextEntry).data).toEqual({
+				id: '2',
+				name: 'Second',
+			});
+		});
+
 		it('should not add duplicate context entries', () => {
 			const entry: ContextEntry = {
 				id: 'test-entry',
@@ -129,6 +283,44 @@ describe('AgentInputContextSlice', () => {
 			expect(context.testKey[0].source).toBe('subscription');
 		});
 
+		it('should preserve single value structure when clearing by source', () => {
+			// Add a single subscription entry
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext(
+						'singleKey',
+						{ id: '1', name: 'Subscription Item' },
+						{ labelField: 'name' }
+					);
+			});
+
+			// Add a single mention entry to a different key
+			const mentionEntry: ContextEntry = {
+				id: 'mention1',
+				source: 'mention',
+				data: { value: 'mention' },
+			};
+			act(() => {
+				useCedarStore.getState().addContextEntry('mentionKey', mentionEntry);
+			});
+
+			// Clear mentions
+			act(() => {
+				useCedarStore.getState().clearContextBySource('mention');
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+
+			// singleKey should still be a single value (not converted to array)
+			expect(Array.isArray(context.singleKey)).toBe(false);
+			expect((context.singleKey as ContextEntry).source).toBe('function');
+
+			// mentionKey should be empty array
+			expect(Array.isArray(context.mentionKey)).toBe(true);
+			expect((context.mentionKey as ContextEntry[]).length).toBe(0);
+		});
+
 		it('should clear mentions', () => {
 			const mentionEntry: ContextEntry = {
 				id: 'mention1',
@@ -171,9 +363,62 @@ describe('AgentInputContextSlice', () => {
 			expect(context.emptyArray).toHaveLength(0);
 			expect(Array.isArray(context.emptyArray)).toBe(true);
 
-			// Non-empty array should be processed normally
-			expect(context.nonEmptyArray).toHaveLength(1);
-			expect(context.nonEmptyArray[0].source).toBe('subscription');
+			// Non-empty array should be preserved as array
+			expect(Array.isArray(context.nonEmptyArray)).toBe(true);
+			const entries = context.nonEmptyArray as ContextEntry[];
+			expect(entries.length).toBe(1);
+			expect(entries[0].source).toBe('subscription');
+		});
+
+		it('should preserve array structure in updateAdditionalContext', () => {
+			const contextData = {
+				singleItemArray: [{ id: 'item1', title: 'Single Item' }],
+				multipleItems: [
+					{ id: 'item1', title: 'Item 1' },
+					{ id: 'item2', title: 'Item 2' },
+				],
+			};
+
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext(contextData);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+
+			// Single item array should be preserved as array
+			expect(Array.isArray(context.singleItemArray)).toBe(true);
+			const singleArray = context.singleItemArray as ContextEntry[];
+			expect(singleArray.length).toBe(1);
+			const singleEntry = singleArray[0] as ContextEntry & { title?: string };
+			expect(singleEntry.id).toBe('item1');
+			expect(singleEntry.title).toBe('Single Item');
+			expect(singleEntry.source).toBe('subscription');
+
+			// Multiple items should be stored as array
+			expect(Array.isArray(context.multipleItems)).toBe(true);
+			expect((context.multipleItems as ContextEntry[]).length).toBe(2);
+		});
+
+		it('should preserve single-item arrays in updateAdditionalContext', () => {
+			// Test that [item] gets preserved as array
+			const contextData = {
+				preservedArray: [{ id: 'single', name: 'Preserved' }],
+			};
+
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext(contextData);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+
+			// Should be preserved as array since input was [item]
+			expect(Array.isArray(context.preservedArray)).toBe(true);
+			const entries = context.preservedArray as ContextEntry[];
+			expect(entries.length).toBe(1);
+			const entry = entries[0] as ContextEntry & { name?: string };
+			expect(entry.id).toBe('single');
+			expect(entry.name).toBe('Preserved');
+			expect(entry.source).toBe('subscription');
 		});
 
 		it('should handle multiple empty arrays', () => {
@@ -201,6 +446,7 @@ describe('AgentInputContextSlice', () => {
 					{ id: 'item2', name: 'Item 2' },
 					{ label: 'Item 3' },
 				],
+				singleItem: [{ id: 'single', title: 'Single Item' }],
 			};
 
 			act(() => {
@@ -208,10 +454,13 @@ describe('AgentInputContextSlice', () => {
 			});
 
 			const context = useCedarStore.getState().additionalContext;
-			expect(context.testItems).toHaveLength(3);
+
+			// Multiple items should be stored as array
+			expect(Array.isArray(context.testItems)).toBe(true);
+			expect((context.testItems as ContextEntry[]).length).toBe(3);
 
 			// Check first item - updateAdditionalContext spreads the item directly
-			expect(context.testItems[0]).toEqual({
+			expect((context.testItems as ContextEntry[])[0]).toEqual({
 				id: 'item1',
 				title: 'Item 1',
 				customData: 'test',
@@ -219,15 +468,25 @@ describe('AgentInputContextSlice', () => {
 			});
 
 			// Check second item
-			expect(context.testItems[1]).toEqual({
+			expect((context.testItems as ContextEntry[])[1]).toEqual({
 				id: 'item2',
 				name: 'Item 2',
 				source: 'subscription',
 			});
 
 			// Check third item
-			expect(context.testItems[2]).toEqual({
+			expect((context.testItems as ContextEntry[])[2]).toEqual({
 				label: 'Item 3',
+				source: 'subscription',
+			});
+
+			// Single item array should be preserved as array
+			expect(Array.isArray(context.singleItem)).toBe(true);
+			const singleArray = context.singleItem as ContextEntry[];
+			expect(singleArray.length).toBe(1);
+			expect(singleArray[0]).toEqual({
+				id: 'single',
+				title: 'Single Item',
 				source: 'subscription',
 			});
 		});
@@ -500,23 +759,27 @@ describe('AgentInputContextSlice', () => {
 			});
 
 			const context = useCedarStore.getState().additionalContext;
-			expect(context.singleItem).toHaveLength(1);
-			expect(context.singleItem[0].metadata?.label).toBe('Test: 42');
+			// Single item should be stored as single value
+			expect(Array.isArray(context.singleItem)).toBe(false);
+			const entry = context.singleItem as ContextEntry;
+			expect(entry.metadata?.label).toBe('Test: 42');
 		});
 
 		it('should replace existing context when using same key', () => {
-			// First add some context
+			// First add some context (single item)
 			act(() => {
 				useCedarStore
 					.getState()
-					.putAdditionalContext('replaceTest', [{ id: '1', title: 'First' }]);
+					.putAdditionalContext('replaceTest', { id: '1', title: 'First' });
 			});
 
 			let context = useCedarStore.getState().additionalContext;
-			expect(context.replaceTest).toHaveLength(1);
-			expect(context.replaceTest[0].data.title).toBe('First');
+			// Should be stored as single value
+			expect(Array.isArray(context.replaceTest)).toBe(false);
+			const singleEntry = context.replaceTest as ContextEntry;
+			expect((singleEntry.data as { title: string }).title).toBe('First');
 
-			// Now replace it with new data
+			// Now replace it with new data (multiple items)
 			act(() => {
 				useCedarStore.getState().putAdditionalContext('replaceTest', [
 					{ id: '2', title: 'Second' },
@@ -525,9 +788,12 @@ describe('AgentInputContextSlice', () => {
 			});
 
 			context = useCedarStore.getState().additionalContext;
-			expect(context.replaceTest).toHaveLength(2);
-			expect(context.replaceTest[0].data.title).toBe('Second');
-			expect(context.replaceTest[1].data.title).toBe('Third');
+			// Should now be an array
+			expect(Array.isArray(context.replaceTest)).toBe(true);
+			const arrayEntries = context.replaceTest as ContextEntry[];
+			expect(arrayEntries.length).toBe(2);
+			expect((arrayEntries[0].data as { title: string }).title).toBe('Second');
+			expect((arrayEntries[1].data as { title: string }).title).toBe('Third');
 		});
 
 		it('should handle null and undefined values', () => {
@@ -586,10 +852,37 @@ describe('AgentInputContextSlice', () => {
 
 			expect(mapFn).toHaveBeenCalled();
 
-			// Check that context was updated
+			// Check that context was updated - should be array since there are 2 items
 			const context = useCedarStore.getState().additionalContext;
 			expect(context.items).toBeDefined();
-			expect(context.items).toHaveLength(2);
+			expect(Array.isArray(context.items)).toBe(true);
+			expect((context.items as ContextEntry[]).length).toBe(2);
+		});
+
+		it('should store single mapped value as single context entry', () => {
+			// Register a state with a single item
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'singleItemState',
+					value: { id: '1', title: 'Single Item' },
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: { id: string; title: string }) => ({
+				selectedItem: state,
+			}));
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('singleItemState', mapFn)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			// Should be stored as single value, not array
+			expect(Array.isArray(context.selectedItem)).toBe(false);
+			const entry = context.selectedItem as ContextEntry;
+			expect(entry.source).toBe('subscription');
+			expect(entry.data).toEqual({ id: '1', title: 'Single Item' });
 		});
 
 		it('should handle string labelField option correctly', () => {
@@ -613,7 +906,7 @@ describe('AgentInputContextSlice', () => {
 
 			const options = {
 				labelField: 'name',
-				icon: React.createElement('span', {}, '🔥'),
+				icon: React.createElement('span', {}, '��'),
 				color: '#2ECC40',
 				order: 1,
 			};
@@ -758,13 +1051,14 @@ describe('AgentInputContextSlice', () => {
 			);
 
 			const context = useCedarStore.getState().additionalContext;
-			// Single value should be wrapped in an array
-			expect(context.selectedItem).toHaveLength(1);
-			expect(context.selectedItem[0].data).toEqual({
+			// Single value should be stored as single value
+			expect(Array.isArray(context.selectedItem)).toBe(false);
+			const entry = context.selectedItem as ContextEntry;
+			expect(entry.data).toEqual({
 				id: 'single',
 				name: 'Single Item',
 			});
-			expect(context.selectedItem[0].metadata?.label).toBe('Single Item');
+			expect(entry.metadata?.label).toBe('Single Item');
 		});
 
 		it('should use fallback label when labelField is not specified', () => {
@@ -837,13 +1131,21 @@ describe('AgentInputContextSlice', () => {
 			);
 
 			const context = useCedarStore.getState().additionalContext;
-			const item = context.complex[0];
+			// complex should be an array since mapFn returns an array
+			expect(Array.isArray(context.complex)).toBe(true);
+			const items = context.complex as ContextEntry[];
+			expect(items.length).toBe(1);
+			const item = items[0];
 
 			// Data should be exactly the original object
 			expect(item.data).toEqual(complexData[0]);
-			expect(item.data.nested.deep.value).toBe('preserved');
-			expect(item.data.array).toEqual([1, 2, 3]);
-			expect(item.data.metadata).toEqual({ original: 'metadata' });
+			expect((item.data as (typeof complexData)[0]).nested.deep.value).toBe(
+				'preserved'
+			);
+			expect((item.data as (typeof complexData)[0]).array).toEqual([1, 2, 3]);
+			expect((item.data as (typeof complexData)[0]).metadata).toEqual({
+				original: 'metadata',
+			});
 
 			// Context metadata should be separate
 			expect(item.metadata?.label).toBe('Complex Item');
@@ -910,13 +1212,16 @@ describe('AgentInputContextSlice', () => {
 			expect(context.undefinedValue).toEqual([]);
 			expect(Array.isArray(context.undefinedValue)).toBe(true);
 
-			// Valid array should remain as processed array
-			expect(context.validArray).toHaveLength(1);
-			expect(context.validArray[0].source).toBe('subscription');
+			// Valid array should remain as array since mapFn returned an array
+			expect(Array.isArray(context.validArray)).toBe(true);
+			const validArrayEntries = context.validArray as ContextEntry[];
+			expect(validArrayEntries.length).toBe(1);
+			expect(validArrayEntries[0].source).toBe('subscription');
 
-			// Valid single value should be wrapped in array
-			expect(context.validSingle).toHaveLength(1);
-			expect(context.validSingle[0].source).toBe('subscription');
+			// Valid single value should be stored as single value
+			expect(Array.isArray(context.validSingle)).toBe(false);
+			const validSingleEntry = context.validSingle as ContextEntry;
+			expect(validSingleEntry.source).toBe('subscription');
 		});
 
 		it('should handle options with metadata', () => {
@@ -945,9 +1250,12 @@ describe('AgentInputContextSlice', () => {
 			);
 
 			const context = useCedarStore.getState().additionalContext;
-			expect(context.itemsWithOptions).toHaveLength(1);
+			// itemsWithOptions should be an array since mapFn returns an array
+			expect(Array.isArray(context.itemsWithOptions)).toBe(true);
 
-			const item = context.itemsWithOptions[0];
+			const items = context.itemsWithOptions as ContextEntry[];
+			expect(items.length).toBe(1);
+			const item = items[0];
 			expect(item.metadata?.label).toBe('Test Item');
 			expect(item.metadata?.color).toBe('#ff0000');
 			expect(item.metadata?.order).toBe(1);
@@ -986,8 +1294,11 @@ describe('AgentInputContextSlice', () => {
 
 			// Check initial context
 			let context = useCedarStore.getState().additionalContext;
-			expect(context.items).toHaveLength(1);
-			expect(context.items[0].metadata?.label).toBe('Initial');
+			// items should be an array since mapFn returns an array
+			expect(Array.isArray(context.items)).toBe(true);
+			const initialItems = context.items as ContextEntry[];
+			expect(initialItems.length).toBe(1);
+			expect(initialItems[0].metadata?.label).toBe('Initial');
 
 			// Update the state
 			act(() => {
@@ -1001,11 +1312,16 @@ describe('AgentInputContextSlice', () => {
 			// Force re-render to trigger useEffect
 			rerender();
 
-			// Check updated context
+			// Check updated context - now should be array with 2 items
 			context = useCedarStore.getState().additionalContext;
-			expect(context.items).toHaveLength(2);
-			expect(context.items[0].metadata?.label).toBe('Updated');
-			expect(context.items[1].metadata?.label).toBe('New Item');
+			expect(Array.isArray(context.items)).toBe(true);
+			expect((context.items as ContextEntry[]).length).toBe(2);
+			expect((context.items as ContextEntry[])[0].metadata?.label).toBe(
+				'Updated'
+			);
+			expect((context.items as ContextEntry[])[1].metadata?.label).toBe(
+				'New Item'
+			);
 		});
 
 		it('should handle null state value as empty arrays', () => {

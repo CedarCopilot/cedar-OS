@@ -14,6 +14,15 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 export type ChatInput = JSONContent;
 
 /**
+ * Helper to normalize context entries to an array for internal processing
+ */
+function normalizeToArray(
+	value: ContextEntry | ContextEntry[]
+): ContextEntry[] {
+	return Array.isArray(value) ? value : [value];
+}
+
+/**
  * Helper to extract label from an item based on labelField option
  */
 function extractLabel<T>(
@@ -163,17 +172,22 @@ export const createAgentInputContextSlice: StateCreator<
 
 	addContextEntry: (key, entry) => {
 		set((state) => {
-			const currentEntries = state.additionalContext[key] || [];
+			const currentValue = state.additionalContext[key];
+			const currentEntries = currentValue ? normalizeToArray(currentValue) : [];
+
 			// Check if entry already exists
 			const exists = currentEntries.some((e) => e.id === entry.id);
 			if (exists) {
 				return state;
 			}
 
+			// Add the new entry to the array
+			const updatedEntries = [...currentEntries, entry];
+
 			return {
 				additionalContext: {
 					...state.additionalContext,
-					[key]: [...currentEntries, entry],
+					[key]: updatedEntries,
 				},
 			};
 		});
@@ -181,11 +195,25 @@ export const createAgentInputContextSlice: StateCreator<
 
 	removeContextEntry: (key, entryId) => {
 		set((state) => {
-			const currentEntries = state.additionalContext[key] || [];
+			const currentValue = state.additionalContext[key];
+			if (!currentValue) return state;
+
+			const currentEntries = normalizeToArray(currentValue);
+			const filtered = currentEntries.filter((e) => e.id !== entryId);
+
+			// If we filtered out all entries, remove the key or keep as empty array
+			// If only one entry remains, store as single value, otherwise as array
+			const newValue =
+				filtered.length === 0
+					? []
+					: filtered.length === 1
+					? filtered[0]
+					: filtered;
+
 			return {
 				additionalContext: {
 					...state.additionalContext,
-					[key]: currentEntries.filter((e) => e.id !== entryId),
+					[key]: newValue,
 				},
 			};
 		});
@@ -194,10 +222,19 @@ export const createAgentInputContextSlice: StateCreator<
 	clearContextBySource: (source) => {
 		set((state) => {
 			const newContext: AdditionalContext = {};
-			Object.entries(state.additionalContext).forEach(([key, entries]) => {
+			Object.entries(state.additionalContext).forEach(([key, value]) => {
+				const entries = normalizeToArray(value);
 				const filtered = entries.filter((e) => e.source !== source);
-				// Always retain the key in the context, even if no entries remain after filtering.
-				newContext[key] = filtered;
+
+				// Preserve the single/array structure based on filtered results
+				if (filtered.length === 0) {
+					newContext[key] = [];
+				} else if (filtered.length === 1 && !Array.isArray(value)) {
+					// If original was single value and we still have one, keep as single
+					newContext[key] = filtered[0];
+				} else {
+					newContext[key] = filtered;
+				}
 			});
 			return { additionalContext: newContext };
 		});
@@ -218,11 +255,19 @@ export const createAgentInputContextSlice: StateCreator<
 					if (value.length === 0) {
 						newContext[key] = [];
 					} else {
+						// Array input - preserve as array (even if single item)
 						newContext[key] = value.map((item) => ({
 							...item,
 							source: item.source || 'subscription',
 						}));
 					}
+				} else if (value && typeof value === 'object') {
+					// Single object - store as single value
+					const entry = value as { source?: string };
+					newContext[key] = {
+						...entry,
+						source: entry.source || 'subscription',
+					} as ContextEntry;
 				}
 			});
 
@@ -248,8 +293,14 @@ export const createAgentInputContextSlice: StateCreator<
 				...options,
 				source: 'function',
 			});
-			// Set the context for this key (replaces existing entries for this key)
-			newContext[key] = formattedEntries;
+
+			// If input was an array, keep as array (even if single item)
+			// If input was not an array, unwrap to single value
+			newContext[key] = Array.isArray(value)
+				? formattedEntries
+				: formattedEntries.length === 1
+				? formattedEntries[0]
+				: formattedEntries;
 			return { additionalContext: newContext };
 		});
 	},
@@ -327,20 +378,18 @@ export const createAgentInputContextSlice: StateCreator<
 
 		// Process context to simplify structure
 		const simplifiedContext: Record<string, unknown> = {};
-		Object.entries(context).forEach(([key, entries]) => {
-			if (Array.isArray(entries)) {
-				// Extract just the data and source from each entry
-				const simplified = entries.map((entry) => ({
-					data: entry.data,
-					source: entry.source,
-				}));
+		Object.entries(context).forEach(([key, value]) => {
+			const entries = normalizeToArray(value);
 
-				// If array has single item, extract it
-				simplifiedContext[key] =
-					simplified.length === 1 ? simplified[0] : simplified;
-			} else {
-				simplifiedContext[key] = entries;
-			}
+			// Extract just the data and source from each entry
+			const simplified = entries.map((entry) => ({
+				data: entry.data,
+				source: entry.source,
+			}));
+
+			// If single entry, extract it; otherwise keep as array
+			simplifiedContext[key] =
+				simplified.length === 1 ? simplified[0] : simplified;
 		});
 
 		Object.keys(context).forEach((stateKey) => {
@@ -439,11 +488,14 @@ export function useSubscribeStateToInputContext<T>(
 
 		for (const [key, value] of Object.entries(mapped)) {
 			// Use the common formatting helper
-			formattedContext[key] = formatContextEntries<ElementType<T>>(
-				key,
-				value,
-				options
-			);
+			const entries = formatContextEntries<ElementType<T>>(key, value, options);
+			// If mapped value was an array, keep as array (even if single item)
+			// If mapped value was not an array, unwrap to single value
+			formattedContext[key] = Array.isArray(value)
+				? entries
+				: entries.length === 1
+				? entries[0]
+				: entries;
 		}
 
 		// Update the additional context
@@ -467,8 +519,9 @@ export function useRenderAdditionalContext(
 	return useMemo(() => {
 		const elements: ReactNode[] = [];
 		Object.entries(renderers).forEach(([key, renderer]) => {
-			const entries = additionalContext[key];
-			if (Array.isArray(entries)) {
+			const value = additionalContext[key];
+			if (value) {
+				const entries = normalizeToArray(value);
 				entries.forEach((entry) => {
 					const element = renderer(entry);
 					elements.push(element);
