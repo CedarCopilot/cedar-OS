@@ -3,13 +3,13 @@
 import { FeatureNodeData } from '@/app/examples/product-roadmap/components/FeatureNode';
 import {
 	CedarCopilot,
-	createActionMessageRenderer,
+	createSetStateMessageRenderer,
 	createMessageRenderer,
 	createResponseProcessor,
 	useCedarStore,
 } from 'cedar-os';
 import type {
-	ActionMessageFor,
+	SetStateMessageFor,
 	CustomMessage,
 	CustomStructuredResponseType,
 	MessageStorageConfig,
@@ -88,17 +88,17 @@ export default function ProductRoadmapLayout({
 		},
 	});
 
-	type AddNodeActionMessage = ActionMessageFor<
+	type AddNodeSetStateMessage = SetStateMessageFor<
 		'nodes',
 		'addNode',
 		[{ data: Partial<FeatureNodeData> }]
 	>;
 
-	const customActionMessageRenderer = createActionMessageRenderer({
+	const customSetStateMessageRenderer = createSetStateMessageRenderer({
 		render: (message) => {
 			switch (message.setterKey) {
 				case 'addNode':
-					const typedMessage = message as AddNodeActionMessage;
+					const typedMessage = message as AddNodeSetStateMessage;
 
 					return (
 						<div>
@@ -256,7 +256,7 @@ export default function ProductRoadmapLayout({
 			voiceSettings={voiceSettings}
 			messageStorage={localStorageConfig}
 			responseProcessors={[responseProcessor]}
-			messageRenderers={[AlertMessageRenderer, customActionMessageRenderer]}>
+			messageRenderers={[AlertMessageRenderer, customSetStateMessageRenderer]}>
 			{children}
 			{/* TooltipMenuSpell for any text selection */}
 			<TooltipMenuSpell

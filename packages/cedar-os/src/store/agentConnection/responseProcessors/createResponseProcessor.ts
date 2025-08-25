@@ -14,36 +14,36 @@ export function createResponseProcessor<T extends StructuredResponseType>(
 }
 
 // -----------------------------------------------------------------------------
-// Base payload shared by ActionResponse structured responses and chat messages
+// Base payload shared by SetStateResponse structured responses and chat messages
 // -----------------------------------------------------------------------------
 
-export type ActionResponsePayload = {
+export type SetStateResponsePayload = {
 	stateKey: string;
 	setterKey: string;
 	args?: unknown[];
 };
 
-// Generic action structured response type
-export type ActionResponse = CustomStructuredResponseType<
-	'action',
-	ActionResponsePayload
+// Generic setState structured response type
+export type SetStateResponse = CustomStructuredResponseType<
+	'setState',
+	SetStateResponsePayload
 >;
 
-// Helper type for action responses
-export type ActionResponseFor<
+// Helper type for setState responses
+export type SetStateResponseFor<
 	StateKey extends string,
 	SetterKey extends string,
 	Args extends unknown[] = []
 > = BaseStructuredResponseType & {
-	type: 'action';
+	type: 'setState';
 	stateKey: StateKey;
 	setterKey: SetterKey;
 	args: Args;
 };
 
-// Factory function for creating action response processors
-export function createActionResponseProcessor<
-	T extends ActionResponse
+// Factory function for creating setState response processors
+export function createSetStateResponseProcessor<
+	T extends SetStateResponse
 >(config: {
 	namespace?: string;
 	/** Optional setterKey. If provided the processor only handles msgs with this key */
@@ -55,15 +55,15 @@ export function createActionResponseProcessor<
 
 	const defaultValidate = (
 		obj: StructuredResponseType
-	): obj is ActionResponse => {
-		if (obj.type !== 'action') return false;
-		if (setterKey && (obj as ActionResponse).setterKey !== setterKey)
+	): obj is SetStateResponse => {
+		if (obj.type !== 'setState') return false;
+		if (setterKey && (obj as SetStateResponse).setterKey !== setterKey)
 			return false;
 		return true;
 	};
 
 	return {
-		type: 'action',
+		type: 'setState',
 		namespace,
 		execute: execute as ResponseProcessorExecute<T>,
 		validate: validate ?? defaultValidate,

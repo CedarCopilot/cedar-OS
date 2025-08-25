@@ -2,13 +2,13 @@ import type {
 	ResponseProcessor,
 	ResponseProcessorRegistry,
 } from '@/store/agentConnection/AgentConnectionTypes';
-import { actionResponseProcessor } from '@/store/agentConnection/responseProcessors/actionResponseProcessor';
+import { setStateResponseProcessor } from '@/store/agentConnection/responseProcessors/setStateResponseProcessor';
 import { messageResponseProcessor } from '@/store/agentConnection/responseProcessors/messageResponseProcessor';
 import { progressUpdateResponseProcessor } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 
 export const defaultResponseProcessors = [
 	messageResponseProcessor,
-	actionResponseProcessor,
+	setStateResponseProcessor,
 	progressUpdateResponseProcessor,
 ];
 

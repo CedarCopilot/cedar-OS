@@ -222,27 +222,27 @@ const messageResponseProcessor = {
 };
 ```
 
-### `"action"` Type
+### `"setState"` Type
 
-- **Behavior**: Executes state actions via custom setters and adds action message to chat
+- **Behavior**: Executes state actions via custom setters and adds setState message to chat
 - **Properties**: `stateKey: string`, `setterKey: string`, `args?: unknown[]`
-- **Default Processor**: `actionResponseProcessor` executes state actions and adds to chat
+- **Default Processor**: `setStateResponseProcessor` executes state actions and adds to chat
 
 ```tsx
-// Default actionResponseProcessor implementation
-const actionResponseProcessor = {
-	type: 'action',
+// Default setStateResponseProcessor implementation
+const setStateResponseProcessor = {
+	type: 'setState',
 	namespace: 'default',
 	execute: async (obj, store) => {
 		// Execute the state action
 		const args = Array.isArray(obj.args) ? obj.args : [];
 		store.executeCustomSetter(obj.stateKey, obj.setterKey, ...args);
 
-		// Add action message to chat
+		// Add setState message to chat
 		store.addMessage(obj as unknown as MessageInput);
 	},
-	validate: (obj): obj is ActionResponse =>
-		obj.type === 'action' &&
+	validate: (obj): obj is SetStateResponse =>
+		obj.type === 'setState' &&
 		'stateKey' in obj &&
 		'setterKey' in obj &&
 		typeof obj.stateKey === 'string' &&
@@ -250,21 +250,21 @@ const actionResponseProcessor = {
 };
 ```
 
-**Action Factory Functions**: Cedar provides special factory functions for action responses:
+**SetState Factory Functions**: Cedar provides special factory functions for setState responses:
 
 ```tsx
-import { createActionResponseProcessor, ActionResponseFor } from 'cedar-os';
+import { createSetStateResponseProcessor, SetStateResponseFor } from 'cedar-os';
 
-// Specific action response type using helper
-type UpdateCounterResponse = ActionResponseFor<
+// Specific setState response type using helper
+type UpdateCounterResponse = SetStateResponseFor<
 	'counter', // StateKey
 	'increment', // SetterKey
 	[number] // Args
 >;
 
-// Create custom action processor with filtering
-const CounterActionProcessor =
-	createActionResponseProcessor<UpdateCounterResponse>({
+// Create custom setState processor with filtering
+const CounterSetStateProcessor =
+	createSetStateResponseProcessor<UpdateCounterResponse>({
 		namespace: 'counter',
 		setterKey: 'increment', // Only handle increment actions
 		execute: (obj, store) => {
