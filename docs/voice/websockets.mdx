@@ -193,7 +193,7 @@ export const createWebSocketVoiceSlice: StateCreator<
 				set({ isSpeaking: false });
 				break;
 
-			case 'action':
+			case 'setState':
 				// Handle structured actions
 				if (message.stateKey && message.setterKey) {
 					const { executeCustomSetter } = get();

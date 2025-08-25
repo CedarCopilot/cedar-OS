@@ -132,7 +132,7 @@ export const addFeatureTool = createTool({
 		nodeType: z.literal('feature').default('feature'),
 	}),
 	outputSchema: z.object({
-		type: z.literal('action'),
+		type: z.literal('setState'),
 		stateKey: z.literal('nodes'),
 		setterKey: z.literal('addNode'),
 		args: z.array(z.any()),
@@ -140,7 +140,7 @@ export const addFeatureTool = createTool({
 	execute: async ({ context }) => {
 		// Return structured response for Cedar to interpret
 		return {
-			type: 'action',
+			type: 'setState',
 			stateKey: 'nodes',
 			setterKey: 'addNode',
 			args: [
@@ -171,8 +171,8 @@ handleLLMResult: (response: LLMResponse) => {
 	if (response.object && typeof response.object === 'object') {
 		const structuredResponse = response.object;
 
-		// Handle action type responses
-		if (structuredResponse.type === 'action') {
+		// Handle setState type responses
+		if (structuredResponse.type === 'setState') {
 			// Execute the custom setter with provided parameters
 			state.executeCustomSetter(
 				structuredResponse.stateKey,
@@ -194,19 +194,19 @@ handleLLMResult: (response: LLMResponse) => {
 };
 ```
 
-> **Note**: This default handling can be customized using [Custom Response Processing](/agent-backend-connection/custom-response-processing#action-type). You can also customize how action completion is displayed with [Custom Message Rendering](/chat/custom-message-rendering#action-type).
+> **Note**: This default handling can be customized using [Custom Response Processing](/agent-backend-connection/custom-response-processing#setstate-type). You can also customize how setState completion is displayed with [Custom Message Rendering](/chat/custom-message-rendering#setstate-type).
 
 ## Structured Response Types
 
 Cedar supports different types of structured responses:
 
-### Action Type
+### SetState Type
 
 Execute a custom setter on registered state:
 
 ```json
 {
-	"type": "action",
+	"type": "setState",
 	"stateKey": "nodes",
 	"setterKey": "addNode",
 	"args": [
@@ -217,7 +217,7 @@ Execute a custom setter on registered state:
 }
 ```
 
-> **Learn More**: See the complete [Action Response Processing](/agent-backend-connection/custom-response-processing#action-type) documentation and [Action Message Rendering](/chat/custom-message-rendering#action-type) guide for detailed information about customizing action handling and display.
+> **Learn More**: See the complete [SetState Response Processing](/agent-backend-connection/custom-response-processing#setstate-type) documentation and [SetState Message Rendering](/chat/custom-message-rendering#setstate-type) guide for detailed information about customizing setState handling and display.
 
 ### Message Type
 
@@ -345,13 +345,13 @@ For complex workflows, you can chain multiple actions:
   "type": "multi-action",
   "actions": [
     {
-      "type": "action",
+      "type": "setState",
       "stateKey": "nodes",
       "setterKey": "addNode",
       "args": [/* node 1 */]
     },
     {
-      "type": "action",
+      "type": "setState",
       "stateKey": "edges",
       "setterKey": "connectNodes",
       "args": ["node1", "node2"]
