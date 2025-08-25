@@ -77,7 +77,7 @@ interface RegisterStateOptions<T> {
 interface Setter<T, Args extends unknown[] = unknown[]> {
 	name: string;
 	description: string;
-	parameters?: SetterParameter[];
+	schema?: ZodSchema;
 	execute: (state: T, ...args: Args) => void;
 }
 
