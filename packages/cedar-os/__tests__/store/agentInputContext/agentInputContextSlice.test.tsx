@@ -906,7 +906,7 @@ describe('AgentInputContextSlice', () => {
 
 			const options = {
 				labelField: 'name',
-				icon: React.createElement('span', {}, '��'),
+				icon: React.createElement('span', {}, '👀'),
 				color: '#2ECC40',
 				order: 1,
 			};

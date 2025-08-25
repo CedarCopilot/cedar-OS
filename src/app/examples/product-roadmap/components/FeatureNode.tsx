@@ -573,7 +573,7 @@ function FeatureNodeComponent({
 							style={{ minHeight: '60px' }}
 						/>
 					) : (
-						<p
+						<div
 							className='mb-3 text-xs text-gray-600 dark:text-gray-300 flex-1 overflow-y-auto whitespace-pre-wrap'
 							onDoubleClick={() => setEditingDescription(true)}
 							tabIndex={0}
@@ -584,7 +584,7 @@ function FeatureNodeComponent({
 							<ReactMarkdown remarkPlugins={[remarkGfm]}>
 								{description}
 							</ReactMarkdown>
-						</p>
+						</div>
 					)}
 					<div className='flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 flex-none'>
 						<div className='flex items-center gap-2'>
