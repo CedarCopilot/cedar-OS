@@ -13,6 +13,15 @@ import { sanitizeJson } from '@/utils/sanitizeJson';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 export type ChatInput = JSONContent;
 
+// Helper for legacy label extraction
+const extractLegacyLabel = (item: unknown): string => {
+	if (typeof item === 'object' && item !== null) {
+		const obj = item as Record<string, unknown>;
+		return String(obj.title || obj.label || obj.name || obj.id || 'Unknown');
+	}
+	return String(item);
+};
+
 // Define the agent input context slice
 export interface AgentInputContextSlice {
 	// The up-to-date editor JSON content
@@ -118,22 +127,44 @@ export const createAgentInputContextSlice: StateCreator<
 
 			Object.entries(context).forEach(([key, value]) => {
 				if (Array.isArray(value)) {
-					// Convert legacy array format to context entries
-					// Handle empty arrays by setting them explicitly
+					// Handle empty arrays
 					if (value.length === 0) {
 						newContext[key] = [];
 					} else {
-						newContext[key] = value.map((item, index) => ({
-							id: item.id || `${key}-${index}`,
-							source: 'subscription' as const,
-							data: item,
-							metadata: {
-								label:
-									item.title || item.label || item.name || item.id || 'Unknown',
-								// Preserve any existing metadata including icon and color
-								...item.metadata,
-							},
-						}));
+						// Check if items are already properly formatted context entries
+						const firstItem = value[0];
+						const isContextEntry =
+							firstItem &&
+							typeof firstItem === 'object' &&
+							'id' in firstItem &&
+							'data' in firstItem &&
+							'metadata' in firstItem;
+
+						if (isContextEntry) {
+							// Already properly formatted, ensure source field exists
+							newContext[key] = value.map((item) => ({
+								...item,
+								source: item.source || 'subscription',
+							}));
+						} else {
+							// Legacy format: convert to context entries
+							// This path is for backwards compatibility
+							newContext[key] = value.map((item, index) => ({
+								id:
+									item && typeof item === 'object' && 'id' in item
+										? String(item.id)
+										: `${key}-${index}`,
+								source: 'subscription' as const,
+								data: item,
+								metadata: {
+									label: extractLegacyLabel(item),
+									// Preserve any existing metadata if present
+									...(item && typeof item === 'object' && 'metadata' in item
+										? item.metadata
+										: {}),
+								},
+							}));
+						}
 					}
 				}
 			});
@@ -293,31 +324,40 @@ export function useSubscribeStateToInputContext<T>(
 	);
 
 	useEffect(() => {
-		// Helper to extract label from an item (depends on options)
+		// Helper to extract label from an item
 		const getLabel = (item: unknown): string => {
 			const { labelField } = options || {};
 
+			// If labelField is a function, call it with the item
 			if (typeof labelField === 'function') {
 				return labelField(item as ElementType<T>);
 			}
 
-			// For objects, try to extract label from field
-			if (typeof item === 'object' && item !== null) {
+			// If labelField is a string, extract that field
+			if (
+				typeof labelField === 'string' &&
+				typeof item === 'object' &&
+				item !== null
+			) {
 				const obj = item as Record<string, unknown>;
-
-				if (typeof labelField === 'string' && labelField in obj) {
+				if (labelField in obj) {
 					return String(obj[labelField]);
 				}
+			}
 
-				// Default label extraction for objects
-				return String(obj.title || obj.label || obj.name || obj.id || item);
+			// Default fallback: try common label fields
+			if (typeof item === 'object' && item !== null) {
+				const obj = item as Record<string, unknown>;
+				return String(
+					obj.title || obj.label || obj.name || obj.id || 'Unknown'
+				);
 			}
 
 			// For primitives, convert to string
 			return String(item);
 		};
 
-		// Check if state key exists (not just if value is undefined)
+		// Check if state key exists
 		if (!stateExists) {
 			console.warn(
 				`[useSubscribeStateToInputContext] State with key "${stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
@@ -325,73 +365,52 @@ export function useSubscribeStateToInputContext<T>(
 			return;
 		}
 
+		// Apply the mapping function to get the context data
 		const mapped = mapFn(stateValue as T);
-		const normalized: Record<string, unknown> = {};
 
-		// Normalize all values to arrays for consistent handling
+		// Transform mapped data into properly formatted context entries
+		const formattedContext: Record<string, unknown> = {};
+
 		for (const [key, value] of Object.entries(mapped)) {
-			if (Array.isArray(value)) {
-				// Already an array, use as is
-				normalized[key] = value;
-			} else if (value !== null && value !== undefined) {
-				// Single value - wrap in array with proper structure
-				const label = getLabel(value);
-				normalized[key] = [
-					{
-						id: `${key}-single`,
-						value: value,
-						// Use extracted label
-						label: label,
-						title: label,
-						name: label,
-					},
-				];
-			} else {
-				// Null or undefined - create empty array
-				normalized[key] = [];
+			// Handle null/undefined values
+			if (value === null || value === undefined) {
+				formattedContext[key] = [];
+				continue;
 			}
+
+			// Ensure value is an array for consistent processing
+			const items = Array.isArray(value) ? value : [value];
+
+			// Transform each item into a proper context entry
+			formattedContext[key] = items.map((item, index) => {
+				// Generate a unique ID for this entry
+				const id =
+					typeof item === 'object' && item !== null && 'id' in item
+						? String(item.id)
+						: `${key}-${index}`;
+
+				// Extract the label using the configured method
+				const label = options?.labelField ? getLabel(item) : undefined;
+
+				// Create the context entry with clean separation of concerns
+				return {
+					id,
+					source: 'subscription' as const,
+					data: item, // The original data, unchanged
+					metadata: {
+						label: label || getLabel(item), // Use extracted label or fallback
+						...(options?.icon && { icon: options.icon }),
+						...(options?.color && { color: options.color }),
+						...(options?.order !== undefined && { order: options.order }),
+						showInChat:
+							options?.showInChat !== undefined ? options.showInChat : true,
+					},
+				};
+			});
 		}
 
-		// If options are provided, enhance the normalized data with metadata and labels
-		if (
-			options &&
-			(options.icon ||
-				options.color ||
-				options.labelField ||
-				options.order !== undefined ||
-				options.showInChat !== undefined)
-		) {
-			const enhanced: Record<string, unknown> = {};
-			for (const [key, value] of Object.entries(normalized)) {
-				if (Array.isArray(value)) {
-					// Add metadata and update labels for each item
-					enhanced[key] = value.map((item) => {
-						const label = getLabel(
-							item.value !== undefined ? item.value : item
-						);
-						return {
-							...item,
-							// Update label fields if labelField is specified
-							label: options.labelField ? label : item.label,
-							title: options.labelField ? label : item.title,
-							name: options.labelField ? label : item.name,
-							metadata: {
-								...item.metadata,
-								label: options.labelField ? label : item.metadata?.label,
-								icon: options.icon,
-								color: options.color,
-								order: options.order,
-								showInChat:
-									options.showInChat !== undefined ? options.showInChat : true,
-							},
-						};
-					});
-				}
-			}
-			updateAdditionalContext(enhanced);
-		} else {
-			updateAdditionalContext(normalized);
-		}
+		// Update the additional context
+		updateAdditionalContext(formattedContext);
 	}, [
 		stateExists,
 		stateValue,

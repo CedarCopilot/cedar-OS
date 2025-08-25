@@ -392,6 +392,264 @@ describe('AgentInputContextSlice', () => {
 			expect(context.items).toHaveLength(2);
 		});
 
+		it('should handle string labelField option correctly', () => {
+			// Register a state with items that have a 'name' field
+			const testData = [
+				{ value: 0, name: 'temperature' },
+				{ value: 0.9, name: 'opacity' },
+			];
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'parametersState',
+					value: testData,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: typeof testData) => ({
+				parameters: state,
+			}));
+
+			const options = {
+				labelField: 'name',
+				icon: React.createElement('span', {}, '🔥'),
+				color: '#2ECC40',
+				order: 1,
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('parametersState', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.parameters).toHaveLength(2);
+
+			// Check first parameter
+			const firstParam = context.parameters[0];
+			expect(firstParam.id).toBe('parameters-0');
+			expect(firstParam.source).toBe('subscription');
+			expect(firstParam.data).toEqual({ value: 0, name: 'temperature' });
+			expect(firstParam.metadata?.label).toBe('temperature');
+			expect(firstParam.metadata?.color).toBe('#2ECC40');
+			expect(firstParam.metadata?.order).toBe(1);
+
+			// Check second parameter
+			const secondParam = context.parameters[1];
+			expect(secondParam.id).toBe('parameters-1');
+			expect(secondParam.data).toEqual({ value: 0.9, name: 'opacity' });
+			expect(secondParam.metadata?.label).toBe('opacity');
+		});
+
+		it('should handle function labelField option correctly', () => {
+			// Register a state with items
+			const testData = [
+				{ value: 0, name: 'temperature' },
+				{ value: 0.9, name: 'opacity' },
+			];
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'functionalLabelState',
+					value: testData,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: typeof testData) => ({
+				parameters: state,
+			}));
+
+			// Use a function to format the label
+			const labelFunction = jest.fn(
+				(item: (typeof testData)[0]) => `${item.name} (${item.value})`
+			);
+
+			const options = {
+				labelField: labelFunction,
+				icon: React.createElement('span', {}, '⚙️'),
+				color: '#FF851B',
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('functionalLabelState', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.parameters).toHaveLength(2);
+
+			// Verify the label function was called for each item
+			expect(labelFunction).toHaveBeenCalledTimes(2);
+			expect(labelFunction).toHaveBeenCalledWith({
+				value: 0,
+				name: 'temperature',
+			});
+			expect(labelFunction).toHaveBeenCalledWith({
+				value: 0.9,
+				name: 'opacity',
+			});
+
+			// Check formatted labels
+			expect(context.parameters[0].metadata?.label).toBe('temperature (0)');
+			expect(context.parameters[1].metadata?.label).toBe('opacity (0.9)');
+
+			// Data should remain unchanged
+			expect(context.parameters[0].data).toEqual({
+				value: 0,
+				name: 'temperature',
+			});
+			expect(context.parameters[1].data).toEqual({
+				value: 0.9,
+				name: 'opacity',
+			});
+		});
+
+		it('should handle labelField with nested object paths', () => {
+			const testData = [
+				{ id: '1', details: { displayName: 'First Item' } },
+				{ id: '2', details: { displayName: 'Second Item' } },
+			];
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'nestedState',
+					value: testData,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: typeof testData) => ({
+				nestedItems: state,
+			}));
+
+			// Use a function to extract nested field
+			const options = {
+				labelField: (item: (typeof testData)[0]) => item.details.displayName,
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('nestedState', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.nestedItems[0].metadata?.label).toBe('First Item');
+			expect(context.nestedItems[1].metadata?.label).toBe('Second Item');
+		});
+
+		it('should handle single value (non-array) in mapFn result', () => {
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'singleValueState',
+					value: { id: 'single', name: 'Single Item' },
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: { id: string; name: string }) => ({
+				selectedItem: state, // Single value, not an array
+			}));
+
+			const options = {
+				labelField: 'name',
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('singleValueState', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			// Single value should be wrapped in an array
+			expect(context.selectedItem).toHaveLength(1);
+			expect(context.selectedItem[0].data).toEqual({
+				id: 'single',
+				name: 'Single Item',
+			});
+			expect(context.selectedItem[0].metadata?.label).toBe('Single Item');
+		});
+
+		it('should use fallback label when labelField is not specified', () => {
+			const testData = [
+				{
+					id: '1',
+					name: 'Item Name',
+					title: 'Item Title',
+					label: 'Item Label',
+				},
+				{ id: '2', title: 'Only Title' },
+				{ id: '3', label: 'Only Label' },
+				{ id: '4' }, // Only ID
+			];
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'fallbackState',
+					value: testData,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: typeof testData) => ({
+				items: state,
+			}));
+
+			// No labelField specified - should use fallback logic
+			renderHook(() => useSubscribeStateToInputContext('fallbackState', mapFn));
+
+			const context = useCedarStore.getState().additionalContext;
+
+			// Should prefer title > label > name > id
+			expect(context.items[0].metadata?.label).toBe('Item Title');
+			expect(context.items[1].metadata?.label).toBe('Only Title');
+			expect(context.items[2].metadata?.label).toBe('Only Label');
+			expect(context.items[3].metadata?.label).toBe('4');
+		});
+
+		it('should preserve original data structure without modification', () => {
+			const complexData = [
+				{
+					id: '1',
+					name: 'Complex Item',
+					nested: { deep: { value: 'preserved' } },
+					array: [1, 2, 3],
+					metadata: { original: 'metadata' }, // This should not interfere
+				},
+			];
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'complexState',
+					value: complexData,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: typeof complexData) => ({
+				complex: state,
+			}));
+
+			const options = {
+				labelField: 'name',
+				icon: React.createElement('span', {}, '📦'),
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('complexState', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			const item = context.complex[0];
+
+			// Data should be exactly the original object
+			expect(item.data).toEqual(complexData[0]);
+			expect(item.data.nested.deep.value).toBe('preserved');
+			expect(item.data.array).toEqual([1, 2, 3]);
+			expect(item.data.metadata).toEqual({ original: 'metadata' });
+
+			// Context metadata should be separate
+			expect(item.metadata?.label).toBe('Complex Item');
+			expect(item.metadata?.icon).toBeDefined();
+		});
+
 		it('should handle empty array states', () => {
 			// Register an empty array state
 			act(() => {
@@ -490,9 +748,64 @@ describe('AgentInputContextSlice', () => {
 			expect(context.itemsWithOptions).toHaveLength(1);
 
 			const item = context.itemsWithOptions[0];
+			expect(item.metadata?.label).toBe('Test Item');
 			expect(item.metadata?.color).toBe('#ff0000');
 			expect(item.metadata?.order).toBe(1);
 			expect(item.metadata?.showInChat).toBe(false);
+			expect(item.metadata?.icon).toBeDefined();
+		});
+
+		it('should handle state updates correctly', () => {
+			// Initial state
+			const initialData = [{ id: '1', name: 'Initial' }];
+			const updatedData = [
+				{ id: '1', name: 'Updated' },
+				{ id: '2', name: 'New Item' },
+			];
+
+			const setValue = jest.fn();
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'updatingState',
+					value: initialData,
+					setValue,
+				});
+			});
+
+			const mapFn = jest.fn((state: Array<{ id: string; name: string }>) => ({
+				items: state,
+			}));
+
+			const options = {
+				labelField: 'name',
+			};
+
+			const { rerender } = renderHook(() =>
+				useSubscribeStateToInputContext('updatingState', mapFn, options)
+			);
+
+			// Check initial context
+			let context = useCedarStore.getState().additionalContext;
+			expect(context.items).toHaveLength(1);
+			expect(context.items[0].metadata?.label).toBe('Initial');
+
+			// Update the state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'updatingState',
+					value: updatedData,
+					setValue,
+				});
+			});
+
+			// Force re-render to trigger useEffect
+			rerender();
+
+			// Check updated context
+			context = useCedarStore.getState().additionalContext;
+			expect(context.items).toHaveLength(2);
+			expect(context.items[0].metadata?.label).toBe('Updated');
+			expect(context.items[1].metadata?.label).toBe('New Item');
 		});
 
 		it('should handle null state value as empty arrays', () => {
