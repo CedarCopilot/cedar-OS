@@ -1,5 +1,4 @@
 import React, { useCallback } from 'react';
-import { useCedarStore } from 'cedar-os';
 import { FloatingContainer } from '@/structural/FloatingContainer';
 import { ChatInput } from '@/chatInput/ChatInput';
 import Container3D from '@/containers/Container3D';
@@ -13,8 +12,9 @@ import {
 	Package,
 	Settings,
 	XCircle,
+	Undo,
+	Redo,
 } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 
 interface CedarCaptionChatProps {
 	dimensions?: {
@@ -32,75 +32,32 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 	showThinking = true,
 	stream = true,
 }) => {
-	// Check if there are any nodes with diffs
-	const nodesState = useCedarStore((state) => state.registeredStates.nodes);
-	const hasDiffs = React.useMemo(() => {
-		if (!nodesState?.value || !Array.isArray(nodesState.value)) return false;
-		return nodesState.value.some(
-			(node: { data?: { diff?: string } }) => node.data?.diff
-		);
-	}, [nodesState]);
+	// Always false since buttons do nothing
+	const hasDiffs = false;
 
+	// Empty handlers that do nothing
 	const handleAddFeature = useCallback(() => {
-		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
-		const newFeature = {
-			id: uuidv4(),
-			type: 'featureNode',
-			position: { x: Math.random() * 400, y: Math.random() * 400 },
-			data: {
-				title: 'New Feature',
-				description: 'Describe your new feature here',
-				upvotes: 0,
-				comments: [],
-				status: 'planned' as const,
-				nodeType: 'feature' as const,
-				diff: 'added' as const,
-			},
-		};
-		executeCustomSetter({
-			key: 'nodes',
-			setterKey: 'addNode',
-			args: [newFeature],
-		});
+		// Empty - does nothing
 	}, []);
 
 	const handleAddIssue = useCallback(() => {
-		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
-		const newIssue = {
-			id: uuidv4(),
-			type: 'featureNode',
-			position: { x: Math.random() * 400, y: Math.random() * 400 },
-			data: {
-				title: 'New Bug',
-				description: 'Describe the bug here',
-				upvotes: 0,
-				comments: [],
-				status: 'backlog' as const,
-				nodeType: 'bug' as const,
-				diff: 'added' as const,
-			},
-		};
-		executeCustomSetter({
-			key: 'nodes',
-			setterKey: 'addNode',
-			args: [newIssue],
-		});
+		// Empty - does nothing
 	}, []);
 
 	const handleAcceptAllDiffs = useCallback(() => {
-		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
-		executeCustomSetter({
-			key: 'nodes',
-			setterKey: 'acceptAllDiffs',
-		});
+		// Empty - does nothing
 	}, []);
 
 	const handleRejectAllDiffs = useCallback(() => {
-		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
-		executeCustomSetter({
-			key: 'nodes',
-			setterKey: 'rejectAllDiffs',
-		});
+		// Empty - does nothing
+	}, []);
+
+	const handleUndo = useCallback(() => {
+		// Empty - does nothing
+	}, []);
+
+	const handleRedo = useCallback(() => {
+		// Empty - does nothing
 	}, []);
 
 	return (
@@ -120,7 +77,7 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 							onClick={handleAddFeature}>
 							<span className='flex items-center gap-1'>
 								<Package className='w-4 h-4' />
-								Add Feature
+								Add X
 							</span>
 						</Container3DButton>
 						<Container3DButton
@@ -129,7 +86,7 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 							onClick={handleAddIssue}>
 							<span className='flex items-center gap-1'>
 								<Bug className='w-4 h-4' />
-								Add Bug
+								Add Y
 							</span>
 						</Container3DButton>
 						{hasDiffs && (
@@ -164,6 +121,22 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 						)}
 					</div>
 					<div className='flex space-x-2'>
+						<Container3DButton
+							id='undo-btn'
+							childClassName='p-1.5'
+							onClick={handleUndo}>
+							<span className='flex items-center gap-1'>
+								<Undo className='w-4 h-4' />
+							</span>
+						</Container3DButton>
+						<Container3DButton
+							id='redo-btn'
+							childClassName='p-1.5'
+							onClick={handleRedo}>
+							<span className='flex items-center gap-1'>
+								<Redo className='w-4 h-4' />
+							</span>
+						</Container3DButton>
 						<Container3DButton id='history-btn' childClassName='p-1.5'>
 							<span className='flex items-center gap-1'>
 								<History className='w-4 h-4' />
