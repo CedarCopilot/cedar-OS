@@ -364,6 +364,84 @@ describe('AgentInputContextSlice', () => {
 		});
 	});
 
+	describe('putAdditionalContext method', () => {
+		it('should add formatted context entries programmatically', () => {
+			const testData = [
+				{ id: '1', name: 'Item 1', value: 100 },
+				{ id: '2', name: 'Item 2', value: 200 },
+			];
+
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('testItems', testData, {
+					labelField: 'name',
+					color: '#FF0000',
+					icon: React.createElement('span', {}, '🔧'),
+				});
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.testItems).toHaveLength(2);
+			expect(context.testItems[0].data).toEqual(testData[0]);
+			expect(context.testItems[0].metadata?.label).toBe('Item 1');
+			expect(context.testItems[0].metadata?.color).toBe('#FF0000');
+			expect(context.testItems[1].data).toEqual(testData[1]);
+			expect(context.testItems[1].metadata?.label).toBe('Item 2');
+		});
+
+		it('should handle function labelField in putAdditionalContext', () => {
+			const testData = { id: 'single', name: 'Test', value: 42 };
+
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('singleItem', testData, {
+					labelField: (item: typeof testData) => `${item.name}: ${item.value}`,
+				});
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.singleItem).toHaveLength(1);
+			expect(context.singleItem[0].metadata?.label).toBe('Test: 42');
+		});
+
+		it('should replace existing context when using same key', () => {
+			// First add some context
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext('replaceTest', [{ id: '1', title: 'First' }]);
+			});
+
+			let context = useCedarStore.getState().additionalContext;
+			expect(context.replaceTest).toHaveLength(1);
+			expect(context.replaceTest[0].data.title).toBe('First');
+
+			// Now replace it with new data
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('replaceTest', [
+					{ id: '2', title: 'Second' },
+					{ id: '3', title: 'Third' },
+				]);
+			});
+
+			context = useCedarStore.getState().additionalContext;
+			expect(context.replaceTest).toHaveLength(2);
+			expect(context.replaceTest[0].data.title).toBe('Second');
+			expect(context.replaceTest[1].data.title).toBe('Third');
+		});
+
+		it('should handle null and undefined values', () => {
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('nullTest', null);
+				useCedarStore
+					.getState()
+					.putAdditionalContext('undefinedTest', undefined);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.nullTest).toEqual([]);
+			expect(context.undefinedTest).toEqual([]);
+		});
+	});
+
 	describe('useSubscribeStateToInputContext hook', () => {
 		it('should subscribe to state and update context', () => {
 			// Register a state first

@@ -13,14 +13,87 @@ import { sanitizeJson } from '@/utils/sanitizeJson';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 export type ChatInput = JSONContent;
 
-// Helper for legacy label extraction
-const extractLegacyLabel = (item: unknown): string => {
+/**
+ * Helper to extract label from an item based on labelField option
+ */
+function extractLabel<T>(
+	item: unknown,
+	labelField?: string | ((item: T) => string)
+): string {
+	// If labelField is a function, call it with the item
+	if (typeof labelField === 'function') {
+		return labelField(item as T);
+	}
+
+	// If labelField is a string, extract that field
+	if (
+		typeof labelField === 'string' &&
+		typeof item === 'object' &&
+		item !== null
+	) {
+		const obj = item as Record<string, unknown>;
+		if (labelField in obj) {
+			return String(obj[labelField]);
+		}
+	}
+
+	// Default fallback: just try common fields
 	if (typeof item === 'object' && item !== null) {
 		const obj = item as Record<string, unknown>;
 		return String(obj.title || obj.label || obj.name || obj.id || 'Unknown');
 	}
 	return String(item);
-};
+}
+
+/**
+ * Formats raw data into properly structured context entries
+ */
+function formatContextEntries<T>(
+	key: string,
+	value: unknown,
+	options?: {
+		icon?: ReactNode;
+		color?: string;
+		labelField?: string | ((item: T) => string);
+		order?: number;
+		showInChat?: boolean;
+	}
+): ContextEntry[] {
+	// Handle null/undefined values
+	if (value === null || value === undefined) {
+		return [];
+	}
+
+	// Ensure value is an array for consistent processing
+	const items = Array.isArray(value) ? value : [value];
+
+	// Transform each item into a proper context entry
+	return items.map((item, index) => {
+		// Generate a unique ID for this entry
+		const id =
+			typeof item === 'object' && item !== null && 'id' in item
+				? String(item.id)
+				: `${key}-${index}`;
+
+		// Extract the label using the configured method
+		const label = extractLabel<T>(item, options?.labelField);
+
+		// Create the context entry with clean separation of concerns
+		return {
+			id,
+			source: 'subscription' as const,
+			data: item, // The original data, unchanged
+			metadata: {
+				label,
+				...(options?.icon && { icon: options.icon }),
+				...(options?.color && { color: options.color }),
+				...(options?.order !== undefined && { order: options.order }),
+				showInChat:
+					options?.showInChat !== undefined ? options.showInChat : true,
+			},
+		};
+	});
+}
 
 // Define the agent input context slice
 export interface AgentInputContextSlice {
@@ -41,6 +114,19 @@ export interface AgentInputContextSlice {
 	clearContextBySource: (source: ContextEntry['source']) => void;
 	clearMentions: () => void;
 	updateAdditionalContext: (context: Record<string, unknown>) => void;
+
+	// New method for programmatically adding context
+	putAdditionalContext: <T>(
+		key: string,
+		value: unknown,
+		options?: {
+			icon?: ReactNode;
+			color?: string;
+			labelField?: string | ((item: T) => string);
+			order?: number;
+			showInChat?: boolean;
+		}
+	) => void;
 
 	// Mention providers registry
 	mentionProviders: Map<string, MentionProvider>;
@@ -131,44 +217,35 @@ export const createAgentInputContextSlice: StateCreator<
 					if (value.length === 0) {
 						newContext[key] = [];
 					} else {
-						// Check if items are already properly formatted context entries
-						const firstItem = value[0];
-						const isContextEntry =
-							firstItem &&
-							typeof firstItem === 'object' &&
-							'id' in firstItem &&
-							'data' in firstItem &&
-							'metadata' in firstItem;
-
-						if (isContextEntry) {
-							// Already properly formatted, ensure source field exists
-							newContext[key] = value.map((item) => ({
-								...item,
-								source: item.source || 'subscription',
-							}));
-						} else {
-							// Legacy format: convert to context entries
-							// This path is for backwards compatibility
-							newContext[key] = value.map((item, index) => ({
-								id:
-									item && typeof item === 'object' && 'id' in item
-										? String(item.id)
-										: `${key}-${index}`,
-								source: 'subscription' as const,
-								data: item,
-								metadata: {
-									label: extractLegacyLabel(item),
-									// Preserve any existing metadata if present
-									...(item && typeof item === 'object' && 'metadata' in item
-										? item.metadata
-										: {}),
-								},
-							}));
-						}
+						newContext[key] = value.map((item) => ({
+							...item,
+							source: item.source || 'subscription',
+						}));
 					}
 				}
 			});
 
+			return { additionalContext: newContext };
+		});
+	},
+
+	putAdditionalContext: <T>(
+		key: string,
+		value: unknown,
+		options?: {
+			icon?: ReactNode;
+			color?: string;
+			labelField?: string | ((item: T) => string);
+			order?: number;
+			showInChat?: boolean;
+		}
+	) => {
+		set((state) => {
+			const newContext = { ...state.additionalContext };
+			// Format the entries using the common helper
+			const formattedEntries = formatContextEntries<T>(key, value, options);
+			// Set the context for this key (replaces existing entries for this key)
+			newContext[key] = formattedEntries;
 			return { additionalContext: newContext };
 		});
 	},
@@ -324,39 +401,6 @@ export function useSubscribeStateToInputContext<T>(
 	);
 
 	useEffect(() => {
-		// Helper to extract label from an item
-		const getLabel = (item: unknown): string => {
-			const { labelField } = options || {};
-
-			// If labelField is a function, call it with the item
-			if (typeof labelField === 'function') {
-				return labelField(item as ElementType<T>);
-			}
-
-			// If labelField is a string, extract that field
-			if (
-				typeof labelField === 'string' &&
-				typeof item === 'object' &&
-				item !== null
-			) {
-				const obj = item as Record<string, unknown>;
-				if (labelField in obj) {
-					return String(obj[labelField]);
-				}
-			}
-
-			// Default fallback: try common label fields
-			if (typeof item === 'object' && item !== null) {
-				const obj = item as Record<string, unknown>;
-				return String(
-					obj.title || obj.label || obj.name || obj.id || 'Unknown'
-				);
-			}
-
-			// For primitives, convert to string
-			return String(item);
-		};
-
 		// Check if state key exists
 		if (!stateExists) {
 			console.warn(
@@ -372,41 +416,12 @@ export function useSubscribeStateToInputContext<T>(
 		const formattedContext: Record<string, unknown> = {};
 
 		for (const [key, value] of Object.entries(mapped)) {
-			// Handle null/undefined values
-			if (value === null || value === undefined) {
-				formattedContext[key] = [];
-				continue;
-			}
-
-			// Ensure value is an array for consistent processing
-			const items = Array.isArray(value) ? value : [value];
-
-			// Transform each item into a proper context entry
-			formattedContext[key] = items.map((item, index) => {
-				// Generate a unique ID for this entry
-				const id =
-					typeof item === 'object' && item !== null && 'id' in item
-						? String(item.id)
-						: `${key}-${index}`;
-
-				// Extract the label using the configured method
-				const label = options?.labelField ? getLabel(item) : undefined;
-
-				// Create the context entry with clean separation of concerns
-				return {
-					id,
-					source: 'subscription' as const,
-					data: item, // The original data, unchanged
-					metadata: {
-						label: label || getLabel(item), // Use extracted label or fallback
-						...(options?.icon && { icon: options.icon }),
-						...(options?.color && { color: options.color }),
-						...(options?.order !== undefined && { order: options.order }),
-						showInChat:
-							options?.showInChat !== undefined ? options.showInChat : true,
-					},
-				};
-			});
+			// Use the common formatting helper
+			formattedContext[key] = formatContextEntries<ElementType<T>>(
+				key,
+				value,
+				options
+			);
 		}
 
 		// Update the additional context
