@@ -1,10 +1,10 @@
 import { ResponseProcessor } from '@/store/agentConnection/AgentConnectionTypes';
-import { SetStateResponse } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
+import { LegacyActionResponse } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
 import { MessageInput } from '@/store/messages/MessageTypes';
 
 // Legacy action response processor - backwards compatibility for 'action' type
 // This handles the old 'action' type the same way as 'setState' for backwards compatibility
-export const legacyActionResponseProcessor: ResponseProcessor<SetStateResponse> =
+export const legacyActionResponseProcessor: ResponseProcessor<LegacyActionResponse> =
 	{
 		type: 'action' as const,
 		namespace: 'default',
@@ -19,7 +19,7 @@ export const legacyActionResponseProcessor: ResponseProcessor<SetStateResponse> 
 			});
 			store.addMessage(obj as unknown as MessageInput);
 		},
-		validate: (obj): obj is SetStateResponse =>
+		validate: (obj): obj is LegacyActionResponse =>
 			obj.type === 'action' &&
 			'stateKey' in obj &&
 			'setterKey' in obj &&

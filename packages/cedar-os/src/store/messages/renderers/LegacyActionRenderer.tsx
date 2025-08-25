@@ -1,10 +1,10 @@
 import React from 'react';
 
 import { ShimmerText } from './ShimmerText';
-import { SetStateMessage } from '@/store/messages/renderers/createMessageRenderer';
+import { LegacyActionMessage } from '@/store/messages/renderers/createMessageRenderer';
 
 interface LegacyActionRendererProps {
-	message: SetStateMessage;
+	message: LegacyActionMessage;
 }
 
 // Legacy action renderer - backwards compatibility for 'action' type messages

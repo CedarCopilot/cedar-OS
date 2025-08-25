@@ -162,6 +162,10 @@ export {
 	SetStateResponse,
 	SetStateResponseFor,
 	createSetStateResponseProcessor,
+	LegacyActionResponsePayload,
+	LegacyActionResponse,
+	LegacyActionResponseFor,
+	createLegacyActionResponseProcessor,
 	createResponseProcessor,
 } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
 
@@ -171,6 +175,9 @@ export {
 	SetStateMessage,
 	SetStateMessageFor,
 	createSetStateMessageRenderer,
+	LegacyActionMessage,
+	LegacyActionMessageFor,
+	createLegacyActionMessageRenderer,
 } from '@/store/messages/renderers/createMessageRenderer';
 
 // Export spell system types and utilities

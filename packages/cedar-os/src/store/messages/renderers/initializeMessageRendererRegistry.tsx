@@ -10,7 +10,10 @@ import ProgressUpdateRenderer, {
 } from './ProgressUpdateRenderer';
 import SetStateRenderer from './SetStateRenderer';
 import LegacyActionRenderer from './LegacyActionRenderer';
-import { SetStateMessage } from '@/store/messages/renderers/createMessageRenderer';
+import {
+	SetStateMessage,
+	LegacyActionMessage,
+} from '@/store/messages/renderers/createMessageRenderer';
 import MastraEventRenderer, {
 	CustomMastraMessage,
 } from './MastraEventRenderer';
@@ -43,9 +46,9 @@ export const legacyActionMessageRenderer: MessageRenderer<Message> = {
 	type: 'action',
 	namespace: 'default',
 	render: (message) => (
-		<LegacyActionRenderer message={message as SetStateMessage} />
+		<LegacyActionRenderer message={message as LegacyActionMessage} />
 	),
-	validateMessage: (msg): msg is SetStateMessage => msg.type === 'action',
+	validateMessage: (msg): msg is LegacyActionMessage => msg.type === 'action',
 };
 
 // Mastra event renderers – one per streamed event type
