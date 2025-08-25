@@ -8,6 +8,7 @@ import {
 	AgentBackendConnectionSection,
 	ChatSection,
 	TextLengthSection,
+	SubscribedStatesSection,
 } from './sections';
 
 export default function CedarPlaygroundPage() {
@@ -90,6 +91,8 @@ export default function CedarPlaygroundPage() {
 			<ChatSection activeTab={activeChatTab} onTabChange={setActiveChatTab} />
 
 			<TextLengthSection />
+
+			<SubscribedStatesSection />
 
 			{/* 
 			<StateAccessSection /> */}

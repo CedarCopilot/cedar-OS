@@ -13,6 +13,98 @@ import { sanitizeJson } from '@/utils/sanitizeJson';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 export type ChatInput = JSONContent;
 
+/**
+ * Helper to normalize context entries to an array for internal processing
+ */
+function normalizeToArray(
+	value: ContextEntry | ContextEntry[]
+): ContextEntry[] {
+	return Array.isArray(value) ? value : [value];
+}
+
+/**
+ * Helper to extract label from an item based on labelField option
+ */
+function extractLabel<T>(
+	item: unknown,
+	labelField?: string | ((item: T) => string)
+): string {
+	// If labelField is a function, call it with the item
+	if (typeof labelField === 'function') {
+		return labelField(item as T);
+	}
+
+	// If labelField is a string, extract that field
+	if (
+		typeof labelField === 'string' &&
+		typeof item === 'object' &&
+		item !== null
+	) {
+		const obj = item as Record<string, unknown>;
+		if (labelField in obj) {
+			return String(obj[labelField]);
+		}
+	}
+
+	// Default fallback: just try common fields
+	if (typeof item === 'object' && item !== null) {
+		const obj = item as Record<string, unknown>;
+		return String(obj.title || obj.label || obj.name || obj.id || 'Unknown');
+	}
+	return String(item);
+}
+
+/**
+ * Formats raw data into properly structured context entries
+ */
+function formatContextEntries<T>(
+	key: string,
+	value: unknown,
+	options?: {
+		icon?: ReactNode;
+		color?: string;
+		labelField?: string | ((item: T) => string);
+		order?: number;
+		showInChat?: boolean;
+		source?: ContextEntry['source'];
+	}
+): ContextEntry[] {
+	// Handle null/undefined values
+	if (value === null || value === undefined) {
+		return [];
+	}
+
+	// Ensure value is an array for consistent processing
+	const items = Array.isArray(value) ? value : [value];
+
+	// Transform each item into a proper context entry
+	return items.map((item, index) => {
+		// Generate a unique ID for this entry
+		const id =
+			typeof item === 'object' && item !== null && 'id' in item
+				? String(item.id)
+				: `${key}-${index}`;
+
+		// Extract the label using the configured method
+		const label = extractLabel<T>(item, options?.labelField);
+
+		// Create the context entry with clean separation of concerns
+		return {
+			id,
+			source: options?.source || ('subscription' as const),
+			data: item, // The original data, unchanged
+			metadata: {
+				label,
+				...(options?.icon && { icon: options.icon }),
+				...(options?.color && { color: options.color }),
+				...(options?.order !== undefined && { order: options.order }),
+				showInChat:
+					options?.showInChat !== undefined ? options.showInChat : true,
+			},
+		};
+	});
+}
+
 // Define the agent input context slice
 export interface AgentInputContextSlice {
 	// The up-to-date editor JSON content
@@ -32,6 +124,19 @@ export interface AgentInputContextSlice {
 	clearContextBySource: (source: ContextEntry['source']) => void;
 	clearMentions: () => void;
 	updateAdditionalContext: (context: Record<string, unknown>) => void;
+
+	// New method for programmatically adding context
+	putAdditionalContext: <T>(
+		key: string,
+		value: unknown,
+		options?: {
+			icon?: ReactNode;
+			color?: string;
+			labelField?: string | ((item: T) => string);
+			order?: number;
+			showInChat?: boolean;
+		}
+	) => void;
 
 	// Mention providers registry
 	mentionProviders: Map<string, MentionProvider>;
@@ -67,17 +172,22 @@ export const createAgentInputContextSlice: StateCreator<
 
 	addContextEntry: (key, entry) => {
 		set((state) => {
-			const currentEntries = state.additionalContext[key] || [];
+			const currentValue = state.additionalContext[key];
+			const currentEntries = currentValue ? normalizeToArray(currentValue) : [];
+
 			// Check if entry already exists
 			const exists = currentEntries.some((e) => e.id === entry.id);
 			if (exists) {
 				return state;
 			}
 
+			// Add the new entry to the array
+			const updatedEntries = [...currentEntries, entry];
+
 			return {
 				additionalContext: {
 					...state.additionalContext,
-					[key]: [...currentEntries, entry],
+					[key]: updatedEntries,
 				},
 			};
 		});
@@ -85,11 +195,25 @@ export const createAgentInputContextSlice: StateCreator<
 
 	removeContextEntry: (key, entryId) => {
 		set((state) => {
-			const currentEntries = state.additionalContext[key] || [];
+			const currentValue = state.additionalContext[key];
+			if (!currentValue) return state;
+
+			const currentEntries = normalizeToArray(currentValue);
+			const filtered = currentEntries.filter((e) => e.id !== entryId);
+
+			// If we filtered out all entries, remove the key or keep as empty array
+			// If only one entry remains, store as single value, otherwise as array
+			const newValue =
+				filtered.length === 0
+					? []
+					: filtered.length === 1
+					? filtered[0]
+					: filtered;
+
 			return {
 				additionalContext: {
 					...state.additionalContext,
-					[key]: currentEntries.filter((e) => e.id !== entryId),
+					[key]: newValue,
 				},
 			};
 		});
@@ -98,10 +222,19 @@ export const createAgentInputContextSlice: StateCreator<
 	clearContextBySource: (source) => {
 		set((state) => {
 			const newContext: AdditionalContext = {};
-			Object.entries(state.additionalContext).forEach(([key, entries]) => {
+			Object.entries(state.additionalContext).forEach(([key, value]) => {
+				const entries = normalizeToArray(value);
 				const filtered = entries.filter((e) => e.source !== source);
-				// Always retain the key in the context, even if no entries remain after filtering.
-				newContext[key] = filtered;
+
+				// Preserve the single/array structure based on filtered results
+				if (filtered.length === 0) {
+					newContext[key] = [];
+				} else if (filtered.length === 1 && !Array.isArray(value)) {
+					// If original was single value and we still have one, keep as single
+					newContext[key] = filtered[0];
+				} else {
+					newContext[key] = filtered;
+				}
 			});
 			return { additionalContext: newContext };
 		});
@@ -111,33 +244,63 @@ export const createAgentInputContextSlice: StateCreator<
 		get().clearContextBySource('mention');
 	},
 
-	// Legacy method - converts simple objects to context entries
+	// internal method to update the additional context
 	updateAdditionalContext: (context) => {
 		set((state) => {
 			const newContext = { ...state.additionalContext };
 
 			Object.entries(context).forEach(([key, value]) => {
 				if (Array.isArray(value)) {
-					// Convert legacy array format to context entries
-					// Handle empty arrays by setting them explicitly
+					// Handle empty arrays
 					if (value.length === 0) {
 						newContext[key] = [];
 					} else {
-						newContext[key] = value.map((item, index) => ({
-							id: item.id || `${key}-${index}`,
-							source: 'subscription' as const,
-							data: item,
-							metadata: {
-								label:
-									item.title || item.label || item.name || item.id || 'Unknown',
-								// Preserve any existing metadata including icon and color
-								...item.metadata,
-							},
+						// Array input - preserve as array (even if single item)
+						newContext[key] = value.map((item) => ({
+							...item,
+							source: item.source || 'subscription',
 						}));
 					}
+				} else if (value && typeof value === 'object') {
+					// Single object - store as single value
+					const entry = value as { source?: string };
+					newContext[key] = {
+						...entry,
+						source: entry.source || 'subscription',
+					} as ContextEntry;
 				}
 			});
 
+			return { additionalContext: newContext };
+		});
+	},
+
+	putAdditionalContext: <T>(
+		key: string,
+		value: unknown,
+		options?: {
+			icon?: ReactNode;
+			color?: string;
+			labelField?: string | ((item: T) => string);
+			order?: number;
+			showInChat?: boolean;
+		}
+	) => {
+		set((state) => {
+			const newContext = { ...state.additionalContext };
+			// Format the entries using the common helper with "function" source
+			const formattedEntries = formatContextEntries<T>(key, value, {
+				...options,
+				source: 'function',
+			});
+
+			// If input was an array, keep as array (even if single item)
+			// If input was not an array, unwrap to single value
+			newContext[key] = Array.isArray(value)
+				? formattedEntries
+				: formattedEntries.length === 1
+				? formattedEntries[0]
+				: formattedEntries;
 			return { additionalContext: newContext };
 		});
 	},
@@ -213,6 +376,22 @@ export const createAgentInputContextSlice: StateCreator<
 		const setters: Record<string, unknown> = {};
 		const schemas: Record<string, unknown> = {};
 
+		// Process context to simplify structure
+		const simplifiedContext: Record<string, unknown> = {};
+		Object.entries(context).forEach(([key, value]) => {
+			const entries = normalizeToArray(value);
+
+			// Extract just the data and source from each entry
+			const simplified = entries.map((entry) => ({
+				data: entry.data,
+				source: entry.source,
+			}));
+
+			// If single entry, extract it; otherwise keep as array
+			simplifiedContext[key] =
+				simplified.length === 1 ? simplified[0] : simplified;
+		});
+
 		Object.keys(context).forEach((stateKey) => {
 			const state = registeredStates[stateKey];
 
@@ -240,8 +419,8 @@ export const createAgentInputContextSlice: StateCreator<
 			}
 		});
 
-		// Merge original context with setter schemas and state schemas
-		const mergedContext = { ...context, setters, schemas };
+		// Merge simplified context with setter schemas and state schemas
+		const mergedContext = { ...simplifiedContext, setters, schemas };
 
 		// Sanitize before stringifying
 		const sanitizedContext = sanitizeJson(mergedContext);
@@ -292,31 +471,7 @@ export function useSubscribeStateToInputContext<T>(
 	);
 
 	useEffect(() => {
-		// Helper to extract label from an item (depends on options)
-		const getLabel = (item: unknown): string => {
-			const { labelField } = options || {};
-
-			if (typeof labelField === 'function') {
-				return labelField(item as ElementType<T>);
-			}
-
-			// For objects, try to extract label from field
-			if (typeof item === 'object' && item !== null) {
-				const obj = item as Record<string, unknown>;
-
-				if (typeof labelField === 'string' && labelField in obj) {
-					return String(obj[labelField]);
-				}
-
-				// Default label extraction for objects
-				return String(obj.title || obj.label || obj.name || obj.id || item);
-			}
-
-			// For primitives, convert to string
-			return String(item);
-		};
-
-		// Check if state key exists (not just if value is undefined)
+		// Check if state key exists
 		if (!stateExists) {
 			console.warn(
 				`[useSubscribeStateToInputContext] State with key "${stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
@@ -324,73 +479,26 @@ export function useSubscribeStateToInputContext<T>(
 			return;
 		}
 
+		// Apply the mapping function to get the context data
 		const mapped = mapFn(stateValue as T);
-		const normalized: Record<string, unknown> = {};
 
-		// Normalize all values to arrays for consistent handling
+		// Transform mapped data into properly formatted context entries
+		const formattedContext: Record<string, unknown> = {};
+
 		for (const [key, value] of Object.entries(mapped)) {
-			if (Array.isArray(value)) {
-				// Already an array, use as is
-				normalized[key] = value;
-			} else if (value !== null && value !== undefined) {
-				// Single value - wrap in array with proper structure
-				const label = getLabel(value);
-				normalized[key] = [
-					{
-						id: `${key}-single`,
-						value: value,
-						// Use extracted label
-						label: label,
-						title: label,
-						name: label,
-					},
-				];
-			} else {
-				// Null or undefined - create empty array
-				normalized[key] = [];
-			}
+			// Use the common formatting helper
+			const entries = formatContextEntries<ElementType<T>>(key, value, options);
+			// If mapped value was an array, keep as array (even if single item)
+			// If mapped value was not an array, unwrap to single value
+			formattedContext[key] = Array.isArray(value)
+				? entries
+				: entries.length === 1
+				? entries[0]
+				: entries;
 		}
 
-		// If options are provided, enhance the normalized data with metadata and labels
-		if (
-			options &&
-			(options.icon ||
-				options.color ||
-				options.labelField ||
-				options.order !== undefined ||
-				options.showInChat !== undefined)
-		) {
-			const enhanced: Record<string, unknown> = {};
-			for (const [key, value] of Object.entries(normalized)) {
-				if (Array.isArray(value)) {
-					// Add metadata and update labels for each item
-					enhanced[key] = value.map((item) => {
-						const label = getLabel(
-							item.value !== undefined ? item.value : item
-						);
-						return {
-							...item,
-							// Update label fields if labelField is specified
-							label: options.labelField ? label : item.label,
-							title: options.labelField ? label : item.title,
-							name: options.labelField ? label : item.name,
-							metadata: {
-								...item.metadata,
-								label: options.labelField ? label : item.metadata?.label,
-								icon: options.icon,
-								color: options.color,
-								order: options.order,
-								showInChat:
-									options.showInChat !== undefined ? options.showInChat : true,
-							},
-						};
-					});
-				}
-			}
-			updateAdditionalContext(enhanced);
-		} else {
-			updateAdditionalContext(normalized);
-		}
+		// Update the additional context
+		updateAdditionalContext(formattedContext);
 	}, [
 		stateExists,
 		stateValue,
@@ -410,8 +518,9 @@ export function useRenderAdditionalContext(
 	return useMemo(() => {
 		const elements: ReactNode[] = [];
 		Object.entries(renderers).forEach(([key, renderer]) => {
-			const entries = additionalContext[key];
-			if (Array.isArray(entries)) {
+			const value = additionalContext[key];
+			if (value) {
+				const entries = normalizeToArray(value);
 				entries.forEach((entry) => {
 					const element = renderer(entry);
 					elements.push(element);

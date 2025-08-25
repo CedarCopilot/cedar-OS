@@ -8,6 +8,15 @@ import {
 } from 'cedar-os';
 import { X } from 'lucide-react';
 
+/**
+ * Helper to normalize context entries to an array for internal processing
+ */
+function normalizeToArray(
+	value: ContextEntry | ContextEntry[]
+): ContextEntry[] {
+	return Array.isArray(value) ? value : [value];
+}
+
 interface ContextBadgeRowProps {
 	editor?: Editor | null;
 }
@@ -100,9 +109,10 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 
 		// Create a sorted list of context keys based on their entries' order metadata
 		const contextKeysWithOrder = Object.keys(additionalContext).map((key) => {
-			const entries = additionalContext[key];
+			const value = additionalContext[key];
+			const entries = normalizeToArray(value);
 			// Get the minimum order value from entries for this key (or MAX if none)
-			const minOrder = entries.reduce((min, entry) => {
+			const minOrder = entries.reduce((min: number, entry: ContextEntry) => {
 				const order = entry.metadata?.order;
 				return order !== undefined ? Math.min(min, order) : min;
 			}, Number.MAX_SAFE_INTEGER);
