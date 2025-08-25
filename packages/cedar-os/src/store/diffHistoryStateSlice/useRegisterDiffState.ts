@@ -1,40 +1,16 @@
-import { useEffect, useCallback } from 'react';
-import type { ZodSchema } from 'zod';
 import { useCedarStore } from '@/store/CedarStore';
-import type {
-	BasicStateValue,
-	Setter,
-	SetterFunction,
-} from '@/store/stateSlice/stateSlice';
-import type {
-	DiffMode,
-	DiffState,
-	DiffHistoryState,
-	ComputeStateFunction,
-} from './diffHistorySlice';
+import type { BasicStateValue } from '@/store/stateSlice/stateSlice';
 import { compare } from 'fast-json-patch';
+import { useEffect } from 'react';
+import type { RegisterDiffStateConfig } from './diffHistorySlice';
 
-/**
- * Configuration for registerDiffState
- */
-export interface RegisterDiffStateConfig<T extends BasicStateValue> {
-	key: string;
-	value: T;
-	setValue?: SetterFunction<T>;
-	description?: string;
-	schema?: ZodSchema<T>;
-	customSetters?: Record<string, Setter<T>>;
-	diffMode?: DiffMode;
-	computeState?: ComputeStateFunction<T>;
-}
+// Re-export the config type from diffHistorySlice
+export type { RegisterDiffStateConfig } from './diffHistorySlice';
 
 /**
  * Return type for registerDiffState
  */
-export interface DiffStateReturn<T> {
-	computedState: T;
-	oldState: T | undefined;
-	newState: T | undefined;
+export interface DiffStateReturn {
 	undo: () => boolean;
 	redo: () => boolean;
 	acceptAllDiffs: () => boolean;
@@ -126,7 +102,7 @@ function setValueAtPath<T>(obj: T, path: string, value: unknown): T {
 /**
  * Hook version of registerDiffState for use in React components
  * Sets up diff tracking for a state without overriding setters.
- * The stateSlice will automatically notify diffHistorySlice of changes.
+ * The diffHistorySlice will automatically propagate changes to stateSlice.
  *
  * @example
  * ```typescript
@@ -155,144 +131,29 @@ function setValueAtPath<T>(obj: T, path: string, value: unknown): T {
  * const { computedState, undo, redo, acceptAllDiffs, rejectAllDiffs } = nodesDiff;
  * ```
  */
-export function useRegisterDiffState<T extends BasicStateValue>({
-	key,
-	value,
-	setValue,
-	description,
-	schema,
-	customSetters,
-	diffMode = 'defaultAccept',
-	computeState,
-}: RegisterDiffStateConfig<T>): DiffStateReturn<T> {
-	const store = useCedarStore();
-	const {
-		registerState,
-		getDiffHistoryState,
-		setDiffHistoryState,
-		setComputeStateFunction,
-		getComputedState,
-		getCleanState,
-		undo: undoFn,
-		redo: redoFn,
-		acceptAllDiffs: acceptFn,
-		rejectAllDiffs: rejectFn,
-	} = store;
+export function useRegisterDiffState<T extends BasicStateValue>(
+	config: RegisterDiffStateConfig<T>
+) {
+	const registerDiffState = useCedarStore((state) => state.registerDiffState);
 
-	// Initialize diff history state if it doesn't exist
+	// const { key } = config;
+
+	// Register the diff state only once on mount
+	// We intentionally don't include config.value in dependencies to avoid loops
+	// The value will be synced through the one-way flow: diffHistorySlice → stateSlice → component
 	useEffect(() => {
-		const existingDiffState = getDiffHistoryState<T>(key);
-		if (!existingDiffState) {
-			const initialDiffState: DiffState<T> = {
-				oldState: value,
-				newState: value,
-				isDiffMode: false,
-				patches: [],
-			};
-			const initialDiffHistoryState: DiffHistoryState<T> = {
-				diffState: initialDiffState,
-				history: [],
-				redoStack: [],
-				diffMode,
-				computeState,
-			};
-			setDiffHistoryState(key, initialDiffHistoryState);
-		} else if (computeState !== existingDiffState.computeState) {
-			// Update the computeState function if it changed
-			setComputeStateFunction(key, computeState);
-		}
+		registerDiffState(config);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
-		key,
-		value,
-		diffMode,
-		computeState,
-		getDiffHistoryState,
-		setDiffHistoryState,
-		setComputeStateFunction,
+		config.key,
+		// Intentionally exclude config.value to prevent infinite loops
+		// The value is managed by the store and synced back via setValue
+		config.setValue,
+		config.description,
+		config.schema,
+		config.customSetters,
+		config.diffMode,
+		config.computeState,
+		registerDiffState,
 	]);
-
-	// Register the state in stateSlice (without overriding setValue)
-	// The stateSlice will automatically notify diffHistorySlice of changes
-	useEffect(() => {
-		registerState<T>({
-			key,
-			value,
-			setValue,
-			description,
-			customSetters,
-			schema,
-		});
-	}, [key, value, setValue, description, customSetters, schema, registerState]);
-
-	// Get current states
-	const diffHistoryState = getDiffHistoryState<T>(key);
-	const oldState = diffHistoryState?.diffState.oldState;
-	const newState = diffHistoryState?.diffState.newState;
-
-	// Get the computed state from the slice (it applies computeState internally)
-	const computedState = getComputedState<T>(key) ?? value;
-
-	// Create bound undo/redo functions
-	const undo = useCallback(() => {
-		const result = undoFn(key);
-		if (result && setValue) {
-			// After undo, sync the clean state with setValue
-			const cleanState = getCleanState<T>(key);
-			if (cleanState !== undefined) {
-				setValue(cleanState);
-			}
-		}
-		return result;
-	}, [key, undoFn, getCleanState, setValue]);
-
-	const redo = useCallback(() => {
-		const result = redoFn(key);
-		if (result && setValue) {
-			// After redo, sync the clean state with setValue
-			const cleanState = getCleanState<T>(key);
-			if (cleanState !== undefined) {
-				setValue(cleanState);
-			}
-		}
-		return result;
-	}, [key, redoFn, getCleanState, setValue]);
-
-	const acceptAllDiffs = useCallback(() => {
-		const result = acceptFn(key);
-		if (result && setValue) {
-			// After accepting, sync the clean state with setValue
-			const cleanState = getCleanState<T>(key);
-			if (cleanState !== undefined) {
-				setValue(cleanState);
-			}
-		}
-		return result;
-	}, [key, acceptFn, getCleanState, setValue]);
-
-	const rejectAllDiffs = useCallback(() => {
-		const result = rejectFn(key);
-		if (result && setValue) {
-			// After rejecting, sync the clean state with setValue
-			const cleanState = getCleanState<T>(key);
-			if (cleanState !== undefined) {
-				setValue(cleanState);
-			}
-		}
-		return result;
-	}, [key, rejectFn, getCleanState, setValue]);
-
-	return {
-		computedState,
-		oldState,
-		newState,
-		undo,
-		redo,
-		acceptAllDiffs,
-		rejectAllDiffs,
-	};
 }
-
-/**
- * Alias for backwards compatibility
- */
-export const registerDiffState = useRegisterDiffState;

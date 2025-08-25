@@ -23,13 +23,8 @@ export {
 } from './useSubscribeToDiffValue';
 export {
 	useRegisterDiffState,
-	registerDiffState,
 	addDiffToArrayObjs,
 	type RegisterDiffStateConfig,
 	type DiffStateReturn,
 } from './useRegisterDiffState';
-export {
-	useRegisterCedarDiffState,
-	type RegisterCedarDiffStateConfig,
-	type CedarDiffStateReturn,
-} from './useRegisterCedarDiffState';
+export { useDiffState, useDiffStateOperations } from './useDiffState';

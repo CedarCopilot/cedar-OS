@@ -43,7 +43,7 @@ describe('DiffHistorySlice', () => {
 				};
 
 				act(() => {
-					useCedarStore.getState().setDiffHistoryState('testKey', testState);
+					useCedarStore.getState().setDiffState('testKey', testState);
 				});
 
 				const result = useCedarStore
@@ -53,7 +53,7 @@ describe('DiffHistorySlice', () => {
 			});
 		});
 
-		describe('setDiffHistoryState', () => {
+		describe('setDiffState', () => {
 			it('should set a new diff history state', () => {
 				const testState: DiffHistoryState<string> = {
 					diffState: {
@@ -68,7 +68,7 @@ describe('DiffHistorySlice', () => {
 				};
 
 				act(() => {
-					useCedarStore.getState().setDiffHistoryState('stringKey', testState);
+					useCedarStore.getState().setDiffState('stringKey', testState);
 				});
 
 				const result = useCedarStore
@@ -103,12 +103,8 @@ describe('DiffHistorySlice', () => {
 				};
 
 				act(() => {
-					useCedarStore
-						.getState()
-						.setDiffHistoryState('numberKey', initialState);
-					useCedarStore
-						.getState()
-						.setDiffHistoryState('numberKey', updatedState);
+					useCedarStore.getState().setDiffState('numberKey', initialState);
+					useCedarStore.getState().setDiffState('numberKey', updatedState);
 				});
 
 				const result = useCedarStore
@@ -138,9 +134,7 @@ describe('DiffHistorySlice', () => {
 				};
 
 				act(() => {
-					useCedarStore
-						.getState()
-						.setDiffHistoryState('defaultAcceptKey', testState);
+					useCedarStore.getState().setDiffState('defaultAcceptKey', testState);
 				});
 
 				const result = useCedarStore
@@ -163,9 +157,7 @@ describe('DiffHistorySlice', () => {
 				};
 
 				act(() => {
-					useCedarStore
-						.getState()
-						.setDiffHistoryState('holdAcceptKey', testState);
+					useCedarStore.getState().setDiffState('holdAcceptKey', testState);
 				});
 
 				const result = useCedarStore
@@ -176,7 +168,7 @@ describe('DiffHistorySlice', () => {
 		});
 	});
 
-	describe('setDiffState', () => {
+	describe('newDiffState', () => {
 		it('should warn and return early if no existing state', () => {
 			const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
@@ -206,7 +198,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('countKey', initialState);
+				useCedarStore.getState().setDiffState('countKey', initialState);
 				useCedarStore.getState().setDiffState('countKey', { count: 2 }, false);
 			});
 
@@ -241,7 +233,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('textKey', initialState);
+				useCedarStore.getState().setDiffState('textKey', initialState);
 				useCedarStore
 					.getState()
 					.setDiffState('textKey', { text: 'changed' }, true);
@@ -275,7 +267,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('textKey2', initialState);
+				useCedarStore.getState().setDiffState('textKey2', initialState);
 				useCedarStore
 					.getState()
 					.setDiffState('textKey2', { text: 'changed' }, true);
@@ -312,9 +304,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore
-					.getState()
-					.setDiffHistoryState('redoTestKey', initialState);
+				useCedarStore.getState().setDiffState('redoTestKey', initialState);
 				useCedarStore.getState().setDiffState('redoTestKey', 3, false);
 			});
 
@@ -345,7 +335,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('noDiffKey', testState);
+				useCedarStore.getState().setDiffState('noDiffKey', testState);
 			});
 
 			const result = useCedarStore.getState().acceptAllDiffs('noDiffKey');
@@ -369,7 +359,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('acceptKey', testState);
+				useCedarStore.getState().setDiffState('acceptKey', testState);
 			});
 
 			const result = useCedarStore.getState().acceptAllDiffs('acceptKey');
@@ -425,9 +415,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore
-					.getState()
-					.setDiffHistoryState('acceptRedoKey', testState);
+				useCedarStore.getState().setDiffState('acceptRedoKey', testState);
 			});
 
 			useCedarStore.getState().acceptAllDiffs('acceptRedoKey');
@@ -459,9 +447,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore
-					.getState()
-					.setDiffHistoryState('noDiffRejectKey', testState);
+				useCedarStore.getState().setDiffState('noDiffRejectKey', testState);
 			});
 
 			const result = useCedarStore.getState().rejectAllDiffs('noDiffRejectKey');
@@ -485,7 +471,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('rejectKey', testState);
+				useCedarStore.getState().setDiffState('rejectKey', testState);
 			});
 
 			const result = useCedarStore.getState().rejectAllDiffs('rejectKey');
@@ -541,9 +527,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore
-					.getState()
-					.setDiffHistoryState('rejectRedoKey', testState);
+				useCedarStore.getState().setDiffState('rejectRedoKey', testState);
 			});
 
 			useCedarStore.getState().rejectAllDiffs('rejectRedoKey');
@@ -575,9 +559,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore
-					.getState()
-					.setDiffHistoryState('emptyHistoryKey', testState);
+				useCedarStore.getState().setDiffState('emptyHistoryKey', testState);
 			});
 
 			const result = useCedarStore.getState().undo('emptyHistoryKey');
@@ -607,7 +589,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('undoKey', testState);
+				useCedarStore.getState().setDiffState('undoKey', testState);
 			});
 
 			const result = useCedarStore.getState().undo('undoKey');
@@ -657,7 +639,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('multiUndoKey', testState);
+				useCedarStore.getState().setDiffState('multiUndoKey', testState);
 			});
 
 			// First undo
@@ -700,7 +682,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('emptyRedoKey', testState);
+				useCedarStore.getState().setDiffState('emptyRedoKey', testState);
 			});
 
 			const result = useCedarStore.getState().redo('emptyRedoKey');
@@ -721,9 +703,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore
-					.getState()
-					.setDiffHistoryState('undefinedRedoKey', testState);
+				useCedarStore.getState().setDiffState('undefinedRedoKey', testState);
 			});
 
 			const result = useCedarStore.getState().redo('undefinedRedoKey');
@@ -753,7 +733,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('redoKey', testState);
+				useCedarStore.getState().setDiffState('redoKey', testState);
 			});
 
 			const result = useCedarStore.getState().redo('redoKey');
@@ -803,7 +783,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('multiRedoKey', testState);
+				useCedarStore.getState().setDiffState('multiRedoKey', testState);
 			});
 
 			// First redo
@@ -846,9 +826,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore
-					.getState()
-					.setDiffHistoryState('workflowKey', initialState);
+				useCedarStore.getState().setDiffState('workflowKey', initialState);
 			});
 
 			// Step 1: Set a diff state
@@ -944,7 +922,7 @@ describe('DiffHistorySlice', () => {
 			act(() => {
 				useCedarStore
 					.getState()
-					.setDiffHistoryState('rejectWorkflowKey', initialState);
+					.setDiffState('rejectWorkflowKey', initialState);
 			});
 
 			// Step 1: Reject the diffs
@@ -1035,7 +1013,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('patchKey', initialState);
+				useCedarStore.getState().setDiffState('patchKey', initialState);
 			});
 
 			// Make changes that should generate patches
@@ -1110,9 +1088,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('patchApplyKey', initialState);
+			useCedarStore.getState().setDiffState('patchApplyKey', initialState);
 		});
 
 		// Apply patches to modify the state
@@ -1184,9 +1160,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('arrayPatchKey', initialState);
+			useCedarStore.getState().setDiffState('arrayPatchKey', initialState);
 		});
 
 		// Apply patches for array operations
@@ -1291,9 +1265,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('complexPatchKey', initialState);
+			useCedarStore.getState().setDiffState('complexPatchKey', initialState);
 		});
 
 		// Apply complex nested patches
@@ -1363,9 +1335,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('diffBehaviorKey1', initialState1);
+			useCedarStore.getState().setDiffState('diffBehaviorKey1', initialState1);
 		});
 
 		const patches1: Operation[] = [{ op: 'replace', path: '/value', value: 3 }];
@@ -1400,9 +1370,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('diffBehaviorKey2', initialState2);
+			useCedarStore.getState().setDiffState('diffBehaviorKey2', initialState2);
 		});
 
 		const patches2: Operation[] = [
@@ -1445,9 +1413,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('diffPatchGenKey', initialState);
+			useCedarStore.getState().setDiffState('diffPatchGenKey', initialState);
 		});
 
 		const inputPatches: Operation[] = [
@@ -1501,9 +1467,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('redoClearKey', initialState);
+			useCedarStore.getState().setDiffState('redoClearKey', initialState);
 		});
 
 		const patches: Operation[] = [
@@ -1547,7 +1511,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore.getState().setDiffHistoryState('historyKey', initialState);
+			useCedarStore.getState().setDiffState('historyKey', initialState);
 		});
 
 		const patches: Operation[] = [
@@ -1594,9 +1558,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('emptyPatchKey', initialState);
+			useCedarStore.getState().setDiffState('emptyPatchKey', initialState);
 		});
 
 		const patches: Operation[] = [];
@@ -1645,7 +1607,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore.getState().setDiffHistoryState('copyMoveKey', initialState);
+			useCedarStore.getState().setDiffState('copyMoveKey', initialState);
 		});
 
 		const patches: Operation[] = [
@@ -1694,7 +1656,7 @@ describe('applyPatchesToDiffState', () => {
 		};
 
 		act(() => {
-			useCedarStore.getState().setDiffHistoryState('testOpKey', initialState);
+			useCedarStore.getState().setDiffState('testOpKey', initialState);
 		});
 
 		// Patches with test operation followed by replace
@@ -1743,9 +1705,7 @@ describe('Integration: applyPatchesToDiffState with other methods', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('integrationKey1', initialState);
+			useCedarStore.getState().setDiffState('integrationKey1', initialState);
 		});
 
 		// Apply patches to create a diff
@@ -1799,9 +1759,7 @@ describe('Integration: applyPatchesToDiffState with other methods', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('undoRedoPatchKey', initialState);
+			useCedarStore.getState().setDiffState('undoRedoPatchKey', initialState);
 		});
 
 		// Apply first set of patches
@@ -1875,9 +1833,7 @@ describe('Integration: applyPatchesToDiffState with other methods', () => {
 		};
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.setDiffHistoryState('alternatingKey', initialState);
+			useCedarStore.getState().setDiffState('alternatingKey', initialState);
 		});
 
 		// Use setDiffState

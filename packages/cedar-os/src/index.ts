@@ -28,13 +28,14 @@ export { createStateSlice } from '@/store/stateSlice/stateSlice';
 export { createStylingSlice } from '@/store/stylingSlice';
 
 // Export state management
-export { useRegisterState } from '@/store/stateSlice/stateSlice';
+export { useRegisterState } from '@/store/stateSlice/useCedarState';
 export { useCedarState } from '@/store/stateSlice/useCedarState';
 export {
 	useCedarDiffState,
 	useRegisterDiffState,
-	registerDiffState,
 	addDiffToArrayObjs,
+	useDiffState,
+	useDiffStateOperations,
 	type RegisterDiffStateConfig,
 	type DiffStateReturn,
 	type ComputeStateFunction,

@@ -42,10 +42,10 @@ export function useCedarDiffState<T extends BasicStateValue>(
 	}, [key]);
 
 	// Initialize diff history state if it doesn't exist
-	const setDiffHistoryState = useCedarStore((s) => s.setDiffHistoryState);
 	const getDiffHistoryState = useCedarStore((s) => s.getDiffHistoryState);
 	const getCleanState = useCedarStore((s) => s.getCleanState);
 	const setDiffState = useCedarStore((s) => s.setDiffState);
+	const newDiffState = useCedarStore((s) => s.newDiffState);
 
 	useEffect(() => {
 		const existingDiffState = getDiffHistoryState<T>(key);
@@ -53,6 +53,7 @@ export function useCedarDiffState<T extends BasicStateValue>(
 			const initialDiffState: DiffState<T> = {
 				oldState: initialValue,
 				newState: initialValue,
+				computedState: initialValue,
 				isDiffMode: false,
 			};
 			const initialDiffHistoryState: DiffHistoryState<T> = {
@@ -61,7 +62,7 @@ export function useCedarDiffState<T extends BasicStateValue>(
 				redoStack: [],
 				diffMode,
 			};
-			setDiffHistoryState(key, initialDiffHistoryState);
+			setDiffState(key, initialDiffHistoryState);
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [key]);
@@ -85,9 +86,9 @@ export function useCedarDiffState<T extends BasicStateValue>(
 				schema: effectiveSchema,
 			});
 
-			// Use the new setDiffState method to handle diff state updates
+			// Use the newDiffState method to handle diff state updates
 			// Any change through this setter is considered a diff change (isDiffChange = true)
-			setDiffState<T>(key, newValue, true);
+			newDiffState<T>(key, newValue, true);
 		},
 		[
 			key,

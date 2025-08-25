@@ -1,9 +1,9 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import {
-	useRegisterCedarDiffState,
+	useRegisterDiffState,
 	addDiffToArrayObjs,
-} from '../../../src/store/diffHistoryStateSlice/useRegisterCedarDiffState';
+} from '../../../src/store/diffHistoryStateSlice/useRegisterDiffState';
 import { CedarCopilot } from '../../../src/components/CedarCopilot';
 import { useCedarStore } from '../../../src/store/CedarStore';
 
@@ -15,7 +15,7 @@ interface TestNode extends Record<string, unknown> {
 	};
 }
 
-describe('useRegisterCedarDiffState Integration', () => {
+describe('useRegisterDiffState Integration', () => {
 	const wrapper = ({ children }: { children: React.ReactNode }) => (
 		<CedarCopilot>{children}</CedarCopilot>
 	);
@@ -53,7 +53,7 @@ describe('useRegisterCedarDiffState Integration', () => {
 					setValueRef.current = mockSetNodesImpl;
 				}, [mockSetNodesImpl]);
 
-				const diffState = useRegisterCedarDiffState({
+				const diffState = useRegisterDiffState({
 					key: 'testNodes',
 					value: nodes,
 					setValue: (newNodes) => {
@@ -76,15 +76,11 @@ describe('useRegisterCedarDiffState Integration', () => {
 									description: 'Node to add',
 								},
 							],
-							execute: function (currentNodes, node) {
+							execute: function (currentNodes, setValue, node) {
 								const newNode = node as TestNode;
-								// Get the registered state's setValue
-								const store = useCedarStore.getState();
-								const state = store.getState('testNodes');
-								if (state?.setValue) {
-									const newNodes = [...(currentNodes as TestNode[]), newNode];
-									state.setValue(newNodes);
-								}
+								// Use the setValue passed to the execute function
+								const newNodes = [...(currentNodes as TestNode[]), newNode];
+								setValue(newNodes);
 							},
 						},
 						changeNode: {
@@ -94,21 +90,16 @@ describe('useRegisterCedarDiffState Integration', () => {
 								{
 									name: 'updatedNode',
 									type: 'TestNode',
-									description: 'Updated node',
+									description: 'Updated node data',
 								},
 							],
-							execute: function (currentNodes, updatedNode) {
+							execute: function (currentNodes, setValue, updatedNode) {
 								const updated = updatedNode as TestNode;
-								// Get the registered state's setValue
-								const store = useCedarStore.getState();
-								const state = store.getState('testNodes');
-								if (state?.setValue) {
-									state.setValue(
-										(currentNodes as TestNode[]).map((node) =>
-											node.id === updated.id ? updated : node
-										)
-									);
-								}
+								// Use the setValue passed to the execute function
+								const newNodes = (currentNodes as TestNode[]).map((node) =>
+									node.id === updated.id ? updated : node
+								);
+								setValue(newNodes);
 							},
 						},
 					},
@@ -129,9 +120,15 @@ describe('useRegisterCedarDiffState Integration', () => {
 		// Test adding a node through custom setter
 		act(() => {
 			const store = result.current.store;
-			store.executeCustomSetter('testNodes', 'addNode', {
-				id: '3',
-				data: { title: 'Node 3' },
+			store.executeCustomSetter({
+				key: 'testNodes',
+				setterKey: 'addNode',
+				args: [
+					{
+						id: '3',
+						data: { title: 'Node 3' },
+					},
+				],
 			});
 		});
 
@@ -147,22 +144,28 @@ describe('useRegisterCedarDiffState Integration', () => {
 		expect(addedNode).toBeDefined();
 		expect(addedNode.data.diff).toBe('added');
 
-		// Test changing a node
+		// Test changing a node through custom setter
 		act(() => {
 			const store = result.current.store;
-			store.executeCustomSetter('testNodes', 'changeNode', {
-				id: '1',
-				data: { title: 'Updated Node 1' },
+			store.executeCustomSetter({
+				key: 'testNodes',
+				setterKey: 'changeNode',
+				args: [
+					{
+						id: '2',
+						data: { title: 'Updated Node 2' },
+					},
+				],
 			});
 		});
 
 		// Verify the node was changed with diff marker
 		const changeCall =
 			mockSetNodes.mock.calls[mockSetNodes.mock.calls.length - 1][0];
-		const changedNode = changeCall.find((n: TestNode) => n.id === '1');
+		const changedNode = changeCall.find((n: TestNode) => n.id === '2');
 		expect(changedNode).toBeDefined();
 		expect(changedNode.data.diff).toBe('changed');
-		expect(changedNode.data.title).toBe('Updated Node 1');
+		expect(changedNode.data.title).toBe('Updated Node 2');
 	});
 
 	it('should sync clean state with stateSlice registeredStates', () => {
@@ -179,7 +182,7 @@ describe('useRegisterCedarDiffState Integration', () => {
 					});
 				}, []);
 
-				const diffState = useRegisterCedarDiffState({
+				const diffState = useRegisterDiffState({
 					key: 'testState',
 					value,
 					setValue: mockSetValue,
@@ -222,7 +225,7 @@ describe('useRegisterCedarDiffState Integration', () => {
 					mockSetValue(newValue);
 				}, []);
 
-				const diffState = useRegisterCedarDiffState({
+				const diffState = useRegisterDiffState({
 					key: 'undoRedoTest',
 					value,
 					setValue: mockSetValueImpl,
@@ -272,7 +275,7 @@ describe('useRegisterCedarDiffState Integration', () => {
 					});
 				}, []);
 
-				return useRegisterCedarDiffState({
+				return useRegisterDiffState({
 					key: 'acceptRejectTest',
 					value: nodes,
 					setValue: mockSetValue,

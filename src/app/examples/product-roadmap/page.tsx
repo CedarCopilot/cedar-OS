@@ -85,15 +85,13 @@ function FlowCanvas() {
 	const saveTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	// Register states using the diff-aware hook
-	const nodesDiffState = useRegisterDiffState({
+	useRegisterDiffState({
 		value: nodes,
 		setValue: setNodes,
 		key: 'nodes',
 		description: 'Product roadmap nodes',
-		computeState: (oldState, newState) => {
-			// Add diff markers to the data property of nodes
-			return addDiffToArrayObjs(oldState, newState, 'id', '/data');
-		},
+		computeState: (oldState, newState) =>
+			addDiffToArrayObjs(oldState, newState, 'id', '/data'),
 		customSetters: {
 			addNode: {
 				name: 'addNode',
@@ -166,36 +164,12 @@ function FlowCanvas() {
 		},
 	});
 
-	useRegisterDiffState({
+	useRegisterState({
 		key: 'edges',
 		value: edges,
 		setValue: setEdges,
 		description: 'Product roadmap edges',
 	});
-
-	// Add keyboard shortcuts for undo/redo
-	React.useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			// Check for Cmd/Ctrl + Z (undo)
-			if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
-				e.preventDefault();
-				nodesDiffState.undo();
-			}
-			// Check for Cmd/Ctrl + Shift + Z (redo)
-			else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
-				e.preventDefault();
-				nodesDiffState.redo();
-			}
-			// Check for Cmd/Ctrl + Y (redo alternative)
-			else if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
-				e.preventDefault();
-				nodesDiffState.redo();
-			}
-		};
-
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [nodesDiffState]);
 
 	// Register mention provider for nodes
 	useStateBasedMentionProvider({

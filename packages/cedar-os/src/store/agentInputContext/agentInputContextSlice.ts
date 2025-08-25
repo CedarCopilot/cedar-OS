@@ -30,7 +30,7 @@ export interface AgentInputContextSlice {
 	removeContextEntry: (key: string, entryId: string) => void;
 	clearContextBySource: (source: ContextEntry['source']) => void;
 	clearMentions: () => void;
-	updateAdditionalContext: (context: Record<string, any>) => void;
+	updateAdditionalContext: (context: Record<string, unknown>) => void;
 
 	// Mention providers registry
 	mentionProviders: Map<string, MentionProvider>;
@@ -111,7 +111,6 @@ export const createAgentInputContextSlice: StateCreator<
 		get().clearContextBySource('mention');
 	},
 
-	// Legacy method - converts simple objects to context entries
 	updateAdditionalContext: (context) => {
 		set((state) => {
 			const newContext = { ...state.additionalContext };
@@ -119,6 +118,7 @@ export const createAgentInputContextSlice: StateCreator<
 			Object.entries(context).forEach(([key, value]) => {
 				if (Array.isArray(value)) {
 					// Convert legacy array format to context entries
+					// This will handle both empty arrays and arrays with items
 					newContext[key] = value.map((item, index) => ({
 						id: item.id || `${key}-${index}`,
 						source: 'subscription' as const,
@@ -323,6 +323,7 @@ export function useSubscribeStateToInputContext<T>(
 			for (const [key, value] of Object.entries(normalized)) {
 				if (Array.isArray(value)) {
 					// Add metadata and update labels for each item
+					// This handles both empty arrays and arrays with items
 					enhanced[key] = value.map((item) => {
 						const label = getLabel(
 							item.value !== undefined ? item.value : item
@@ -344,6 +345,9 @@ export function useSubscribeStateToInputContext<T>(
 							},
 						};
 					});
+				} else {
+					// Fallback for non-array values (shouldn't happen after normalization)
+					enhanced[key] = value;
 				}
 			}
 			updateAdditionalContext(enhanced);

@@ -1,7 +1,13 @@
 import { StateCreator } from 'zustand';
 import { compare, Operation, applyPatch } from 'fast-json-patch';
+import { isEqual } from 'lodash';
 import type { CedarStore } from '@/store/CedarOSTypes';
-import type { BasicStateValue } from '@/store/stateSlice/stateSlice';
+import type {
+	BasicStateValue,
+	BaseSetter,
+	Setter,
+} from '@/store/stateSlice/stateSlice';
+import type { ZodSchema } from 'zod';
 
 /**
  * DiffHistorySlice manages diffs so that we can render changes and let the user accept, reject, and manage them.
@@ -25,6 +31,7 @@ export type ComputeStateFunction<T = unknown> = (
 export interface DiffState<T = unknown> {
 	oldState: T;
 	newState: T;
+	computedState: T; // The computed state based on computeState function or fallback to appropriate state
 	isDiffMode: boolean;
 	patches?: Operation[]; // JSON patches describing the changes from oldState to newState
 }
@@ -37,15 +44,26 @@ export interface DiffHistoryState<T = unknown> {
 	computeState?: ComputeStateFunction<T>;
 }
 
+/**
+ * Configuration for registerDiffState
+ */
+export interface RegisterDiffStateConfig<T extends BasicStateValue> {
+	key: string;
+	value: T;
+	setValue?: BaseSetter<T>;
+	description?: string;
+	schema?: ZodSchema<T>;
+	customSetters?: Record<string, Setter<T>>;
+	diffMode?: DiffMode;
+	computeState?: ComputeStateFunction<T>;
+}
+
 export interface DiffHistorySlice {
 	diffHistoryStates: Record<string, DiffHistoryState>;
 
 	// Core methods
 	getDiffHistoryState: <T>(key: string) => DiffHistoryState<T> | undefined;
-	setDiffHistoryState: <T>(
-		key: string,
-		diffHistoryState: DiffHistoryState<T>
-	) => void;
+	setDiffState: <T>(key: string, diffHistoryState: DiffHistoryState<T>) => void;
 	getCleanState: <T>(key: string) => T | undefined;
 
 	// Get computed state (with computeState applied if available)
@@ -57,8 +75,13 @@ export interface DiffHistorySlice {
 		computeState: ComputeStateFunction<T> | undefined
 	) => void;
 
-	// New setDiffState method
-	setDiffState: <T>(key: string, newState: T, isDiffChange: boolean) => void;
+	// Register a diff-tracked state (handles all initialization and setup)
+	registerDiffState: <T extends BasicStateValue>(
+		config: RegisterDiffStateConfig<T>
+	) => void;
+
+	// New newDiffState method
+	newDiffState: <T>(key: string, newState: T, isDiffChange: boolean) => void;
 
 	// Execute custom setter for diff-tracked states
 	executeDiffSetter: (
@@ -96,72 +119,99 @@ export const createDiffHistorySlice: StateCreator<
 		return get().diffHistoryStates[key] as DiffHistoryState<T> | undefined;
 	},
 
-	setDiffHistoryState: <T>(
-		key: string,
-		diffHistoryState: DiffHistoryState<T>
+	registerDiffState: <T extends BasicStateValue>(
+		config: RegisterDiffStateConfig<T>
 	) => {
+		const {
+			key,
+			value,
+			setValue,
+			description,
+			schema,
+			customSetters,
+			diffMode = 'defaultAccept',
+			computeState,
+		} = config;
+		// Step 1: Initialize or update diff history state
+		const existingDiffState = get().getDiffHistoryState<T>(key);
+
+		if (!existingDiffState) {
+			// Step 1: Register the state in stateSlice
+			get().registerState({
+				key,
+				value,
+				setValue,
+				description,
+				schema,
+				customSetters,
+			});
+
+			const initialDiffHistoryState: DiffHistoryState<T> = {
+				diffState: {
+					oldState: value,
+					newState: value,
+					computedState: value, // Initial state is the same for all
+					isDiffMode: false,
+					patches: [],
+				},
+				history: [],
+				redoStack: [],
+				diffMode,
+				computeState,
+			};
+			// This will also register the state in stateSlice via setDiffState
+			get().setDiffState(key, initialDiffHistoryState);
+		} else {
+			get().newDiffState(key, value, false);
+		}
+	},
+
+	setDiffState: <T>(key: string, diffHistoryState: DiffHistoryState<T>) => {
 		set((state) => ({
 			diffHistoryStates: {
 				...state.diffHistoryStates,
 				[key]: diffHistoryState as DiffHistoryState<unknown>,
 			},
 		}));
-	},
 
-	getCleanState: <T>(key: string): T | undefined => {
-		const diffHistoryState = get().getDiffHistoryState<T>(key);
-		if (!diffHistoryState) return undefined;
+		// Register or update the state in stateSlice with the clean state
+		const cleanState = get().getCleanState<T>(key);
+		if (cleanState !== undefined) {
+			// Get the registered state to check if it exists
+			const registeredState = get().registeredStates?.[key];
+			if (!registeredState) {
+				// // Register the state if it doesn't exist
+				get().registerState({
+					key,
+					value: cleanState,
+					// Change
+					description: `Diff-tracked state: ${key}`,
+				});
+			} else {
+				// Only update if the value has actually changed
+				// This prevents unnecessary re-renders and potential loops
+				const currentValue = registeredState.value;
 
-		const { diffState, diffMode } = diffHistoryState;
-
-		// Return the appropriate state based on diffMode
-		if (diffMode === 'defaultAccept') {
-			return diffState.newState;
-		} else {
-			// holdAccept
-			return diffState.oldState;
+				if (!isEqual(currentValue, cleanState)) {
+					// Update the value in registeredStates
+					set(
+						(state) =>
+							({
+								registeredStates: {
+									...state.registeredStates,
+									[key]: {
+										...state.registeredStates[key],
+										value: cleanState as BasicStateValue,
+									},
+								},
+							} as Partial<CedarStore>)
+					);
+				}
+			}
 		}
 	},
 
-	getComputedState: <T>(key: string): T | undefined => {
-		const diffHistoryState = get().getDiffHistoryState<T>(key);
-		if (!diffHistoryState) return undefined;
-
-		const { diffState, computeState } = diffHistoryState;
-
-		// If there's a computeState function, apply it
-		if (computeState) {
-			const patches = compare(
-				diffState.oldState as object,
-				diffState.newState as object
-			);
-			return computeState(diffState.oldState, diffState.newState, patches);
-		}
-
-		// Otherwise return the clean state
-		return get().getCleanState<T>(key);
-	},
-
-	setComputeStateFunction: <T>(
-		key: string,
-		computeState: ComputeStateFunction<T> | undefined
-	) => {
-		const currentDiffHistoryState = get().getDiffHistoryState<T>(key);
-		if (!currentDiffHistoryState) {
-			console.warn(`No diff history state found for key: ${key}`);
-			return;
-		}
-
-		// Update the diff history state with the new computeState function
-		const updatedDiffHistoryState: DiffHistoryState<T> = {
-			...currentDiffHistoryState,
-			computeState,
-		};
-
-		get().setDiffHistoryState(key, updatedDiffHistoryState);
-	},
-
-	setDiffState: <T>(key: string, newState: T, isDiffChange: boolean) => {
+	newDiffState: <T>(key: string, newState: T, isDiffChange: boolean) => {
 		const currentDiffHistoryState = get().getDiffHistoryState<T>(key);
 
 		// If no existing state, we can't proceed
@@ -180,20 +230,6 @@ export const createDiffHistorySlice: StateCreator<
 		// Step 1: Save the original diffState to history
 		const updatedHistory = [...history, originalDiffState];
 
-		// Step 2: Apply computeState if available
-		let finalNewState = newState;
-		if (computeState) {
-			const patches = compare(
-				originalDiffState.oldState as object,
-				newState as object
-			);
-			finalNewState = computeState(
-				originalDiffState.oldState,
-				newState,
-				patches
-			);
-		}
-
 		// Step 3: Create the new diffState based on isDiffChange flag
 		// Determine oldState: if isDiffChange and not previously in diff mode, use previous newState
 		// Otherwise keep the original oldState
@@ -203,11 +239,19 @@ export const createDiffHistorySlice: StateCreator<
 				: originalDiffState.oldState;
 
 		// Generate patches to describe the changes
-		const patches = compare(oldStateForDiff as object, finalNewState as object);
+		const patches = compare(oldStateForDiff as object, newState as object);
+
+		// Determine computedState: call computeState function if it exists, otherwise use appropriate state based on diffMode
+		const computedStateValue = computeState
+			? computeState(oldStateForDiff, newState, patches)
+			: diffMode === 'defaultAccept'
+			? newState
+			: oldStateForDiff;
 
 		const newDiffState: DiffState<T> = {
 			oldState: oldStateForDiff,
-			newState: finalNewState,
+			newState: newState,
+			computedState: computedStateValue,
 			isDiffMode: isDiffChange,
 			patches,
 		};
@@ -222,7 +266,76 @@ export const createDiffHistorySlice: StateCreator<
 		};
 
 		// Update the store
-		get().setDiffHistoryState(key, updatedDiffHistoryState);
+		get().setDiffState(key, updatedDiffHistoryState);
+
+		// Propagate the clean state to stateSlice
+		const cleanState =
+			diffMode === 'defaultAccept' ? newState : oldStateForDiff;
+
+		// Update the value in registeredStates only (do NOT call setValue to avoid circular dependency)
+		const registeredState = get().registeredStates?.[key];
+		if (registeredState) {
+			// Check if the clean state has actually changed before updating
+			const currentValue = registeredState.value;
+
+			if (!isEqual(currentValue, cleanState)) {
+				// Update the stored value
+				set(
+					(state) =>
+						({
+							registeredStates: {
+								...state.registeredStates,
+								[key]: {
+									...state.registeredStates[key],
+									value: cleanState as BasicStateValue,
+								},
+							},
+						} as Partial<CedarStore>)
+				);
+			}
+		}
+	},
+
+	getCleanState: <T>(key: string): T | undefined => {
+		const diffHistoryState = get().getDiffHistoryState<T>(key);
+		if (!diffHistoryState || !diffHistoryState.diffState) return undefined;
+
+		const { diffState, diffMode } = diffHistoryState;
+
+		// Return the appropriate state based on diffMode
+		if (diffMode === 'defaultAccept') {
+			return diffState.newState;
+		} else {
+			// holdAccept
+			return diffState.oldState;
+		}
+	},
+
+	getComputedState: <T>(key: string): T | undefined => {
+		const diffHistoryState = get().getDiffHistoryState<T>(key);
+		if (!diffHistoryState) return undefined;
+
+		// Return the pre-computed state that was calculated during newDiffState
+		return diffHistoryState.diffState.computedState;
+	},
+
+	setComputeStateFunction: <T>(
+		key: string,
+		computeState: ComputeStateFunction<T> | undefined
+	) => {
+		const currentDiffHistoryState = get().getDiffHistoryState<T>(key);
+		if (!currentDiffHistoryState) {
+			console.warn(`No diff history state found for key: ${key}`);
+			return;
+		}
+
+		// Update the diff history state with the new computeState function
+		const updatedDiffHistoryState: DiffHistoryState<T> = {
+			...currentDiffHistoryState,
+			computeState,
+		};
+
+		get().setDiffState(key, updatedDiffHistoryState);
 	},
 
 	executeDiffSetter: (
@@ -269,8 +382,8 @@ export const createDiffHistorySlice: StateCreator<
 			const setter = customSetters[setterKey];
 			setter.execute(currentNewState as BasicStateValue, setValueFunc, ...args);
 
-			// Now call setDiffState with the captured result
-			get().setDiffState(key, resultState, isDiff);
+			// Now call newDiffState with the captured result
+			get().newDiffState(key, resultState, isDiff);
 		} catch (error) {
 			console.error(`Error executing diff setter for "${key}":`, error);
 		}
@@ -311,22 +424,7 @@ export const createDiffHistorySlice: StateCreator<
 			patches,
 			false, // Don't validate (for performance)
 			false // Don't mutate the original
-		);
-
-		let updatedNewState = patchResult.newDocument as T;
-
-		// Apply computeState if available
-		if (computeState) {
-			const computePatches = compare(
-				originalDiffState.oldState as object,
-				updatedNewState as object
-			);
-			updatedNewState = computeState(
-				originalDiffState.oldState,
-				updatedNewState,
-				computePatches
-			);
-		}
+		).newDocument;
 
 		// Step 3: Create the new diffState based on isDiffChange flag
 		// Determine oldState: if isDiffChange and not previously in diff mode, use previous newState
@@ -339,12 +437,20 @@ export const createDiffHistorySlice: StateCreator<
 		// Generate patches to describe the changes from oldState to the new patched state
 		const diffPatches = compare(
 			oldStateForDiff as object,
-			updatedNewState as object
+			patchResult as object
 		);
+
+		// Determine computedState: call computeState function if it exists, otherwise use appropriate state based on diffMode
+		const computedStateValue = computeState
+			? computeState(oldStateForDiff, patchResult, diffPatches)
+			: diffMode === 'defaultAccept'
+			? patchResult
+			: oldStateForDiff;
 
 		const newDiffState: DiffState<T> = {
 			oldState: oldStateForDiff,
-			newState: updatedNewState,
+			newState: patchResult,
+			computedState: computedStateValue,
 			isDiffMode: isDiffChange,
 			patches: diffPatches,
 		};
@@ -359,7 +465,7 @@ export const createDiffHistorySlice: StateCreator<
 		};
 
 		// Update the store
-		get().setDiffHistoryState(key, updatedDiffHistoryState);
+		get().setDiffState(key, updatedDiffHistoryState);
 	},
 
 	acceptAllDiffs: (key: string): boolean => {
@@ -378,9 +484,14 @@ export const createDiffHistorySlice: StateCreator<
 
 		// Accept changes by copying newState into oldState (sync states)
 		// No patches needed as states are now identical
+		const acceptedComputedState = computeState
+			? computeState(diffState.newState, diffState.newState, [])
+			: diffState.newState;
+
 		const acceptedDiffState: DiffState = {
 			oldState: diffState.newState, // Copy newState to oldState
 			newState: diffState.newState, // Keep newState as is
+			computedState: acceptedComputedState, // Call computeState if available
 			isDiffMode: false, // No longer in diff mode
 			patches: [], // Empty patches as states are synced
 		};
@@ -397,7 +508,7 @@ export const createDiffHistorySlice: StateCreator<
 		};
 
 		// Update the store
-		get().setDiffHistoryState(key, updatedDiffHistoryState);
+		get().setDiffState(key, updatedDiffHistoryState);
 
 		return true; // Successfully accepted diffs
 	},
@@ -418,9 +529,14 @@ export const createDiffHistorySlice: StateCreator<
 
 		// Reject changes by copying oldState into newState (revert to old state)
 		// No patches needed as states are now identical
+		const rejectedComputedState = computeState
+			? computeState(diffState.oldState, diffState.oldState, [])
+			: diffState.oldState;
+
 		const rejectedDiffState: DiffState = {
 			oldState: diffState.oldState, // Keep oldState as is
 			newState: diffState.oldState, // Copy oldState to newState
+			computedState: rejectedComputedState, // Call computeState if available
 			isDiffMode: false, // No longer in diff mode
 			patches: [], // Empty patches as states are synced
 		};
@@ -437,7 +553,7 @@ export const createDiffHistorySlice: StateCreator<
 		};
 
 		// Update the store
-		get().setDiffHistoryState(key, updatedDiffHistoryState);
+		get().setDiffState(key, updatedDiffHistoryState);
 
 		return true; // Successfully rejected diffs
 	},
@@ -481,7 +597,7 @@ export const createDiffHistorySlice: StateCreator<
 		};
 
 		// Update the store
-		get().setDiffHistoryState(key, updatedDiffHistoryState);
+		get().setDiffState(key, updatedDiffHistoryState);
 
 		return true; // Successfully performed undo
 	},
@@ -526,7 +642,7 @@ export const createDiffHistorySlice: StateCreator<
 		};
 
 		// Update the store
-		get().setDiffHistoryState(key, updatedDiffHistoryState);
+		get().setDiffState(key, updatedDiffHistoryState);
 
 		return true; // Successfully performed redo
 	},

@@ -78,6 +78,7 @@ export async function saveNodes(nodes: Node<FeatureNodeData>[]) {
 		height: n.data.height,
 		handle_labels: n.data.handleLabels,
 		details: n.data.details,
+		diff_state: n.data.diff,
 		deleted: false, // Ensure saved nodes are not marked as deleted
 	}));
 

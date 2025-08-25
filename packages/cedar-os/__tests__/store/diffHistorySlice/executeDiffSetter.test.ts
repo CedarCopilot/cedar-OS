@@ -47,7 +47,7 @@ describe('executeDiffSetter', () => {
 		});
 
 		// Initialize diff history state
-		store.getState().setDiffHistoryState?.(testKey, {
+		store.getState().setDiffState?.(testKey, {
 			diffState: {
 				oldState: initialValue,
 				newState: initialValue,
@@ -94,7 +94,7 @@ describe('executeDiffSetter', () => {
 		});
 
 		// Initialize diff history state
-		store.getState().setDiffHistoryState?.(testKey, {
+		store.getState().setDiffState?.(testKey, {
 			diffState: {
 				oldState: initialValue,
 				newState: initialValue,
@@ -131,7 +131,7 @@ describe('executeDiffSetter', () => {
 		});
 
 		// Initialize diff history state
-		store.getState().setDiffHistoryState?.(testKey, {
+		store.getState().setDiffState?.(testKey, {
 			diffState: {
 				oldState: initialValue,
 				newState: initialValue,

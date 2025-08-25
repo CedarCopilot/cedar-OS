@@ -59,7 +59,7 @@ describe('useSubscribeToDiffValue', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('testKey', testState);
+				useCedarStore.getState().setDiffState('testKey', testState);
 			});
 
 			const { result } = renderHook(() =>
@@ -110,7 +110,7 @@ describe('useSubscribeToDiffValue', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('nestedKey', testState);
+				useCedarStore.getState().setDiffState('nestedKey', testState);
 			});
 
 			const { result } = renderHook(() =>
@@ -153,7 +153,7 @@ describe('useSubscribeToDiffValue', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('arrayKey', testState);
+				useCedarStore.getState().setDiffState('arrayKey', testState);
 			});
 
 			// Test accessing array element
@@ -193,7 +193,7 @@ describe('useSubscribeToDiffValue', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffHistoryState('rootKey', testState);
+				useCedarStore.getState().setDiffState('rootKey', testState);
 			});
 
 			// Test empty string path
@@ -235,7 +235,7 @@ describe('useSubscribeToDiffValue', () => {
 			act(() => {
 				useCedarStore
 					.getState()
-					.setDiffHistoryState('defaultAcceptKey', testState);
+					.setDiffState('defaultAcceptKey', testState);
 			});
 
 			const { result } = renderHook(() =>
@@ -265,7 +265,7 @@ describe('useSubscribeToDiffValue', () => {
 			act(() => {
 				useCedarStore
 					.getState()
-					.setDiffHistoryState('holdAcceptKey', testState);
+					.setDiffState('holdAcceptKey', testState);
 			});
 
 			const { result } = renderHook(() =>
@@ -297,7 +297,7 @@ describe('useSubscribeToDiffValue', () => {
 			act(() => {
 				useCedarStore
 					.getState()
-					.setDiffHistoryState('reactiveKey', initialState);
+					.setDiffState('reactiveKey', initialState);
 			});
 
 			const { result } = renderHook(() =>
@@ -362,7 +362,7 @@ describe('useSubscribeToDiffValues', () => {
 		};
 
 		act(() => {
-			useCedarStore.getState().setDiffHistoryState('multiKey', testState);
+			useCedarStore.getState().setDiffState('multiKey', testState);
 		});
 
 		const { result } = renderHook(() =>
@@ -432,7 +432,7 @@ describe('useSubscribeToDiffValues', () => {
 		};
 
 		act(() => {
-			useCedarStore.getState().setDiffHistoryState('mixedKey', testState);
+			useCedarStore.getState().setDiffState('mixedKey', testState);
 		});
 
 		const { result } = renderHook(() =>

@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useCedarStore } from '@/store/CedarStore';
 import {
-	useRegisterCedarDiffState,
+	useRegisterDiffState,
 	addDiffToArrayObjs,
 } from '@/store/diffHistoryStateSlice';
 import { Node } from 'reactflow';
@@ -12,7 +12,7 @@ interface TestNodeData {
 	diff?: 'added' | 'changed' | 'removed';
 }
 
-describe('useRegisterCedarDiffState', () => {
+describe('useRegisterDiffState', () => {
 	beforeEach(() => {
 		// Reset the store before each test
 		useCedarStore.setState((state) => ({
@@ -33,17 +33,22 @@ describe('useRegisterCedarDiffState', () => {
 				},
 			];
 
-			const { result } = renderHook(() =>
-				useRegisterCedarDiffState({
+			renderHook(() =>
+				useRegisterDiffState({
 					key: 'testNodes',
 					value: initialNodes,
 					description: 'Test nodes',
 				})
 			);
 
-			expect(result.current.computedState).toEqual(initialNodes);
-			expect(result.current.oldState).toEqual(initialNodes);
-			expect(result.current.newState).toEqual(initialNodes);
+			// Check the state was registered in the store
+			const diffHistoryState = useCedarStore
+				.getState()
+				.getDiffHistoryState<Node<TestNodeData>[]>('testNodes');
+			expect(diffHistoryState).toBeDefined();
+			expect(diffHistoryState?.diffState.computedState).toEqual(initialNodes);
+			expect(diffHistoryState?.diffState.oldState).toEqual(initialNodes);
+			expect(diffHistoryState?.diffState.newState).toEqual(initialNodes);
 		});
 
 		it('should track changes with computeState', () => {
@@ -61,8 +66,8 @@ describe('useRegisterCedarDiffState', () => {
 				currentNodes = nodes;
 			};
 
-			const { result } = renderHook(() =>
-				useRegisterCedarDiffState({
+			renderHook(() =>
+				useRegisterDiffState({
 					key: 'testNodes',
 					value: currentNodes,
 					setValue: setNodes,
@@ -113,8 +118,8 @@ describe('useRegisterCedarDiffState', () => {
 				currentValue = value;
 			};
 
-			const { result } = renderHook(() =>
-				useRegisterCedarDiffState({
+			renderHook(() =>
+				useRegisterDiffState({
 					key: 'counter',
 					value: currentValue,
 					setValue,
@@ -134,13 +139,13 @@ describe('useRegisterCedarDiffState', () => {
 
 			// Undo
 			act(() => {
-				const success = result.current.undo();
+				const success = useCedarStore.getState().undo('counter');
 				expect(success).toBe(true);
 			});
 
 			// Redo
 			act(() => {
-				const success = result.current.redo();
+				const success = useCedarStore.getState().redo('counter');
 				expect(success).toBe(true);
 			});
 		});
@@ -149,8 +154,8 @@ describe('useRegisterCedarDiffState', () => {
 	describe('Accept/Reject diffs', () => {
 		it('should accept all diffs', () => {
 			const initialValue = { status: 'pending' };
-			const { result } = renderHook(() =>
-				useRegisterCedarDiffState({
+			renderHook(() =>
+				useRegisterDiffState({
 					key: 'status',
 					value: initialValue,
 					description: 'Status state',
@@ -166,7 +171,7 @@ describe('useRegisterCedarDiffState', () => {
 
 			// Accept all diffs
 			act(() => {
-				const success = result.current.acceptAllDiffs();
+				const success = useCedarStore.getState().acceptAllDiffs('status');
 				expect(success).toBe(true);
 			});
 
@@ -179,8 +184,8 @@ describe('useRegisterCedarDiffState', () => {
 
 		it('should reject all diffs', () => {
 			const initialValue = { status: 'pending' };
-			const { result } = renderHook(() =>
-				useRegisterCedarDiffState({
+			renderHook(() =>
+				useRegisterDiffState({
 					key: 'status',
 					value: initialValue,
 					description: 'Status state',
@@ -196,7 +201,7 @@ describe('useRegisterCedarDiffState', () => {
 
 			// Reject all diffs
 			act(() => {
-				const success = result.current.rejectAllDiffs();
+				const success = useCedarStore.getState().rejectAllDiffs('status');
 				expect(success).toBe(true);
 			});
 

@@ -193,9 +193,9 @@ export const useDiffHistory = () => ({
 	diffHistoryStates: useCedarStore((state) => state.diffHistoryStates),
 
 	getDiffHistoryState: useCedarStore((state) => state.getDiffHistoryState),
-	setDiffHistoryState: useCedarStore((state) => state.setDiffHistoryState),
 	getCleanState: useCedarStore((state) => state.getCleanState),
 	setDiffState: useCedarStore((state) => state.setDiffState),
+	newDiffState: useCedarStore((state) => state.newDiffState),
 	acceptAllDiffs: useCedarStore((state) => state.acceptAllDiffs),
 	rejectAllDiffs: useCedarStore((state) => state.rejectAllDiffs),
 	undo: useCedarStore((state) => state.undo),
