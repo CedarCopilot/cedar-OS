@@ -24,6 +24,7 @@ First, register your state with custom setters that define the available actions
 ```tsx
 import { useRegisterState } from 'cedar-os';
 import { Node } from 'reactflow';
+import { z } from 'zod';
 
 // Register nodes state with custom setters
 useRegisterState({
@@ -35,13 +36,16 @@ useRegisterState({
 		addNode: {
 			name: 'addNode',
 			description: 'Add a new node to the roadmap',
-			parameters: [
-				{
-					name: 'node',
-					type: 'Node<FeatureNodeData>',
-					description: 'The node to add',
-				},
-			],
+			schema: z.object({
+				node: z.object({
+					data: z.object({
+						title: z.string(),
+						description: z.string(),
+						status: z.enum(['done', 'planned', 'backlog', 'in progress']),
+						nodeType: z.literal('feature').default('feature'),
+					}),
+				}),
+			}),
 			execute: (currentNodes, node) => {
 				const newNode = {
 					...node,
@@ -63,13 +67,9 @@ useRegisterState({
 		removeNode: {
 			name: 'removeNode',
 			description: 'Remove a node from the roadmap',
-			parameters: [
-				{
-					name: 'id',
-					type: 'string',
-					description: 'The ID of the node to remove',
-				},
-			],
+			schema: z.object({
+				id: z.string().describe('The ID of the node to remove'),
+			}),
 			execute: async (currentNodes, id) => {
 				// Mark as removed with diff instead of immediate deletion
 				setNodes(
@@ -84,7 +84,7 @@ useRegisterState({
 		acceptAllDiffs: {
 			name: 'acceptAllDiffs',
 			description: 'Accept all pending diffs',
-			parameters: [],
+			schema: z.object({}),
 			execute: async (currentNodes) => {
 				const nodesWithDiffs = currentNodes.filter((n) => n.data.diff);
 
@@ -289,18 +289,16 @@ customSetters: {
 }
 ```
 
-### 2. Include Parameter Descriptions
+### 2. Use Descriptive Schema Fields
 
-Help your agent understand what parameters to provide:
+Help your agent understand what parameters to provide using Zod's describe method:
 
 ```tsx
-parameters: [
-	{
-		name: 'priority',
-		type: 'string',
-		description: 'Priority level: low, medium, high, or critical',
-	},
-];
+schema: z.object({
+	priority: z
+		.enum(['low', 'medium', 'high', 'critical'])
+		.describe('Priority level: low, medium, high, or critical'),
+});
 ```
 
 ### 3. Handle Errors Gracefully
@@ -395,28 +393,42 @@ The setter and state schemas are included in top-level `setters` and `schemas` f
 			"name": "addNode",
 			"stateKey": "nodes",
 			"description": "Add a new node to the roadmap",
-			"parameters": [
-				{
-					"name": "node",
-					"type": "Node<FeatureNodeData>",
-					"description": "The node to add"
-				}
-			],
 			"schema": {
-				// Zod schema converted to JSON Schema format
+				"type": "object",
+				"properties": {
+					"node": {
+						"type": "object",
+						"properties": {
+							"data": {
+								"type": "object",
+								"properties": {
+									"title": { "type": "string" },
+									"description": { "type": "string" },
+									"status": {
+										"type": "string",
+										"enum": ["done", "planned", "backlog", "in progress"]
+									},
+									"nodeType": { "type": "string", "default": "feature" }
+								}
+							}
+						}
+					}
+				}
 			}
 		},
 		"removeNode": {
 			"name": "removeNode",
 			"stateKey": "nodes",
 			"description": "Remove a node from the roadmap",
-			"parameters": [
-				{
-					"name": "id",
-					"type": "string",
-					"description": "The ID of the node to remove"
+			"schema": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "The ID of the node to remove"
+					}
 				}
-			]
+			}
 		}
 	}
 }
@@ -424,7 +436,7 @@ The setter and state schemas are included in top-level `setters` and `schemas` f
 
 ### Zod Schema Integration
 
-If your custom setters include a `schema` field with a Zod schema, Cedar will automatically convert it to JSON Schema format using `zod-to-json-schema` and include it in the setter information. This provides your agent with precise type information for generating valid parameters.
+Custom setters use Zod schemas to define parameter validation and provide rich type information to your agent. Cedar automatically converts Zod schemas to JSON Schema format using `zod-to-json-schema` and includes them in the context sent to your agent.
 
 ```tsx
 // In your useRegisterState hook call
@@ -435,21 +447,26 @@ customSetters: {
     schema: z.object({
       node: z.object({
         data: z.object({
-          title: z.string(),
-          description: z.string(),
-          status: z.enum(['done', 'planned', 'backlog', 'in progress']),
-          nodeType: z.literal('feature').default('feature')
+          title: z.string().describe('Feature title'),
+          description: z.string().describe('Detailed feature description'),
+          status: z.enum(['done', 'planned', 'backlog', 'in progress']).describe('Current development status'),
+          nodeType: z.literal('feature').default('feature').describe('Type of node')
         })
       })
     }),
     execute: (currentNodes, node) => {
-      // Implementation
+      // Implementation with full type safety
     }
   }
 }
 ```
 
-This automatic schema distribution ensures your agent always has up-to-date information about available actions and their requirements, enabling more accurate and reliable action execution.
+This schema-based approach provides several benefits:
+
+- **Type Safety**: Runtime validation of parameters
+- **Rich Documentation**: Descriptive field information for agents
+- **Automatic JSON Schema**: Converted format perfect for LLM understanding
+- **Consistent API**: Single source of truth for parameter definitions
 
 ## Next Steps
 
