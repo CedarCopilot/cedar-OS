@@ -3,12 +3,14 @@ import type {
 	ResponseProcessorRegistry,
 } from '@/store/agentConnection/AgentConnectionTypes';
 import { setStateResponseProcessor } from '@/store/agentConnection/responseProcessors/setStateResponseProcessor';
+import { legacyActionResponseProcessor } from '@/store/agentConnection/responseProcessors/legacyActionResponseProcessor';
 import { messageResponseProcessor } from '@/store/agentConnection/responseProcessors/messageResponseProcessor';
 import { progressUpdateResponseProcessor } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 
 export const defaultResponseProcessors = [
 	messageResponseProcessor,
 	setStateResponseProcessor,
+	legacyActionResponseProcessor, // Backwards compatibility for 'action' type
 	progressUpdateResponseProcessor,
 ];
 

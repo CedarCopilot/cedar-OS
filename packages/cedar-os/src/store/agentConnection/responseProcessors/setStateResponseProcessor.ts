@@ -18,7 +18,7 @@ export const setStateResponseProcessor: ResponseProcessor<SetStateResponse> = {
 		store.addMessage(obj as unknown as MessageInput);
 	},
 	validate: (obj): obj is SetStateResponse =>
-		obj.type === 'setState' &&
+		(obj.type === 'setState' || obj.type === 'action') &&
 		'stateKey' in obj &&
 		'setterKey' in obj &&
 		typeof obj.stateKey === 'string' &&

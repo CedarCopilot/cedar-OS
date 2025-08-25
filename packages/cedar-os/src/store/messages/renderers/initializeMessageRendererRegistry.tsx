@@ -9,6 +9,7 @@ import ProgressUpdateRenderer, {
 	ProgressUpdateMessage,
 } from './ProgressUpdateRenderer';
 import SetStateRenderer from './SetStateRenderer';
+import LegacyActionRenderer from './LegacyActionRenderer';
 import { SetStateMessage } from '@/store/messages/renderers/createMessageRenderer';
 import MastraEventRenderer, {
 	CustomMastraMessage,
@@ -36,6 +37,15 @@ export const setStateResponseMessageRenderer: MessageRenderer<Message> = {
 		<SetStateRenderer message={message as SetStateMessage} />
 	),
 	validateMessage: (msg): msg is SetStateMessage => msg.type === 'setState',
+};
+
+export const legacyActionMessageRenderer: MessageRenderer<Message> = {
+	type: 'action',
+	namespace: 'default',
+	render: (message) => (
+		<LegacyActionRenderer message={message as SetStateMessage} />
+	),
+	validateMessage: (msg): msg is SetStateMessage => msg.type === 'action',
 };
 
 // Mastra event renderers – one per streamed event type
@@ -67,6 +77,7 @@ const mastraEventRenderers: MessageRenderer<Message>[] = mastraEventTypes.map(
 export const defaultMessageRenderers: MessageRenderer<Message>[] = [
 	progressUpdateMessageRenderer,
 	setStateResponseMessageRenderer,
+	legacyActionMessageRenderer, // Backwards compatibility for 'action' type
 	...mastraEventRenderers,
 ];
 
