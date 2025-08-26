@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 import type { CedarStore } from '@/store/CedarOSTypes';
 
 // Base types for LLM responses and events
@@ -25,7 +25,7 @@ export interface VoiceLLMResponse extends LLMResponse {
 }
 
 // Voice parameters for LLM calls
-export interface VoiceParams extends BaseParams {
+export type VoiceParams<E = object> = BaseParams<E> & {
 	audioData: Blob;
 	voiceSettings: {
 		language: string;
@@ -38,7 +38,7 @@ export interface VoiceParams extends BaseParams {
 		endpoint?: string;
 	};
 	context?: string;
-}
+};
 
 export type StreamEvent =
 	| { type: 'chunk'; content: string }
@@ -58,13 +58,13 @@ export interface StreamResponse {
 }
 
 // Provider-specific parameter types
-export interface BaseParams {
-	prompt: string;
+export type BaseParams<E = object> = {
+	prompt?: string;
 	systemPrompt?: string;
 	temperature?: number;
 	maxTokens?: number;
-	[key: string]: any;
-}
+	stream?: boolean;
+} & E; // User-defined extra fields with full type safety
 
 export interface OpenAIParams extends BaseParams {
 	model: string;
@@ -74,29 +74,29 @@ export interface AnthropicParams extends BaseParams {
 	model: string;
 }
 
-export interface MastraParams extends BaseParams {
+export type MastraParams<T = unknown, E = object> = BaseParams<E> & {
 	route: string;
-	resourceId?: string; // Only for mastra
+	resourceId?: string;
 	threadId?: string;
-	// Mastra doesn't require model as a param
-}
+	additionalContext?: T; // Typed additional context
+};
 
 export interface AISDKParams extends BaseParams {
 	model: string; // Format: "provider/model" e.g., "openai/gpt-4o", "anthropic/claude-3-sonnet"
 }
 
-export interface CustomParams extends BaseParams {
-	userId?: string; // Only for custom
+export type CustomParams<T = unknown, E = object> = BaseParams<E> & {
+	userId?: string;
 	threadId?: string;
-	[key: string]: unknown;
-}
+	additionalContext?: T; // Typed additional context
+};
 
 // Structured output params extend base params with schema
-export interface StructuredParams<T = unknown> extends BaseParams {
+export type StructuredParams<T = unknown, E = object> = BaseParams<E> & {
 	schema?: T; // JSON Schema or Zod schema
 	schemaName?: string;
 	schemaDescription?: string;
-}
+};
 
 // AI SDK specific structured params that require Zod schemas
 export interface AISDKStructuredParams extends BaseParams {
@@ -220,3 +220,75 @@ export type ResponseProcessorRegistry = Record<
 	string,
 	ResponseProcessor | undefined
 >;
+
+// Generic Zod schema factory for BaseParams that matches the updated interface
+export const BaseParamsSchema = <E extends z.ZodTypeAny = z.ZodType<object>>(
+	extraFieldsSchema?: E
+) =>
+	z
+		.object({
+			prompt: z.string().optional(),
+			systemPrompt: z.string().optional(),
+			temperature: z.number().optional(),
+			maxTokens: z.number().optional(),
+			stream: z.boolean().optional(),
+		})
+		.and(extraFieldsSchema || z.object({})); // Merge with user-defined extra fields schema
+
+// Convenience export for basic BaseParams schema (no extra fields)
+export const BasicBaseParamsSchema = BaseParamsSchema();
+
+// Provider-specific schema factories that use the generic BaseParams
+export const MastraParamsSchema = <
+	T extends z.ZodTypeAny = z.ZodUnknown,
+	E extends z.ZodTypeAny = z.ZodType<object>
+>(
+	additionalContextSchema?: T,
+	extraFieldsSchema?: E
+) =>
+	BaseParamsSchema(extraFieldsSchema).and(
+		z.object({
+			route: z.string(),
+			resourceId: z.string().optional(),
+			threadId: z.string().optional(),
+			additionalContext: (additionalContextSchema || z.unknown()).optional(),
+		})
+	);
+
+export const CustomParamsSchema = <
+	T extends z.ZodTypeAny = z.ZodUnknown,
+	E extends z.ZodTypeAny = z.ZodType<object>
+>(
+	additionalContextSchema?: T,
+	extraFieldsSchema?: E
+) =>
+	BaseParamsSchema(extraFieldsSchema).and(
+		z.object({
+			userId: z.string().optional(),
+			threadId: z.string().optional(),
+			additionalContext: (additionalContextSchema || z.unknown()).optional(),
+		})
+	);
+
+// Standardized provider schemas (no custom fields - they have fixed APIs)
+export const OpenAIParamsSchema = BasicBaseParamsSchema.and(
+	z.object({
+		model: z.string(),
+	})
+);
+
+export const AnthropicParamsSchema = BasicBaseParamsSchema.and(
+	z.object({
+		model: z.string(),
+	})
+);
+
+export const AISDKParamsSchema = BasicBaseParamsSchema.and(
+	z.object({
+		model: z.string(), // Format: "provider/model" e.g., "openai/gpt-4o"
+	})
+);
+
+// Convenience exports for configurable providers (no extra fields)
+export const BasicMastraParamsSchema = MastraParamsSchema();
+export const BasicCustomParamsSchema = CustomParamsSchema();

@@ -218,10 +218,11 @@ Cedar-OS provides full TypeScript support. When you configure a provider, all me
 
 // Base params sent to all providers
 export interface BaseParams {
-	prompt: string; // Compiled frontend context and user message
+	prompt?: string; // Compiled frontend context and user message
 	systemPrompt?: string;
 	temperature?: number;
 	maxTokens?: number;
+	stream?: boolean; // Streaming support
 	[key: string]: unknown;
 }
 
@@ -237,6 +238,34 @@ export interface LLMResponse {
 	object?: StructuredResponseType | StructuredResponseType[]; // See the docs on How Responses are Processed to understand how this field is parsed
 }
 ```
+
+### Zod Schema Support
+
+Cedar-OS provides comprehensive Zod schemas for runtime validation and enhanced type safety. These schemas are available for import and can be used to validate backend requests:
+
+```typescript
+// Import Zod schemas from cedar-os
+import {
+	BaseParamsSchema,
+	MastraParamsSchema,
+	CustomParamsSchema,
+	OpenAIParamsSchema,
+	AnthropicParamsSchema,
+} from 'cedar-os';
+
+// Create typed schemas for custom backends
+const MyCustomSchema = MastraParamsSchema<MyContextType, MyCustomFields>();
+
+// Runtime validation
+const validatedParams = MyCustomSchema.parse(incomingRequest);
+```
+
+The schema system supports:
+
+- **Generic typing** for custom additional context and fields
+- **Provider-specific schemas** for different backend types
+- **Runtime validation** with full TypeScript integration
+- **Factory functions** for creating typed schemas
 
 <AccordionGroup>
   <Accordion title="Reserved object shapes in the Cedar chat">

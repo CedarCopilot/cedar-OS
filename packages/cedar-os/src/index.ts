@@ -93,6 +93,7 @@ export type { CedarStore } from '@/store/CedarOSTypes';
 export type {
 	AISDKParams,
 	AnthropicParams,
+	BaseParams,
 	CustomParams,
 	InferProviderParams,
 	InferProviderType,
@@ -113,6 +114,24 @@ export type {
 	StructuredResponseType,
 	ResponseProcessor,
 	ResponseProcessorRegistry,
+} from '@/store/agentConnection/AgentConnectionTypes';
+
+// Export SendMessageParams from the slice
+export type { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
+
+export {
+	// Generic schema factories (for configurable providers)
+	BaseParamsSchema,
+	MastraParamsSchema,
+	CustomParamsSchema,
+	// Fixed schemas (for standardized providers)
+	OpenAIParamsSchema,
+	AnthropicParamsSchema,
+	AISDKParamsSchema,
+	// Convenience schemas (no extra fields)
+	BasicBaseParamsSchema,
+	BasicMastraParamsSchema,
+	BasicCustomParamsSchema,
 } from '@/store/agentConnection/AgentConnectionTypes';
 
 // Export Mastra message types

@@ -54,10 +54,11 @@ interface ProviderImplementation<TParams, TConfig> {
 
 ```typescript
 interface CustomParams extends BaseParams {
-	prompt: string; // The user's input prompt
+	prompt?: string; // The user's input prompt
 	systemPrompt?: string; // Optional system prompt
 	temperature?: number; // Sampling temperature (0-1)
 	maxTokens?: number; // Maximum tokens to generate
+	stream?: boolean; // Streaming support
 	[key: string]: unknown; // Any additional custom parameters
 }
 
