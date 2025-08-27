@@ -194,17 +194,17 @@ export async function handleVoiceExecute(c: Context) {
 			fullPrompt += `Additional Context: ${JSON.stringify(additionalContext, null, 2)}`;
 		}
 
-		// Enhanced system prompt to guide the agent to return structured actions
-		const enhancedSystemPrompt = `You are a product roadmap assistant. When users ask you to modify the roadmap, you should return structured actions.
+		// Enhanced system prompt to guide the agent to return structured setState actions
+		const enhancedSystemPrompt = `You are a product roadmap assistant. When users ask you to modify the roadmap, you should return structured setState actions.
 
-Available actions:
+Available setState actions:
 1. addNode - Add a new feature node to the roadmap
 2. removeNode - Remove a feature node by ID
 3. changeNode - Update an existing feature node
 
-When returning an action, use this exact structure:
+When returning a setState action, use this exact structure:
 {
-  "type": "action",
+  "type": "setState",
   "stateKey": "nodes",
   "setterKey": "addNode" | "removeNode" | "changeNode",
   "args": [appropriate arguments],
@@ -246,24 +246,24 @@ If the user is just asking a question or making a comment, return:
 			}),
 		});
 
-		const AddNodeActionSchema = z.object({
-			type: z.literal('action'),
+		const AddNodeSetStateSchema = z.object({
+			type: z.literal('setState'),
 			stateKey: z.literal('nodes'),
 			setterKey: z.literal('addNode'),
 			args: z.array(NodeSchema),
 			content: z.string(),
 		});
 
-		const RemoveNodeActionSchema = z.object({
-			type: z.literal('action'),
+		const RemoveNodeSetStateSchema = z.object({
+			type: z.literal('setState'),
 			stateKey: z.literal('nodes'),
 			setterKey: z.literal('removeNode'),
 			args: z.array(z.string()),
 			content: z.string(),
 		});
 
-		const ChangeNodeActionSchema = z.object({
-			type: z.literal('action'),
+		const ChangeNodeSetStateSchema = z.object({
+			type: z.literal('setState'),
 			stateKey: z.literal('nodes'),
 			setterKey: z.literal('changeNode'),
 			args: z.array(NodeSchema),
@@ -277,9 +277,9 @@ If the user is just asking a question or making a comment, return:
 		});
 
 		const ExecuteFunctionResponseSchema = z.union([
-			AddNodeActionSchema,
-			RemoveNodeActionSchema,
-			ChangeNodeActionSchema,
+			AddNodeSetStateSchema,
+			RemoveNodeSetStateSchema,
+			ChangeNodeSetStateSchema,
 			MessageResponseSchema,
 		]);
 

@@ -46,6 +46,7 @@ import {
 	type CedarStore,
 } from 'cedar-os';
 import { isSupabaseAvailable } from '@/app/examples/product-roadmap/supabase/client';
+import { z } from 'zod';
 import {
 	ArrowRight,
 	Box,
@@ -92,13 +93,27 @@ function FlowCanvas() {
 			addNode: {
 				name: 'addNode',
 				description: 'Add a new node to the roadmap',
-				parameters: [
-					{
-						name: 'node',
-						type: 'Node<FeatureNodeData>',
-						description: 'The node to add',
-					},
-				],
+				schema: z.object({
+					node: z.object({
+						id: z.string().optional(),
+						data: z.object({
+							title: z.string().describe('Feature title'),
+							description: z.string().describe('Detailed feature description'),
+							status: z
+								.enum(['done', 'planned', 'backlog', 'in progress'])
+								.describe('Current development status'),
+							nodeType: z
+								.literal('feature')
+								.default('feature')
+								.describe('Type of node'),
+							upvotes: z.number().default(0).describe('Number of upvotes'),
+							comments: z
+								.array(z.any())
+								.default([])
+								.describe('Array of comments'),
+						}),
+					}),
+				}),
 				execute: (currentNodes, node) => {
 					const nodes = currentNodes as Node<FeatureNodeData>[];
 					const nodeData = node as Node<FeatureNodeData>;
@@ -122,13 +137,9 @@ function FlowCanvas() {
 			removeNode: {
 				name: 'removeNode',
 				description: 'Remove a node from the roadmap',
-				parameters: [
-					{
-						name: 'id',
-						type: 'string',
-						description: 'The ID of the node to remove',
-					},
-				],
+				schema: z.object({
+					id: z.string().describe('The ID of the node to remove'),
+				}),
 				execute: async (currentNodes, id) => {
 					const nodeId = id as string;
 					const nodes = currentNodes as Node<FeatureNodeData>[];
@@ -145,13 +156,27 @@ function FlowCanvas() {
 			changeNode: {
 				name: 'changeNode',
 				description: 'Update an existing node in the roadmap',
-				parameters: [
-					{
-						name: 'newNode',
-						type: 'Node<FeatureNodeData>',
-						description: 'The updated node data',
-					},
-				],
+				schema: z.object({
+					newNode: z.object({
+						id: z.string().describe('The ID of the node to update'),
+						data: z.object({
+							title: z.string().describe('Updated feature title'),
+							description: z.string().describe('Updated feature description'),
+							status: z
+								.enum(['done', 'planned', 'backlog', 'in progress'])
+								.describe('Updated development status'),
+							nodeType: z
+								.literal('feature')
+								.default('feature')
+								.describe('Type of node'),
+							upvotes: z.number().default(0).describe('Number of upvotes'),
+							comments: z
+								.array(z.any())
+								.default([])
+								.describe('Array of comments'),
+						}),
+					}),
+				}),
 				execute: (currentNodes, newNode) => {
 					const nodes = currentNodes as Node<FeatureNodeData>[];
 					const updatedNode = newNode as Node<FeatureNodeData>;
@@ -170,13 +195,11 @@ function FlowCanvas() {
 			acceptDiff: {
 				name: 'acceptDiff',
 				description: 'Accept a diff for a node',
-				parameters: [
-					{
-						name: 'nodeId',
-						type: 'string',
-						description: 'The ID of the node to accept the diff for',
-					},
-				],
+				schema: z.object({
+					nodeId: z
+						.string()
+						.describe('The ID of the node to accept the diff for'),
+				}),
 				execute: async (currentNodes, nodeId) => {
 					const nodes = currentNodes as Node<FeatureNodeData>[];
 					const nodeIdStr = nodeId as string;
@@ -209,13 +232,11 @@ function FlowCanvas() {
 			rejectDiff: {
 				name: 'rejectDiff',
 				description: 'Reject a diff for a node',
-				parameters: [
-					{
-						name: 'nodeId',
-						type: 'string',
-						description: 'The ID of the node to reject the diff for',
-					},
-				],
+				schema: z.object({
+					nodeId: z
+						.string()
+						.describe('The ID of the node to reject the diff for'),
+				}),
 				execute: (currentNodes, nodeId) => {
 					const nodes = currentNodes as Node<FeatureNodeData>[];
 					const node = nodes.find((n) => n.id === nodeId);
@@ -240,7 +261,7 @@ function FlowCanvas() {
 			acceptAllDiffs: {
 				name: 'acceptAllDiffs',
 				description: 'Accept all pending diffs',
-				parameters: [],
+				schema: z.object({}),
 				execute: async (currentNodes) => {
 					const nodes = currentNodes as Node<FeatureNodeData>[];
 					const nodesWithDiffs = nodes.filter((n) => n.data.diff);
@@ -280,7 +301,7 @@ function FlowCanvas() {
 			rejectAllDiffs: {
 				name: 'rejectAllDiffs',
 				description: 'Reject all pending diffs',
-				parameters: [],
+				schema: z.object({}),
 				execute: (currentNodes) => {
 					const nodes = currentNodes as Node<FeatureNodeData>[];
 

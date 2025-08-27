@@ -70,7 +70,7 @@ export async function handleEventStream(
 	 * Process the data content from SSE events
 	 * Handles multiple content formats:
 	 * 1. OpenAI delta format: {"choices": [{"delta": {"content": "text"}}]}
-	 * 2. Custom object format: {"type": "action", "data": {...}}
+	 * 2. Custom object format: {"type": "setState", "data": {...}}
 	 * 3. Direct content: {"content": "text"}
 	 * 4. Plain text: raw string content
 	 */
@@ -130,8 +130,8 @@ export async function handleEventStream(
 			}
 
 			// 2. Mastra/custom structured object handling
-			//    a) Inline object        -> {"type": "action", ... }
-			//    b) Nested under object  -> {"object": {"type": "action", ...}}
+			//    a) Inline object        -> {"type": "setState", ... }
+			//    b) Nested under object  -> {"object": {"type": "setState", ...}}
 			if (
 				parsed.type ||
 				(parsed.object && (parsed.object as { type?: string }).type)

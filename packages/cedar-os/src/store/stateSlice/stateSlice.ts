@@ -18,12 +18,6 @@ export type BasicStateValue =
 	| void;
 
 // Setter types
-export interface SetterParameter {
-	name: string;
-	type: string;
-	description: string;
-	optional?: boolean;
-}
 
 // Options for executeCustomSetter
 export interface ExecuteCustomSetterOptions {
@@ -55,8 +49,7 @@ export interface Setter<
 > {
 	name: string;
 	description: string;
-	parameters?: SetterParameter[];
-	/** Optional Zod schema describing the input shape expected by this setter. Acts as an alternative to 'parameters'. */
+	/** Zod schema describing the input shape expected by this setter. */
 	schema?: ZodSchema;
 	execute: SetterFunction<T, Args>;
 }

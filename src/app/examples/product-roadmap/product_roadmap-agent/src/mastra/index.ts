@@ -55,25 +55,25 @@ const NodeSchema = z.object({
 	data: FeatureNodeDataSchema,
 });
 
-// Action schemas
-const AddNodeActionSchema = z.object({
-	type: z.literal('action'),
+// SetState schemas
+const AddNodeSetStateSchema = z.object({
+	type: z.literal('setState'),
 	stateKey: z.literal('nodes'),
 	setterKey: z.literal('addNode'),
 	args: z.array(NodeSchema),
 	content: z.string(),
 });
 
-const RemoveNodeActionSchema = z.object({
-	type: z.literal('action'),
+const RemoveNodeSetStateSchema = z.object({
+	type: z.literal('setState'),
 	stateKey: z.literal('nodes'),
 	setterKey: z.literal('removeNode'),
 	args: z.array(z.string()), // Just the node ID
 	content: z.string(),
 });
 
-const ChangeNodeActionSchema = z.object({
-	type: z.literal('action'),
+const ChangeNodeSetStateSchema = z.object({
+	type: z.literal('setState'),
 	stateKey: z.literal('nodes'),
 	setterKey: z.literal('changeNode'),
 	args: z.array(NodeSchema),
@@ -88,9 +88,9 @@ const MessageResponseSchema = z.object({
 
 // Union of all possible responses
 const ExecuteFunctionResponseSchema = z.union([
-	AddNodeActionSchema,
-	RemoveNodeActionSchema,
-	ChangeNodeActionSchema,
+	AddNodeSetStateSchema,
+	RemoveNodeSetStateSchema,
+	ChangeNodeSetStateSchema,
 	MessageResponseSchema,
 ]);
 
@@ -115,9 +115,9 @@ Available actions:
 2. removeNode - Remove a feature node by ID
 3. changeNode - Update an existing feature node
 
-When returning an action, use this exact structure:
+When returning a setState action, use this exact structure:
 {
-  "type": "action",
+  "type": "setState",
   "stateKey": "nodes",
   "setterKey": "addNode" | "removeNode" | "changeNode",
   "args": [appropriate arguments],

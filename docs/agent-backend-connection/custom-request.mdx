@@ -46,14 +46,23 @@ Cedar serializes the collected context into a structured format that your agent 
   "todos": [
     { "id": "1", "title": "Fix login bug", "completed": false }
   ],
-  "setters": {
-    "addTodo": {
-      "name": "addTodo",
-      "stateKey": "todos",
-      "description": "Add a new todo item",
-      "parameters": ["title: string"]
-    }
-  }
+    	"setters": {
+			"addTodo": {
+			"name": "addTodo",
+			"stateKey": "todos",
+			"description": "Add a new todo item",
+			"schema": {
+				"type": "object",
+				"properties": {
+				"title": {
+					"type": "string",
+					"description": "The title of the todo item"
+				}
+				},
+				"required": ["title"]
+			}
+			}
+      }
 }
 ```
 

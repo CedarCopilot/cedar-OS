@@ -92,7 +92,7 @@ When the LLM returns a response, it gets passed to `handleLLMResponse()` which p
 The system uses a switch-like mechanism through `processStructuredResponse()` that looks at the `type` field of structured responses and routes them to registered response processors:
 
 - **`message` type** - Handled by `messageResponseProcessor`, converts backend message format to chat messages
-- **`action` type** - Handled by `actionResponseProcessor`, executes state mutations through `executeCustomSetter()`
+- **`setState` type** - Handled by `setStateResponseProcessor`, executes state mutations through `executeCustomSetter()`
 - **`progress_update` type** - Shows loading states and progress indicators
 
 **3. Adding to chat through `messagesSlice`**
@@ -101,7 +101,7 @@ Text content and processed messages get added to the chat history via `addMessag
 
 **4. State mutations through registered setters**
 
-For `action` type responses, the system calls `executeCustomSetter()` which uses the parameters from `registerState()` to execute the appropriate custom setter function, allowing the AI to modify application state based on the registered schema and available setters.
+For `setState` type responses, the system calls `executeCustomSetter()` which uses the parameters from `registerState()` to execute the appropriate custom setter function, allowing the AI to modify application state based on the registered schema and available setters.
 
 ---
 
@@ -111,7 +111,7 @@ Response processors handle different types of structured AI responses:
 
 ### Built-in Processors
 
-1. **ActionResponseProcessor** - Executes state mutations
+1. **SetStateResponseProcessor** - Executes state mutations
 2. **MessageResponseProcessor** - Adds text messages to chat
 3. **ProgressUpdateResponseProcessor** - Handles loading states
 

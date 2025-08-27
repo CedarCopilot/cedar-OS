@@ -242,7 +242,7 @@ export interface LLMResponse {
   <Accordion title="Reserved object shapes in the Cedar chat">
     When returning structured data in the `object` field of `LLMResponse`, objects with a `type` field have special meanings in Cedar-OS:
 
-    **`type: "action"`** - Defers to frontend action execution (state manipulation)
+    **`type: "setState"`** - Defers to frontend setState execution (state manipulation)
     - Learn more: [Agentic State Access](/state-access/agentic-state-access)
 
     **`type: "message"`** - Processes and adds content as a message in the chat

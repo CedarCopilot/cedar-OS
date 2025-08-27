@@ -14,23 +14,43 @@ export function createResponseProcessor<T extends StructuredResponseType>(
 }
 
 // -----------------------------------------------------------------------------
-// Base payload shared by ActionResponse structured responses and chat messages
+// Base payload shared by SetStateResponse structured responses and chat messages
 // -----------------------------------------------------------------------------
 
-export type ActionResponsePayload = {
+export type SetStateResponsePayload = {
 	stateKey: string;
 	setterKey: string;
 	args?: unknown[];
 };
 
-// Generic action structured response type
-export type ActionResponse = CustomStructuredResponseType<
-	'action',
-	ActionResponsePayload
+// Generic setState structured response type
+export type SetStateResponse = CustomStructuredResponseType<
+	'setState',
+	SetStateResponsePayload
 >;
 
-// Helper type for action responses
-export type ActionResponseFor<
+// Helper type for setState responses
+export type SetStateResponseFor<
+	StateKey extends string,
+	SetterKey extends string,
+	Args extends unknown[] = []
+> = BaseStructuredResponseType & {
+	type: 'setState';
+	stateKey: StateKey;
+	setterKey: SetterKey;
+	args: Args;
+};
+
+// Legacy action response types for backwards compatibility
+export type LegacyActionResponsePayload = SetStateResponsePayload; // Same structure
+
+export type LegacyActionResponse = CustomStructuredResponseType<
+	'action',
+	LegacyActionResponsePayload
+>;
+
+// Helper type for legacy action responses
+export type LegacyActionResponseFor<
 	StateKey extends string,
 	SetterKey extends string,
 	Args extends unknown[] = []
@@ -41,9 +61,9 @@ export type ActionResponseFor<
 	args: Args;
 };
 
-// Factory function for creating action response processors
-export function createActionResponseProcessor<
-	T extends ActionResponse
+// Factory function for creating setState response processors
+export function createSetStateResponseProcessor<
+	T extends SetStateResponse
 >(config: {
 	namespace?: string;
 	/** Optional setterKey. If provided the processor only handles msgs with this key */
@@ -55,9 +75,38 @@ export function createActionResponseProcessor<
 
 	const defaultValidate = (
 		obj: StructuredResponseType
-	): obj is ActionResponse => {
+	): obj is SetStateResponse => {
+		if (obj.type !== 'setState') return false;
+		if (setterKey && (obj as SetStateResponse).setterKey !== setterKey)
+			return false;
+		return true;
+	};
+
+	return {
+		type: 'setState',
+		namespace,
+		execute: execute as ResponseProcessorExecute<T>,
+		validate: validate ?? defaultValidate,
+	} as unknown as ResponseProcessor<StructuredResponseType>;
+}
+
+// Factory function for creating legacy action response processors (backwards compatibility)
+export function createLegacyActionResponseProcessor<
+	T extends LegacyActionResponse
+>(config: {
+	namespace?: string;
+	/** Optional setterKey. If provided the processor only handles msgs with this key */
+	setterKey?: string;
+	execute?: ResponseProcessorExecute<T>;
+	validate?: (obj: StructuredResponseType) => obj is T; // custom validator override
+}): ResponseProcessor<StructuredResponseType> {
+	const { namespace, setterKey, execute, validate } = config;
+
+	const defaultValidate = (
+		obj: StructuredResponseType
+	): obj is LegacyActionResponse => {
 		if (obj.type !== 'action') return false;
-		if (setterKey && (obj as ActionResponse).setterKey !== setterKey)
+		if (setterKey && (obj as LegacyActionResponse).setterKey !== setterKey)
 			return false;
 		return true;
 	};

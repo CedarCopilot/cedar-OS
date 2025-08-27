@@ -156,21 +156,28 @@ export {
 	useVoice,
 } from '@/store/CedarStore';
 
-// Export action response processor hooks
+// Export setState response processor hooks
 export {
-	ActionResponsePayload,
-	ActionResponse,
-	ActionResponseFor,
-	createActionResponseProcessor,
+	SetStateResponsePayload,
+	SetStateResponse,
+	SetStateResponseFor,
+	createSetStateResponseProcessor,
+	LegacyActionResponsePayload,
+	LegacyActionResponse,
+	LegacyActionResponseFor,
+	createLegacyActionResponseProcessor,
 	createResponseProcessor,
 } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
 
 // Export message renderer factory function
 export {
 	createMessageRenderer,
-	ActionMessage,
-	ActionMessageFor,
-	createActionMessageRenderer,
+	SetStateMessage,
+	SetStateMessageFor,
+	createSetStateMessageRenderer,
+	LegacyActionMessage,
+	LegacyActionMessageFor,
+	createLegacyActionMessageRenderer,
 } from '@/store/messages/renderers/createMessageRenderer';
 
 // Export spell system types and utilities

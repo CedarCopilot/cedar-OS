@@ -24,6 +24,7 @@ First, register your state with custom setters that define the available actions
 ```tsx
 import { useRegisterState } from 'cedar-os';
 import { Node } from 'reactflow';
+import { z } from 'zod';
 
 // Register nodes state with custom setters
 useRegisterState({
@@ -35,13 +36,16 @@ useRegisterState({
 		addNode: {
 			name: 'addNode',
 			description: 'Add a new node to the roadmap',
-			parameters: [
-				{
-					name: 'node',
-					type: 'Node<FeatureNodeData>',
-					description: 'The node to add',
-				},
-			],
+			schema: z.object({
+				node: z.object({
+					data: z.object({
+						title: z.string(),
+						description: z.string(),
+						status: z.enum(['done', 'planned', 'backlog', 'in progress']),
+						nodeType: z.literal('feature').default('feature'),
+					}),
+				}),
+			}),
 			execute: (currentNodes, node) => {
 				const newNode = {
 					...node,
@@ -63,13 +67,9 @@ useRegisterState({
 		removeNode: {
 			name: 'removeNode',
 			description: 'Remove a node from the roadmap',
-			parameters: [
-				{
-					name: 'id',
-					type: 'string',
-					description: 'The ID of the node to remove',
-				},
-			],
+			schema: z.object({
+				id: z.string().describe('The ID of the node to remove'),
+			}),
 			execute: async (currentNodes, id) => {
 				// Mark as removed with diff instead of immediate deletion
 				setNodes(
@@ -84,7 +84,7 @@ useRegisterState({
 		acceptAllDiffs: {
 			name: 'acceptAllDiffs',
 			description: 'Accept all pending diffs',
-			parameters: [],
+			schema: z.object({}),
 			execute: async (currentNodes) => {
 				const nodesWithDiffs = currentNodes.filter((n) => n.data.diff);
 
@@ -132,7 +132,7 @@ export const addFeatureTool = createTool({
 		nodeType: z.literal('feature').default('feature'),
 	}),
 	outputSchema: z.object({
-		type: z.literal('action'),
+		type: z.literal('setState'),
 		stateKey: z.literal('nodes'),
 		setterKey: z.literal('addNode'),
 		args: z.array(z.any()),
@@ -140,7 +140,7 @@ export const addFeatureTool = createTool({
 	execute: async ({ context }) => {
 		// Return structured response for Cedar to interpret
 		return {
-			type: 'action',
+			type: 'setState',
 			stateKey: 'nodes',
 			setterKey: 'addNode',
 			args: [
@@ -171,8 +171,8 @@ handleLLMResult: (response: LLMResponse) => {
 	if (response.object && typeof response.object === 'object') {
 		const structuredResponse = response.object;
 
-		// Handle action type responses
-		if (structuredResponse.type === 'action') {
+		// Handle setState type responses
+		if (structuredResponse.type === 'setState') {
 			// Execute the custom setter with provided parameters
 			state.executeCustomSetter(
 				structuredResponse.stateKey,
@@ -194,19 +194,19 @@ handleLLMResult: (response: LLMResponse) => {
 };
 ```
 
-> **Note**: This default handling can be customized using [Custom Response Processing](/agent-backend-connection/custom-response-processing#action-type). You can also customize how action completion is displayed with [Custom Message Rendering](/chat/custom-message-rendering#action-type).
+> **Note**: This default handling can be customized using [Custom Response Processing](/agent-backend-connection/custom-response-processing#setstate-type). You can also customize how setState completion is displayed with [Custom Message Rendering](/chat/custom-message-rendering#setstate-type).
 
 ## Structured Response Types
 
 Cedar supports different types of structured responses:
 
-### Action Type
+### SetState Type
 
 Execute a custom setter on registered state:
 
 ```json
 {
-	"type": "action",
+	"type": "setState",
 	"stateKey": "nodes",
 	"setterKey": "addNode",
 	"args": [
@@ -217,7 +217,7 @@ Execute a custom setter on registered state:
 }
 ```
 
-> **Learn More**: See the complete [Action Response Processing](/agent-backend-connection/custom-response-processing#action-type) documentation and [Action Message Rendering](/chat/custom-message-rendering#action-type) guide for detailed information about customizing action handling and display.
+> **Learn More**: See the complete [SetState Response Processing](/agent-backend-connection/custom-response-processing#setstate-type) documentation and [SetState Message Rendering](/chat/custom-message-rendering#setstate-type) guide for detailed information about customizing setState handling and display.
 
 ### Message Type
 
@@ -289,18 +289,16 @@ customSetters: {
 }
 ```
 
-### 2. Include Parameter Descriptions
+### 2. Use Descriptive Schema Fields
 
-Help your agent understand what parameters to provide:
+Help your agent understand what parameters to provide using Zod's describe method:
 
 ```tsx
-parameters: [
-	{
-		name: 'priority',
-		type: 'string',
-		description: 'Priority level: low, medium, high, or critical',
-	},
-];
+schema: z.object({
+	priority: z
+		.enum(['low', 'medium', 'high', 'critical'])
+		.describe('Priority level: low, medium, high, or critical'),
+});
 ```
 
 ### 3. Handle Errors Gracefully
@@ -347,13 +345,13 @@ For complex workflows, you can chain multiple actions:
   "type": "multi-action",
   "actions": [
     {
-      "type": "action",
+      "type": "setState",
       "stateKey": "nodes",
       "setterKey": "addNode",
       "args": [/* node 1 */]
     },
     {
-      "type": "action",
+      "type": "setState",
       "stateKey": "edges",
       "setterKey": "connectNodes",
       "args": ["node1", "node2"]
@@ -395,28 +393,42 @@ The setter and state schemas are included in top-level `setters` and `schemas` f
 			"name": "addNode",
 			"stateKey": "nodes",
 			"description": "Add a new node to the roadmap",
-			"parameters": [
-				{
-					"name": "node",
-					"type": "Node<FeatureNodeData>",
-					"description": "The node to add"
-				}
-			],
 			"schema": {
-				// Zod schema converted to JSON Schema format
+				"type": "object",
+				"properties": {
+					"node": {
+						"type": "object",
+						"properties": {
+							"data": {
+								"type": "object",
+								"properties": {
+									"title": { "type": "string" },
+									"description": { "type": "string" },
+									"status": {
+										"type": "string",
+										"enum": ["done", "planned", "backlog", "in progress"]
+									},
+									"nodeType": { "type": "string", "default": "feature" }
+								}
+							}
+						}
+					}
+				}
 			}
 		},
 		"removeNode": {
 			"name": "removeNode",
 			"stateKey": "nodes",
 			"description": "Remove a node from the roadmap",
-			"parameters": [
-				{
-					"name": "id",
-					"type": "string",
-					"description": "The ID of the node to remove"
+			"schema": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "The ID of the node to remove"
+					}
 				}
-			]
+			}
 		}
 	}
 }
@@ -424,7 +436,7 @@ The setter and state schemas are included in top-level `setters` and `schemas` f
 
 ### Zod Schema Integration
 
-If your custom setters include a `schema` field with a Zod schema, Cedar will automatically convert it to JSON Schema format using `zod-to-json-schema` and include it in the setter information. This provides your agent with precise type information for generating valid parameters.
+Custom setters use Zod schemas to define parameter validation and provide rich type information to your agent. Cedar automatically converts Zod schemas to JSON Schema format using `zod-to-json-schema` and includes them in the context sent to your agent.
 
 ```tsx
 // In your useRegisterState hook call
@@ -435,21 +447,26 @@ customSetters: {
     schema: z.object({
       node: z.object({
         data: z.object({
-          title: z.string(),
-          description: z.string(),
-          status: z.enum(['done', 'planned', 'backlog', 'in progress']),
-          nodeType: z.literal('feature').default('feature')
+          title: z.string().describe('Feature title'),
+          description: z.string().describe('Detailed feature description'),
+          status: z.enum(['done', 'planned', 'backlog', 'in progress']).describe('Current development status'),
+          nodeType: z.literal('feature').default('feature').describe('Type of node')
         })
       })
     }),
     execute: (currentNodes, node) => {
-      // Implementation
+      // Implementation with full type safety
     }
   }
 }
 ```
 
-This automatic schema distribution ensures your agent always has up-to-date information about available actions and their requirements, enabling more accurate and reliable action execution.
+This schema-based approach provides several benefits:
+
+- **Type Safety**: Runtime validation of parameters
+- **Rich Documentation**: Descriptive field information for agents
+- **Automatic JSON Schema**: Converted format perfect for LLM understanding
+- **Consistent API**: Single source of truth for parameter definitions
 
 ## Next Steps
 

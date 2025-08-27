@@ -6,7 +6,7 @@ Cedar allows your agent to understand what is happening in your application, and
 
 In other words, it allows your agent to read and write to the local react state.
 
-To understand how we internally execute and render actions on your state (and how to override default behavior and rendering for state changes), read [Action Response Processing](/agent-backend-connection/custom-response-processing#action-type) and [Action Message Rendering](/chat/custom-message-rendering#action-type).
+To understand how we internally execute and render actions on your state (and how to override default behavior and rendering for state changes), read [SetState Response Processing](/agent-backend-connection/custom-response-processing#setstate-type) and [SetState Message Rendering](/chat/custom-message-rendering#setstate-type).
 
 ## useRegisterState Hook
 
@@ -77,7 +77,7 @@ interface RegisterStateOptions<T> {
 interface Setter<T, Args extends unknown[] = unknown[]> {
 	name: string;
 	description: string;
-	parameters?: SetterParameter[];
+	schema?: ZodSchema;
 	execute: (state: T, ...args: Args) => void;
 }
 
@@ -247,7 +247,7 @@ executeCustomSetter: (
 
 </CodeGroup>
 
-> **Agent Actions**: Custom setters can be automatically invoked by your agent through structured responses. Learn more about [Action Response Processing](/agent-backend-connection/custom-response-processing#action-type) and [Action Message Rendering](/chat/custom-message-rendering#action-type) to see how agents can execute these setters and display the results.
+> **Agent Actions**: Custom setters can be automatically invoked by your agent through structured responses. Learn more about [SetState Response Processing](/agent-backend-connection/custom-response-processing#setstate-type) and [SetState Message Rendering](/chat/custom-message-rendering#setstate-type) to see how agents can execute these setters and display the results.
 
 ## getCedarState
 

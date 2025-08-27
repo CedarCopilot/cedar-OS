@@ -73,9 +73,11 @@ describe('StateSlice – state re-registration', () => {
 		expect(mockSetValue1).not.toHaveBeenCalled(); // Old function should NOT be called
 
 		act(() => {
-			useCedarStore
-				.getState()
-				.executeCustomSetter('testState', 'testSetter', 'arg');
+			useCedarStore.getState().executeCustomSetter({
+				key: 'testState',
+				setterKey: 'testSetter',
+				args: ['arg'],
+			});
 		});
 		// The custom setter receives the current value which was set to 'newValue' by setCedarState
 		expect(mockCustomSetter2).toHaveBeenCalledWith('newValue', 'arg');

@@ -94,7 +94,7 @@ Your endpoint can return different types of responses:
 		"totalTokens": 150
 	},
 	"object": {
-		"type": "action",
+		"type": "setState",
 		"stateKey": "myState",
 		"setterKey": "updateValue",
 		"args": ["new value"]
@@ -188,7 +188,7 @@ Cedar OS provides a unified `handleLLMVoice` function that processes voice respo
 
 Cedar OS supports structured responses that can trigger actions in your application:
 
-### Action Response
+### SetState Response
 
 To execute a state change:
 
@@ -196,7 +196,7 @@ To execute a state change:
 {
 	"text": "I've updated the value for you.",
 	"object": {
-		"type": "action",
+		"type": "setState",
 		"stateKey": "myCustomState",
 		"setterKey": "setValue",
 		"args": [42]
