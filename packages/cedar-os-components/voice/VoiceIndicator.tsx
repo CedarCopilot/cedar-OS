@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mic, Volume2, AlertCircle } from 'lucide-react';
-import type { VoiceState } from '@/store/voice/voiceSlice';
+import type { VoiceState } from 'cedar-os';
 
 interface VoiceIndicatorProps {
 	voiceState: Pick<

@@ -1,4 +1,8 @@
-import { MessageRenderer, Message, CustomMessage } from '@/store/messages/MessageTypes';
+import {
+	MessageRenderer,
+	Message,
+	CustomMessage,
+} from '@/store/messages/MessageTypes';
 import React from 'react';
 
 export function createMessageRenderer<T extends Message>(
@@ -9,19 +13,37 @@ export function createMessageRenderer<T extends Message>(
 }
 
 // ---------------------------------------------------------------------------
-// Helper types and factory for Action chat messages
+// Helper types and factory for SetState chat messages
 // ---------------------------------------------------------------------------
 
-export type ActionMessagePayload = {
+export type SetStateMessagePayload = {
 	stateKey: string;
 	setterKey: string;
 	args?: unknown[];
 };
 
-export type ActionMessage = CustomMessage<'action', ActionMessagePayload>;
+export type SetStateMessage = CustomMessage<'setState', SetStateMessagePayload>;
 
-// Helper to derive a narrower action message type
-export type ActionMessageFor<
+// Helper to derive a narrower setState message type
+export type SetStateMessageFor<
+	StateKey extends string,
+	SetterKey extends string,
+	Args extends unknown[] = []
+> = CustomMessage<
+	'setState',
+	{ stateKey: StateKey; setterKey: SetterKey; args: Args }
+>;
+
+// Legacy action message types for backwards compatibility
+export type LegacyActionMessagePayload = SetStateMessagePayload; // Same structure
+
+export type LegacyActionMessage = CustomMessage<
+	'action',
+	LegacyActionMessagePayload
+>;
+
+// Helper to derive a narrower legacy action message type
+export type LegacyActionMessageFor<
 	StateKey extends string,
 	SetterKey extends string,
 	Args extends unknown[] = []
@@ -30,8 +52,10 @@ export type ActionMessageFor<
 	{ stateKey: StateKey; setterKey: SetterKey; args: Args }
 >;
 
-// Factory to create an Action message renderer with optional filtering
-export function createActionMessageRenderer<T extends ActionMessage>(config: {
+// Factory to create a SetState message renderer with optional filtering
+export function createSetStateMessageRenderer<
+	T extends SetStateMessage
+>(config: {
 	namespace?: string;
 	/** Optional setterKey filter; if provided the renderer only handles msgs with this key */
 	setterKey?: string;
@@ -40,9 +64,40 @@ export function createActionMessageRenderer<T extends ActionMessage>(config: {
 }): MessageRenderer<Message> {
 	const { namespace, setterKey, render, validateMessage } = config;
 
-	const defaultValidate = (msg: Message): msg is ActionMessage => {
+	const defaultValidate = (msg: Message): msg is SetStateMessage => {
+		if (msg.type !== 'setState') return false;
+		if (setterKey && (msg as SetStateMessage).setterKey !== setterKey)
+			return false;
+		return true;
+	};
+
+	const rendererFn = (message: Message) => {
+		return render(message as T);
+	};
+
+	return {
+		type: 'setState',
+		namespace,
+		render: rendererFn,
+		validateMessage: validateMessage ?? defaultValidate,
+	} as unknown as MessageRenderer<Message>;
+}
+
+// Factory to create a legacy action message renderer with optional filtering (backwards compatibility)
+export function createLegacyActionMessageRenderer<
+	T extends LegacyActionMessage
+>(config: {
+	namespace?: string;
+	/** Optional setterKey filter; if provided the renderer only handles msgs with this key */
+	setterKey?: string;
+	render: (msg: T) => React.ReactNode;
+	validateMessage?: (msg: Message) => msg is T;
+}): MessageRenderer<Message> {
+	const { namespace, setterKey, render, validateMessage } = config;
+
+	const defaultValidate = (msg: Message): msg is LegacyActionMessage => {
 		if (msg.type !== 'action') return false;
-		if (setterKey && (msg as ActionMessage).setterKey !== setterKey)
+		if (setterKey && (msg as LegacyActionMessage).setterKey !== setterKey)
 			return false;
 		return true;
 	};

@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
  */
 export interface ContextEntry {
 	id: string;
-	source: 'mention' | 'subscription' | 'manual';
+	source: 'mention' | 'subscription' | 'manual' | 'function';
 	data: unknown;
 	metadata?: {
 		label?: string;
@@ -19,10 +19,10 @@ export interface ContextEntry {
 }
 
 /**
- * Additional context structure
+ * Additional context structure - supports both single entries and arrays
  */
 export interface AdditionalContext {
-	[key: string]: ContextEntry[];
+	[key: string]: ContextEntry | ContextEntry[];
 }
 
 /**

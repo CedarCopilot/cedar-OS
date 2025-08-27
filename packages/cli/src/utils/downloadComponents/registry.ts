@@ -20,7 +20,8 @@ export interface ComponentRegistryEntry {
 		| 'text'
 		| 'ui'
 		| 'diffs'
-		| 'spells';
+		| 'spells'
+		| 'voice';
 	dependencies?: string[];
 	registryDependencies?: string[]; // Other cedar components this component depends on
 	files: string[];
@@ -96,6 +97,7 @@ function getFilePath(
 		ui: 'ui',
 		diffs: 'diffs',
 		spells: 'spells',
+		voice: 'voice',
 	};
 
 	return `${typeMap[type]}/${fileName}`;
@@ -170,6 +172,7 @@ export async function getCategories(): Promise<Record<string, string>> {
 		ui: 'UI Components',
 		diffs: 'Diff Components',
 		spells: 'Spell Components',
+		voice: 'Voice Components',
 	};
 }
 

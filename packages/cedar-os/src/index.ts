@@ -148,8 +148,7 @@ export type {
 	MessageStorageAdapter,
 } from '@/store/messages/messageStorage';
 
-// Export voice components and types
-export { VoiceIndicator } from '@/store/voice/VoiceIndicator';
+// Export voice types
 export type { VoiceState } from '@/store/voice/voiceSlice';
 
 // Export all hooks and utilities from CedarStore
@@ -169,27 +168,28 @@ export {
 	useVoice,
 } from '@/store/CedarStore';
 
-// Export action response processor hooks
+// Export setState response processor hooks
 export {
-	createActionResponseProcessor,
+	SetStateResponsePayload,
+	SetStateResponse,
+	SetStateResponseFor,
+	createSetStateResponseProcessor,
+	LegacyActionResponsePayload,
+	LegacyActionResponse,
+	LegacyActionResponseFor,
+	createLegacyActionResponseProcessor,
 	createResponseProcessor,
-} from '@/store/agentConnection/responseProcessors/createResponseProcessor';
-
-export type {
-	ActionResponsePayload,
-	ActionResponse,
-	ActionResponseFor,
 } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
 
 // Export message renderer factory function
 export {
 	createMessageRenderer,
-	createActionMessageRenderer,
-} from '@/store/messages/renderers/createMessageRenderer';
-
-export type {
-	ActionMessage,
-	ActionMessageFor,
+	SetStateMessage,
+	SetStateMessageFor,
+	createSetStateMessageRenderer,
+	LegacyActionMessage,
+	LegacyActionMessageFor,
+	createLegacyActionMessageRenderer,
 } from '@/store/messages/renderers/createMessageRenderer';
 
 // Export spell system types and utilities
@@ -229,3 +229,6 @@ export {
 	Editor as CedarEditor,
 	EditorContent as CedarEditorContent,
 } from '@tiptap/react';
+
+// Export utility functions
+export { sanitizeJson, desanitizeJson } from '@/utils/sanitizeJson';

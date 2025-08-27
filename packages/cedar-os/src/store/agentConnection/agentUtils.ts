@@ -70,7 +70,7 @@ export async function handleEventStream(
 	 * Process the data content from SSE events
 	 * Handles multiple content formats:
 	 * 1. OpenAI delta format: {"choices": [{"delta": {"content": "text"}}]}
-	 * 2. Custom object format: {"type": "action", "data": {...}}
+	 * 2. Custom object format: {"type": "setState", "data": {...}}
 	 * 3. Direct content: {"content": "text"}
 	 * 4. Plain text: raw string content
 	 */
@@ -83,6 +83,16 @@ export async function handleEventStream(
 		// Attempt JSON parsing first (most common case)
 		try {
 			const parsed = JSON.parse(data);
+
+			// If the parsed value is a primitive (number, string, boolean, null),
+			// treat it as plain text content rather than a structured object.
+			// This handles cases where providers stream individual tokens like "292" or "•"
+			if (parsed === null || typeof parsed !== 'object') {
+				const processedContent = processContentChunk(String(parsed));
+				currentTextMessage += processedContent;
+				handler({ type: 'chunk', content: processedContent });
+				return;
+			}
 
 			// OpenAI format: {"choices": [{"delta": {...}}]}
 			if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
@@ -120,8 +130,8 @@ export async function handleEventStream(
 			}
 
 			// 2. Mastra/custom structured object handling
-			//    a) Inline object        -> {"type": "action", ... }
-			//    b) Nested under object  -> {"object": {"type": "action", ...}}
+			//    a) Inline object        -> {"type": "setState", ... }
+			//    b) Nested under object  -> {"object": {"type": "setState", ...}}
 			if (
 				parsed.type ||
 				(parsed.object && (parsed.object as { type?: string }).type)
@@ -158,7 +168,8 @@ export async function handleEventStream(
 			}
 		} catch {
 			// Not valid JSON, treat as plain text content
-			if (data.trim() && data !== '[DONE]' && data !== 'done') {
+			// Note: Don't use data.trim() here as it would filter out space-only chunks
+			if (data && data !== '[DONE]' && data !== 'done') {
 				const processedContent = processContentChunk(data);
 				currentTextMessage += processedContent;
 				handler({ type: 'chunk', content: processedContent });

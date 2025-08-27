@@ -1,0 +1,1436 @@
+import React from 'react';
+import { act, renderHook } from '@testing-library/react';
+import { useCedarStore } from '../../../src/store/CedarStore';
+import {
+	useSubscribeStateToInputContext,
+	useRenderAdditionalContext,
+} from '../../../src/store/agentInputContext/agentInputContextSlice';
+import type {
+	ContextEntry,
+	MentionProvider,
+} from '../../../src/store/agentInputContext/AgentInputContextTypes';
+import type { JSONContent } from '@tiptap/core';
+
+/**
+ * Tests for the AgentInputContextSlice to verify all functionality
+ * including context management, mention providers, and state subscription
+ */
+
+describe('AgentInputContextSlice', () => {
+	beforeEach(() => {
+		// Reset the store before each test
+		useCedarStore.setState((state) => ({
+			...state,
+			chatInputContent: null,
+			overrideInputContent: { input: null },
+			additionalContext: {},
+			mentionProviders: new Map(),
+			registeredStates: {},
+		}));
+	});
+
+	describe('Basic state management', () => {
+		it('should set chat input content', () => {
+			const content: JSONContent = {
+				type: 'doc',
+				content: [{ type: 'text', text: 'Hello world' }],
+			};
+
+			act(() => {
+				useCedarStore.getState().setChatInputContent(content);
+			});
+
+			expect(useCedarStore.getState().chatInputContent).toEqual(content);
+		});
+
+		it('should set override input content', () => {
+			const content = 'Override content';
+
+			act(() => {
+				useCedarStore.getState().setOverrideInputContent(content);
+			});
+
+			expect(useCedarStore.getState().overrideInputContent.input).toBe(content);
+		});
+	});
+
+	describe('Context entry management', () => {
+		it('should add context entry', () => {
+			const entry: ContextEntry = {
+				id: 'test-entry',
+				source: 'manual',
+				data: { value: 'test' },
+				metadata: { label: 'Test Entry' },
+			};
+
+			act(() => {
+				useCedarStore.getState().addContextEntry('testKey', entry);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.testKey).toHaveLength(1);
+			expect(context.testKey[0]).toEqual(entry);
+		});
+
+		it('should store single context entry as single value', () => {
+			act(() => {
+				useCedarStore.getState().putAdditionalContext(
+					'singleKey',
+					{ value: 'single' },
+					{
+						labelField: 'value',
+					}
+				);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			const value = context.singleKey;
+
+			// Should be stored as single value, not array
+			expect(Array.isArray(value)).toBe(false);
+			expect((value as ContextEntry).source).toBe('function');
+			expect((value as ContextEntry).data).toEqual({ value: 'single' });
+		});
+
+		it('should preserve single-item arrays as arrays', () => {
+			// Pass a single-item array - should be preserved as array
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext(
+						'arrayTest',
+						[{ id: '1', name: 'Single Item' }],
+						{
+							labelField: 'name',
+						}
+					);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			const value = context.arrayTest;
+
+			// Should be preserved as array since input was [item]
+			expect(Array.isArray(value)).toBe(true);
+			const entries = value as ContextEntry[];
+			expect(entries.length).toBe(1);
+			expect(entries[0].source).toBe('function');
+			expect(entries[0].data).toEqual({ id: '1', name: 'Single Item' });
+			expect(entries[0].metadata?.label).toBe('Single Item');
+		});
+
+		it('should unwrap single non-array values to single ContextEntry', () => {
+			// Pass a single non-array value - should be unwrapped to single value
+			act(() => {
+				useCedarStore.getState().putAdditionalContext(
+					'singleTest',
+					{ id: '1', name: 'Single Item' },
+					{
+						labelField: 'name',
+					}
+				);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			const value = context.singleTest;
+
+			// Should be stored as single value since input was item (not [item])
+			expect(Array.isArray(value)).toBe(false);
+			const entry = value as ContextEntry;
+			expect(entry.source).toBe('function');
+			expect(entry.data).toEqual({ id: '1', name: 'Single Item' });
+			expect(entry.metadata?.label).toBe('Single Item');
+		});
+
+		it('should store multiple context entries as array', () => {
+			const entries = [
+				{ id: '1', name: 'First' },
+				{ id: '2', name: 'Second' },
+			];
+
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('multipleKey', entries, {
+					labelField: 'name',
+				});
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			const value = context.multipleKey;
+
+			// Should be stored as array
+			expect(Array.isArray(value)).toBe(true);
+			expect((value as ContextEntry[]).length).toBe(2);
+		});
+
+		it('should handle adding to single value context', () => {
+			// Start with a single value
+			act(() => {
+				useCedarStore.getState().putAdditionalContext(
+					'testKey',
+					{ id: '1', name: 'First' },
+					{
+						labelField: 'name',
+					}
+				);
+			});
+
+			let context = useCedarStore.getState().additionalContext;
+			expect(Array.isArray(context.testKey)).toBe(false);
+
+			// Add another entry
+			const newEntry: ContextEntry = {
+				id: 'second-entry',
+				source: 'manual',
+				data: { value: 'second' },
+				metadata: { label: 'Second Entry' },
+			};
+
+			act(() => {
+				useCedarStore.getState().addContextEntry('testKey', newEntry);
+			});
+
+			context = useCedarStore.getState().additionalContext;
+			// Should now be an array with both entries
+			expect(Array.isArray(context.testKey)).toBe(true);
+			expect((context.testKey as ContextEntry[]).length).toBe(2);
+		});
+
+		it('should handle removing from array to single value', () => {
+			// Start with multiple entries
+			const entries = [
+				{ id: '1', name: 'First' },
+				{ id: '2', name: 'Second' },
+			];
+
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('testKey', entries, {
+					labelField: 'name',
+				});
+			});
+
+			let context = useCedarStore.getState().additionalContext;
+			expect(Array.isArray(context.testKey)).toBe(true);
+			expect((context.testKey as ContextEntry[]).length).toBe(2);
+
+			// Remove one entry
+			act(() => {
+				const firstEntry = (context.testKey as ContextEntry[])[0];
+				useCedarStore.getState().removeContextEntry('testKey', firstEntry.id);
+			});
+
+			context = useCedarStore.getState().additionalContext;
+			// Should now be a single value
+			expect(Array.isArray(context.testKey)).toBe(false);
+			expect((context.testKey as ContextEntry).data).toEqual({
+				id: '2',
+				name: 'Second',
+			});
+		});
+
+		it('should not add duplicate context entries', () => {
+			const entry: ContextEntry = {
+				id: 'test-entry',
+				source: 'manual',
+				data: { value: 'test' },
+				metadata: { label: 'Test Entry' },
+			};
+
+			act(() => {
+				useCedarStore.getState().addContextEntry('testKey', entry);
+				useCedarStore.getState().addContextEntry('testKey', entry); // Duplicate
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.testKey).toHaveLength(1);
+		});
+
+		it('should remove context entry', () => {
+			const entry: ContextEntry = {
+				id: 'test-entry',
+				source: 'manual',
+				data: { value: 'test' },
+				metadata: { label: 'Test Entry' },
+			};
+
+			act(() => {
+				useCedarStore.getState().addContextEntry('testKey', entry);
+				useCedarStore.getState().removeContextEntry('testKey', 'test-entry');
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.testKey).toHaveLength(0);
+		});
+
+		it('should clear context by source', () => {
+			const entry1: ContextEntry = {
+				id: 'entry1',
+				source: 'mention',
+				data: { value: 'test1' },
+			};
+			const entry2: ContextEntry = {
+				id: 'entry2',
+				source: 'subscription',
+				data: { value: 'test2' },
+			};
+
+			act(() => {
+				useCedarStore.getState().addContextEntry('testKey', entry1);
+				useCedarStore.getState().addContextEntry('testKey', entry2);
+				useCedarStore.getState().clearContextBySource('mention');
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.testKey).toHaveLength(1);
+			expect(context.testKey[0].source).toBe('subscription');
+		});
+
+		it('should preserve single value structure when clearing by source', () => {
+			// Add a single subscription entry
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext(
+						'singleKey',
+						{ id: '1', name: 'Subscription Item' },
+						{ labelField: 'name' }
+					);
+			});
+
+			// Add a single mention entry to a different key
+			const mentionEntry: ContextEntry = {
+				id: 'mention1',
+				source: 'mention',
+				data: { value: 'mention' },
+			};
+			act(() => {
+				useCedarStore.getState().addContextEntry('mentionKey', mentionEntry);
+			});
+
+			// Clear mentions
+			act(() => {
+				useCedarStore.getState().clearContextBySource('mention');
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+
+			// singleKey should still be a single value (not converted to array)
+			expect(Array.isArray(context.singleKey)).toBe(false);
+			expect((context.singleKey as ContextEntry).source).toBe('function');
+
+			// mentionKey should be empty array
+			expect(Array.isArray(context.mentionKey)).toBe(true);
+			expect((context.mentionKey as ContextEntry[]).length).toBe(0);
+		});
+
+		it('should clear mentions', () => {
+			const mentionEntry: ContextEntry = {
+				id: 'mention1',
+				source: 'mention',
+				data: { value: 'test' },
+			};
+			const subscriptionEntry: ContextEntry = {
+				id: 'sub1',
+				source: 'subscription',
+				data: { value: 'test' },
+			};
+
+			act(() => {
+				useCedarStore.getState().addContextEntry('testKey', mentionEntry);
+				useCedarStore.getState().addContextEntry('testKey', subscriptionEntry);
+				useCedarStore.getState().clearMentions();
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.testKey).toHaveLength(1);
+			expect(context.testKey[0].source).toBe('subscription');
+		});
+	});
+
+	describe('updateAdditionalContext - empty array handling', () => {
+		it('should register empty arrays in additionalContext', () => {
+			const contextData = {
+				emptyArray: [],
+				nonEmptyArray: [{ id: 'item1', title: 'Item 1' }],
+			};
+
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext(contextData);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+
+			// Empty array should be registered
+			expect(context.emptyArray).toBeDefined();
+			expect(context.emptyArray).toHaveLength(0);
+			expect(Array.isArray(context.emptyArray)).toBe(true);
+
+			// Non-empty array should be preserved as array
+			expect(Array.isArray(context.nonEmptyArray)).toBe(true);
+			const entries = context.nonEmptyArray as ContextEntry[];
+			expect(entries.length).toBe(1);
+			expect(entries[0].source).toBe('subscription');
+		});
+
+		it('should preserve array structure in updateAdditionalContext', () => {
+			const contextData = {
+				singleItemArray: [{ id: 'item1', title: 'Single Item' }],
+				multipleItems: [
+					{ id: 'item1', title: 'Item 1' },
+					{ id: 'item2', title: 'Item 2' },
+				],
+			};
+
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext(contextData);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+
+			// Single item array should be preserved as array
+			expect(Array.isArray(context.singleItemArray)).toBe(true);
+			const singleArray = context.singleItemArray as ContextEntry[];
+			expect(singleArray.length).toBe(1);
+			const singleEntry = singleArray[0] as ContextEntry & { title?: string };
+			expect(singleEntry.id).toBe('item1');
+			expect(singleEntry.title).toBe('Single Item');
+			expect(singleEntry.source).toBe('subscription');
+
+			// Multiple items should be stored as array
+			expect(Array.isArray(context.multipleItems)).toBe(true);
+			expect((context.multipleItems as ContextEntry[]).length).toBe(2);
+		});
+
+		it('should preserve single-item arrays in updateAdditionalContext', () => {
+			// Test that [item] gets preserved as array
+			const contextData = {
+				preservedArray: [{ id: 'single', name: 'Preserved' }],
+			};
+
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext(contextData);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+
+			// Should be preserved as array since input was [item]
+			expect(Array.isArray(context.preservedArray)).toBe(true);
+			const entries = context.preservedArray as ContextEntry[];
+			expect(entries.length).toBe(1);
+			const entry = entries[0] as ContextEntry & { name?: string };
+			expect(entry.id).toBe('single');
+			expect(entry.name).toBe('Preserved');
+			expect(entry.source).toBe('subscription');
+		});
+
+		it('should handle multiple empty arrays', () => {
+			const contextData = {
+				emptyArray1: [],
+				emptyArray2: [],
+				emptyArray3: [],
+			};
+
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext(contextData);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+
+			expect(context.emptyArray1).toEqual([]);
+			expect(context.emptyArray2).toEqual([]);
+			expect(context.emptyArray3).toEqual([]);
+		});
+
+		it('should convert legacy format to context entries', () => {
+			const contextData = {
+				testItems: [
+					{ id: 'item1', title: 'Item 1', customData: 'test' },
+					{ id: 'item2', name: 'Item 2' },
+					{ label: 'Item 3' },
+				],
+				singleItem: [{ id: 'single', title: 'Single Item' }],
+			};
+
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext(contextData);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+
+			// Multiple items should be stored as array
+			expect(Array.isArray(context.testItems)).toBe(true);
+			expect((context.testItems as ContextEntry[]).length).toBe(3);
+
+			// Check first item - updateAdditionalContext spreads the item directly
+			expect((context.testItems as ContextEntry[])[0]).toEqual({
+				id: 'item1',
+				title: 'Item 1',
+				customData: 'test',
+				source: 'subscription',
+			});
+
+			// Check second item
+			expect((context.testItems as ContextEntry[])[1]).toEqual({
+				id: 'item2',
+				name: 'Item 2',
+				source: 'subscription',
+			});
+
+			// Check third item
+			expect((context.testItems as ContextEntry[])[2]).toEqual({
+				label: 'Item 3',
+				source: 'subscription',
+			});
+
+			// Single item array should be preserved as array
+			expect(Array.isArray(context.singleItem)).toBe(true);
+			const singleArray = context.singleItem as ContextEntry[];
+			expect(singleArray.length).toBe(1);
+			expect(singleArray[0]).toEqual({
+				id: 'single',
+				title: 'Single Item',
+				source: 'subscription',
+			});
+		});
+	});
+
+	describe('Mention provider management', () => {
+		const mockProvider: MentionProvider = {
+			id: 'test-provider',
+			trigger: '@',
+			label: 'Test Provider',
+			getItems: jest.fn().mockReturnValue([]),
+			toContextEntry: jest.fn().mockReturnValue({
+				id: 'test',
+				source: 'mention' as const,
+				data: {},
+			}),
+		};
+
+		it('should register mention provider', () => {
+			act(() => {
+				useCedarStore.getState().registerMentionProvider(mockProvider);
+			});
+
+			const providers = useCedarStore.getState().mentionProviders;
+			expect(providers.has('test-provider')).toBe(true);
+			expect(providers.get('test-provider')).toBe(mockProvider);
+		});
+
+		it('should unregister mention provider', () => {
+			act(() => {
+				useCedarStore.getState().registerMentionProvider(mockProvider);
+				useCedarStore.getState().unregisterMentionProvider('test-provider');
+			});
+
+			const providers = useCedarStore.getState().mentionProviders;
+			expect(providers.has('test-provider')).toBe(false);
+		});
+
+		it('should get providers by trigger', () => {
+			const provider1: MentionProvider = {
+				...mockProvider,
+				id: 'provider1',
+				trigger: '@',
+			};
+			const provider2: MentionProvider = {
+				...mockProvider,
+				id: 'provider2',
+				trigger: '#',
+			};
+			const provider3: MentionProvider = {
+				...mockProvider,
+				id: 'provider3',
+				trigger: '@',
+			};
+
+			act(() => {
+				useCedarStore.getState().registerMentionProvider(provider1);
+				useCedarStore.getState().registerMentionProvider(provider2);
+				useCedarStore.getState().registerMentionProvider(provider3);
+			});
+
+			const atProviders = useCedarStore
+				.getState()
+				.getMentionProvidersByTrigger('@');
+			const hashProviders = useCedarStore
+				.getState()
+				.getMentionProvidersByTrigger('#');
+
+			expect(atProviders).toHaveLength(2);
+			expect(atProviders.map((p) => p.id)).toContain('provider1');
+			expect(atProviders.map((p) => p.id)).toContain('provider3');
+
+			expect(hashProviders).toHaveLength(1);
+			expect(hashProviders[0].id).toBe('provider2');
+		});
+	});
+
+	describe('String conversion methods', () => {
+		it('should stringify editor content', () => {
+			const content: JSONContent = {
+				type: 'doc',
+				content: [
+					{ type: 'text', text: 'Hello ' },
+					{ type: 'mention', attrs: { label: 'world' } },
+					{ type: 'text', text: '!' },
+				],
+			};
+
+			act(() => {
+				useCedarStore.getState().setChatInputContent(content);
+			});
+
+			const stringified = useCedarStore.getState().stringifyEditor();
+			expect(stringified).toBe('Hello @world!');
+		});
+
+		it('should handle empty editor content', () => {
+			const stringified = useCedarStore.getState().stringifyEditor();
+			expect(stringified).toBe('');
+		});
+
+		it('should stringify additional context', () => {
+			const contextData = {
+				testItems: [{ id: 'item1', title: 'Item 1' }],
+			};
+
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext(contextData);
+			});
+
+			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			expect(stringified).toContain('testItems');
+			expect(JSON.parse(stringified)).toHaveProperty('testItems');
+		});
+
+		it('should stringify input context', () => {
+			const content: JSONContent = {
+				type: 'doc',
+				content: [{ type: 'text', text: 'Test input' }],
+			};
+			const contextData = {
+				testItems: [{ id: 'item1', title: 'Item 1' }],
+			};
+
+			act(() => {
+				useCedarStore.getState().setChatInputContent(content);
+				useCedarStore.getState().updateAdditionalContext(contextData);
+			});
+
+			const stringified = useCedarStore.getState().stringifyInputContext();
+			expect(stringified).toContain('User Text: Test input');
+			expect(stringified).toContain('Additional Context:');
+		});
+
+		it('should simplify context structure in stringifyAdditionalContext', () => {
+			const testData = [
+				{ id: '1', name: 'Item 1', value: 100 },
+				{ id: '2', name: 'Item 2', value: 200 },
+			];
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext('multipleItems', testData, {
+						labelField: 'name',
+					});
+			});
+
+			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			const parsed = JSON.parse(stringified);
+
+			// Should be an array since there are multiple items
+			expect(Array.isArray(parsed.multipleItems)).toBe(true);
+			expect(parsed.multipleItems).toHaveLength(2);
+
+			// Each item should have simplified structure with just data and source
+			expect(parsed.multipleItems[0]).toEqual({
+				data: { id: '1', name: 'Item 1', value: 100 },
+				source: 'function',
+			});
+			expect(parsed.multipleItems[1]).toEqual({
+				data: { id: '2', name: 'Item 2', value: 200 },
+				source: 'function',
+			});
+
+			// Should not have id or metadata fields
+			expect(parsed.multipleItems[0]).not.toHaveProperty('id');
+			expect(parsed.multipleItems[0]).not.toHaveProperty('metadata');
+		});
+
+		it('should extract single-item arrays in stringifyAdditionalContext', () => {
+			const singleItem = { id: '1', name: 'Single Item', value: 42 };
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext('singleItem', singleItem, {
+						labelField: 'name',
+					});
+			});
+
+			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			const parsed = JSON.parse(stringified);
+
+			// Should be a single object, not an array
+			expect(Array.isArray(parsed.singleItem)).toBe(false);
+			expect(parsed.singleItem).toEqual({
+				data: { id: '1', name: 'Single Item', value: 42 },
+				source: 'function',
+			});
+
+			// Should not have id or metadata fields
+			expect(parsed.singleItem).not.toHaveProperty('id');
+			expect(parsed.singleItem).not.toHaveProperty('metadata');
+		});
+
+		it('should handle mixed sources in stringifyAdditionalContext', () => {
+			// Add context via putAdditionalContext (function source)
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('functionItems', {
+					id: '1',
+					name: 'Function Item',
+				});
+			});
+
+			// Add context via updateAdditionalContext (subscription source)
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext({
+					subscriptionItems: [
+						{
+							data: { id: 'sub1', title: 'Subscription Item' },
+							source: 'subscription',
+						},
+					],
+				});
+			});
+
+			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			const parsed = JSON.parse(stringified);
+
+			// Function source should be simplified and extracted (single item)
+			expect(parsed.functionItems).toEqual({
+				data: { id: '1', name: 'Function Item' },
+				source: 'function',
+			});
+
+			// Subscription source (legacy format) should be simplified and extracted (single item)
+			// Note: updateAdditionalContext creates entries in legacy format without data wrapper
+			expect(parsed.subscriptionItems).toEqual({
+				data: {
+					id: 'sub1',
+					title: 'Subscription Item',
+				},
+				source: 'subscription',
+			});
+		});
+	});
+
+	describe('putAdditionalContext method', () => {
+		it('should add formatted context entries programmatically', () => {
+			const testData = [
+				{ id: '1', name: 'Item 1', value: 100 },
+				{ id: '2', name: 'Item 2', value: 200 },
+			];
+
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('testItems', testData, {
+					labelField: 'name',
+					color: '#FF0000',
+					icon: React.createElement('span', {}, '🔧'),
+				});
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.testItems).toHaveLength(2);
+			expect(context.testItems[0].data).toEqual(testData[0]);
+			expect(context.testItems[0].metadata?.label).toBe('Item 1');
+			expect(context.testItems[0].metadata?.color).toBe('#FF0000');
+			expect(context.testItems[1].data).toEqual(testData[1]);
+			expect(context.testItems[1].metadata?.label).toBe('Item 2');
+		});
+
+		it('should handle function labelField in putAdditionalContext', () => {
+			const testData = { id: 'single', name: 'Test', value: 42 };
+
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('singleItem', testData, {
+					labelField: (item: typeof testData) => `${item.name}: ${item.value}`,
+				});
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			// Single item should be stored as single value
+			expect(Array.isArray(context.singleItem)).toBe(false);
+			const entry = context.singleItem as ContextEntry;
+			expect(entry.metadata?.label).toBe('Test: 42');
+		});
+
+		it('should replace existing context when using same key', () => {
+			// First add some context (single item)
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext('replaceTest', { id: '1', title: 'First' });
+			});
+
+			let context = useCedarStore.getState().additionalContext;
+			// Should be stored as single value
+			expect(Array.isArray(context.replaceTest)).toBe(false);
+			const singleEntry = context.replaceTest as ContextEntry;
+			expect((singleEntry.data as { title: string }).title).toBe('First');
+
+			// Now replace it with new data (multiple items)
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('replaceTest', [
+					{ id: '2', title: 'Second' },
+					{ id: '3', title: 'Third' },
+				]);
+			});
+
+			context = useCedarStore.getState().additionalContext;
+			// Should now be an array
+			expect(Array.isArray(context.replaceTest)).toBe(true);
+			const arrayEntries = context.replaceTest as ContextEntry[];
+			expect(arrayEntries.length).toBe(2);
+			expect((arrayEntries[0].data as { title: string }).title).toBe('Second');
+			expect((arrayEntries[1].data as { title: string }).title).toBe('Third');
+		});
+
+		it('should handle null and undefined values', () => {
+			act(() => {
+				useCedarStore.getState().putAdditionalContext('nullTest', null);
+				useCedarStore
+					.getState()
+					.putAdditionalContext('undefinedTest', undefined);
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.nullTest).toEqual([]);
+			expect(context.undefinedTest).toEqual([]);
+		});
+
+		it('should set source as "function" for putAdditionalContext entries', () => {
+			const testData = [
+				{ id: '1', name: 'Item 1' },
+				{ id: '2', name: 'Item 2' },
+			];
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext('functionSourceTest', testData, {
+						labelField: 'name',
+					});
+			});
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.functionSourceTest).toHaveLength(2);
+			expect(context.functionSourceTest[0].source).toBe('function');
+			expect(context.functionSourceTest[1].source).toBe('function');
+		});
+	});
+
+	describe('useSubscribeStateToInputContext hook', () => {
+		it('should subscribe to state and update context', () => {
+			// Register a state first
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'testState',
+					value: [
+						{ id: '1', title: 'Item 1' },
+						{ id: '2', title: 'Item 2' },
+					],
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: unknown[]) => ({
+				items: state,
+			}));
+
+			renderHook(() => useSubscribeStateToInputContext('testState', mapFn));
+
+			expect(mapFn).toHaveBeenCalled();
+
+			// Check that context was updated - should be array since there are 2 items
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.items).toBeDefined();
+			expect(Array.isArray(context.items)).toBe(true);
+			expect((context.items as ContextEntry[]).length).toBe(2);
+		});
+
+		it('should store single mapped value as single context entry', () => {
+			// Register a state with a single item
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'singleItemState',
+					value: { id: '1', title: 'Single Item' },
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: { id: string; title: string }) => ({
+				selectedItem: state,
+			}));
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('singleItemState', mapFn)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			// Should be stored as single value, not array
+			expect(Array.isArray(context.selectedItem)).toBe(false);
+			const entry = context.selectedItem as ContextEntry;
+			expect(entry.source).toBe('subscription');
+			expect(entry.data).toEqual({ id: '1', title: 'Single Item' });
+		});
+
+		it('should handle string labelField option correctly', () => {
+			// Register a state with items that have a 'name' field
+			const testData = [
+				{ value: 0, name: 'temperature' },
+				{ value: 0.9, name: 'opacity' },
+			];
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'parametersState',
+					value: testData,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: typeof testData) => ({
+				parameters: state,
+			}));
+
+			const options = {
+				labelField: 'name',
+				icon: React.createElement('span', {}, '👀'),
+				color: '#2ECC40',
+				order: 1,
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('parametersState', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.parameters).toHaveLength(2);
+
+			// Check first parameter
+			const firstParam = context.parameters[0];
+			expect(firstParam.id).toBe('parameters-0');
+			expect(firstParam.source).toBe('subscription');
+			expect(firstParam.data).toEqual({ value: 0, name: 'temperature' });
+			expect(firstParam.metadata?.label).toBe('temperature');
+			expect(firstParam.metadata?.color).toBe('#2ECC40');
+			expect(firstParam.metadata?.order).toBe(1);
+
+			// Check second parameter
+			const secondParam = context.parameters[1];
+			expect(secondParam.id).toBe('parameters-1');
+			expect(secondParam.data).toEqual({ value: 0.9, name: 'opacity' });
+			expect(secondParam.metadata?.label).toBe('opacity');
+		});
+
+		it('should handle function labelField option correctly', () => {
+			// Register a state with items
+			const testData = [
+				{ value: 0, name: 'temperature' },
+				{ value: 0.9, name: 'opacity' },
+			];
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'functionalLabelState',
+					value: testData,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: typeof testData) => ({
+				parameters: state,
+			}));
+
+			// Use a function to format the label
+			const labelFunction = jest.fn(
+				(item: (typeof testData)[0]) => `${item.name} (${item.value})`
+			);
+
+			const options = {
+				labelField: labelFunction,
+				icon: React.createElement('span', {}, '⚙️'),
+				color: '#FF851B',
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('functionalLabelState', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.parameters).toHaveLength(2);
+
+			// Verify the label function was called for each item
+			expect(labelFunction).toHaveBeenCalledTimes(2);
+			expect(labelFunction).toHaveBeenCalledWith({
+				value: 0,
+				name: 'temperature',
+			});
+			expect(labelFunction).toHaveBeenCalledWith({
+				value: 0.9,
+				name: 'opacity',
+			});
+
+			// Check formatted labels
+			expect(context.parameters[0].metadata?.label).toBe('temperature (0)');
+			expect(context.parameters[1].metadata?.label).toBe('opacity (0.9)');
+
+			// Data should remain unchanged
+			expect(context.parameters[0].data).toEqual({
+				value: 0,
+				name: 'temperature',
+			});
+			expect(context.parameters[1].data).toEqual({
+				value: 0.9,
+				name: 'opacity',
+			});
+		});
+
+		it('should handle labelField with nested object paths', () => {
+			const testData = [
+				{ id: '1', details: { displayName: 'First Item' } },
+				{ id: '2', details: { displayName: 'Second Item' } },
+			];
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'nestedState',
+					value: testData,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: typeof testData) => ({
+				nestedItems: state,
+			}));
+
+			// Use a function to extract nested field
+			const options = {
+				labelField: (item: (typeof testData)[0]) => item.details.displayName,
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('nestedState', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.nestedItems[0].metadata?.label).toBe('First Item');
+			expect(context.nestedItems[1].metadata?.label).toBe('Second Item');
+		});
+
+		it('should handle single value (non-array) in mapFn result', () => {
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'singleValueState',
+					value: { id: 'single', name: 'Single Item' },
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: { id: string; name: string }) => ({
+				selectedItem: state, // Single value, not an array
+			}));
+
+			const options = {
+				labelField: 'name',
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('singleValueState', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			// Single value should be stored as single value
+			expect(Array.isArray(context.selectedItem)).toBe(false);
+			const entry = context.selectedItem as ContextEntry;
+			expect(entry.data).toEqual({
+				id: 'single',
+				name: 'Single Item',
+			});
+			expect(entry.metadata?.label).toBe('Single Item');
+		});
+
+		it('should use fallback label when labelField is not specified', () => {
+			const testData = [
+				{
+					id: '1',
+					name: 'Item Name',
+					title: 'Item Title',
+					label: 'Item Label',
+				},
+				{ id: '2', title: 'Only Title' },
+				{ id: '3', label: 'Only Label' },
+				{ id: '4' }, // Only ID
+			];
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'fallbackState',
+					value: testData,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: typeof testData) => ({
+				items: state,
+			}));
+
+			// No labelField specified - should use fallback logic
+			renderHook(() => useSubscribeStateToInputContext('fallbackState', mapFn));
+
+			const context = useCedarStore.getState().additionalContext;
+
+			// Should prefer title > label > name > id
+			expect(context.items[0].metadata?.label).toBe('Item Title');
+			expect(context.items[1].metadata?.label).toBe('Only Title');
+			expect(context.items[2].metadata?.label).toBe('Only Label');
+			expect(context.items[3].metadata?.label).toBe('4');
+		});
+
+		it('should preserve original data structure without modification', () => {
+			const complexData = [
+				{
+					id: '1',
+					name: 'Complex Item',
+					nested: { deep: { value: 'preserved' } },
+					array: [1, 2, 3],
+					metadata: { original: 'metadata' }, // This should not interfere
+				},
+			];
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'complexState',
+					value: complexData,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: typeof complexData) => ({
+				complex: state,
+			}));
+
+			const options = {
+				labelField: 'name',
+				icon: React.createElement('span', {}, '📦'),
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('complexState', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			// complex should be an array since mapFn returns an array
+			expect(Array.isArray(context.complex)).toBe(true);
+			const items = context.complex as ContextEntry[];
+			expect(items.length).toBe(1);
+			const item = items[0];
+
+			// Data should be exactly the original object
+			expect(item.data).toEqual(complexData[0]);
+			expect((item.data as (typeof complexData)[0]).nested.deep.value).toBe(
+				'preserved'
+			);
+			expect((item.data as (typeof complexData)[0]).array).toEqual([1, 2, 3]);
+			expect((item.data as (typeof complexData)[0]).metadata).toEqual({
+				original: 'metadata',
+			});
+
+			// Context metadata should be separate
+			expect(item.metadata?.label).toBe('Complex Item');
+			expect(item.metadata?.icon).toBeDefined();
+		});
+
+		it('should handle empty array states', () => {
+			// Register an empty array state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'emptyState',
+					value: [],
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: unknown[]) => ({
+				emptyItems: state,
+			}));
+
+			renderHook(() => useSubscribeStateToInputContext('emptyState', mapFn));
+
+			expect(mapFn).toHaveBeenCalledWith([]);
+
+			// Check that empty array context was registered
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.emptyItems).toBeDefined();
+			expect(context.emptyItems).toEqual([]);
+			expect(Array.isArray(context.emptyItems)).toBe(true);
+		});
+
+		it('should handle null and undefined values in mapped result as empty arrays', () => {
+			// Register a state with some data
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'testState',
+					value: { someData: 'test' },
+					setValue: jest.fn(),
+				});
+			});
+
+			// Map function that returns null and undefined values
+			const mapFn = jest.fn(() => ({
+				nullValue: null,
+				undefinedValue: undefined,
+				validArray: [{ id: '1', title: 'Valid Item' }],
+				validSingle: { id: '2', title: 'Single Item' },
+			}));
+
+			renderHook(() => useSubscribeStateToInputContext('testState', mapFn));
+
+			expect(mapFn).toHaveBeenCalledWith({ someData: 'test' });
+
+			// Check that null and undefined values become empty arrays
+			const context = useCedarStore.getState().additionalContext;
+
+			// Null should become empty array
+			expect(context.nullValue).toBeDefined();
+			expect(context.nullValue).toEqual([]);
+			expect(Array.isArray(context.nullValue)).toBe(true);
+
+			// Undefined should become empty array
+			expect(context.undefinedValue).toBeDefined();
+			expect(context.undefinedValue).toEqual([]);
+			expect(Array.isArray(context.undefinedValue)).toBe(true);
+
+			// Valid array should remain as array since mapFn returned an array
+			expect(Array.isArray(context.validArray)).toBe(true);
+			const validArrayEntries = context.validArray as ContextEntry[];
+			expect(validArrayEntries.length).toBe(1);
+			expect(validArrayEntries[0].source).toBe('subscription');
+
+			// Valid single value should be stored as single value
+			expect(Array.isArray(context.validSingle)).toBe(false);
+			const validSingleEntry = context.validSingle as ContextEntry;
+			expect(validSingleEntry.source).toBe('subscription');
+		});
+
+		it('should handle options with metadata', () => {
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'stateWithOptions',
+					value: [{ id: '1', name: 'Test Item' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: unknown[]) => ({
+				itemsWithOptions: state,
+			}));
+
+			const options = {
+				icon: React.createElement('span', {}, '🔥'),
+				color: '#ff0000',
+				labelField: 'name' as const,
+				order: 1,
+				showInChat: false,
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('stateWithOptions', mapFn, options)
+			);
+
+			const context = useCedarStore.getState().additionalContext;
+			// itemsWithOptions should be an array since mapFn returns an array
+			expect(Array.isArray(context.itemsWithOptions)).toBe(true);
+
+			const items = context.itemsWithOptions as ContextEntry[];
+			expect(items.length).toBe(1);
+			const item = items[0];
+			expect(item.metadata?.label).toBe('Test Item');
+			expect(item.metadata?.color).toBe('#ff0000');
+			expect(item.metadata?.order).toBe(1);
+			expect(item.metadata?.showInChat).toBe(false);
+			expect(item.metadata?.icon).toBeDefined();
+		});
+
+		it('should handle state updates correctly', () => {
+			// Initial state
+			const initialData = [{ id: '1', name: 'Initial' }];
+			const updatedData = [
+				{ id: '1', name: 'Updated' },
+				{ id: '2', name: 'New Item' },
+			];
+
+			const setValue = jest.fn();
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'updatingState',
+					value: initialData,
+					setValue,
+				});
+			});
+
+			const mapFn = jest.fn((state: Array<{ id: string; name: string }>) => ({
+				items: state,
+			}));
+
+			const options = {
+				labelField: 'name',
+			};
+
+			const { rerender } = renderHook(() =>
+				useSubscribeStateToInputContext('updatingState', mapFn, options)
+			);
+
+			// Check initial context
+			let context = useCedarStore.getState().additionalContext;
+			// items should be an array since mapFn returns an array
+			expect(Array.isArray(context.items)).toBe(true);
+			const initialItems = context.items as ContextEntry[];
+			expect(initialItems.length).toBe(1);
+			expect(initialItems[0].metadata?.label).toBe('Initial');
+
+			// Update the state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'updatingState',
+					value: updatedData,
+					setValue,
+				});
+			});
+
+			// Force re-render to trigger useEffect
+			rerender();
+
+			// Check updated context - now should be array with 2 items
+			context = useCedarStore.getState().additionalContext;
+			expect(Array.isArray(context.items)).toBe(true);
+			expect((context.items as ContextEntry[]).length).toBe(2);
+			expect((context.items as ContextEntry[])[0].metadata?.label).toBe(
+				'Updated'
+			);
+			expect((context.items as ContextEntry[])[1].metadata?.label).toBe(
+				'New Item'
+			);
+		});
+
+		it('should handle null state value as empty arrays', () => {
+			// Register a state with null value
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'nullState',
+					value: null,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: null) => ({
+				selectedNodes: state,
+			}));
+
+			renderHook(() => useSubscribeStateToInputContext('nullState', mapFn));
+
+			expect(mapFn).toHaveBeenCalledWith(null);
+
+			// Check that null state results in empty array context
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.selectedNodes).toBeDefined();
+			expect(context.selectedNodes).toEqual([]);
+			expect(Array.isArray(context.selectedNodes)).toBe(true);
+		});
+
+		it('should handle undefined state value as empty arrays', () => {
+			// Register a state with undefined value
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'undefinedState',
+					value: undefined,
+					setValue: jest.fn(),
+				});
+			});
+
+			const mapFn = jest.fn((state: undefined) => ({
+				selectedItems: state,
+			}));
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('undefinedState', mapFn)
+			);
+
+			expect(mapFn).toHaveBeenCalledWith(undefined);
+
+			// Check that undefined state results in empty array context
+			const context = useCedarStore.getState().additionalContext;
+			expect(context.selectedItems).toBeDefined();
+			expect(context.selectedItems).toEqual([]);
+			expect(Array.isArray(context.selectedItems)).toBe(true);
+		});
+
+		it('should warn when state is not found', () => {
+			const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+			const mapFn = jest.fn();
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('nonExistentState', mapFn)
+			);
+
+			expect(consoleSpy).toHaveBeenCalledWith(
+				expect.stringContaining(
+					'State with key "nonExistentState" was not found'
+				)
+			);
+
+			consoleSpy.mockRestore();
+		});
+	});
+
+	describe('useRenderAdditionalContext hook', () => {
+		it('should render context entries with custom renderers', () => {
+			// Setup context
+			const contextData = {
+				testItems: [{ id: 'item1', title: 'Item 1' }],
+			};
+
+			act(() => {
+				useCedarStore.getState().updateAdditionalContext(contextData);
+			});
+
+			const renderers = {
+				testItems: jest.fn((entry: ContextEntry) =>
+					React.createElement('div', { key: entry.id }, entry.metadata?.label)
+				),
+			};
+
+			const { result } = renderHook(() =>
+				useRenderAdditionalContext(renderers)
+			);
+
+			expect(renderers.testItems).toHaveBeenCalled();
+			expect(result.current).toHaveLength(1);
+		});
+
+		it('should handle empty context gracefully', () => {
+			const renderers = {
+				nonExistent: jest.fn(),
+			};
+
+			const { result } = renderHook(() =>
+				useRenderAdditionalContext(renderers)
+			);
+
+			expect(renderers.nonExistent).not.toHaveBeenCalled();
+			expect(result.current).toHaveLength(0);
+		});
+	});
+});

@@ -1,4 +1,4 @@
-import { useVoice, VoiceIndicator, cn } from 'cedar-os';
+import { useVoice, cn } from 'cedar-os';
 
 import { CedarEditorContent as EditorContent } from 'cedar-os';
 import { Code, Image, Mic, SendHorizonal } from 'lucide-react';
@@ -9,6 +9,7 @@ import './ChatInput.css';
 import { ContextBadgeRow } from '@/chatInput/ContextBadgeRow';
 import { useCedarEditor } from 'cedar-os';
 import Container3DButton from '@/containers/Container3DButton';
+import { VoiceIndicator } from '@/voice/VoiceIndicator';
 
 // ChatContainer component with position options
 export type ChatContainerPosition = 'bottom-center' | 'embedded' | 'custom';

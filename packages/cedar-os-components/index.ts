@@ -51,8 +51,26 @@ export * from './structural/index';
 // Text
 export { ShimmerText } from './text/ShimmerText';
 export { TypewriterText } from './text/TypewriterText';
+export { PhantomText } from './text/PhantomText';
 
 // UI
 export { KeyboardShortcut } from './ui/KeyboardShortcut';
 // export { default as Slider3D } from './ui/Slider3D'; // Temporarily disabled due to motion type conflicts
 export { Button } from './ui/button';
+
+// Spells
+export { default as QuestioningSpell } from './spells/QuestioningSpell';
+export { default as RadialMenuSpell } from './spells/RadialMenuSpell';
+export { default as SliderSpell } from './spells/SliderSpell';
+export type {
+	RangeMetadata as SliderRangeMetadata,
+	SliderConfig,
+	SliderSpellProps,
+} from './spells/SliderSpell';
+export { default as RangeSliderSpell } from './spells/RangeSliderSpell';
+export type {
+	RangeOption,
+	RangeSliderConfig,
+	RangeSliderSpellProps,
+} from './spells/RangeSliderSpell';
+export { default as TooltipMenuSpell } from './spells/TooltipMenuSpell';

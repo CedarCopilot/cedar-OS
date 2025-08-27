@@ -9,9 +9,7 @@
 				"floating-container",
 				"chat-input",
 				"container-3d",
-				"container-3d-button",
-				"caption-messages",
-				"keyboard-shortcut"
+				"caption-messages"
 			],
 			"files": ["CedarCaptionChat.tsx"],
 			"meta": {
@@ -59,13 +57,31 @@
 			}
 		},
 		{
+			"name": "embedded-cedar-chat",
+			"type": "chatComponents",
+			"dependencies": ["react", "lucide-react", "motion"],
+			"registryDependencies": [
+				"cedar-os",
+				"chat-input",
+				"chat-bubbles",
+				"container-3d"
+			],
+			"files": ["EmbeddedCedarChat.tsx"],
+			"meta": {
+				"importName": "EmbeddedCedarChat",
+				"displayName": "Embedded Cedar Chat",
+				"description": "Embeddable chat component with customizable header and branding"
+			}
+		},
+		{
 			"name": "chat-input",
 			"type": "chatInput",
 			"dependencies": ["react", "lucide-react", "motion"],
 			"registryDependencies": [
 				"cedar-os",
 				"context-badge-row",
-				"container-3d-button"
+				"container-3d-button",
+				"voice-indicator"
 			],
 			"files": ["ChatInput.tsx", "ChatInput.css", "index.ts"],
 			"meta": {
@@ -396,6 +412,18 @@
 			}
 		},
 		{
+			"name": "phantom-text",
+			"type": "text",
+			"dependencies": ["react"],
+			"registryDependencies": ["cedar-os"],
+			"files": ["PhantomText.tsx"],
+			"meta": {
+				"importName": "PhantomText",
+				"displayName": "Phantom Text",
+				"description": "Placeholder text generator with specified word count"
+			}
+		},
+		{
 			"name": "keyboard-shortcut",
 			"type": "ui",
 			"dependencies": ["react"],
@@ -473,8 +501,8 @@
 		{
 			"name": "questioning-spell",
 			"type": "spells",
-			"dependencies": ["react", "lucide-react", "motion"],
-			"registryDependencies": ["cedar-os", "floating-chat-input"],
+			"dependencies": ["react", "lucide-react", "motion", "motion-plus-react"],
+			"registryDependencies": ["cedar-os"],
 			"files": ["QuestioningSpell.tsx"],
 			"meta": {
 				"importName": "QuestioningSpell",
@@ -495,6 +523,30 @@
 			}
 		},
 		{
+			"name": "slider-spell",
+			"type": "spells",
+			"dependencies": ["react", "lucide-react", "motion"],
+			"registryDependencies": ["cedar-os", "container-3d"],
+			"files": ["SliderSpell.tsx"],
+			"meta": {
+				"importName": "SliderSpell",
+				"displayName": "Slider Spell",
+				"description": "Interactive slider spell component"
+			}
+		},
+		{
+			"name": "range-slider-spell",
+			"type": "spells",
+			"dependencies": ["react", "lucide-react", "motion"],
+			"registryDependencies": ["cedar-os", "container-3d"],
+			"files": ["RangeSliderSpell.tsx"],
+			"meta": {
+				"importName": "RangeSliderSpell",
+				"displayName": "Range Slider Spell",
+				"description": "Range slider spell with customizable options"
+			}
+		},
+		{
 			"name": "tooltip-menu-spell",
 			"type": "spells",
 			"dependencies": ["react", "lucide-react", "motion"],
@@ -508,6 +560,18 @@
 				"importName": "TooltipMenuSpell",
 				"displayName": "Tooltip Menu Spell",
 				"description": "Tooltip menu spell for contextual actions"
+			}
+		},
+		{
+			"name": "voice-indicator",
+			"type": "voice",
+			"dependencies": ["react", "motion", "lucide-react"],
+			"registryDependencies": ["cedar-os"],
+			"files": ["VoiceIndicator.tsx"],
+			"meta": {
+				"importName": "VoiceIndicator",
+				"displayName": "Voice Indicator",
+				"description": "Visual indicator for voice states (listening, speaking, errors)"
 			}
 		}
 	]

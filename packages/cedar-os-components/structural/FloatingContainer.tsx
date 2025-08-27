@@ -49,14 +49,14 @@ export const FloatingContainer: React.FC<FloatingContainerProps> = ({
 		// For bottom-center, use ChatInputContainer defaults
 		if (effectivePosition === 'bottom-center') {
 			return {
-				width: initialWidth || Math.min(window.innerWidth - 32, 768), // max-w-3xl equivalent with padding
-				height: initialHeight || 'auto', // Let content determine height
+				width: initialWidth || 600, // Use static fallback for SSR
+				height: initialHeight || 'auto',
 			};
 		}
 
 		return {
-			width: initialWidth || window.innerWidth * 0.3,
-			height: initialHeight || window.innerHeight * 0.6,
+			width: initialWidth || 400, // Use static fallback for SSR
+			height: initialHeight || 500, // Use static fallback for SSR
 		};
 	};
 
@@ -68,27 +68,78 @@ export const FloatingContainer: React.FC<FloatingContainerProps> = ({
 		typeof defaults.height === 'number' ? defaults.height : 500
 	);
 
-	// Calculate max dimensions based on position
-	const getMaxDimensions = () => {
-		if (typeof window === 'undefined') {
-			return { maxWidth: 800, maxHeight: 600 };
-		}
+	// Update panel dimensions after hydration and when dimensions prop changes
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
 
+		// Calculate client-side dimensions after hydration
+		const getClientDimensions = () => {
+			if (effectivePosition === 'bottom-center') {
+				return {
+					width: initialWidth || Math.min(window.innerWidth - 32, 768),
+					height: initialHeight || 'auto',
+				};
+			}
+
+			return {
+				width: initialWidth || window.innerWidth * 0.3,
+				height: initialHeight || window.innerHeight * 0.6,
+			};
+		};
+
+		const clientDefaults = getClientDimensions();
+		if (typeof clientDefaults.width === 'number') {
+			setPanelWidth(clientDefaults.width);
+		}
+		if (typeof clientDefaults.height === 'number') {
+			setPanelHeight(clientDefaults.height);
+		}
+	}, [initialWidth, initialHeight, effectivePosition]);
+
+	// Calculate max dimensions based on position - use static fallbacks for SSR
+	const getMaxDimensions = () => {
 		if (effectivePosition === 'bottom-center') {
 			return {
-				maxWidth: maxWidth || Math.min(window.innerWidth - 32, 768), // max-w-3xl with padding
-				maxHeight: maxHeight || window.innerHeight * 0.8,
+				maxWidth: maxWidth || 768, // Static fallback for SSR
+				maxHeight: maxHeight || 600, // Static fallback for SSR
 			};
 		}
 
 		return {
-			maxWidth: maxWidth || window.innerWidth * 0.6,
-			maxHeight: maxHeight || window.innerHeight * 0.8,
+			maxWidth: maxWidth || 800, // Static fallback for SSR
+			maxHeight: maxHeight || 600, // Static fallback for SSR
 		};
 	};
 
-	const { maxWidth: calculatedMaxWidth, maxHeight: calculatedMaxHeight } =
-		getMaxDimensions();
+	const [calculatedMaxWidth, setCalculatedMaxWidth] = useState(
+		() => getMaxDimensions().maxWidth
+	);
+	const [calculatedMaxHeight, setCalculatedMaxHeight] = useState(
+		() => getMaxDimensions().maxHeight
+	);
+
+	// Update max dimensions after hydration
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
+
+		const getClientMaxDimensions = () => {
+			if (effectivePosition === 'bottom-center') {
+				return {
+					maxWidth: maxWidth || Math.min(window.innerWidth - 32, 768),
+					maxHeight: maxHeight || window.innerHeight * 0.8,
+				};
+			}
+
+			return {
+				maxWidth: maxWidth || window.innerWidth * 0.6,
+				maxHeight: maxHeight || window.innerHeight * 0.8,
+			};
+		};
+
+		const clientMaxDimensions = getClientMaxDimensions();
+		setCalculatedMaxWidth(clientMaxDimensions.maxWidth);
+		setCalculatedMaxHeight(clientMaxDimensions.maxHeight);
+	}, [effectivePosition, maxWidth, maxHeight]);
 
 	// Resize state
 	const [isResizing, setIsResizing] = useState<
@@ -260,7 +311,7 @@ export const FloatingContainer: React.FC<FloatingContainerProps> = ({
 	return (
 		<div
 			className={`${positionClasses} z-[9999] ${
-				effectivePosition === 'bottom-center' ? 'w-full max-w-3xl' : ''
+				effectivePosition === 'bottom-center' ? 'w-2xl max-w-3xl' : ''
 			} ${className}`}
 			style={containerStyle}>
 			<motion.div

@@ -8,9 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GlassyPaneContainer from '@/containers/GlassyPaneContainer';
 import { useCedarStore } from '@/store/CedarStore';
 import { useEffect, useState } from 'react';
-import ChatBubbles from '@/chatMessages/ChatBubbles';
-import { ChatInput } from '@/chatInput/ChatInput';
+
 import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
+import { EmbeddedCedarChat } from '@/chatComponents/EmbeddedCedarChat';
 import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 
 interface SliderControlProps {
@@ -216,16 +216,13 @@ export function ChatSection({
 								{/* Chat Column */}
 								<div className='space-y-4'>
 									<h4 className='font-semibold text-sm'>Live Chat Interface</h4>
-									<div className='h-96 border rounded-lg relative flex flex-col '>
-										{/* Messages Display */}
-										<div className='flex-1 overflow-hidden'>
-											<ChatBubbles maxHeight='100%' />
-										</div>
-
-										{/* Chat Input */}
-										<div className='border-t p-4'>
-											<ChatInput />
-										</div>
+									<div className='h-96 border rounded-lg relative'>
+										<EmbeddedCedarChat
+											title='Embedded Chat'
+											showHeader={true}
+											showCloseButton={false}
+											stream={true}
+										/>
 									</div>
 								</div>
 							</div>

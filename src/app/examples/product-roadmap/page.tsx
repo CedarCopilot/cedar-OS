@@ -50,6 +50,8 @@ import {
 	useSubscribeStateToInputContext,
 	type CedarStore,
 } from 'cedar-os';
+import { isSupabaseAvailable } from '@/app/examples/product-roadmap/supabase/client';
+import { z } from 'zod';
 import {
 	ArrowRight,
 	Box,
@@ -135,13 +137,27 @@ function FlowCanvas() {
 			addNode: {
 				name: 'addNode',
 				description: 'Add a new node to the roadmap',
-				parameters: [
-					{
-						name: 'node',
-						type: 'Node<FeatureNodeData>',
-						description: 'The node to add',
-					},
-				],
+				schema: z.object({
+					node: z.object({
+						id: z.string().optional(),
+						data: z.object({
+							title: z.string().describe('Feature title'),
+							description: z.string().describe('Detailed feature description'),
+							status: z
+								.enum(['done', 'planned', 'backlog', 'in progress'])
+								.describe('Current development status'),
+							nodeType: z
+								.literal('feature')
+								.default('feature')
+								.describe('Type of node'),
+							upvotes: z.number().default(0).describe('Number of upvotes'),
+							comments: z
+								.array(z.any())
+								.default([])
+								.describe('Array of comments'),
+						}),
+					}),
+				}),
 				execute: (currentNodes, setValue, node) => {
 					const nodes = currentNodes as Node<FeatureNodeData>[];
 					const nodeData = node as Node<FeatureNodeData>;
@@ -167,13 +183,9 @@ function FlowCanvas() {
 			removeNode: {
 				name: 'removeNode',
 				description: 'Remove a node from the roadmap',
-				parameters: [
-					{
-						name: 'id',
-						type: 'string',
-						description: 'The ID of the node to remove',
-					},
-				],
+				schema: z.object({
+					id: z.string().describe('The ID of the node to remove'),
+				}),
 				execute: async (currentNodes, setValue, id) => {
 					const nodeId = id as string;
 					const nodes = currentNodes as Node<FeatureNodeData>[];
@@ -184,13 +196,27 @@ function FlowCanvas() {
 			changeNode: {
 				name: 'changeNode',
 				description: 'Update an existing node in the roadmap',
-				parameters: [
-					{
-						name: 'newNode',
-						type: 'Node<FeatureNodeData>',
-						description: 'The updated node data',
-					},
-				],
+				schema: z.object({
+					newNode: z.object({
+						id: z.string().describe('The ID of the node to update'),
+						data: z.object({
+							title: z.string().describe('Updated feature title'),
+							description: z.string().describe('Updated feature description'),
+							status: z
+								.enum(['done', 'planned', 'backlog', 'in progress'])
+								.describe('Updated development status'),
+							nodeType: z
+								.literal('feature')
+								.default('feature')
+								.describe('Type of node'),
+							upvotes: z.number().default(0).describe('Number of upvotes'),
+							comments: z
+								.array(z.any())
+								.default([])
+								.describe('Array of comments'),
+						}),
+					}),
+				}),
 				execute: (currentNodes, setValue, newNode) => {
 					const nodes = currentNodes as Node<FeatureNodeData>[];
 					const updatedNode = newNode as Node<FeatureNodeData>;
@@ -435,7 +461,7 @@ function FlowCanvas() {
 							onInvoke: onDirectionChange,
 						},
 						{
-							title: 'Delete',
+							title: 'Delete Edge',
 							icon: '🗑️',
 							onInvoke: onDeleteEdge,
 						},
@@ -493,7 +519,12 @@ function SelectedNodesPanel() {
 
 	return (
 		<div className='absolute right-4 top-4 rounded-lg p-3 shadow-md backdrop-blur'>
-			<h4 className='mb-2 text-sm font-semibold'>Selected Nodes</h4>
+			<div className='flex items-center justify-between mb-2'>
+				<h4 className='text-sm font-semibold'>Selected Nodes</h4>
+				<div className='text-xs text-gray-500 dark:text-gray-400 px-2 py-1 rounded bg-gray-100 dark:bg-gray-800'>
+					{isSupabaseAvailable ? '🗄️ Supabase' : '💾 localStorage'}
+				</div>
+			</div>
 			{selected.length ? (
 				<ul className='space-y-1 text-xs'>
 					{selected.map((n) => (

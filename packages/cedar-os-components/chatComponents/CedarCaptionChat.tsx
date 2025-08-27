@@ -2,7 +2,6 @@ import React, { useCallback } from 'react';
 import { FloatingContainer } from '@/structural/FloatingContainer';
 import { ChatInput } from '@/chatInput/ChatInput';
 import Container3D from '@/containers/Container3D';
-import Container3DButton from '@/containers/Container3DButton';
 import CaptionMessages from '@/chatMessages/CaptionMessages';
 import { KeyboardShortcut } from '@/ui/KeyboardShortcut';
 import {
@@ -15,6 +14,7 @@ import {
 	Undo,
 	Redo,
 } from 'lucide-react';
+import Container3DButton from 'cedar-os-components/containers/Container3DButton';
 
 interface CedarCaptionChatProps {
 	dimensions?: {

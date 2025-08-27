@@ -9,7 +9,7 @@ Cedar's `useSubscribeStateToInputContext` function allows you to automatically m
 
 ## useSubscribeStateToInputContext Overview
 
-The `useSubscribeStateToInputContext` function subscribes to local state changes and automatically updates the agent's input context whenever the state changes. This means your AI agent always has access to the most up-to-date information from your application.
+The `useSubscribeStateToInputContext` function subscribes to local state changes and automatically updates the agent's input context whenever the state changes. This means your AI agent always has access to the most up-to-date information from your application, including any Zod schemas defined for the state.
 
 ### Function Signature
 
@@ -368,34 +368,208 @@ When no `labelField` is specified, the function looks for labels in this order:
 4. `id` field
 5. String representation of the value
 
-## How It Works Automatically
+When using `useSubscribeInputContext`, entries are automatically marked with `source: 'subscription'`.
 
-When you use `useSubscribeInputContext`, here's what happens automatically:
+## Output Behavior and Structure
 
-1. **State Monitoring**: The function uses React's `useEffect` to monitor changes to your `localState`
-2. **Context Mapping**: When state changes, your `mapFn` transforms the state into context entries
-3. **Store Update**: The mapped context is automatically added to Cedar's internal store
-4. **Agent Access**: When the user sends a message, the agent receives this context along with the message
+### What Gets Sent to the Agent
 
-### Context Structure
+When the agent receives context from `useSubscribeStateToInputContext`, it gets a simplified structure containing only the essential data:
 
-The context entries follow this structure:
-
-```typescript
-interface ContextEntry {
-	id: string;
-	source: 'mention' | 'subscription' | 'manual';
-	data: any;
-	metadata?: {
-		label?: string;
-		icon?: ReactNode;
-		color?: string;
-		[key: string]: any;
-	};
+```json
+{
+	"contextKey": {
+		"source": "subscription",
+		"data": {
+			/* your actual data */
+		}
+	}
 }
 ```
 
-When using `useSubscribeInputContext`, entries are automatically marked with `source: 'subscription'`.
+<Info>
+	The agent only receives the `source` and `data` fields. Visual metadata like
+	`icon`, `color`, and `label` are used only for UI display and are not sent to
+	the agent.
+</Info>
+
+### Array Behavior
+
+The output structure depends on how you pass data to `useSubscribeStateToInputContext`:
+
+<Tabs>
+<Tab title="Single Value → Single Entry">
+When your `mapFn` returns a single non-array value, it's stored as a single context entry:
+
+```tsx
+// Input: Single object
+useSubscribeStateToInputContext('user', (userData) => ({
+  currentUser: userData, // Single object
+}));
+
+// Agent receives:
+{
+  "currentUser": {
+    "source": "subscription",
+    "data": { "id": "123", "name": "John Doe" }
+  }
+}
+```
+
+</Tab>
+
+<Tab title="Array → Array of Entries">
+When your `mapFn` returns an array, it's preserved as an array of context entries:
+
+```tsx
+// Input: Array
+useSubscribeStateToInputContext('todos', (todoList) => ({
+  todos: todoList, // Array of todos
+}));
+
+// Agent receives:
+{
+  "todos": [
+    { "source": "subscription", "data": { "id": 1, "text": "Buy groceries" }},
+    { "source": "subscription", "data": { "id": 2, "text": "Walk dog" }}
+  ]
+}
+```
+
+</Tab>
+
+<Tab title="Single-Item Array → Array">
+Even single-item arrays are preserved as arrays:
+
+```tsx
+// Input: Array with one item
+useSubscribeStateToInputContext('selected', (selection) => ({
+  selectedItems: [selection[0]], // Single-item array
+}));
+
+// Agent receives:
+{
+  "selectedItems": [
+    { "source": "subscription", "data": { "id": "item1", "title": "Selected Item" }}
+  ]
+}
+```
+
+</Tab>
+</Tabs>
+
+### Practical Examples
+
+Here are real-world examples showing the input and output:
+
+<CodeGroup>
+```tsx React Component
+// Example 1: User profile (single value)
+const [user] = useState({ id: '123', name: 'Alice', role: 'admin' });
+
+useSubscribeStateToInputContext('user', (userData) => ({
+currentUser: userData, // Single object
+}), { labelField: 'name' });
+
+````
+
+```json Agent Context
+{
+  "currentUser": {
+    "source": "subscription",
+    "data": {
+      "id": "123",
+      "name": "Alice",
+      "role": "admin"
+    }
+  }
+}
+````
+
+</CodeGroup>
+
+<CodeGroup>
+```tsx React Component  
+// Example 2: Shopping cart (array)
+const [cart] = useState([
+  { id: 'p1', name: 'Laptop', price: 999 },
+  { id: 'p2', name: 'Mouse', price: 29 }
+]);
+
+useSubscribeStateToInputContext('cart', (items) => ({
+cartItems: items, // Array
+}), { labelField: 'name' });
+
+````
+
+```json Agent Context
+{
+  "cartItems": [
+    {
+      "source": "subscription",
+      "data": { "id": "p1", "name": "Laptop", "price": 999 }
+    },
+    {
+      "source": "subscription",
+      "data": { "id": "p2", "name": "Mouse", "price": 29 }
+    }
+  ]
+}
+````
+
+</CodeGroup>
+
+<CodeGroup>
+```tsx React Component
+// Example 3: Single selected item (preserved as array)
+const [selected] = useState([
+  { id: 'node1', title: 'Important Feature', status: 'planned' }
+]);
+
+useSubscribeStateToInputContext('selection', (nodes) => ({
+selectedNodes: nodes, // Single-item array
+}), { labelField: 'title' });
+
+````
+
+```json Agent Context
+{
+  "selectedNodes": [
+    {
+      "source": "subscription",
+      "data": {
+        "id": "node1",
+        "title": "Important Feature",
+        "status": "planned"
+      }
+    }
+  ]
+}
+````
+
+</CodeGroup>
+
+<Tip>
+	**Why preserve array structure?** This allows the agent to understand whether
+	you're working with a single item or a collection, even when that collection
+	has only one item. This distinction can be important for generating
+	appropriate responses.
+</Tip>
+
+### Multiple Context Keys
+
+When you return multiple keys from your `mapFn`, each follows the same behavior rules:
+
+```tsx
+useSubscribeStateToInputContext('appState', (state) => ({
+	currentUser: state.user, // Single object → single entry
+	activeTasks: state.tasks, // Array → array of entries
+	selectedItems: [state.selected], // Single-item array → array
+	preferences: state.prefs, // Single object → single entry
+}));
+
+// Agent receives all four keys with appropriate structures
+```
 
 ## Multiple State Subscriptions
 

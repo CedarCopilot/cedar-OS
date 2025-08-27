@@ -3,7 +3,15 @@ title: 'Agent Backend Connection'
 description: 'Overview of connecting AI agents to Cedar-OS'
 ---
 
-Before we get to the juicy interactions like speaking to your AI for it to do work inside your applications, we have to connect to the agent!
+<Info>
+	If you already have your backend setup, you can skip this. Move onto [Creating
+	custom agent flows](/agent-backend-connection/custom-request) and [Processing
+	agent responses](/agent-backend-connection/custom-response-processing) to
+	understand how Cedar-OS makes a network call and handles the response.
+</Info>
+
+Before we get to the juicy interactions like speaking to your AI for it to do work
+inside your applications, we have to connect to the agent!
 
 Cedar-OS has working configurations with every major backend. We support:
 
@@ -234,7 +242,7 @@ export interface LLMResponse {
   <Accordion title="Reserved object shapes in the Cedar chat">
     When returning structured data in the `object` field of `LLMResponse`, objects with a `type` field have special meanings in Cedar-OS:
 
-    **`type: "action"`** - Defers to frontend action execution (state manipulation)
+    **`type: "setState"`** - Defers to frontend setState execution (state manipulation)
     - Learn more: [Agentic State Access](/state-access/agentic-state-access)
 
     **`type: "message"`** - Processes and adds content as a message in the chat

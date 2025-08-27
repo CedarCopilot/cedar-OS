@@ -254,7 +254,7 @@ function ContextStringifier() {
 		const userText = stringifyEditor();
 		console.log('User text:', userText);
 
-		// Get additional context as JSON
+		// Get additional context as JSON (includes state data, setters, and schemas)
 		const contextData = stringifyAdditionalContext();
 		console.log('Context data:', contextData);
 
