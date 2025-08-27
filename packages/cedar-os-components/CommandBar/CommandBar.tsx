@@ -42,6 +42,8 @@ export interface CommandBarGroup {
 export interface CommandBarContents {
 	/** Array of command groups */
 	groups: CommandBarGroup[];
+	/** Optional fixed bottom group that stays at the bottom outside scroll area */
+	fixedBottomGroup?: CommandBarGroup;
 }
 
 interface CommandBarProps {
@@ -109,14 +111,44 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 			})
 			.filter((group) => group.items.length > 0);
 
+		// Filter fixed bottom group separately
+		let filteredFixedBottomGroup: CommandBarGroup | undefined;
+		if (contents.fixedBottomGroup) {
+			const filteredItems = contents.fixedBottomGroup.items.filter((item) => {
+				// Use custom search function if provided
+				if (item.searchFunction) {
+					return item.searchFunction(searchText, item);
+				}
+				// Fall back to default search behavior
+				return (
+					item.label.toLowerCase().includes(searchText) ||
+					item.id.toLowerCase().includes(searchText)
+				);
+			});
+
+			if (filteredItems.length > 0) {
+				filteredFixedBottomGroup = {
+					...contents.fixedBottomGroup,
+					items: filteredItems,
+				};
+			}
+		}
+
 		return {
 			groups: filteredGroups,
+			fixedBottomGroup: filteredFixedBottomGroup,
 		};
 	}, [contents, searchText]);
 
 	// Create a flattened list of all items for easier keyboard navigation
 	const allItems = React.useMemo(() => {
-		return filteredContents.groups.flatMap((group) => group.items);
+		const items: CommandBarItem[] = filteredContents.groups.flatMap(
+			(group) => group.items
+		);
+		if (filteredContents.fixedBottomGroup) {
+			items.push(...filteredContents.fixedBottomGroup.items);
+		}
+		return items;
 	}, [filteredContents]);
 
 	// Reset selected index when filtered items change and auto-select first item
@@ -289,6 +321,41 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 						</CommandList>
 					)}
 				</motion.div>
+
+				{/* Fixed bottom group - always visible when expanded */}
+				{!isCollapsed && filteredContents.fixedBottomGroup && (
+					<div className='border-t'>
+						<CommandList>
+							<CommandGroup heading={filteredContents.fixedBottomGroup.heading}>
+								{filteredContents.fixedBottomGroup.items.map((item) => (
+									<CommandItem
+										key={item.id}
+										value={item.id}
+										onSelect={() => handleItemSelect(item)}
+										disabled={item.disabled}
+										className={cn(
+											'flex items-center gap-2',
+											item.disabled && 'opacity-50 cursor-not-allowed'
+										)}>
+										{item.icon && (
+											<span className='flex-shrink-0'>
+												{typeof item.icon === 'string' ? (
+													<span className='text-sm'>{item.icon}</span>
+												) : (
+													item.icon
+												)}
+											</span>
+										)}
+										<span className='flex-1'>{item.label}</span>
+										{item.shortcut && (
+											<KeyboardShortcut shortcut={item.shortcut} />
+										)}
+									</CommandItem>
+								))}
+							</CommandGroup>
+						</CommandList>
+					</div>
+				)}
 			</Command>
 		</motion.div>
 	);

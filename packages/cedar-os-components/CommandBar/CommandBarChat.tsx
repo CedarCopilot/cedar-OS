@@ -2,15 +2,7 @@ import React, { useCallback } from 'react';
 import { CommandBar, CommandBarContents } from './CommandBar';
 import { useCedarStore } from 'cedar-os';
 import { cn } from 'cedar-os';
-import {
-	Send,
-	History,
-	HelpCircle,
-	Trash2,
-	Download,
-	Upload,
-	Bot,
-} from 'lucide-react';
+import { Send, HelpCircle, Bot } from 'lucide-react';
 
 interface CommandBarChatProps {
 	/** Whether the command bar is open/visible */
@@ -27,8 +19,6 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 	className,
 }) => {
 	const addMessage = useCedarStore((state) => state.addMessage);
-	const messages = useCedarStore((state) => state.messages);
-	const clearMessages = useCedarStore((state) => state.clearMessages);
 
 	// Handle sending a message directly
 	const handleSendMessage = useCallback(
@@ -43,67 +33,6 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 		},
 		[addMessage]
 	);
-
-	// Handle clearing all messages
-	const handleClearMessages = useCallback(() => {
-		if (window.confirm('Are you sure you want to clear all messages?')) {
-			clearMessages();
-		}
-	}, [clearMessages]);
-
-	// Handle exporting messages
-	const handleExportMessages = useCallback(() => {
-		const exportData = {
-			messages,
-			timestamp: new Date().toISOString(),
-		};
-		const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-			type: 'application/json',
-		});
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `chat-messages-${Date.now()}.json`;
-		a.click();
-		URL.revokeObjectURL(url);
-	}, [messages]);
-
-	// Handle importing messages
-	const handleImportMessages = useCallback(() => {
-		const input = document.createElement('input');
-		input.type = 'file';
-		input.accept = '.json';
-		input.onchange = (e) => {
-			const file = (e.target as HTMLInputElement).files?.[0];
-			if (file) {
-				const reader = new FileReader();
-				reader.onload = (e) => {
-					try {
-						const data = JSON.parse(e.target?.result as string);
-						if (data.messages && Array.isArray(data.messages)) {
-							// Clear existing messages and import new ones
-							clearMessages();
-							data.messages.forEach((msg: unknown) => {
-								// Type guard to ensure msg is a valid message
-								if (
-									typeof msg === 'object' &&
-									msg !== null &&
-									'role' in msg &&
-									'content' in msg
-								) {
-									addMessage(msg as Parameters<typeof addMessage>[0]);
-								}
-							});
-						}
-					} catch {
-						alert('Invalid file format');
-					}
-				};
-				reader.readAsText(file);
-			}
-		};
-		input.click();
-	}, [addMessage, clearMessages]);
 
 	const contents: CommandBarContents = {
 		groups: [
@@ -164,64 +93,6 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 				],
 			},
 			{
-				id: 'chat-management',
-				heading: 'Chat Management',
-				items: [
-					{
-						id: 'view-history',
-						label: `View History (${messages.length} messages)`,
-						icon: <History className='w-4 h-4' />,
-						onSelect: () => {
-							// This could open a history panel or send a summary message
-							const summary = `You have ${
-								messages.length
-							} messages in your chat history. Recent messages: ${messages
-								.slice(-3)
-								.map((m) => `${m.role}: ${m.content?.slice(0, 50)}...`)
-								.join(', ')}`;
-							addMessage({
-								role: 'assistant',
-								type: 'text',
-								content: summary,
-							});
-						},
-					},
-					{
-						id: 'clear-messages',
-						label: 'Clear All Messages',
-						icon: <Trash2 className='w-4 h-4' />,
-						shortcut: '⌘K',
-						onSelect: handleClearMessages,
-						searchFunction: (searchText, item) => {
-							// Match on clearing/deleting terms
-							const terms = [
-								item.label.toLowerCase(),
-								'clear',
-								'delete',
-								'remove',
-								'reset',
-								'empty',
-								'trash',
-								'clean',
-							];
-							return terms.some((term) => term.includes(searchText));
-						},
-					},
-					{
-						id: 'export-messages',
-						label: 'Export Messages',
-						icon: <Download className='w-4 h-4' />,
-						onSelect: handleExportMessages,
-					},
-					{
-						id: 'import-messages',
-						label: 'Import Messages',
-						icon: <Upload className='w-4 h-4' />,
-						onSelect: handleImportMessages,
-					},
-				],
-			},
-			{
 				id: 'common-prompts',
 				heading: 'Common Prompts',
 				items: [
@@ -262,6 +133,66 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 						},
 					},
 					{
+						id: 'suggest-features',
+						label: 'Suggest New Features',
+						icon: '💡',
+						onSelect: () => {
+							handleSendMessage(
+								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
+							);
+						},
+					},
+					{
+						id: 'suggest-features',
+						label: 'Suggest New Features',
+						icon: '💡',
+						onSelect: () => {
+							handleSendMessage(
+								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
+							);
+						},
+					},
+					{
+						id: 'suggest-features',
+						label: 'Suggest New Features',
+						icon: '💡',
+						onSelect: () => {
+							handleSendMessage(
+								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
+							);
+						},
+					},
+					{
+						id: 'suggest-features',
+						label: 'Suggest New Features',
+						icon: '💡',
+						onSelect: () => {
+							handleSendMessage(
+								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
+							);
+						},
+					},
+					{
+						id: 'suggest-features',
+						label: 'Suggest New Features',
+						icon: '💡',
+						onSelect: () => {
+							handleSendMessage(
+								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
+							);
+						},
+					},
+					{
+						id: 'suggest-features',
+						label: 'Suggest New Features',
+						icon: '💡',
+						onSelect: () => {
+							handleSendMessage(
+								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
+							);
+						},
+					},
+					{
 						id: 'review-priorities',
 						label: 'Review Priorities',
 						icon: '🎯',
@@ -283,28 +214,28 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 					},
 				],
 			},
-			{
-				id: 'ai-assistant',
-				heading: 'AI Assistant',
-				items: [
-					{
-						id: 'ask-ai',
-						label: 'Ask AI',
-						icon: <Bot className='w-4 h-4' />,
-						shortcut: '⌘⇧A',
-						onSelect: () => {
-							const question = window.prompt(
-								'What would you like to ask the AI?'
-							);
-							if (question) {
-								handleSendMessage(question);
-							}
-						},
-						searchFunction: () => true,
-					},
-				],
-			},
 		],
+		fixedBottomGroup: {
+			id: 'ai-assistant',
+			heading: 'AI Assistant',
+			items: [
+				{
+					id: 'ask-ai',
+					label: 'Ask AI',
+					icon: <Bot className='w-4 h-4' />,
+					shortcut: '⌘⇧A',
+					onSelect: () => {
+						const question = window.prompt(
+							'What would you like to ask the AI?'
+						);
+						if (question) {
+							handleSendMessage(question);
+						}
+					},
+					searchFunction: () => true,
+				},
+			],
+		},
 	};
 
 	// Don't render if not open
