@@ -45,6 +45,7 @@ import {
 	useSubscribeStateToInputContext,
 	type CedarStore,
 } from 'cedar-os';
+import { isSupabaseAvailable } from '@/app/examples/product-roadmap/supabase/client';
 import {
 	ArrowRight,
 	Box,
@@ -584,7 +585,12 @@ function SelectedNodesPanel() {
 
 	return (
 		<div className='absolute right-4 top-4 rounded-lg p-3 shadow-md backdrop-blur'>
-			<h4 className='mb-2 text-sm font-semibold'>Selected Nodes</h4>
+			<div className='flex items-center justify-between mb-2'>
+				<h4 className='text-sm font-semibold'>Selected Nodes</h4>
+				<div className='text-xs text-gray-500 dark:text-gray-400 px-2 py-1 rounded bg-gray-100 dark:bg-gray-800'>
+					{isSupabaseAvailable ? '🗄️ Supabase' : '💾 localStorage'}
+				</div>
+			</div>
 			{selected.length ? (
 				<ul className='space-y-1 text-xs'>
 					{selected.map((n) => (
