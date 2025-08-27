@@ -1,0 +1,190 @@
+---
+title: 'Typing Agent Responses'
+description: 'Learn how to type agent responses and structured outputs in Cedar-OS'
+---
+
+Cedar-OS provides TypeScript types and Zod schemas for agent responses, enabling type-safe handling of LLM outputs, structured responses, and streaming events.
+
+## Basic LLM Responses
+
+The core response type contains the agent's text response along with usage and metadata information:
+
+**TypeScript Type:**
+
+```typescript
+interface LLMResponse {
+	content: string;
+	usage?: {
+		promptTokens: number;
+		completionTokens: number;
+		totalTokens: number;
+	};
+	metadata?: Record<string, unknown>;
+	// The object field contains structured output when using JSON Schema or Zod
+	object?: StructuredResponseType | StructuredResponseType[];
+}
+```
+
+**Corresponding Zod Schema:**
+
+```typescript
+import { LLMResponseSchema } from 'cedar-os';
+
+// Basic response schema (no structured output)
+const BasicResponseSchema = LLMResponseSchema();
+
+// With custom structured output schema
+const TaskResponseSchema = LLMResponseSchema(
+	z.object({
+		taskId: z.string(),
+		title: z.string(),
+		completed: z.boolean(),
+	})
+);
+
+// Usage example
+const response = TaskResponseSchema.parse(agentResponse);
+const taskId = response.object?.taskId; // ✅ Fully typed
+```
+
+## Structured Responses
+
+For agents that return structured data, Cedar provides flexible typing for custom response objects:
+
+**TypeScript Types:**
+
+```typescript
+// Base structure for all response objects
+interface BaseStructuredResponseType {
+	type: string;
+	content?: string;
+}
+
+// Create custom response types
+type CustomStructuredResponseType<
+	T extends string,
+	P extends object = Record<string, never>
+> = BaseStructuredResponseType & { type: T } & P;
+
+// Example: Task creation response
+type CreateTaskResponse = CustomStructuredResponseType<
+	'create_task',
+	{
+		taskId: string;
+		title: string;
+		assignee?: string;
+	}
+>;
+```
+
+**Corresponding Zod Schemas:**
+
+```typescript
+import {
+	StructuredResponseSchema,
+	BaseStructuredResponseSchema,
+} from 'cedar-os';
+
+// Generic structured response schema
+const AnyStructuredResponse = BaseStructuredResponseSchema;
+
+// Specific response type schema
+const CreateTaskResponseSchema = StructuredResponseSchema('create_task').and(
+	z.object({
+		taskId: z.string(),
+		title: z.string(),
+		assignee: z.string().optional(),
+	})
+);
+
+// Usage with LLMResponse
+const TaskResponseSchema = LLMResponseSchema(CreateTaskResponseSchema);
+```
+
+## Streaming Responses
+
+For real-time streaming, Cedar provides event-based typing:
+
+**TypeScript Type:**
+
+```typescript
+type StreamEvent =
+	| { type: 'chunk'; content: string }
+	| {
+			type: 'object';
+			object: StructuredResponseType | StructuredResponseType[];
+	  }
+	| { type: 'done'; completedItems: (string | object)[] }
+	| { type: 'error'; error: unknown };
+```
+
+**Corresponding Zod Schema:**
+
+```typescript
+import { StreamEventSchema } from 'cedar-os';
+
+// Validate streaming events
+function handleStreamEvent(event: unknown) {
+	const validatedEvent = StreamEventSchema.parse(event);
+
+	switch (validatedEvent.type) {
+		case 'chunk':
+			console.log('Content:', validatedEvent.content); // ✅ string
+			break;
+		case 'object':
+			console.log('Structured:', validatedEvent.object); // ✅ StructuredResponseType
+			break;
+		case 'done':
+			console.log('Completed:', validatedEvent.completedItems); // ✅ (string | object)[]
+			break;
+		case 'error':
+			console.error('Error:', validatedEvent.error); // ✅ unknown
+			break;
+	}
+}
+```
+
+## Voice Responses
+
+For voice-enabled agents, Cedar extends the base response with audio-specific fields:
+
+**TypeScript Type:**
+
+```typescript
+interface VoiceLLMResponse extends LLMResponse {
+	transcription?: string;
+	audioData?: string; // Base64 encoded audio
+	audioUrl?: string;
+	audioFormat?: string;
+}
+```
+
+**Corresponding Zod Schema:**
+
+```typescript
+import { VoiceLLMResponseSchema } from 'cedar-os';
+
+// Basic voice response schema
+const BasicVoiceResponseSchema = VoiceLLMResponseSchema();
+
+// Voice response with structured output
+const VoiceTaskResponseSchema = VoiceLLMResponseSchema(
+	z.object({
+		action: z.enum(['create', 'update', 'delete']),
+		target: z.string(),
+	})
+);
+
+// Usage example
+const voiceResponse = VoiceTaskResponseSchema.parse(agentResponse);
+const transcription = voiceResponse.transcription; // ✅ string | undefined
+const action = voiceResponse.object?.action; // ✅ 'create' | 'update' | 'delete' | undefined
+```
+
+## Next Steps
+
+Now that you understand response typing, learn about:
+
+- [Typing Agent Requests](/type-safety/typing-agent-requests) - Type safety for agent requests and parameters
+- [Agent Backend Connection](/agent-backend-connection/agent-backend-connection) - Setting up your backend integration
+- [Chat](/chat/chat-overview) - Implementing chat interfaces with your typed agents

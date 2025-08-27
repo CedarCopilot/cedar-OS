@@ -183,7 +183,7 @@ function App() {
 
 </CodeGroup>
 
-### Mastra Configuration Options
+## Mastra Configuration Options
 
 When using the Mastra provider, you have additional configuration options:
 
@@ -209,50 +209,100 @@ The high-level `sendMessage()` function (that handles sending the chat), calls b
 
 You can still override this by passing a custom `route` parameter to `sendMessage()`.
 
-### Typed Provider Connection
+## Typed Provider Connection
 
-Cedar-OS provides full TypeScript support. When you configure a provider, all methods are properly typed:
+Cedar-OS provides full TypeScript support with provider-specific parameter types:
+
+### Request Types
+
+**Configurable Providers** (support custom fields via generics):
 
 ```typescript
-// Types can be found in cedar-os/types.ts
+// MastraParams - for Mastra backends
+type MastraParams<
+	T extends Record<string, unknown> = Record<string, never>, // For typing the additionalContext field on Base Params
+	E = object // For adding additional params to your backend connection
+> = BaseParams<T, E> & {
+	route: string;
+	resourceId?: string;
+	threadId?: string;
+};
 
-// Base params sent to all providers
-export interface BaseParams {
-	prompt: string; // Compiled frontend context and user message
-	systemPrompt?: string;
-	temperature?: number;
-	maxTokens?: number;
-	[key: string]: unknown;
+// CustomParams - for custom backends
+type CustomParams<
+	T extends Record<string, unknown> = Record<string, never>,
+	E = object
+> = BaseParams<T, E> & {
+	userId?: string;
+	threadId?: string;
+};
+```
+
+**Standardized Providers** (fixed APIs):
+
+```typescript
+// Fixed parameter types - no custom fields
+interface OpenAIParams extends BaseParams {
+	model: string;
 }
 
-// What the frontend expects in return
+interface AnthropicParams extends BaseParams {
+	model: string;
+}
+
+interface AISDKParams extends BaseParams {
+	model: string; // Format: "provider/model"
+}
+```
+
+### Response Types
+
+```typescript
+// What all providers return
 export interface LLMResponse {
-	content: string; // In the chat sendMessage() flow, this is the message added to the chat
+	content: string; // The agent's text response
 	usage?: {
 		promptTokens: number;
 		completionTokens: number;
 		totalTokens: number;
 	};
 	metadata?: Record<string, unknown>;
-	object?: StructuredResponseType | StructuredResponseType[]; // See the docs on How Responses are Processed to understand how this field is parsed
+	object?: StructuredResponseType | StructuredResponseType[]; // For structured outputs
+}
+
+// For voice-enabled providers
+interface VoiceLLMResponse extends LLMResponse {
+	transcription?: string;
+	audioData?: string; // Base64 encoded audio
+	audioUrl?: string;
+	audioFormat?: string;
 }
 ```
 
-<AccordionGroup>
-  <Accordion title="Reserved object shapes in the Cedar chat">
-    When returning structured data in the `object` field of `LLMResponse`, objects with a `type` field have special meanings in Cedar-OS:
+### Zod Types
 
-    **`type: "setState"`** - Defers to frontend setState execution (state manipulation)
-    - Learn more: [Agentic State Access](/state-access/agentic-state-access)
+All agent connection types are exposed as Zod schemas for runtime validation on the backend:
 
-    **`type: "message"`** - Processes and adds content as a message in the chat
-    - Automatically renders the object content as a new chat message
-    - Note: if you return an object with this type AND a content field, both will be rendered as chat messages in the order the are received
+```typescript
+import { MastraParamsSchema } from 'cedar-os';
 
-    Other `type` values can be used for custom handling (such as generative UI). See [Custom Response Handling](/agent-backend-connection/custom-response-processing) to learn how this works.
+// Backend validation example
+const requestSchema = MastraParamsSchema(
+	UserContextSchemas, // Zod schemas for your context data
+	z.object({
+		// Custom fields schema
+		userId: z.string(),
+		sessionId: z.string(),
+	})
+);
 
-  </Accordion>
-</AccordionGroup>
+// Validate incoming requests with full type safety
+const validatedParams = requestSchema.parse(incomingRequest);
+```
+
+For comprehensive type safety implementation and examples, see [Typing Agent Requests](/type-safety/typing-agent-requests) and [Typing Agent Responses](/type-safety/typing-agent-responses).
+
+## Best Practices
 
 When designing agentic workflows, the best practice for working with Cedar-OS is to create typed functions with hardcoded system prompts in a single file. This approach ensures consistency, type safety, and reusability across your application.
 

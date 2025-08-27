@@ -57,6 +57,11 @@ export type {
 	MentionItem,
 	MentionProvider,
 	StateBasedMentionProviderConfig,
+	// Phase 1: Backend context types moved from AgentConnectionTypes
+	AdditionalContextParam,
+	BackendSetterSchema,
+	BackendStateSchema,
+	BackendContextEntry,
 } from '@/store/agentInputContext/AgentInputContextTypes';
 
 // Export message types
@@ -93,6 +98,7 @@ export type { CedarStore } from '@/store/CedarOSTypes';
 export type {
 	AISDKParams,
 	AnthropicParams,
+	BaseParams,
 	CustomParams,
 	InferProviderParams,
 	InferProviderType,
@@ -114,6 +120,39 @@ export type {
 	ResponseProcessor,
 	ResponseProcessorRegistry,
 } from '@/store/agentConnection/AgentConnectionTypes';
+
+// Export SendMessageParams from the slice
+export type { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
+
+export {
+	// Generic schema factories (for configurable providers)
+	BaseParamsSchema,
+	MastraParamsSchema,
+	CustomParamsSchema,
+	// Fixed schemas (for standardized providers)
+	OpenAIParamsSchema,
+	AnthropicParamsSchema,
+	AISDKParamsSchema,
+	// Convenience schemas (no extra fields)
+	// Response Schema System
+	LLMResponseSchema,
+	BaseStructuredResponseSchema,
+	StructuredResponseSchema,
+	StreamEventSchema,
+	VoiceLLMResponseSchema,
+} from '@/store/agentConnection/AgentConnectionTypes';
+
+// Export additional context schemas from AgentInputContextTypes
+export {
+	// Backend context schema factories
+	AdditionalContextParamSchema,
+	// Standard frontend context schemas
+	ContextEntrySchema,
+	AdditionalContextSchema,
+	ChatRequestSchema,
+	ChatResponseSchema,
+	createChatRequestSchema,
+} from '@/store/agentInputContext/AgentInputContextTypes';
 
 // Export Mastra message types
 export type {
