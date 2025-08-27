@@ -162,7 +162,15 @@ export const createDiffHistorySlice: StateCreator<
 			// This will also register the state in stateSlice via setDiffState
 			get().setDiffState(key, initialDiffHistoryState);
 		} else {
-			get().newDiffState(key, value, false);
+			// Technically I don't think we need to check the newState since computedState should equal newState in some situations, but just in case
+			const currentNewState = existingDiffState.diffState.newState;
+			const currentComputedState = existingDiffState.diffState.computedState;
+			if (
+				!isEqual(currentNewState, value) &&
+				!isEqual(currentComputedState, value)
+			) {
+				get().newDiffState(key, value, false);
+			}
 		}
 	},
 
@@ -231,12 +239,15 @@ export const createDiffHistorySlice: StateCreator<
 		const updatedHistory = [...history, originalDiffState];
 
 		// Step 3: Create the new diffState based on isDiffChange flag
-		// Determine oldState: if isDiffChange and not previously in diff mode, use previous newState
-		// Otherwise keep the original oldState
-		const oldStateForDiff =
-			isDiffChange && !originalDiffState.isDiffMode
-				? originalDiffState.newState
-				: originalDiffState.oldState;
+		let oldStateForDiff: T;
+		if (!isDiffChange) {
+			// Not in diff mode, use current newState
+			oldStateForDiff = newState;
+		} else {
+			oldStateForDiff = originalDiffState.isDiffMode
+				? originalDiffState.oldState
+				: originalDiffState.newState;
+		}
 
 		// Generate patches to describe the changes
 		const patches = compare(oldStateForDiff as object, newState as object);
@@ -265,20 +276,22 @@ export const createDiffHistorySlice: StateCreator<
 			computeState, // Preserve the computeState function
 		};
 
-		// Update the store
-		get().setDiffState(key, updatedDiffHistoryState);
+		// Update the store directly without side effects
+		set((state) => ({
+			diffHistoryStates: {
+				...state.diffHistoryStates,
+				[key]: updatedDiffHistoryState as DiffHistoryState<unknown>,
+			},
+		}));
 
-		// Propagate the clean state to stateSlice
-		const cleanState =
-			diffMode === 'defaultAccept' ? newState : oldStateForDiff;
-
+		// Propagate the computed state to stateSlice
 		// Update the value in registeredStates only (do NOT call setValue to avoid circular dependency)
 		const registeredState = get().registeredStates?.[key];
 		if (registeredState) {
 			// Check if the clean state has actually changed before updating
 			const currentValue = registeredState.value;
 
-			if (!isEqual(currentValue, cleanState)) {
+			if (!isEqual(currentValue, computedStateValue)) {
 				// Update the stored value
 				set(
 					(state) =>
@@ -287,11 +300,13 @@ export const createDiffHistorySlice: StateCreator<
 								...state.registeredStates,
 								[key]: {
 									...state.registeredStates[key],
-									value: cleanState as BasicStateValue,
+									value: computedStateValue as BasicStateValue,
 								},
 							},
 						} as Partial<CedarStore>)
 				);
+				// Call setValue to update the external state
+				registeredState.setValue?.(computedStateValue as BasicStateValue);
 			}
 		}
 	},
@@ -427,12 +442,18 @@ export const createDiffHistorySlice: StateCreator<
 		).newDocument;
 
 		// Step 3: Create the new diffState based on isDiffChange flag
-		// Determine oldState: if isDiffChange and not previously in diff mode, use previous newState
-		// Otherwise keep the original oldState
-		const oldStateForDiff =
-			isDiffChange && !originalDiffState.isDiffMode
-				? originalDiffState.newState
-				: originalDiffState.oldState;
+		// Determine oldState based on new logic:
+		// - If isDiffMode is false (not a diff change), use current newState
+		// - If isDiffMode is true (is a diff change), check previous history state
+		let oldStateForDiff: T;
+		if (!isDiffChange) {
+			// Not in diff mode, use current newState
+			oldStateForDiff = patchResult;
+		} else {
+			oldStateForDiff = originalDiffState.isDiffMode
+				? originalDiffState.oldState
+				: originalDiffState.newState;
+		}
 
 		// Generate patches to describe the changes from oldState to the new patched state
 		const diffPatches = compare(

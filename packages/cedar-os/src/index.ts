@@ -36,6 +36,7 @@ export {
 	addDiffToArrayObjs,
 	useDiffState,
 	useDiffStateOperations,
+	useDiffStateHelpers,
 	type RegisterDiffStateConfig,
 	type DiffStateReturn,
 	type ComputeStateFunction,

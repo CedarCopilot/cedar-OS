@@ -28,3 +28,4 @@ export {
 	type DiffStateReturn,
 } from './useRegisterDiffState';
 export { useDiffState, useDiffStateOperations } from './useDiffState';
+export { useDiffStateHelpers } from './useDiffStateHelpers';
