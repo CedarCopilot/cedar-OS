@@ -193,6 +193,12 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 			} else if (e.key === 'ArrowUp' && isFocused && allItems.length > 0) {
 				e.preventDefault();
 				setSelectedIndex((prev) => (prev > 0 ? prev - 1 : allItems.length - 1));
+			} else if (e.key === 'ArrowRight' && isFocused && allItems.length > 0) {
+				e.preventDefault();
+				setSelectedIndex((prev) => (prev < allItems.length - 1 ? prev + 1 : 0));
+			} else if (e.key === 'ArrowLeft' && isFocused && allItems.length > 0) {
+				e.preventDefault();
+				setSelectedIndex((prev) => (prev > 0 ? prev - 1 : allItems.length - 1));
 			} else if (
 				e.key === 'Enter' &&
 				isFocused &&
@@ -325,17 +331,24 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				{/* Fixed bottom group - always visible when expanded */}
 				{!isCollapsed && filteredContents.fixedBottomGroup && (
 					<div className='border-t'>
-						<CommandList>
-							<CommandGroup heading={filteredContents.fixedBottomGroup.heading}>
+						<div className='p-2'>
+							<div className='text-xs font-medium text-muted-foreground mb-2 px-2'>
+								{filteredContents.fixedBottomGroup.heading}
+							</div>
+							<div className='grid grid-cols-5 gap-1'>
 								{filteredContents.fixedBottomGroup.items.map((item) => (
-									<CommandItem
+									<button
 										key={item.id}
-										value={item.id}
-										onSelect={() => handleItemSelect(item)}
+										onClick={() => handleItemSelect(item)}
 										disabled={item.disabled}
 										className={cn(
-											'flex items-center gap-2',
-											item.disabled && 'opacity-50 cursor-not-allowed'
+											'flex items-center gap-1 p-2 rounded-md text-xs hover:bg-accent hover:text-accent-foreground transition-colors',
+											'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+											item.disabled && 'opacity-50 cursor-not-allowed',
+											// Highlight if selected via keyboard navigation
+											selectedIndex >= 0 &&
+												allItems[selectedIndex]?.id === item.id &&
+												'bg-accent text-accent-foreground'
 										)}>
 										{item.icon && (
 											<span className='flex-shrink-0'>
@@ -346,14 +359,13 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 												)}
 											</span>
 										)}
-										<span className='flex-1'>{item.label}</span>
-										{item.shortcut && (
-											<KeyboardShortcut shortcut={item.shortcut} />
-										)}
-									</CommandItem>
+										<span className='text-center leading-tight truncate'>
+											{item.label}
+										</span>
+									</button>
 								))}
-							</CommandGroup>
-						</CommandList>
+							</div>
+						</div>
 					</div>
 				)}
 			</Command>

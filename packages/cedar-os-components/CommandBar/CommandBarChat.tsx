@@ -2,7 +2,15 @@ import React, { useCallback } from 'react';
 import { CommandBar, CommandBarContents } from './CommandBar';
 import { useCedarStore } from 'cedar-os';
 import { cn } from 'cedar-os';
-import { Send, HelpCircle, Bot } from 'lucide-react';
+import {
+	Send,
+	HelpCircle,
+	Bot,
+	Plus,
+	PlusCircle,
+	Link,
+	Wand2,
+} from 'lucide-react';
 
 interface CommandBarChatProps {
 	/** Whether the command bar is open/visible */
@@ -133,66 +141,6 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 						},
 					},
 					{
-						id: 'suggest-features',
-						label: 'Suggest New Features',
-						icon: '💡',
-						onSelect: () => {
-							handleSendMessage(
-								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
-							);
-						},
-					},
-					{
-						id: 'suggest-features',
-						label: 'Suggest New Features',
-						icon: '💡',
-						onSelect: () => {
-							handleSendMessage(
-								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
-							);
-						},
-					},
-					{
-						id: 'suggest-features',
-						label: 'Suggest New Features',
-						icon: '💡',
-						onSelect: () => {
-							handleSendMessage(
-								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
-							);
-						},
-					},
-					{
-						id: 'suggest-features',
-						label: 'Suggest New Features',
-						icon: '💡',
-						onSelect: () => {
-							handleSendMessage(
-								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
-							);
-						},
-					},
-					{
-						id: 'suggest-features',
-						label: 'Suggest New Features',
-						icon: '💡',
-						onSelect: () => {
-							handleSendMessage(
-								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
-							);
-						},
-					},
-					{
-						id: 'suggest-features',
-						label: 'Suggest New Features',
-						icon: '💡',
-						onSelect: () => {
-							handleSendMessage(
-								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
-							);
-						},
-					},
-					{
 						id: 'review-priorities',
 						label: 'Review Priorities',
 						icon: '🎯',
@@ -216,8 +164,8 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 			},
 		],
 		fixedBottomGroup: {
-			id: 'ai-assistant',
-			heading: 'AI Assistant',
+			id: 'quick-actions-bottom',
+			heading: 'Quick Actions',
 			items: [
 				{
 					id: 'ask-ai',
@@ -233,6 +181,94 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 						}
 					},
 					searchFunction: () => true,
+				},
+				{
+					id: 'create-new-item',
+					label: 'Create New Item',
+					icon: <Plus className='w-4 h-4' />,
+					shortcut: '⌘N',
+					onSelect: () => {
+						handleSendMessage(
+							'Help me create a new item for the product roadmap. What should we add?'
+						);
+					},
+					searchFunction: (searchText, item) => {
+						const terms = [
+							item.label.toLowerCase(),
+							'create',
+							'new',
+							'add',
+							'make',
+							'item',
+						];
+						return terms.some((term) => term.includes(searchText));
+					},
+				},
+				{
+					id: 'add-item',
+					label: 'Add Item',
+					icon: <PlusCircle className='w-4 h-4' />,
+					shortcut: '⌘⇧N',
+					onSelect: () => {
+						handleSendMessage(
+							'I want to add a specific item to the roadmap. Can you help me structure it properly?'
+						);
+					},
+					searchFunction: (searchText, item) => {
+						const terms = [
+							item.label.toLowerCase(),
+							'add',
+							'insert',
+							'item',
+							'feature',
+						];
+						return terms.some((term) => term.includes(searchText));
+					},
+				},
+				{
+					id: 'connect',
+					label: 'Connect',
+					icon: <Link className='w-4 h-4' />,
+					shortcut: '⌘L',
+					onSelect: () => {
+						handleSendMessage(
+							'Help me connect items in the roadmap or establish relationships between features.'
+						);
+					},
+					searchFunction: (searchText, item) => {
+						const terms = [
+							item.label.toLowerCase(),
+							'connect',
+							'link',
+							'relate',
+							'relationship',
+							'dependency',
+						];
+						return terms.some((term) => term.includes(searchText));
+					},
+				},
+				{
+					id: 'autoformat',
+					label: 'Autoformat',
+					icon: <Wand2 className='w-4 h-4' />,
+					shortcut: '⌘⇧F',
+					onSelect: () => {
+						handleSendMessage(
+							'Please help me automatically format and organize the roadmap items for better clarity and structure.'
+						);
+					},
+					searchFunction: (searchText, item) => {
+						const terms = [
+							item.label.toLowerCase(),
+							'format',
+							'organize',
+							'structure',
+							'auto',
+							'clean',
+							'arrange',
+						];
+						return terms.some((term) => term.includes(searchText));
+					},
 				},
 			],
 		},
