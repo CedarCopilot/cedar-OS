@@ -117,7 +117,7 @@ export default function CedarPlaygroundPage() {
 			<SliderSpell
 				spellId='playground-slider-default'
 				activationConditions={{
-					events: ['s', 'right-click'],
+					events: ['s'],
 					mode: ActivationMode.HOLD,
 				}}
 				sliderConfig={{

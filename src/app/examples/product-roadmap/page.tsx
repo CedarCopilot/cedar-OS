@@ -25,6 +25,7 @@ import {
 	FeatureNodeData,
 } from '@/app/examples/product-roadmap/components/FeatureNode';
 import { FloatingMenu } from '@/app/examples/product-roadmap/components/FloatingMenu';
+import { ProductRoadmapChat } from '@/app/examples/product-roadmap/components/ProductRoadmapChat';
 import {
 	getEdges,
 	saveEdges,
@@ -34,7 +35,6 @@ import {
 	getNodes,
 	saveNodes,
 } from '@/app/examples/product-roadmap/supabase/nodes';
-import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import { TooltipMenu } from '@/inputs/TooltipMenu';
@@ -43,7 +43,7 @@ import {
 	ActivationMode,
 	addDiffToArrayObjs,
 	Hotkey,
-	MouseEvent as SpellMouseEvent,
+	useDiffStateHelpers,
 	useRegisterDiffState,
 	useRegisterState,
 	useStateBasedMentionProvider,
@@ -84,6 +84,45 @@ function FlowCanvas() {
 	const initialMount = React.useRef(true);
 	const saveTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+	// Get diff state operations and computed nodes
+	const {
+		computedValue: computedNodes,
+		undo,
+		redo,
+	} = useDiffStateHelpers<Node<FeatureNodeData>[]>('nodes');
+
+	// Add keyboard listeners for undo/redo
+	React.useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			// Undo: Ctrl+Z (or Cmd+Z on Mac)
+			if (
+				(event.ctrlKey || event.metaKey) &&
+				event.key === 'z' &&
+				!event.shiftKey
+			) {
+				event.preventDefault();
+				if (undo()) {
+					console.log('Undo performed on nodes');
+				}
+			}
+			// Redo: Ctrl+Y or Ctrl+Shift+Z (or Cmd+Y or Cmd+Shift+Z on Mac)
+			else if (
+				((event.ctrlKey || event.metaKey) && event.key === 'y') ||
+				((event.ctrlKey || event.metaKey) &&
+					event.shiftKey &&
+					event.key === 'z')
+			) {
+				event.preventDefault();
+				if (redo()) {
+					console.log('Redo performed on nodes');
+				}
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, [undo, redo]);
+
 	// Register states using the diff-aware hook
 	useRegisterDiffState({
 		value: nodes,
@@ -118,6 +157,8 @@ function FlowCanvas() {
 							upvotes: nodeData.data.upvotes || 0,
 							comments: nodeData.data.comments || [],
 						},
+						width: 320,
+						height: 150,
 					};
 					// Use the setValue parameter instead of setNodes directly
 					setValue([...nodes, newNode]);
@@ -200,11 +241,11 @@ function FlowCanvas() {
 		order: 20, // Edges appear last
 	});
 
-	// Fetch initial data
+	// Fetch initial data (only on mount)
 	React.useEffect(() => {
 		getNodes().then(setNodes);
 		getEdges().then(setEdges);
-	}, [setNodes, setEdges]);
+	}, []); // Empty dependency array - only run on mount
 
 	// Custom handler for node changes that intercepts deletions
 	const handleNodesChange = React.useCallback(
@@ -360,7 +401,7 @@ function FlowCanvas() {
 	return (
 		<div className='h-full w-full relative'>
 			<ReactFlow
-				nodes={nodes}
+				nodes={computedNodes}
 				edges={edges}
 				nodeTypes={nodeTypes}
 				onNodesChange={handleNodesChange}
@@ -484,7 +525,7 @@ export default function ProductMapPage() {
 					onChatModeChange={setChatMode}
 					currentChatMode={chatMode}
 				/>
-				{chatMode === 'caption' && <CedarCaptionChat stream={false} />}
+				{chatMode === 'caption' && <ProductRoadmapChat stream={false} />}
 				{chatMode === 'floating' && (
 					<FloatingCedarChat
 						stream={false}
@@ -571,7 +612,7 @@ export default function ProductMapPage() {
 						},
 					]}
 					activationConditions={{
-						events: [SpellMouseEvent.RIGHT_CLICK, Hotkey.R],
+						events: [Hotkey.R],
 						mode: ActivationMode.HOLD, // Hold mode for radial menu
 					}}
 				/>
