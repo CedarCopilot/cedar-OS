@@ -28,9 +28,9 @@ export interface VoiceLLMResponse extends LLMResponse {
 
 // Voice parameters for LLM calls
 export type VoiceParams<
-	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	T extends Record<string, unknown> = Record<string, never>,
 	E = object
-> = BaseParams<TData, E> & {
+> = BaseParams<T, E> & {
 	audioData: Blob;
 	voiceSettings: {
 		language: string;
@@ -65,7 +65,7 @@ export interface StreamResponse {
 // Provider-specific parameter types
 // Updated to use AdditionalContextParam for better type safety
 export type BaseParams<
-	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	T extends Record<string, unknown> = Record<string, never>,
 	E = object
 > = {
 	prompt?: string;
@@ -73,7 +73,7 @@ export type BaseParams<
 	temperature?: number;
 	maxTokens?: number;
 	stream?: boolean;
-	additionalContext?: AdditionalContextParam<TData>;
+	additionalContext?: AdditionalContextParam<T>;
 } & E; // User-defined extra fields with full type safety
 
 // Standardized providers have fixed APIs (no custom context data)
@@ -91,28 +91,28 @@ export interface AISDKParams extends BaseParams {
 
 // Configurable providers support custom context data
 export type MastraParams<
-	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	T extends Record<string, unknown> = Record<string, never>,
 	E = object
-> = BaseParams<TData, E> & {
+> = BaseParams<T, E> & {
 	route: string;
 	resourceId?: string;
 	threadId?: string;
 };
 
 export type CustomParams<
-	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	T extends Record<string, unknown> = Record<string, never>,
 	E = object
-> = BaseParams<TData, E> & {
+> = BaseParams<T, E> & {
 	userId?: string;
 	threadId?: string;
 };
 
 // Structured output params extend base params with schema
 export type StructuredParams<
-	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	T extends Record<string, unknown> = Record<string, never>,
 	E = object,
 	TSchema = unknown
-> = BaseParams<TData, E> & {
+> = BaseParams<T, E> & {
 	schema?: TSchema; // JSON Schema or Zod schema
 	schemaName?: string;
 	schemaDescription?: string;
@@ -241,6 +241,10 @@ export type ResponseProcessorRegistry = Record<
 	ResponseProcessor | undefined
 >;
 
+// ==========================================================================================
+// Zod typing for agent requests
+// ==========================================================================================
+
 export const BaseParamsSchema = <
 	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E extends z.ZodTypeAny = z.ZodType<object>
@@ -260,9 +264,6 @@ export const BaseParamsSchema = <
 				: z.unknown().optional(),
 		})
 		.and(extraFieldsSchema || z.object({})); // Merge with user-defined extra fields schema
-
-// Convenience export for basic BaseParams schema (no extra fields)
-export const BasicBaseParamsSchema = BaseParamsSchema();
 
 export const MastraParamsSchema = <
 	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
@@ -294,24 +295,103 @@ export const CustomParamsSchema = <
 	);
 
 // Standardized provider schemas (no custom fields - they have fixed APIs)
-export const OpenAIParamsSchema = BasicBaseParamsSchema.and(
+export const OpenAIParamsSchema = BaseParamsSchema().and(
 	z.object({
 		model: z.string(),
 	})
 );
 
-export const AnthropicParamsSchema = BasicBaseParamsSchema.and(
+export const AnthropicParamsSchema = BaseParamsSchema().and(
 	z.object({
 		model: z.string(),
 	})
 );
 
-export const AISDKParamsSchema = BasicBaseParamsSchema.and(
+export const AISDKParamsSchema = BaseParamsSchema().and(
 	z.object({
 		model: z.string(), // Format: "provider/model" e.g., "openai/gpt-4o"
 	})
 );
 
-// Convenience exports for configurable providers (no extra fields)
-export const BasicMastraParamsSchema = MastraParamsSchema();
-export const BasicCustomParamsSchema = CustomParamsSchema();
+// ==========================================================================================
+// Zod typing for agent responses
+// ==========================================================================================
+
+// Generic structured response schema (matches BaseStructuredResponseType)
+export const BaseStructuredResponseSchema = z
+	.object({
+		type: z.string(),
+		content: z.string().optional(),
+	})
+	.passthrough(); // Allow additional fields for CustomStructuredResponseType
+
+// Structured response schema for specific types
+export const StructuredResponseSchema = <T extends string>(type: T) =>
+	z
+		.object({
+			type: z.literal(type),
+			content: z.string().optional(),
+		})
+		.passthrough(); // Allow additional fields for CustomStructuredResponseType
+
+// Response schema using custom object responses
+export const LLMResponseSchema = <T extends z.ZodTypeAny = z.ZodUnknown>(
+	objectSchema?: T
+) =>
+	z.object({
+		content: z.string(),
+		object: objectSchema
+			? z.union([objectSchema, z.array(objectSchema)]).optional()
+			: z
+					.union([
+						BaseStructuredResponseSchema,
+						z.array(BaseStructuredResponseSchema),
+					])
+					.optional(),
+		usage: z
+			.object({
+				promptTokens: z.number(),
+				completionTokens: z.number(),
+				totalTokens: z.number(),
+			})
+			.optional(),
+		metadata: z.record(z.unknown()).optional(),
+	});
+// Event based schema for streaming responses
+export const StreamEventSchema = z.discriminatedUnion('type', [
+	// Content chunk event
+	z.object({
+		type: z.literal('chunk'),
+		content: z.string(),
+	}),
+	// Structured object event
+	z.object({
+		type: z.literal('object'),
+		object: z.union([
+			BaseStructuredResponseSchema,
+			z.array(BaseStructuredResponseSchema),
+		]),
+	}),
+	// Completion event
+	z.object({
+		type: z.literal('done'),
+		completedItems: z.array(z.union([z.string(), z.record(z.unknown())])), // Used for logging
+	}),
+	// Error event
+	z.object({
+		type: z.literal('error'),
+		error: z.unknown(), // Could be Error object or string
+	}),
+]);
+
+export const VoiceLLMResponseSchema = <T extends z.ZodTypeAny = z.ZodUnknown>(
+	objectSchema?: T
+) =>
+	LLMResponseSchema(objectSchema).and(
+		z.object({
+			transcription: z.string().optional(),
+			audioData: z.string().optional(), // Base64 encoded audio
+			audioUrl: z.string().optional(),
+			audioFormat: z.string().optional(),
+		})
+	);

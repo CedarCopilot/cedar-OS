@@ -24,14 +24,14 @@ export interface BackendContextEntry {
 
 // The transformed backend type - what backends actually receive when parsing the additionalContext field
 export type AdditionalContextParam<
-	TData extends Record<string, z.ZodTypeAny> = Record<string, never>
+	T extends Record<string, unknown> = Record<string, never>
 > = {
 	// Cedar OS system fields (added by stringifyAdditionalContext)
 	setters?: Record<string, BackendSetterSchema>;
 	schemas?: Record<string, BackendStateSchema>;
 } & {
 	// User context fields - auto-transformed to backend format
-	[K in keyof TData]: TData[K] extends z.ZodArray<z.ZodTypeAny>
+	[K in keyof T]: T[K] extends unknown[]
 		? BackendContextEntry[]
 		: BackendContextEntry;
 };
