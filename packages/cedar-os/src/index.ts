@@ -28,8 +28,19 @@ export { createStateSlice } from '@/store/stateSlice/stateSlice';
 export { createStylingSlice } from '@/store/stylingSlice';
 
 // Export state management
-export { useRegisterState } from '@/store/stateSlice/stateSlice';
+export { useRegisterState } from '@/store/stateSlice/useCedarState';
 export { useCedarState } from '@/store/stateSlice/useCedarState';
+export {
+	useCedarDiffState,
+	useRegisterDiffState,
+	addDiffToArrayObjs,
+	useDiffState,
+	useDiffStateOperations,
+	useDiffStateHelpers,
+	type RegisterDiffStateConfig,
+	type DiffStateReturn,
+	type ComputeStateFunction,
+} from '@/store/diffHistoryStateSlice';
 
 // Export context management
 export {
@@ -149,6 +160,7 @@ export {
 	useCedarStore,
 	useChatInput,
 	useDebugger,
+	useDiffHistory,
 	useMessages,
 	useSpell,
 	useSpells,
@@ -202,6 +214,15 @@ export type {
 	UseSpellOptions,
 	UseSpellReturn,
 } from '@/store/spellSlice/useSpell';
+
+// Export diff state types
+export type {
+	DiffMode,
+	DiffState,
+	DiffHistoryState,
+	DiffHistorySlice,
+	Operation,
+} from '@/store/diffHistoryStateSlice';
 
 // Export Tiptap components
 export {

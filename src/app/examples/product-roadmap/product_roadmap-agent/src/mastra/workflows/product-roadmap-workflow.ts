@@ -34,7 +34,7 @@ const executeActionStep = createStep({
 			throw new Error('Input data is required');
 		}
 		const { action, params } = inputData;
-		let result: any;
+		let result: unknown;
 
 		switch (action) {
 			case 'get-features': {

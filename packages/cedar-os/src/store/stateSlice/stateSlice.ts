@@ -1,11 +1,10 @@
 // @stateSlice: central registry for React component states with AI-readable metadata.
 // Supports manual registration via registerState (with optional external setter) and automatic registration via useCedarState hook.
-import { StateCreator } from 'zustand';
 import { CedarStore } from '@/store/CedarOSTypes';
+import { isEqual } from 'lodash';
 import type { ZodSchema } from 'zod';
 import { z } from 'zod/v4';
-import { useEffect } from 'react';
-import { useCedarStore } from '@/store/CedarStore';
+import { StateCreator } from 'zustand';
 
 // Define types that our state values can be
 export type BasicStateValue =
@@ -15,6 +14,7 @@ export type BasicStateValue =
 	| object
 	| unknown[]
 	| undefined
+	| null
 	| void;
 
 // Setter types
@@ -36,11 +36,11 @@ export interface ExecuteCustomSetterParams {
 // A setter function that takes an input value and the current state to produce updates
 export type BaseSetter<T = BasicStateValue> = (state: T) => void;
 
-// A setter function that takes an input value and the current state to produce updates
+// A setter function that takes the current state, setValue function, and additional args
 export type SetterFunction<
 	T = BasicStateValue,
 	Args extends unknown[] = unknown[]
-> = (state: T, ...args: Args) => void;
+> = (state: T, setValue: (newValue: T) => void, ...args: Args) => void;
 
 // Setter object that includes both metadata and execution function
 export interface Setter<
@@ -84,8 +84,8 @@ export interface StateSlice {
 	registerState: <T extends BasicStateValue>(config: {
 		key: string;
 		value: T;
-		// Primary state updater: (inputValue, currentState)
-		setValue?: SetterFunction<T>;
+		// Primary state updater - external React setState function
+		setValue?: BaseSetter<T>;
 		description?: string;
 		schema?: ZodSchema<T>;
 		customSetters?: Record<string, Setter<T>>;
@@ -122,45 +122,17 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		registerState: <T extends BasicStateValue>(config: {
 			key: string;
 			value: T;
-			setValue?: SetterFunction<T>;
+			setValue?: BaseSetter<T>;
 			description?: string;
 			schema?: ZodSchema<T>;
 			customSetters?: Record<string, Setter<T>>;
 		}) => {
-			const stateExists = Boolean(get().registeredStates[config.key]);
-			if (stateExists) {
-				// Update the entire registration to ensure fresh closures
-				set((state) => {
-					// Create a properly typed updated state
-					const updatedState: registeredState<T> = {
-						key: config.key,
-						value: config.value,
-						// Update ALL fields to ensure fresh closures after remount
-						setValue: config.setValue,
-						customSetters: config.customSetters,
-						description: config.description,
-						schema: config.schema,
-					};
-
-					return {
-						registeredStates: {
-							...state.registeredStates,
-							[config.key]: updatedState,
-						},
-					} as Partial<CedarStore>;
-				});
-				return;
-			}
-
-			// Initial registration of a new state
 			set((state) => {
-				// Create the state object
 				const registeredState: registeredState<T> = {
 					key: config.key,
 					value: config.value,
 					description: config.description,
 					schema: config.schema,
-					// Primary updater separate from namedSetters
 					setValue: config.setValue,
 					customSetters: config.customSetters,
 				};
@@ -188,12 +160,33 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		 * @param key The state key.
 		 * @param value The new value to set.
 		 */
-		setCedarState: <T extends BasicStateValue>(key: string, value: T) => {
+		setCedarState: <T extends BasicStateValue>(
+			key: string,
+			value: T,
+			isDiffChange: boolean = false
+		) => {
+			// Check if this state is tracked in diffHistory
+			const diffHistoryState = get().getDiffHistoryState?.(key);
+			if (diffHistoryState) {
+				// Use setDiffState for diff-tracked states
+				// Default to isDiffChange = true when setting through setCedarState
+				get().newDiffState(key, value, isDiffChange);
+				return;
+			}
+
+			// Original implementation for non-diff-tracked states
 			const existingState = get().registeredStates[key];
 			if (!existingState) {
 				console.warn(`State with key "${key}" not found.`);
 				return;
 			}
+
+			// Check if value has actually changed before updating
+			if (isEqual(existingState.value, value)) {
+				// No need to update if values are the same
+				return;
+			}
+
 			// Update stored value
 			set(
 				(state) =>
@@ -207,6 +200,7 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 						},
 					} as Partial<CedarStore>)
 			);
+
 			// Call external setter if provided
 			if (existingState.setValue) {
 				try {
@@ -272,9 +266,18 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		 * Execute a named custom setter for a registered state.
 		 */
 		executeCustomSetter: (params: ExecuteCustomSetterParams) => {
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { key, setterKey, options = {}, args = [] } = params;
-			// Note: options will be used for features like diff tracking
+
+			// Check if this state is tracked in diffHistory
+			const diffHistoryState = get().getDiffHistoryState?.(key);
+			if (diffHistoryState) {
+				// Use executeDiffSetter for diff-tracked states
+				const isDiff = options.isDiff ?? false;
+				get().executeDiffSetter(key, setterKey, { isDiff }, ...args);
+				return;
+			}
+
+			// Original implementation for non-diff-tracked states
 			const existingState = get().registeredStates[key];
 			if (!existingState) {
 				console.warn(`State with key "${key}" not found.`);
@@ -288,7 +291,10 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 				return;
 			}
 			const setter = setters[setterKey];
-			setter.execute(existingState.value, ...args);
+			const setValueFunc = (newValue: BasicStateValue) => {
+				get().setCedarState(key, newValue);
+			};
+			setter.execute(existingState.value, setValueFunc, ...args);
 		},
 	};
 };
@@ -304,41 +310,4 @@ export function isRegisteredState<T>(
 		'customSetters' in value &&
 		'schema' in value
 	);
-}
-
-/**
- * Hook that registers a state in the Cedar store.
- * This is a hook version of registerState that handles the useEffect internally,
- * allowing you to call it directly in the component body without worrying about
- * state updates during render.
- *
- * @param config Configuration object for the state registration
- * @param config.key Unique key for the state in the store
- * @param config.value Current value for the state
- * @param config.setValue Optional React setState function for external state syncing
- * @param config.description Optional human-readable description for AI metadata
- * @param config.customSetters Optional custom setter functions for this state
- * @param config.schema Optional Zod schema for validating the state
- */
-export function useRegisterState<T extends BasicStateValue>(config: {
-	key: string;
-	value: T;
-	setValue?: SetterFunction<T>;
-	description?: string;
-	schema?: ZodSchema<T>;
-	customSetters?: Record<string, Setter<T>>;
-}): void {
-	const registerState = useCedarStore((s: CedarStore) => s.registerState);
-
-	useEffect(() => {
-		registerState(config);
-	}, [
-		config.key,
-		config.value,
-		config.setValue,
-		config.description,
-		config.schema,
-		config.customSetters,
-		registerState,
-	]);
 }

@@ -1,14 +1,15 @@
 'use client';
 
+import JsonPatchPlayground from '@/cedar-playground/JsonPatchPlayground';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
-import { useState } from 'react';
-import { type CedarStore, ActivationMode } from 'cedar-os';
 import SliderSpell from '@/spells/SliderSpell';
+import { type CedarStore, ActivationMode } from 'cedar-os';
+import { useState } from 'react';
 import {
 	AgentBackendConnectionSection,
 	ChatSection,
-	TextLengthSection,
 	SubscribedStatesSection,
+	TextLengthSection,
 } from './sections';
 
 export default function CedarPlaygroundPage() {
@@ -96,6 +97,9 @@ export default function CedarPlaygroundPage() {
 
 			{/* 
 			<StateAccessSection /> */}
+
+			{/* JSON Patch Playground */}
+			<JsonPatchPlayground />
 
 			{/* <SpellsSection /> */}
 
