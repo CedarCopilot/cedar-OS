@@ -53,6 +53,14 @@
 				]
 			},
 			{
+				"group": "End-to-end Type Safety",
+				"icon": "shield-check",
+				"pages": [
+					"type-safety/typing-agent-requests",
+					"type-safety/typing-agent-responses"
+				]
+			},
+			{
 				"group": "Chat",
 				"icon": "message",
 				"pages": [
