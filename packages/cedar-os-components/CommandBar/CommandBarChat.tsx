@@ -1,10 +1,7 @@
 import React, { useCallback } from 'react';
 import { CommandBar, CommandBarContents } from './CommandBar';
 import { useCedarStore } from 'cedar-os';
-import {
-	FloatingContainer,
-	FloatingPosition,
-} from '@/structural/FloatingContainer';
+import { cn } from 'cedar-os';
 import {
 	Send,
 	History,
@@ -20,8 +17,6 @@ interface CommandBarChatProps {
 	open: boolean;
 	/** Callback when the command bar should close */
 	onClose?: () => void;
-	/** Position of the floating container */
-	position?: FloatingPosition;
 	/** Additional CSS classes */
 	className?: string;
 }
@@ -29,7 +24,6 @@ interface CommandBarChatProps {
 export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 	open,
 	onClose,
-	position = 'top-center',
 	className,
 }) => {
 	const addMessage = useCedarStore((state) => state.addMessage);
@@ -313,24 +307,22 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 		],
 	};
 
+	// Don't render if not open
+	if (!open) return null;
+
 	return (
-		<FloatingContainer
-			isActive={open}
-			position={position}
-			dimensions={{
-				width: 600,
-				maxWidth: 800,
-				minWidth: 400,
-			}}
-			resizable={false}>
+		<div
+			className={cn(
+				'fixed top-8 left-1/2 transform -translate-x-1/2 z-[9999] w-2xl',
+				className
+			)}>
 			<CommandBar
 				open={open}
 				contents={contents}
 				onClose={onClose}
 				placeholder='Type a command, ask a question, or search...'
 				emptyMessage="No commands found. Try typing 'help' or 'send message'."
-				className={className}
 			/>
-		</FloatingContainer>
+		</div>
 	);
 };
