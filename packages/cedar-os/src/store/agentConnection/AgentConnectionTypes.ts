@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import type { CedarStore } from '@/store/CedarOSTypes';
+import type { AdditionalContextParam } from '@/store/agentInputContext/AgentInputContextTypes';
+import { AdditionalContextParamSchema } from '@/store/agentInputContext/AgentInputContextTypes';
 
 // Base types for LLM responses and events
 export interface LLMResponse {
@@ -25,7 +27,10 @@ export interface VoiceLLMResponse extends LLMResponse {
 }
 
 // Voice parameters for LLM calls
-export type VoiceParams<E = object> = BaseParams<E> & {
+export type VoiceParams<
+	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E = object
+> = BaseParams<TData, E> & {
 	audioData: Blob;
 	voiceSettings: {
 		language: string;
@@ -58,14 +63,20 @@ export interface StreamResponse {
 }
 
 // Provider-specific parameter types
-export type BaseParams<E = object> = {
+// Updated to use AdditionalContextParam for better type safety
+export type BaseParams<
+	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E = object
+> = {
 	prompt?: string;
 	systemPrompt?: string;
 	temperature?: number;
 	maxTokens?: number;
 	stream?: boolean;
+	additionalContext?: AdditionalContextParam<TData>;
 } & E; // User-defined extra fields with full type safety
 
+// Standardized providers have fixed APIs (no custom context data)
 export interface OpenAIParams extends BaseParams {
 	model: string;
 }
@@ -74,26 +85,35 @@ export interface AnthropicParams extends BaseParams {
 	model: string;
 }
 
-export type MastraParams<T = unknown, E = object> = BaseParams<E> & {
-	route: string;
-	resourceId?: string;
-	threadId?: string;
-	additionalContext?: T; // Typed additional context
-};
-
 export interface AISDKParams extends BaseParams {
 	model: string; // Format: "provider/model" e.g., "openai/gpt-4o", "anthropic/claude-3-sonnet"
 }
 
-export type CustomParams<T = unknown, E = object> = BaseParams<E> & {
+// Configurable providers support custom context data
+export type MastraParams<
+	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E = object
+> = BaseParams<TData, E> & {
+	route: string;
+	resourceId?: string;
+	threadId?: string;
+};
+
+export type CustomParams<
+	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E = object
+> = BaseParams<TData, E> & {
 	userId?: string;
 	threadId?: string;
-	additionalContext?: T; // Typed additional context
 };
 
 // Structured output params extend base params with schema
-export type StructuredParams<T = unknown, E = object> = BaseParams<E> & {
-	schema?: T; // JSON Schema or Zod schema
+export type StructuredParams<
+	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E = object,
+	TSchema = unknown
+> = BaseParams<TData, E> & {
+	schema?: TSchema; // JSON Schema or Zod schema
 	schemaName?: string;
 	schemaDescription?: string;
 };
@@ -221,8 +241,11 @@ export type ResponseProcessorRegistry = Record<
 	ResponseProcessor | undefined
 >;
 
-// Generic Zod schema factory for BaseParams that matches the updated interface
-export const BaseParamsSchema = <E extends z.ZodTypeAny = z.ZodType<object>>(
+export const BaseParamsSchema = <
+	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E extends z.ZodTypeAny = z.ZodType<object>
+>(
+	dataSchemas?: TData,
 	extraFieldsSchema?: E
 ) =>
 	z
@@ -232,41 +255,41 @@ export const BaseParamsSchema = <E extends z.ZodTypeAny = z.ZodType<object>>(
 			temperature: z.number().optional(),
 			maxTokens: z.number().optional(),
 			stream: z.boolean().optional(),
+			additionalContext: dataSchemas
+				? AdditionalContextParamSchema(dataSchemas).optional()
+				: z.unknown().optional(),
 		})
 		.and(extraFieldsSchema || z.object({})); // Merge with user-defined extra fields schema
 
 // Convenience export for basic BaseParams schema (no extra fields)
 export const BasicBaseParamsSchema = BaseParamsSchema();
 
-// Provider-specific schema factories that use the generic BaseParams
 export const MastraParamsSchema = <
-	T extends z.ZodTypeAny = z.ZodUnknown,
+	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E extends z.ZodTypeAny = z.ZodType<object>
 >(
-	additionalContextSchema?: T,
+	dataSchemas?: TData,
 	extraFieldsSchema?: E
 ) =>
-	BaseParamsSchema(extraFieldsSchema).and(
+	BaseParamsSchema(dataSchemas, extraFieldsSchema).and(
 		z.object({
 			route: z.string(),
 			resourceId: z.string().optional(),
 			threadId: z.string().optional(),
-			additionalContext: (additionalContextSchema || z.unknown()).optional(),
 		})
 	);
 
 export const CustomParamsSchema = <
-	T extends z.ZodTypeAny = z.ZodUnknown,
+	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E extends z.ZodTypeAny = z.ZodType<object>
 >(
-	additionalContextSchema?: T,
+	dataSchemas?: TData,
 	extraFieldsSchema?: E
 ) =>
-	BaseParamsSchema(extraFieldsSchema).and(
+	BaseParamsSchema(dataSchemas, extraFieldsSchema).and(
 		z.object({
 			userId: z.string().optional(),
 			threadId: z.string().optional(),
-			additionalContext: (additionalContextSchema || z.unknown()).optional(),
 		})
 	);
 

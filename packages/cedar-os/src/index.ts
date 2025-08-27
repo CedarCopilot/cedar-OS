@@ -57,6 +57,11 @@ export type {
 	MentionItem,
 	MentionProvider,
 	StateBasedMentionProviderConfig,
+	// Phase 1: Backend context types moved from AgentConnectionTypes
+	AdditionalContextParam,
+	BackendSetterSchema,
+	BackendStateSchema,
+	BackendContextEntry,
 } from '@/store/agentInputContext/AgentInputContextTypes';
 
 // Export message types
@@ -133,6 +138,18 @@ export {
 	BasicMastraParamsSchema,
 	BasicCustomParamsSchema,
 } from '@/store/agentConnection/AgentConnectionTypes';
+
+// Export additional context schemas from AgentInputContextTypes
+export {
+	// Backend context schema factories
+	AdditionalContextParamSchema,
+	// Standard frontend context schemas
+	ContextEntrySchema,
+	AdditionalContextSchema,
+	ChatRequestSchema,
+	ChatResponseSchema,
+	createChatRequestSchema,
+} from '@/store/agentInputContext/AgentInputContextTypes';
 
 // Export Mastra message types
 export type {
