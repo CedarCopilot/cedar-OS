@@ -512,25 +512,27 @@ await handleEventStream(response, {
 });
 ```
 
-### Type Safety
+## Type Safety
 
-Use TypeScript interfaces for better type safety:
+Custom backends support full end-to-end type safety using `CustomParams<T, E>`:
 
 ```typescript
-interface MyProviderParams extends CustomParams {
-	model: string;
-	customSetting?: boolean;
-}
-
-interface MyProviderConfig {
-	provider: 'custom';
-	config: {
-		apiKey: string;
-		baseURL: string;
-		defaultModel: string;
-	};
-}
+// Use CustomParams for type-safe requests
+type CustomParams<
+	T extends Record<string, unknown> = Record<string, never>,
+	E = object
+> = BaseParams<T, E> & {
+	userId?: string;
+	threadId?: string;
+};
 ```
+
+The `CustomParams` type allows you to:
+
+- **T**: Define types for your `additionalContext` data
+- **E**: Define types for custom fields specific to your backend
+
+For complete type safety implementation, validation with Zod schemas, and detailed examples, see [Typing Agent Requests](/type-safety/typing-agent-requests).
 
 ## Best Practices
 
