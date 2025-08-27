@@ -134,9 +134,12 @@ export {
 	AnthropicParamsSchema,
 	AISDKParamsSchema,
 	// Convenience schemas (no extra fields)
-	BasicBaseParamsSchema,
-	BasicMastraParamsSchema,
-	BasicCustomParamsSchema,
+	// Response Schema System
+	LLMResponseSchema,
+	BaseStructuredResponseSchema,
+	StructuredResponseSchema,
+	StreamEventSchema,
+	VoiceLLMResponseSchema,
 } from '@/store/agentConnection/AgentConnectionTypes';
 
 // Export additional context schemas from AgentInputContextTypes
