@@ -165,13 +165,17 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		 * @param key The state key.
 		 * @param value The new value to set.
 		 */
-		setCedarState: <T extends BasicStateValue>(key: string, value: T) => {
+		setCedarState: <T extends BasicStateValue>(
+			key: string,
+			value: T,
+			isDiffChange: boolean = false
+		) => {
 			// Check if this state is tracked in diffHistory
 			const diffHistoryState = get().getDiffHistoryState?.(key);
 			if (diffHistoryState) {
 				// Use setDiffState for diff-tracked states
 				// Default to isDiffChange = true when setting through setCedarState
-				get().newDiffState(key, value, true);
+				get().newDiffState(key, value, isDiffChange);
 				return;
 			}
 

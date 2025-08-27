@@ -81,7 +81,7 @@ export interface DiffHistorySlice {
 	) => void;
 
 	// New newDiffState method
-	newDiffState: <T>(key: string, newState: T, isDiffChange: boolean) => void;
+	newDiffState: <T>(key: string, newState: T, isDiffChange?: boolean) => void;
 
 	// Execute custom setter for diff-tracked states
 	executeDiffSetter: (
@@ -169,7 +169,7 @@ export const createDiffHistorySlice: StateCreator<
 				!isEqual(currentNewState, value) &&
 				!isEqual(currentComputedState, value)
 			) {
-				get().newDiffState(key, value, false);
+				get().newDiffState(key, value);
 			}
 		}
 	},
@@ -183,15 +183,15 @@ export const createDiffHistorySlice: StateCreator<
 		}));
 
 		// Register or update the state in stateSlice with the clean state
-		const cleanState = get().getCleanState<T>(key);
-		if (cleanState !== undefined) {
+		const newState = diffHistoryState.diffState.computedState;
+		if (newState !== undefined) {
 			// Get the registered state to check if it exists
 			const registeredState = get().registeredStates?.[key];
 			if (!registeredState) {
 				// // Register the state if it doesn't exist
 				get().registerState({
 					key,
-					value: cleanState,
+					value: newState,
 					// Change
 					description: `Diff-tracked state: ${key}`,
 				});
@@ -200,7 +200,7 @@ export const createDiffHistorySlice: StateCreator<
 				// This prevents unnecessary re-renders and potential loops
 				const currentValue = registeredState.value;
 
-				if (!isEqual(currentValue, cleanState)) {
+				if (!isEqual(currentValue, newState)) {
 					// Update the value in registeredStates
 					set(
 						(state) =>
@@ -209,17 +209,18 @@ export const createDiffHistorySlice: StateCreator<
 									...state.registeredStates,
 									[key]: {
 										...state.registeredStates[key],
-										value: cleanState as BasicStateValue,
+										value: newState as BasicStateValue,
 									},
 								},
 							} as Partial<CedarStore>)
 					);
+					registeredState.setValue?.(newState as BasicStateValue);
 				}
 			}
 		}
 	},
 
-	newDiffState: <T>(key: string, newState: T, isDiffChange: boolean) => {
+	newDiffState: <T>(key: string, newState: T, isDiffChange?: boolean) => {
 		const currentDiffHistoryState = get().getDiffHistoryState<T>(key);
 
 		// If no existing state, we can't proceed
@@ -235,12 +236,15 @@ export const createDiffHistorySlice: StateCreator<
 			computeState,
 		} = currentDiffHistoryState;
 
+		// If isDiffChange is not provided, use the current diff state's isDiffMode
+		const effectiveIsDiffChange = isDiffChange ?? originalDiffState.isDiffMode;
+
 		// Step 1: Save the original diffState to history
 		const updatedHistory = [...history, originalDiffState];
 
 		// Step 3: Create the new diffState based on isDiffChange flag
 		let oldStateForDiff: T;
-		if (!isDiffChange) {
+		if (!effectiveIsDiffChange) {
 			// Not in diff mode, use current newState
 			oldStateForDiff = newState;
 		} else {
@@ -263,7 +267,7 @@ export const createDiffHistorySlice: StateCreator<
 			oldState: oldStateForDiff,
 			newState: newState,
 			computedState: computedStateValue,
-			isDiffMode: isDiffChange,
+			isDiffMode: effectiveIsDiffChange,
 			patches,
 		};
 
@@ -306,7 +310,7 @@ export const createDiffHistorySlice: StateCreator<
 						} as Partial<CedarStore>)
 				);
 				// Call setValue to update the external state
-				registeredState.setValue?.(computedStateValue as BasicStateValue);
+				registeredState.setValue?.(newState as BasicStateValue);
 			}
 		}
 	},

@@ -61,7 +61,6 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 				comments: [],
 				status: 'planned' as const,
 				nodeType: 'feature' as const,
-				diff: 'added' as const,
 			},
 		};
 		executeCustomSetter({
