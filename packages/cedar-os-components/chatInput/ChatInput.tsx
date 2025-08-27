@@ -10,6 +10,7 @@ import { ContextBadgeRow } from '@/chatInput/ContextBadgeRow';
 import { useCedarEditor } from 'cedar-os';
 import Container3DButton from '@/containers/Container3DButton';
 import { VoiceIndicator } from '@/voice/VoiceIndicator';
+import { KeyboardShortcut } from '@/ui/KeyboardShortcut';
 
 // ChatContainer component with position options
 export type ChatContainerPosition = 'bottom-center' | 'embedded' | 'custom';
@@ -29,9 +30,17 @@ export const ChatInput: React.FC<{
 	className = '',
 	stream = true,
 }) => {
+	const [isFocused, setIsFocused] = React.useState(false);
+
 	const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
-		onFocus: handleFocus,
-		onBlur: handleBlur,
+		onFocus: () => {
+			setIsFocused(true);
+			handleFocus?.();
+		},
+		onBlur: () => {
+			setIsFocused(false);
+			handleBlur?.();
+		},
 		stream,
 	});
 
@@ -80,14 +89,19 @@ export const ChatInput: React.FC<{
 		}
 	}, [isInputFocused, editor]);
 
-	// Handle tab key to focus the editor
+	// Handle tab key to focus the editor and escape to unfocus
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === 'Tab') {
 				e.preventDefault();
 				if (editor) {
 					editor.commands.focus();
-					handleFocus?.();
+					setIsFocused(true);
+				}
+			} else if (e.key === 'Escape') {
+				if (isFocused && editor) {
+					editor.commands.blur();
+					setIsFocused(false);
 				}
 			}
 		};
@@ -99,7 +113,7 @@ export const ChatInput: React.FC<{
 		return () => {
 			window.removeEventListener('keydown', handleKeyDown);
 		};
-	}, [editor, handleFocus]);
+	}, [editor, isFocused]);
 
 	// Handle global keyboard shortcuts
 	useEffect(() => {
@@ -160,7 +174,13 @@ export const ChatInput: React.FC<{
 						/>
 					</div>
 				) : (
-					<div className='flex items-center'>
+					<div className='flex items-center gap-2'>
+						{!isFocused && (
+							<KeyboardShortcut
+								shortcut='tab'
+								className='text-muted-foreground border-muted-foreground/30 flex-shrink-0'
+							/>
+						)}
 						<motion.div
 							layoutId='chatInput'
 							className='flex-1 justify-center py-3'

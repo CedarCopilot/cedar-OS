@@ -37,6 +37,7 @@ import {
 import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
+import { CommandBarChat } from '@/CommandBar/CommandBarChat';
 import {
 	ActivationMode,
 	Hotkey,
@@ -631,8 +632,8 @@ function SelectedNodesPanel() {
 
 export default function ProductMapPage() {
 	const [chatMode, setChatMode] = React.useState<
-		'floating' | 'sidepanel' | 'caption'
-	>('caption');
+		'floating' | 'sidepanel' | 'caption' | 'command'
+	>('command');
 
 	const renderContent = () => (
 		<ReactFlowProvider>
@@ -643,6 +644,11 @@ export default function ProductMapPage() {
 					onChatModeChange={setChatMode}
 					currentChatMode={chatMode}
 				/>
+				{chatMode === 'command' && (
+					<>
+						<CommandBarChat open={true} />
+					</>
+				)}
 				{chatMode === 'caption' && <CedarCaptionChat stream={false} />}
 				{chatMode === 'floating' && (
 					<FloatingCedarChat
