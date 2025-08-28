@@ -1,4 +1,4 @@
-import { useVoice, cn } from 'cedar-os';
+import { useVoice, cn, useCedarStore, HumanInTheLoopMessage } from 'cedar-os';
 
 import { CedarEditorContent as EditorContent } from 'cedar-os';
 import { Code, Image, Mic, SendHorizonal } from 'lucide-react';
@@ -10,6 +10,7 @@ import { ContextBadgeRow } from '@/chatInput/ContextBadgeRow';
 import { useCedarEditor } from 'cedar-os';
 import Container3DButton from '@/containers/Container3DButton';
 import { VoiceIndicator } from '@/voice/VoiceIndicator';
+import { HumanInTheLoopIndicator } from 'cedar-os-components/chatInput/HumanInTheLoopIndicator';
 
 // ChatContainer component with position options
 export type ChatContainerPosition = 'bottom-center' | 'embedded' | 'custom';
@@ -37,6 +38,13 @@ export const ChatInput: React.FC<{
 
 	// Initialize voice functionality
 	const voice = useVoice();
+
+	// Get latest message to check for human-in-the-loop state
+	const messages = useCedarStore((state) => state.messages);
+	const latestMessage = messages[messages.length - 1];
+	const isHumanInTheLoopSuspended =
+		latestMessage?.type === 'humanInTheLoop' &&
+		(latestMessage as HumanInTheLoopMessage).state === 'suspended';
 
 	// Handle voice toggle
 	const handleVoiceToggle = useCallback(async () => {
@@ -157,6 +165,12 @@ export const ChatInput: React.FC<{
 								voiceError: voice.voiceError,
 								voicePermissionStatus: voice.voicePermissionStatus,
 							}}
+						/>
+					</div>
+				) : isHumanInTheLoopSuspended ? (
+					<div className='py-2 items-center justify-center w-full'>
+						<HumanInTheLoopIndicator
+							state={(latestMessage as HumanInTheLoopMessage).state}
 						/>
 					</div>
 				) : (
