@@ -37,10 +37,11 @@ import {
 import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
-import { CommandBarChat } from '@/CommandBar/CommandBarChat';
+import { CommandBarChat } from '@/app/examples/product-roadmap/components/CommandBarChat';
 import {
 	ActivationMode,
 	Hotkey,
+	useCedarState,
 	useRegisterState,
 	useStateBasedMentionProvider,
 	useSubscribeStateToInputContext,
@@ -577,12 +578,9 @@ function FlowCanvas() {
 // -----------------------------------------------------------------------------
 
 function SelectedNodesPanel() {
-	const [selected, setSelected] = React.useState<Node<FeatureNodeData>[]>([]);
-
-	useRegisterState<Node<FeatureNodeData>[]>({
+	const [selected, setSelected] = useCedarState<Node<FeatureNodeData>[]>({
 		key: 'selectedNodes',
-		value: selected,
-		setValue: setSelected,
+		initialValue: [],
 		description: 'Selected nodes',
 	});
 
