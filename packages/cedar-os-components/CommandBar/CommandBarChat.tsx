@@ -1,7 +1,7 @@
 import { cn, useCedarStore } from 'cedar-os';
 import { Bot, HelpCircle, Plus, PlusCircle, Send, Wand2 } from 'lucide-react';
 import React from 'react';
-import { CommandBar, CommandBarContents } from './CommandBar';
+import { CommandBar, CommandBarContents, CommandBarItem } from './CommandBar';
 
 interface CommandBarChatProps {
 	/** Whether the command bar is open/visible */
@@ -18,8 +18,10 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 	className,
 }) => {
 	const sendMessage = useCedarStore((state) => state.sendMessage);
+	const [searchText, setSearchText] = React.useState('');
 
-	const contents: CommandBarContents = {
+	// Base contents that are always shown
+	const baseContents: CommandBarContents = {
 		groups: [
 			{
 				id: 'quick-actions',
@@ -67,60 +69,6 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 								'?',
 							];
 							return terms.some((term) => term.includes(searchText));
-						},
-					},
-				],
-			},
-			{
-				id: 'common-prompts',
-				heading: 'Common Prompts',
-				items: [
-					{
-						id: 'analyze-roadmap',
-						label: 'Analyze Current Roadmap',
-						icon: '📊',
-						onSelect: () => {
-							sendMessage();
-						},
-						searchFunction: (searchText, item) => {
-							// Match on analysis and roadmap terms
-							const terms = [
-								item.label.toLowerCase(),
-								'analyze',
-								'analysis',
-								'review',
-								'roadmap',
-								'insights',
-								'gaps',
-								'priorities',
-								'improvement',
-								'assess',
-							];
-							return terms.some((term) => term.includes(searchText));
-						},
-					},
-					{
-						id: 'suggest-features',
-						label: 'Suggest New Features',
-						icon: '💡',
-						onSelect: () => {
-							sendMessage();
-						},
-					},
-					{
-						id: 'review-priorities',
-						label: 'Review Priorities',
-						icon: '🎯',
-						onSelect: () => {
-							sendMessage();
-						},
-					},
-					{
-						id: 'estimate-effort',
-						label: 'Estimate Development Effort',
-						icon: '⏱️',
-						onSelect: () => {
-							sendMessage();
 						},
 					},
 				],
@@ -256,6 +204,74 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 		},
 	};
 
+	// Common prompts group - only shown when search is empty
+	const commonPromptsGroup = {
+		id: 'common-prompts',
+		heading: 'Common Prompts',
+		items: [
+			{
+				id: 'analyze-roadmap',
+				label: 'Analyze Current Roadmap',
+				icon: '📊',
+				onSelect: () => {
+					sendMessage();
+				},
+				searchFunction: (searchText: string, item: CommandBarItem) => {
+					// Match on analysis and roadmap terms
+					const terms = [
+						item.label.toLowerCase(),
+						'analyze',
+						'analysis',
+						'review',
+						'roadmap',
+						'insights',
+						'gaps',
+						'priorities',
+						'improvement',
+						'assess',
+					];
+					return terms.some((term) => term.includes(searchText));
+				},
+			},
+			{
+				id: 'suggest-features',
+				label: 'Suggest New Features',
+				icon: '💡',
+				onSelect: () => {
+					sendMessage();
+				},
+			},
+			{
+				id: 'review-priorities',
+				label: 'Review Priorities',
+				icon: '🎯',
+				onSelect: () => {
+					sendMessage();
+				},
+			},
+			{
+				id: 'estimate-effort',
+				label: 'Estimate Development Effort',
+				icon: '⏱️',
+				onSelect: () => {
+					sendMessage();
+				},
+			},
+		],
+	};
+
+	// Create dynamic contents based on search state
+	const contents: CommandBarContents = React.useMemo(() => {
+		const isEmpty = searchText.trim() === '';
+
+		return {
+			groups: isEmpty
+				? [...baseContents.groups, commonPromptsGroup]
+				: baseContents.groups,
+			fixedBottomGroup: baseContents.fixedBottomGroup,
+		};
+	}, [searchText]);
+
 	// Don't render if not open
 	if (!open) return null;
 
@@ -270,6 +286,7 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 				contents={contents}
 				onClose={onClose}
 				placeholder='Type a command, ask a question, or search...'
+				onSearchChange={setSearchText}
 			/>
 		</div>
 	);

@@ -89,6 +89,8 @@ interface CommandBarProps {
 	onClose?: () => void;
 	/** Whether the command bar is in collapsed state (only shows search bar) */
 	collapsed?: boolean;
+	/** Callback when search text changes */
+	onSearchChange?: (searchText: string) => void;
 }
 
 /**
@@ -110,6 +112,7 @@ const useCommandBarItemSpell = (
 		onActivate: () => {
 			if (isOpen && !item.disabled) {
 				item.onSelect();
+
 				onClose?.();
 			}
 		},
@@ -127,6 +130,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 	className,
 	onClose,
 	collapsed: controlledCollapsed,
+	onSearchChange,
 }) => {
 	const [isFocused, setIsFocused] = React.useState(false);
 	const [selectedIndex, setSelectedIndex] = React.useState(0);
@@ -158,6 +162,11 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 
 	// Get the current search text
 	const searchText = getEditorText().toLowerCase().trim();
+
+	// Notify parent of search text changes
+	React.useEffect(() => {
+		onSearchChange?.(searchText);
+	}, [searchText, onSearchChange]);
 
 	// Filter and sort contents based on search text with priority scoring
 	const filteredContents = React.useMemo(() => {
@@ -261,7 +270,14 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				}
 			} else if (e.key === 'Tab' && !e.shiftKey && open) {
 				e.preventDefault();
-				editor?.commands.focus();
+				if (isFocused) {
+					// Unfocus the input if it's currently focused
+					editor?.commands.blur();
+					setIsFocused(false);
+				} else {
+					// Focus the input if it's not focused
+					editor?.commands.focus();
+				}
 			} else if (
 				e.key === 'ArrowDown' &&
 				isFocused &&
@@ -400,10 +416,13 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 											<CommandItem
 												key={item.id}
 												value={item.id}
-												onSelect={() => handleItemSelect(item)}
+												onSelect={() => {}}
+												onMouseDown={() => {
+													handleItemSelect(item);
+												}}
 												disabled={item.disabled}
 												className={cn(
-													'flex items-center gap-2',
+													'flex items-center gap-2 cursor-pointer',
 													item.disabled && 'opacity-50 cursor-not-allowed',
 													// Apply color-based styling if color is specified
 													item.color === 'blue' &&
@@ -458,7 +477,9 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 								{filteredContents.fixedBottomGroup.items.map((item) => (
 									<button
 										key={item.id}
-										onClick={() => handleItemSelect(item)}
+										onMouseDown={() => {
+											handleItemSelect(item);
+										}}
 										disabled={item.disabled}
 										className={cn(
 											'flex-1 flex items-center justify-between gap-1 p-2 rounded-md text-xs transition-colors',
