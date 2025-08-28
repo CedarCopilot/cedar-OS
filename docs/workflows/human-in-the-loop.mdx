@@ -186,6 +186,7 @@ type HumanInTheLoopMessage<
 ```
 
 This message is added to the chat the same way any other message is, so when rendering it, you can create custom UI for how to gather user input and when to call the callbacks given (see below for an example).
+We do register a custom message renderer for this, but you will likely need to override it since the data you'll gather from the user is application specific. You can work off of the existing message renderer available here: `packages/cedar-os/src/store/messages/renderers/HumanInTheLoopRenderer.tsx`
 
 ## Backend Integration
 
