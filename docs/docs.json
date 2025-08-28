@@ -49,15 +49,14 @@
 							"agent-backend-connection/mastra",
 							"agent-backend-connection/custom"
 						]
+					},
+					{
+						"group": "End-to-end type safety",
+						"pages": [
+							"type-safety/typing-agent-requests",
+							"type-safety/typing-agent-responses"
+						]
 					}
-				]
-			},
-			{
-				"group": "End-to-end Type Safety",
-				"icon": "shield-check",
-				"pages": [
-					"type-safety/typing-agent-requests",
-					"type-safety/typing-agent-responses"
 				]
 			},
 			{
@@ -127,6 +126,11 @@
 						]
 					}
 				]
+			},
+			{
+				"group": "Advanced Workflows",
+				"icon": "brain-circuit",
+				"pages": ["workflows/human-in-the-loop"]
 			},
 			{
 				"group": "External Integrations (Coming Soon)",
