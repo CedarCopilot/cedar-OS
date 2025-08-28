@@ -1,6 +1,7 @@
 import { useCedarStore } from '@/store/CedarStore';
 import type { BasicStateValue } from '@/store/stateSlice/stateSlice';
-import { compare } from 'fast-json-patch';
+import { compare, Operation } from 'fast-json-patch';
+import type { DiffChecker } from './diffHistorySlice';
 import { useEffect } from 'react';
 import type { RegisterDiffStateConfig } from './diffHistorySlice';
 
@@ -18,18 +19,65 @@ export interface DiffStateReturn {
 }
 
 /**
+ * Filters JSON patches based on diffChecker configuration
+ * @param patches - Array of JSON patch operations
+ * @param diffChecker - Configuration for selective diff checking
+ * @returns Filtered array of patches
+ */
+function filterPatchesByDiffChecker(
+	patches: Operation[],
+	diffChecker?: DiffChecker
+): Operation[] {
+	if (!diffChecker) {
+		return patches;
+	}
+
+	const { type, fields } = diffChecker;
+
+	if (type === 'ignore') {
+		// Filter out patches that match any of the ignore fields (including child paths)
+		return patches.filter((patch) => {
+			return !fields.some((field) => {
+				// Normalize paths (ensure they start with /)
+				const normalizedField = field.startsWith('/') ? field : `/${field}`;
+				const patchPath = patch.path;
+
+				// Check if patch path starts with the ignore field (covers child paths too)
+				return patchPath.startsWith(normalizedField);
+			});
+		});
+	} else if (type === 'listen') {
+		// Only keep patches that match any of the listen fields (including child paths)
+		return patches.filter((patch) => {
+			return fields.some((field) => {
+				// Normalize paths (ensure they start with /)
+				const normalizedField = field.startsWith('/') ? field : `/${field}`;
+				const patchPath = patch.path;
+
+				// Check if patch path starts with the listen field (covers child paths too)
+				return patchPath.startsWith(normalizedField);
+			});
+		});
+	}
+
+	return patches;
+}
+
+/**
  * Utility function to add diff markers to array objects
  * Compares arrays and adds 'diff' field to objects based on changes
  * @param oldState - The previous state array
  * @param newState - The new state array
  * @param idField - The field to use as unique identifier (default: 'id')
  * @param diffPath - JSON path where to add the diff field (default: '' for root level, '/data' for nested)
+ * @param diffChecker - Optional configuration for selective diff checking
  */
 export function addDiffToArrayObjs<T extends Record<string, unknown>>(
 	oldState: T[],
 	newState: T[],
 	idField: string = 'id',
-	diffPath: string = ''
+	diffPath: string = '',
+	diffChecker?: DiffChecker
 ): T[] {
 	const oldMap = new Map(oldState.map((item) => [item[idField], item]));
 
@@ -45,7 +93,11 @@ export function addDiffToArrayObjs<T extends Record<string, unknown>>(
 		} else {
 			// Check if item was changed
 			const patches = compare(oldItem, item);
-			if (patches.length > 0) {
+
+			// Apply diffChecker filtering if provided
+			const filteredPatches = filterPatchesByDiffChecker(patches, diffChecker);
+
+			if (filteredPatches.length > 0) {
 				diffType = 'changed';
 			}
 		}

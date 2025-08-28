@@ -19,6 +19,26 @@ import type { ZodSchema } from 'zod';
 export type DiffMode = 'defaultAccept' | 'holdAccept';
 
 /**
+ * Configuration for selective diff checking based on JSON paths.
+ *
+ * @example
+ * // Ignore position changes (and all child fields)
+ * { type: 'ignore', fields: ['/positionAbsolute'] }
+ *
+ * // Only consider changes if positionAbsolute changes
+ * { type: 'listen', fields: ['/positionAbsolute'] }
+ */
+export interface DiffChecker {
+	/**
+	 * 'ignore': Ignore changes to specified fields and their children
+	 * 'listen': Only consider changes to specified fields
+	 */
+	type: 'ignore' | 'listen';
+	/** Array of JSON paths to ignore or listen to */
+	fields: string[];
+}
+
+/**
  * Function that computes the final state based on old and new states.
  * Can be used to add diff markers or transform the state before setting.
  */

@@ -301,3 +301,256 @@ describe('addDiffToArrayObjs', () => {
 		expect(result[1].meta.info.diff).toBe('added');
 	});
 });
+
+describe('diffChecker functionality', () => {
+	it('should ignore specified fields and their children when type is "ignore"', () => {
+		const oldArray = [
+			{
+				id: '1',
+				position: { x: 0, y: 0 },
+				positionAbsolute: { x: 100, y: 100 },
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+		const newArray = [
+			{
+				id: '1',
+				position: { x: 0, y: 0 },
+				positionAbsolute: { x: 200, y: 200 }, // This should be ignored
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+
+		const diffChecker = {
+			type: 'ignore' as const,
+			fields: ['/positionAbsolute'],
+		};
+		const result = addDiffToArrayObjs(
+			oldArray,
+			newArray,
+			'id',
+			'/data',
+			diffChecker
+		);
+
+		// Should not have diff marker since positionAbsolute changes are ignored
+		expect(result[0].data.diff).toBeUndefined();
+	});
+
+	it('should detect changes when non-ignored fields are modified', () => {
+		const oldArray = [
+			{
+				id: '1',
+				position: { x: 0, y: 0 },
+				positionAbsolute: { x: 100, y: 100 },
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+		const newArray = [
+			{
+				id: '1',
+				position: { x: 10, y: 10 }, // This should be detected
+				positionAbsolute: { x: 200, y: 200 }, // This should be ignored
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+
+		const diffChecker = {
+			type: 'ignore' as const,
+			fields: ['/positionAbsolute'],
+		};
+		const result = addDiffToArrayObjs(
+			oldArray,
+			newArray,
+			'id',
+			'/data',
+			diffChecker
+		);
+
+		// Should have diff marker since position changes are not ignored
+		expect(result[0].data.diff).toBe('changed');
+	});
+
+	it('should only detect changes in listened fields when type is "listen"', () => {
+		const oldArray = [
+			{
+				id: '1',
+				position: { x: 0, y: 0 },
+				positionAbsolute: { x: 100, y: 100 },
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+		const newArray = [
+			{
+				id: '1',
+				position: { x: 10, y: 10 }, // This should be ignored
+				positionAbsolute: { x: 100, y: 100 }, // This is what we're listening to (no change)
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+
+		const diffChecker = {
+			type: 'listen' as const,
+			fields: ['/positionAbsolute'],
+		};
+		const result = addDiffToArrayObjs(
+			oldArray,
+			newArray,
+			'id',
+			'/data',
+			diffChecker
+		);
+
+		// Should not have diff marker since only positionAbsolute changes are listened to
+		expect(result[0].data.diff).toBeUndefined();
+	});
+
+	it('should detect changes when listened field is modified', () => {
+		const oldArray = [
+			{
+				id: '1',
+				position: { x: 0, y: 0 },
+				positionAbsolute: { x: 100, y: 100 },
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+		const newArray = [
+			{
+				id: '1',
+				position: { x: 10, y: 10 }, // This should be ignored
+				positionAbsolute: { x: 200, y: 200 }, // This should be detected
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+
+		const diffChecker = {
+			type: 'listen' as const,
+			fields: ['/positionAbsolute'],
+		};
+		const result = addDiffToArrayObjs(
+			oldArray,
+			newArray,
+			'id',
+			'/data',
+			diffChecker
+		);
+
+		// Should have diff marker since positionAbsolute changed
+		expect(result[0].data.diff).toBe('changed');
+	});
+
+	it('should handle multiple ignore fields', () => {
+		const oldArray = [
+			{
+				id: '1',
+				position: { x: 0, y: 0 },
+				positionAbsolute: { x: 100, y: 100 },
+				width: 200,
+				height: 150,
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+		const newArray = [
+			{
+				id: '1',
+				position: { x: 10, y: 10 }, // Should be ignored
+				positionAbsolute: { x: 200, y: 200 }, // Should be ignored
+				width: 300, // Should be ignored
+				height: 200, // Should be ignored
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+
+		const diffChecker = {
+			type: 'ignore' as const,
+			fields: ['/position', '/positionAbsolute', '/width', '/height'],
+		};
+		const result = addDiffToArrayObjs(
+			oldArray,
+			newArray,
+			'id',
+			'/data',
+			diffChecker
+		);
+
+		// Should not have diff marker since all changes are ignored
+		expect(result[0].data.diff).toBeUndefined();
+	});
+
+	it('should handle child path filtering correctly', () => {
+		const oldArray = [
+			{
+				id: '1',
+				position: { x: 0, y: 0 },
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+		const newArray = [
+			{
+				id: '1',
+				position: { x: 10, y: 10 }, // Child of /position should be ignored
+				data: { title: 'Node 1', description: 'Test node' },
+			},
+		];
+
+		const diffChecker = { type: 'ignore' as const, fields: ['/position'] };
+		const result = addDiffToArrayObjs(
+			oldArray,
+			newArray,
+			'id',
+			'/data',
+			diffChecker
+		);
+
+		// Should not have diff marker since /position changes (including children) are ignored
+		expect(result[0].data.diff).toBeUndefined();
+	});
+
+	it('should work without diffChecker (backward compatibility)', () => {
+		const oldArray = [
+			{ id: '1', name: 'Item 1' },
+			{ id: '2', name: 'Item 2' },
+		];
+		const newArray = [
+			{ id: '1', name: 'Item 1 Updated' },
+			{ id: '2', name: 'Item 2' },
+		];
+
+		const result = addDiffToArrayObjs(oldArray, newArray);
+
+		expect(result[0].diff).toBe('changed');
+		expect(result[1].diff).toBeUndefined();
+	});
+
+	it('should handle normalization of paths without leading slash', () => {
+		const oldArray = [
+			{
+				id: '1',
+				positionAbsolute: { x: 100, y: 100 },
+				data: { title: 'Node 1' },
+			},
+		];
+		const newArray = [
+			{
+				id: '1',
+				positionAbsolute: { x: 200, y: 200 },
+				data: { title: 'Node 1' },
+			},
+		];
+
+		// Test with field without leading slash
+		const diffChecker = {
+			type: 'ignore' as const,
+			fields: ['positionAbsolute'],
+		};
+		const result = addDiffToArrayObjs(
+			oldArray,
+			newArray,
+			'id',
+			'/data',
+			diffChecker
+		);
+
+		expect(result[0].data.diff).toBeUndefined();
+	});
+});

@@ -132,7 +132,10 @@ function FlowCanvas() {
 		key: 'nodes',
 		description: 'Product roadmap nodes',
 		computeState: (oldState, newState) =>
-			addDiffToArrayObjs(oldState, newState, 'id', '/data'),
+			addDiffToArrayObjs(oldState, newState, 'id', '/data', {
+				type: 'listen',
+				fields: ['/data', '/position'],
+			}),
 		customSetters: {
 			addNode: {
 				name: 'addNode',
