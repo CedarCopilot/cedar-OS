@@ -256,7 +256,7 @@ describe('useSpell', () => {
 
 	describe('Activation conditions', () => {
 		it('should handle multiple activation events', () => {
-			const { result } = renderHook(() =>
+			renderHook(() =>
 				useSpell({
 					id: 'multi-events',
 					activationConditions: {
@@ -270,7 +270,7 @@ describe('useSpell', () => {
 		});
 
 		it('should handle different activation modes', () => {
-			const { result: toggleResult } = renderHook(() =>
+			renderHook(() =>
 				useSpell({
 					id: 'toggle-mode',
 					activationConditions: {
@@ -280,7 +280,7 @@ describe('useSpell', () => {
 				})
 			);
 
-			const { result: holdResult } = renderHook(() =>
+			renderHook(() =>
 				useSpell({
 					id: 'hold-mode',
 					activationConditions: {
@@ -290,7 +290,7 @@ describe('useSpell', () => {
 				})
 			);
 
-			const { result: triggerResult } = renderHook(() =>
+			renderHook(() =>
 				useSpell({
 					id: 'trigger-mode',
 					activationConditions: {
@@ -317,7 +317,7 @@ describe('useSpell', () => {
 		});
 
 		it('should handle keyboard combos', () => {
-			const { result } = renderHook(() =>
+			renderHook(() =>
 				useSpell({
 					id: 'combo-spell',
 					activationConditions: {
@@ -363,7 +363,7 @@ describe('useSpell', () => {
 
 	describe('Options', () => {
 		it('should handle preventDefaultEvents option', () => {
-			const { result } = renderHook(() =>
+			renderHook(() =>
 				useSpell({
 					id: 'prevent-default',
 					activationConditions: {
@@ -378,7 +378,7 @@ describe('useSpell', () => {
 		});
 
 		it('should handle ignoreInputElements option', () => {
-			const { result } = renderHook(() =>
+			renderHook(() =>
 				useSpell({
 					id: 'ignore-inputs',
 					activationConditions: {
@@ -466,7 +466,7 @@ describe('useSpell', () => {
 			const mockActivate1 = jest.fn();
 			const mockActivate2 = jest.fn();
 
-			const { result: result1 } = renderHook(() =>
+			renderHook(() =>
 				useSpell({
 					id: 'duplicate-id',
 					activationConditions: {
@@ -476,7 +476,7 @@ describe('useSpell', () => {
 				})
 			);
 
-			const { result: result2 } = renderHook(() =>
+			renderHook(() =>
 				useSpell({
 					id: 'duplicate-id', // Same ID
 					activationConditions: {
@@ -542,7 +542,7 @@ describe('useSpell', () => {
 
 		it('should maintain state across rerenders', () => {
 			const { result, rerender } = renderHook(
-				({ extraProp }) =>
+				({}) =>
 					useSpell({
 						id: 'persistent-state',
 						activationConditions: {
@@ -569,7 +569,7 @@ describe('useSpell', () => {
 			const mockActivate = jest.fn();
 			const mockDeactivate = jest.fn();
 
-			const { result, unmount, rerender } = renderHook(
+			const { result, rerender } = renderHook(
 				({ id }) =>
 					useSpell({
 						id,

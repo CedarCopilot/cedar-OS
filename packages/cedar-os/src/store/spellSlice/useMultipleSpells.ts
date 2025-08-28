@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useSpells } from '@/store/CedarStore';
 import type { UseSpellOptions } from './useSpell';
 
@@ -53,7 +53,21 @@ export function useMultipleSpells({ spells }: UseMultipleSpellsOptions): void {
 		callbackRefs.current = newCallbackRefs;
 	}, [spells]);
 
-	// Register/unregister spells when the array changes
+	// Create a stable configuration key that only changes when spell structure changes
+	// We create a single string key instead of an array of objects to ensure stability
+	const spellConfigKey = useMemo(() => {
+		// Create a deterministic string key from spell configurations
+		return spells
+			.map((spell) => {
+				const conditionsStr = JSON.stringify(spell.activationConditions);
+				return `${spell.id}|${conditionsStr}|${
+					spell.preventDefaultEvents ?? false
+				}|${spell.ignoreInputElements ?? false}`;
+			})
+			.join('::');
+	}, [spells]);
+
+	// Register/unregister spells when the configuration key changes
 	useEffect(() => {
 		const currentSpellIds = new Set(spells.map((spell) => spell.id));
 
@@ -78,15 +92,8 @@ export function useMultipleSpells({ spells }: UseMultipleSpellsOptions): void {
 			});
 		};
 	}, [
-		// Create a stable dependency by stringifying the spell configurations
-		JSON.stringify(
-			spells.map((spell) => ({
-				id: spell.id,
-				activationConditions: spell.activationConditions,
-				preventDefaultEvents: spell.preventDefaultEvents,
-				ignoreInputElements: spell.ignoreInputElements,
-			}))
-		),
+		// Use the stable string key which changes only when spell structure changes
+		spellConfigKey,
 		registerSpell,
 		unregisterSpell,
 	]);
