@@ -380,7 +380,20 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					<div className='flex w-full flex-col gap-2 px-3 py-2'>
 						<ContextBadgeRow editor={editor} />
 						<div className='flex w-full items-center gap-2'>
-							{!isFocused && <KeyboardShortcut shortcut='⇥' />}
+							{!isFocused && (
+								<motion.div
+									initial={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+									animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+									exit={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+									transition={{
+										type: 'spring',
+										stiffness: 400,
+										damping: 25,
+										mass: 0.5,
+									}}>
+									<KeyboardShortcut shortcut='⇥' />
+								</motion.div>
+							)}
 							<motion.div
 								layoutId='chatInput'
 								className='flex-1 justify-center'
