@@ -160,26 +160,6 @@ export type {
 	MastraStreamedResponseType,
 } from '@/store/agentConnection/providers/mastra';
 
-// Export progress update response processor
-export type {
-	ProgressUpdateResponse,
-	ProgressUpdateResponsePayload,
-} from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
-
-// Export human-in-the-loop workflow types and components
-export type {
-	HumanInTheLoopResponse,
-	HumanInTheLoopMessage,
-	HumanInTheLoopState,
-} from '@/store/agentConnection/responseProcessors/humanInTheLoopTypes';
-
-export { humanInTheLoopResponseProcessor } from '@/store/agentConnection/responseProcessors/humanInTheLoopResponseProcessor';
-
-export {
-	HumanInTheLoopRenderer,
-	humanInTheLoopMessageRenderer,
-} from '@/store/messages/renderers/HumanInTheLoopRenderer';
-
 // Export storage configuration types
 export type {
 	MessageStorageConfig,
@@ -209,7 +189,28 @@ export {
 	useVoice,
 } from '@/store/CedarStore';
 
-// Export setState response processor hooks
+// Response processors
+export type {
+	HumanInTheLoopResponse,
+	HumanInTheLoopMessage,
+	HumanInTheLoopState,
+} from '@/store/agentConnection/responseProcessors/humanInTheLoopTypes';
+
+export { HumanInTheLoopResponseSchema } from '@/store/agentConnection/responseProcessors/humanInTheLoopTypes';
+export { humanInTheLoopResponseProcessor } from '@/store/agentConnection/responseProcessors/humanInTheLoopResponseProcessor';
+
+export {
+	HumanInTheLoopRenderer,
+	humanInTheLoopMessageRenderer,
+} from '@/store/messages/renderers/HumanInTheLoopRenderer';
+
+export type {
+	ProgressUpdateResponse,
+	ProgressUpdateResponsePayload,
+} from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
+
+export { ProgressUpdateResponseSchema } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
+
 export {
 	SetStateResponsePayload,
 	SetStateResponse,
@@ -220,7 +221,15 @@ export {
 	LegacyActionResponseFor,
 	createLegacyActionResponseProcessor,
 	createResponseProcessor,
+	SetStateResponseSchema,
+	LegacyActionResponseSchema,
 } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
+
+export {
+	BackendMessageResponseSchema,
+	messageResponseProcessor,
+	BackendMessageResponse,
+} from '@/store/agentConnection/responseProcessors/messageResponseProcessor';
 
 // Export message renderer factory function
 export {

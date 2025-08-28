@@ -2,10 +2,12 @@
 // Type definitions
 // -----------------------------------------------------------------------------
 
+import { z } from 'zod';
 import {
 	createResponseProcessor,
 	CustomStructuredResponseType,
 	StructuredResponseType,
+	StructuredResponseSchema,
 } from '@/index';
 import { CedarStore } from '@/store/CedarOSTypes';
 import { CustomMessage, Message } from '@/store/messages/MessageTypes';
@@ -110,3 +112,19 @@ export const progressUpdateResponseProcessor =
 		},
 		validate: isProgressUpdateResponse,
 	});
+
+// ===============================================================================
+// Zod Schema Definitions
+// ===============================================================================
+
+/**
+ * Zod schema for ProgressUpdateResponse
+ */
+export const ProgressUpdateResponseSchema = StructuredResponseSchema(
+	'progress_update'
+).and(
+	z.object({
+		state: z.enum(['in_progress', 'complete', 'error']),
+		text: z.string(),
+	})
+);
