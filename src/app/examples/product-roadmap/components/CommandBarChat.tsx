@@ -1,7 +1,9 @@
-import { cn, useCedarStore } from 'cedar-os';
-import { Bot, HelpCircle, Plus, PlusCircle, Send, Wand2 } from 'lucide-react';
+import { CommandBar, CommandBarContents } from '@/CommandBar/CommandBar';
+import { useCedarStore } from 'cedar-os';
+import { Bot, Plus, PlusCircle, Wand2 } from 'lucide-react';
 import React from 'react';
-import { CommandBar, CommandBarContents, CommandBarItem } from './CommandBar';
+import type { Node } from 'reactflow';
+import type { FeatureNodeData } from './FeatureNode';
 
 interface CommandBarChatProps {
 	/** Whether the command bar is open/visible */
@@ -15,65 +17,90 @@ interface CommandBarChatProps {
 export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 	open,
 	onClose,
-	className,
 }) => {
 	const sendMessage = useCedarStore((state) => state.sendMessage);
 	const [searchText, setSearchText] = React.useState('');
 
-	// Base contents that are always shown
-	const baseContents: CommandBarContents = {
-		groups: [
-			{
-				id: 'quick-actions',
-				heading: 'Quick Actions',
-				items: [
-					{
-						id: 'send-message',
-						label: 'Send Message',
-						icon: <Send className='w-4 h-4' />,
-						onSelect: () => {
-							sendMessage();
-						},
-						searchFunction: (searchText, item) => {
-							// Match on label, id, and common variations
-							const terms = [
-								item.label.toLowerCase(),
-								item.id.toLowerCase(),
-								'message',
-								'chat',
-								'ask',
-								'tell',
-								'say',
-							];
-							return terms.some((term) => term.includes(searchText));
-						},
-					},
-					{
-						id: 'quick-help',
-						label: 'Quick Help',
-						icon: <HelpCircle className='w-4 h-4' />,
-						ignoreInputElements: false, // Allow ? in inputs
-						onSelect: () => {
-							sendMessage();
-						},
-						searchFunction: (searchText, item) => {
-							// Match on help-related terms
-							const terms = [
-								item.label.toLowerCase(),
-								'help',
-								'support',
-								'guide',
-								'tutorial',
-								'how',
-								'what',
-								'?',
-							];
-							return terms.some((term) => term.includes(searchText));
-						},
-					},
-				],
+	// Get nodes from Cedar store
+	const nodes = useCedarStore(
+		(state) => (state.getCedarState?.('nodes') as Node<FeatureNodeData>[]) || []
+	);
+
+	// Get the setCedarState function to update selectedNodes
+	const setCedarState = useCedarStore((state) => state.setCedarState);
+
+	// Filter nodes based on search text
+	const filteredNodes = React.useMemo(() => {
+		if (!searchText.trim()) return nodes.slice(0, 8); // Show first 8 nodes when no search
+
+		const searchLower = searchText.toLowerCase();
+		return nodes
+			.filter((node) => {
+				return (
+					node.data.title.toLowerCase().includes(searchLower) ||
+					node.data.description.toLowerCase().includes(searchLower) ||
+					node.data.status.toLowerCase().includes(searchLower) ||
+					(node.data.nodeType &&
+						node.data.nodeType.toLowerCase().includes(searchLower))
+				);
+			})
+			.slice(0, 10); // Limit to 10 results
+	}, [nodes, searchText]);
+
+	// Create node search results group
+	const nodeSearchGroup = {
+		id: 'node-search',
+		heading: searchText.trim()
+			? `Nodes matching "${searchText}"`
+			: 'Recent Nodes',
+		items: filteredNodes.map((node) => ({
+			id: `node-${node.id}`,
+			label: node.data.title,
+			icon: getNodeTypeIcon(node.data.nodeType || 'feature'),
+			color: getNodeTypeColor(node.data.nodeType || 'feature'),
+			onSelect: () => {
+				// Select the node by updating the selectedNodes state in Cedar
+				if (setCedarState) {
+					setCedarState('selectedNodes', [node]);
+				}
+
+				// Close the command bar after selection
+				if (onClose) {
+					onClose();
+				}
 			},
-		],
+			searchFunction: (searchText: string) => {
+				const terms = [
+					node.data.title.toLowerCase(),
+					node.data.description.toLowerCase(),
+					node.data.status.toLowerCase(),
+					node.data.nodeType?.toLowerCase() || '',
+				];
+				return terms.some((term) => term.includes(searchText.toLowerCase()));
+			},
+			priorityFunction: (searchText: string) => {
+				let score = 0;
+				const text = searchText.toLowerCase();
+
+				// Higher score for title matches
+				if (node.data.title.toLowerCase().includes(text)) score += 100;
+				// Medium score for description matches
+				if (node.data.description.toLowerCase().includes(text)) score += 50;
+				// Lower score for status/type matches
+				if (node.data.status.toLowerCase().includes(text)) score += 30;
+				if (node.data.nodeType?.toLowerCase().includes(text)) score += 20;
+
+				// Boost for exact matches
+				if (node.data.title.toLowerCase() === text) score += 200;
+
+				return score;
+			},
+		})),
+	};
+
+	// Base contents with node search results
+	const baseContents: CommandBarContents = {
+		groups: [nodeSearchGroup],
 		fixedBottomGroup: {
 			id: 'quick-actions-bottom',
 			heading: 'Quick Actions',
@@ -175,9 +202,11 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 					activationEvent: 'ctrl+f',
 					color: 'pink',
 					onSelect: () => {
-						console.log(
-							'Please help me automatically format and organize the roadmap items for better clarity and structure.'
-						);
+						const message =
+							'Please help me automatically format and organize the roadmap items for better clarity and structure.';
+						const store = useCedarStore.getState();
+						store.setOverrideInputContent(message);
+						sendMessage();
 					},
 					searchFunction: () => true,
 					priorityFunction: (searchText, item) => {
@@ -204,84 +233,41 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 		},
 	};
 
-	// Common prompts group - only shown when search is empty
-	const commonPromptsGroup = {
-		id: 'common-prompts',
-		heading: 'Common Prompts',
-		items: [
-			{
-				id: 'analyze-roadmap',
-				label: 'Analyze Current Roadmap',
-				icon: '📊',
-				onSelect: () => {
-					sendMessage();
-				},
-				searchFunction: (searchText: string, item: CommandBarItem) => {
-					// Match on analysis and roadmap terms
-					const terms = [
-						item.label.toLowerCase(),
-						'analyze',
-						'analysis',
-						'review',
-						'roadmap',
-						'insights',
-						'gaps',
-						'priorities',
-						'improvement',
-						'assess',
-					];
-					return terms.some((term) => term.includes(searchText));
-				},
-			},
-			{
-				id: 'suggest-features',
-				label: 'Suggest New Features',
-				icon: '💡',
-				onSelect: () => {
-					sendMessage();
-				},
-			},
-			{
-				id: 'review-priorities',
-				label: 'Review Priorities',
-				icon: '🎯',
-				onSelect: () => {
-					sendMessage();
-				},
-			},
-			{
-				id: 'estimate-effort',
-				label: 'Estimate Development Effort',
-				icon: '⏱️',
-				onSelect: () => {
-					sendMessage();
-				},
-			},
-		],
-	};
-
-	// Create dynamic contents based on search state
-	const contents: CommandBarContents = React.useMemo(() => {
-		const isEmpty = searchText.trim() === '';
-
-		return {
-			groups: isEmpty
-				? [...baseContents.groups, commonPromptsGroup]
-				: baseContents.groups,
-			fixedBottomGroup: baseContents.fixedBottomGroup,
-		};
-	}, [searchText]);
-
 	// Don't render if not open
 	if (!open) return null;
 
 	return (
 		<CommandBar
 			open={open}
-			contents={contents}
+			contents={baseContents}
 			onClose={onClose}
-			placeholder='Type a command, ask a question, or search...'
+			placeholder='Search nodes or ask a question...'
 			onSearchChange={setSearchText}
 		/>
 	);
 };
+
+// Helper functions for node type styling
+function getNodeTypeIcon(nodeType: string): string {
+	const iconMap: Record<string, string> = {
+		feature: '💡',
+		bug: '🐛',
+		improvement: '📦',
+		component: '🔧',
+		utils: '🛠️',
+		'agent helper': '🤖',
+	};
+	return iconMap[nodeType] || '💡';
+}
+
+function getNodeTypeColor(nodeType: string): string {
+	const colorMap: Record<string, string> = {
+		feature: 'purple',
+		bug: 'red',
+		improvement: 'blue',
+		component: 'indigo',
+		utils: 'orange',
+		'agent helper': 'green',
+	};
+	return colorMap[nodeType] || 'purple';
+}
