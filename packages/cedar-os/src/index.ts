@@ -166,6 +166,20 @@ export type {
 	ProgressUpdateResponsePayload,
 } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 
+// Export human-in-the-loop workflow types and components
+export type {
+	HumanInTheLoopResponse,
+	HumanInTheLoopMessage,
+	HumanInTheLoopState,
+} from '@/store/agentConnection/responseProcessors/humanInTheLoopTypes';
+
+export { humanInTheLoopResponseProcessor } from '@/store/agentConnection/responseProcessors/humanInTheLoopResponseProcessor';
+
+export {
+	HumanInTheLoopRenderer,
+	humanInTheLoopMessageRenderer,
+} from '@/store/messages/renderers/HumanInTheLoopRenderer';
+
 // Export storage configuration types
 export type {
 	MessageStorageConfig,
