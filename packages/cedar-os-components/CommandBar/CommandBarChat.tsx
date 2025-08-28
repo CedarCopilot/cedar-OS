@@ -1,8 +1,7 @@
-import React, { useCallback } from 'react';
+import { cn, useCedarStore } from 'cedar-os';
+import { Bot, HelpCircle, Plus, PlusCircle, Send, Wand2 } from 'lucide-react';
+import React from 'react';
 import { CommandBar, CommandBarContents } from './CommandBar';
-import { useCedarStore } from 'cedar-os';
-import { cn } from 'cedar-os';
-import { Send, HelpCircle, Bot, Plus, PlusCircle, Wand2 } from 'lucide-react';
 
 interface CommandBarChatProps {
 	/** Whether the command bar is open/visible */
@@ -18,21 +17,7 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 	onClose,
 	className,
 }) => {
-	const addMessage = useCedarStore((state) => state.addMessage);
-
-	// Handle sending a message directly
-	const handleSendMessage = useCallback(
-		(content: string) => {
-			if (content.trim()) {
-				addMessage({
-					role: 'user',
-					type: 'text',
-					content: content.trim(),
-				});
-			}
-		},
-		[addMessage]
-	);
+	const sendMessage = useCedarStore((state) => state.sendMessage);
 
 	const contents: CommandBarContents = {
 		groups: [
@@ -44,12 +29,8 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 						id: 'send-message',
 						label: 'Send Message',
 						icon: <Send className='w-4 h-4' />,
-						shortcut: '⌘↵',
 						onSelect: () => {
-							const message = window.prompt('Enter your message:');
-							if (message) {
-								handleSendMessage(message);
-							}
+							sendMessage();
 						},
 						searchFunction: (searchText, item) => {
 							// Match on label, id, and common variations
@@ -69,11 +50,9 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 						id: 'quick-help',
 						label: 'Quick Help',
 						icon: <HelpCircle className='w-4 h-4' />,
-						shortcut: '?',
+						ignoreInputElements: false, // Allow ? in inputs
 						onSelect: () => {
-							handleSendMessage(
-								'Help me understand how to use this product roadmap tool'
-							);
+							sendMessage();
 						},
 						searchFunction: (searchText, item) => {
 							// Match on help-related terms
@@ -101,9 +80,7 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 						label: 'Analyze Current Roadmap',
 						icon: '📊',
 						onSelect: () => {
-							handleSendMessage(
-								'Please analyze the current product roadmap and provide insights on priorities, gaps, and suggestions for improvement.'
-							);
+							sendMessage();
 						},
 						searchFunction: (searchText, item) => {
 							// Match on analysis and roadmap terms
@@ -127,9 +104,7 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 						label: 'Suggest New Features',
 						icon: '💡',
 						onSelect: () => {
-							handleSendMessage(
-								'Based on the current roadmap, what new features would you suggest adding? Consider user needs, market trends, and technical feasibility.'
-							);
+							sendMessage();
 						},
 					},
 					{
@@ -137,9 +112,7 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 						label: 'Review Priorities',
 						icon: '🎯',
 						onSelect: () => {
-							handleSendMessage(
-								'Help me review and prioritize the features in the roadmap. Which items should be moved up or down in priority?'
-							);
+							sendMessage();
 						},
 					},
 					{
@@ -147,9 +120,7 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 						label: 'Estimate Development Effort',
 						icon: '⏱️',
 						onSelect: () => {
-							handleSendMessage(
-								'Can you help estimate the development effort and timeline for the features in the roadmap?'
-							);
+							sendMessage();
 						},
 					},
 				],
@@ -163,85 +134,122 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 					id: 'ask-ai',
 					label: 'Ask AI',
 					icon: <Bot className='w-4 h-4' />,
-					shortcut: '⌘A',
+					activationEvent: 'cmd+enter',
 					color: 'blue',
 					onSelect: () => {
-						const question = window.prompt(
-							'What would you like to ask the AI?'
-						);
-						if (question) {
-							handleSendMessage(question);
-						}
+						sendMessage();
 					},
 					searchFunction: () => true,
+					priorityFunction: (searchText, item) => {
+						let score = 0;
+						const text = searchText.toLowerCase();
+
+						// High priority for question/AI-related terms
+						if (text.includes('ask')) score += 100;
+						if (text.includes('question')) score += 90;
+						if (text.includes('help')) score += 80;
+						if (text.includes('ai')) score += 70;
+						if (text.includes('tell')) score += 60;
+						if (text.includes('explain')) score += 50;
+						if (text.includes('what')) score += 40;
+						if (text.includes('how')) score += 40;
+						if (text.includes('why')) score += 40;
+
+						// Boost for exact label match
+						if (text.includes(item.label.toLowerCase())) score += 30;
+
+						return score;
+					},
 				},
 				{
 					id: 'create-new-item',
 					label: 'Create Item',
 					icon: <Plus className='w-4 h-4' />,
-					shortcut: '⌘N',
+					activationEvent: 'ctrl+s',
 					color: 'green',
 					onSelect: () => {
-						handleSendMessage(
+						console.log(
 							'Help me create a new item for the product roadmap. What should we add?'
 						);
 					},
-					searchFunction: (searchText, item) => {
-						const terms = [
-							item.label.toLowerCase(),
-							'create',
-							'new',
-							'add',
-							'make',
-							'item',
-						];
-						return terms.some((term) => term.includes(searchText));
+					searchFunction: () => true,
+					priorityFunction: (searchText, item) => {
+						let score = 0;
+						const text = searchText.toLowerCase();
+
+						// High priority for creation-related terms
+						if (text.includes('create')) score += 100;
+						if (text.includes('make')) score += 80;
+						if (text.includes('new')) score += 70;
+						if (text.includes('add')) score += 60;
+						if (text.includes('build')) score += 50;
+						if (text.includes('start')) score += 40;
+
+						// Boost for exact label match
+						if (text.includes(item.label.toLowerCase())) score += 30;
+
+						return score;
 					},
 				},
 				{
 					id: 'add-item',
 					label: 'Add Item',
 					icon: <PlusCircle className='w-4 h-4' />,
-					shortcut: '⌘N',
+					activationEvent: 'ctrl+d',
 					color: 'purple',
 					onSelect: () => {
-						handleSendMessage(
+						console.log(
 							'I want to add a specific item to the roadmap. Can you help me structure it properly?'
 						);
 					},
-					searchFunction: (searchText, item) => {
-						const terms = [
-							item.label.toLowerCase(),
-							'add',
-							'insert',
-							'item',
-							'feature',
-						];
-						return terms.some((term) => term.includes(searchText));
+					searchFunction: () => true,
+					priorityFunction: (searchText, item) => {
+						let score = 0;
+						const text = searchText.toLowerCase();
+
+						// High priority for adding-related terms
+						if (text.includes('add')) score += 100;
+						if (text.includes('insert')) score += 80;
+						if (text.includes('include')) score += 70;
+						if (text.includes('put')) score += 60;
+						if (text.includes('place')) score += 50;
+
+						// Boost for exact label match
+						if (text.includes(item.label.toLowerCase())) score += 30;
+
+						return score;
 					},
 				},
 				{
 					id: 'autoformat',
 					label: 'Autoformat',
 					icon: <Wand2 className='w-4 h-4' />,
-					shortcut: '⌘F',
+					activationEvent: 'ctrl+f',
 					color: 'pink',
 					onSelect: () => {
-						handleSendMessage(
+						console.log(
 							'Please help me automatically format and organize the roadmap items for better clarity and structure.'
 						);
 					},
-					searchFunction: (searchText, item) => {
-						const terms = [
-							item.label.toLowerCase(),
-							'format',
-							'organize',
-							'structure',
-							'auto',
-							'clean',
-							'arrange',
-						];
-						return terms.some((term) => term.includes(searchText));
+					searchFunction: () => true,
+					priorityFunction: (searchText, item) => {
+						let score = 0;
+						const text = searchText.toLowerCase();
+
+						// High priority for formatting-related terms
+						if (text.includes('format')) score += 100;
+						if (text.includes('organize')) score += 90;
+						if (text.includes('structure')) score += 80;
+						if (text.includes('clean')) score += 70;
+						if (text.includes('arrange')) score += 60;
+						if (text.includes('auto')) score += 50;
+						if (text.includes('fix')) score += 40;
+						if (text.includes('tidy')) score += 40;
+
+						// Boost for exact label match
+						if (text.includes(item.label.toLowerCase())) score += 30;
+
+						return score;
 					},
 				},
 			],

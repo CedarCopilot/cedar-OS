@@ -8,9 +8,32 @@ import {
 } from '@/ui/command';
 import { KeyboardShortcut } from '@/ui/KeyboardShortcut';
 import { EditorContent } from '@tiptap/react';
-import { cn, useCedarEditor } from 'cedar-os';
+import { cn, useCedarEditor, useSpell } from 'cedar-os';
+import type { ActivationEvent, ActivationMode } from 'cedar-os';
+import { ActivationMode as ActivationModeEnum } from 'cedar-os';
 import { motion } from 'motion/react';
 import React from 'react';
+import { getShortcutDisplay } from './utils';
+
+/**
+ * Determine if an activation event should ignore input elements
+ * Non-modifier single keys should ignore inputs, modifier combinations should not
+ */
+const shouldIgnoreInputElements = (
+	activationEvent: ActivationEvent
+): boolean => {
+	if (typeof activationEvent === 'string') {
+		// If it contains modifiers (like cmd+s), don't ignore input elements
+		if (activationEvent.includes('+')) {
+			return false;
+		}
+		// Single keys should ignore input elements
+		return true;
+	}
+
+	// For enum values, single keys should ignore input elements
+	return true;
+};
 
 export interface CommandBarItem {
 	/** Unique identifier for the item */
@@ -21,14 +44,20 @@ export interface CommandBarItem {
 	icon?: React.ReactNode;
 	/** Callback when item is selected */
 	onSelect: () => void;
-	/** Optional keyboard shortcut display */
-	shortcut?: string;
+	/** Optional activation event for hotkey (replaces shortcut string) */
+	activationEvent?: ActivationEvent;
+	/** Optional activation mode (defaults to TRIGGER for command bar items) */
+	activationMode?: ActivationMode;
 	/** Whether the item is disabled */
 	disabled?: boolean;
 	/** Optional custom search function to determine if item matches search text */
 	searchFunction?: (searchText: string, item: CommandBarItem) => boolean;
+	/** Optional priority scoring function for better ordering based on search text */
+	priorityFunction?: (searchText: string, item: CommandBarItem) => number;
 	/** Optional color for background styling (e.g., 'blue', 'green', 'purple') */
 	color?: string;
+	/** Whether to ignore input elements for this hotkey (defaults to true for non-modifier keys) */
+	ignoreInputElements?: boolean;
 }
 
 export interface CommandBarGroup {
@@ -62,6 +91,35 @@ interface CommandBarProps {
 	collapsed?: boolean;
 }
 
+/**
+ * Hook to register a command bar item as a spell
+ */
+const useCommandBarItemSpell = (
+	item: CommandBarItem,
+	isOpen: boolean,
+	onClose?: () => void
+) => {
+	const spellId = `command-bar-${item.id}`;
+
+	useSpell({
+		id: spellId,
+		activationConditions: {
+			events: item.activationEvent ? [item.activationEvent] : [],
+			mode: item.activationMode || ActivationModeEnum.TRIGGER, // Default to trigger mode for command items
+		},
+		onActivate: () => {
+			if (isOpen && !item.disabled) {
+				item.onSelect();
+				onClose?.();
+			}
+		},
+		preventDefaultEvents: true, // Prevent default browser behavior
+		ignoreInputElements:
+			item.ignoreInputElements ??
+			shouldIgnoreInputElements(item.activationEvent || ''),
+	});
+};
+
 export const CommandBar: React.FC<CommandBarProps> = ({
 	open,
 	contents,
@@ -81,38 +139,33 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		onBlur: () => setIsFocused(false),
 	});
 
+	// Collect all items with activation events
+	const allItems: CommandBarItem[] = React.useMemo(
+		() => [
+			...contents.groups.flatMap((group) => group.items),
+			...(contents.fixedBottomGroup?.items || []),
+		],
+		[contents]
+	);
+
+	// Register spells for all items with activation events
+	allItems.forEach((item) => {
+		if (item.activationEvent) {
+			// eslint-disable-next-line react-hooks/rules-of-hooks
+			useCommandBarItemSpell(item, open, onClose);
+		}
+	});
+
 	// Get the current search text
 	const searchText = getEditorText().toLowerCase().trim();
 
-	// Filter contents based on search text
+	// Filter and sort contents based on search text with priority scoring
 	const filteredContents = React.useMemo(() => {
 		if (!searchText) return contents;
 
-		const filteredGroups = contents.groups
-			.map((group) => {
-				const filteredItems = group.items.filter((item) => {
-					// Use custom search function if provided
-					if (item.searchFunction) {
-						return item.searchFunction(searchText, item);
-					}
-					// Fall back to default search behavior
-					return (
-						item.label.toLowerCase().includes(searchText) ||
-						item.id.toLowerCase().includes(searchText)
-					);
-				});
-
-				return {
-					...group,
-					items: filteredItems,
-				};
-			})
-			.filter((group) => group.items.length > 0);
-
-		// Filter fixed bottom group separately
-		let filteredFixedBottomGroup: CommandBarGroup | undefined;
-		if (contents.fixedBottomGroup) {
-			const filteredItems = contents.fixedBottomGroup.items.filter((item) => {
+		const filterAndSortItems = (items: CommandBarItem[]) => {
+			// First filter items that match
+			const matchingItems = items.filter((item) => {
 				// Use custom search function if provided
 				if (item.searchFunction) {
 					return item.searchFunction(searchText, item);
@@ -124,10 +177,34 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				);
 			});
 
-			if (filteredItems.length > 0) {
+			// Then sort by priority score (higher scores first)
+			return matchingItems.sort((a, b) => {
+				const scoreA = a.priorityFunction
+					? a.priorityFunction(searchText, a)
+					: 0;
+				const scoreB = b.priorityFunction
+					? b.priorityFunction(searchText, b)
+					: 0;
+				return scoreB - scoreA; // Higher scores first
+			});
+		};
+
+		const filteredGroups = contents.groups
+			.map((group) => ({
+				...group,
+				items: filterAndSortItems(group.items),
+			}))
+			.filter((group) => group.items.length > 0);
+
+		// Filter and sort fixed bottom group separately
+		let filteredFixedBottomGroup: CommandBarGroup | undefined;
+		if (contents.fixedBottomGroup) {
+			const sortedItems = filterAndSortItems(contents.fixedBottomGroup.items);
+
+			if (sortedItems.length > 0) {
 				filteredFixedBottomGroup = {
 					...contents.fixedBottomGroup,
-					items: filteredItems,
+					items: sortedItems,
 				};
 			}
 		}
@@ -139,7 +216,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 	}, [contents, searchText]);
 
 	// Create a flattened list of all items for easier keyboard navigation
-	const allItems = React.useMemo(() => {
+	const allItemsForNavigation = React.useMemo(() => {
 		const items: CommandBarItem[] = filteredContents.groups.flatMap(
 			(group) => group.items
 		);
@@ -151,12 +228,12 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 
 	// Reset selected index when filtered items change and auto-select first item
 	React.useEffect(() => {
-		if (allItems.length > 0) {
+		if (allItemsForNavigation.length > 0) {
 			setSelectedIndex(0);
 		} else {
 			setSelectedIndex(-1);
 		}
-	}, [allItems]);
+	}, [allItemsForNavigation]);
 
 	// Determine if collapsed - controlled prop takes precedence, otherwise based on focus
 	const isCollapsed =
@@ -185,26 +262,50 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 			} else if (e.key === 'Tab' && !e.shiftKey && open) {
 				e.preventDefault();
 				editor?.commands.focus();
-			} else if (e.key === 'ArrowDown' && isFocused && allItems.length > 0) {
+			} else if (
+				e.key === 'ArrowDown' &&
+				isFocused &&
+				allItemsForNavigation.length > 0
+			) {
 				e.preventDefault();
-				setSelectedIndex((prev) => (prev < allItems.length - 1 ? prev + 1 : 0));
-			} else if (e.key === 'ArrowUp' && isFocused && allItems.length > 0) {
+				setSelectedIndex((prev) =>
+					prev < allItemsForNavigation.length - 1 ? prev + 1 : 0
+				);
+			} else if (
+				e.key === 'ArrowUp' &&
+				isFocused &&
+				allItemsForNavigation.length > 0
+			) {
 				e.preventDefault();
-				setSelectedIndex((prev) => (prev > 0 ? prev - 1 : allItems.length - 1));
-			} else if (e.key === 'ArrowRight' && isFocused && allItems.length > 0) {
+				setSelectedIndex((prev) =>
+					prev > 0 ? prev - 1 : allItemsForNavigation.length - 1
+				);
+			} else if (
+				e.key === 'ArrowRight' &&
+				isFocused &&
+				allItemsForNavigation.length > 0
+			) {
 				e.preventDefault();
-				setSelectedIndex((prev) => (prev < allItems.length - 1 ? prev + 1 : 0));
-			} else if (e.key === 'ArrowLeft' && isFocused && allItems.length > 0) {
+				setSelectedIndex((prev) =>
+					prev < allItemsForNavigation.length - 1 ? prev + 1 : 0
+				);
+			} else if (
+				e.key === 'ArrowLeft' &&
+				isFocused &&
+				allItemsForNavigation.length > 0
+			) {
 				e.preventDefault();
-				setSelectedIndex((prev) => (prev > 0 ? prev - 1 : allItems.length - 1));
+				setSelectedIndex((prev) =>
+					prev > 0 ? prev - 1 : allItemsForNavigation.length - 1
+				);
 			} else if (
 				e.key === 'Enter' &&
 				isFocused &&
 				selectedIndex >= 0 &&
-				allItems[selectedIndex]
+				allItemsForNavigation[selectedIndex]
 			) {
 				e.preventDefault();
-				const selectedItem = allItems[selectedIndex];
+				const selectedItem = allItemsForNavigation[selectedIndex];
 				handleItemSelect(selectedItem);
 			}
 		};
@@ -216,7 +317,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		return () => {
 			document.removeEventListener('keydown', handleKeyDown);
 		};
-	}, [open, onClose, editor, isFocused, allItems, selectedIndex]);
+	}, [open, onClose, editor, isFocused, allItemsForNavigation, selectedIndex]);
 
 	// Don't render if not open
 	if (!open) return null;
@@ -241,13 +342,15 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				className='h-full'
 				shouldFilter={false}
 				value={
-					selectedIndex >= 0 && allItems[selectedIndex]
-						? allItems[selectedIndex].id
+					selectedIndex >= 0 && allItemsForNavigation[selectedIndex]
+						? allItemsForNavigation[selectedIndex].id
 						: ''
 				}
 				onValueChange={(value) => {
 					// Find the index of the selected item
-					const index = allItems.findIndex((item) => item.id === value);
+					const index = allItemsForNavigation.findIndex(
+						(item) => item.id === value
+					);
 					if (index >= 0) {
 						setSelectedIndex(index);
 					}
@@ -330,8 +433,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 													</span>
 												)}
 												<span className='flex-1'>{item.label}</span>
-												{item.shortcut && (
-													<KeyboardShortcut shortcut={item.shortcut} />
+												{item.activationEvent && (
+													<KeyboardShortcut
+														shortcut={getShortcutDisplay(item.activationEvent)}
+													/>
 												)}
 											</CommandItem>
 										))}
@@ -378,35 +483,35 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 												'bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50',
 											// Selection highlights
 											selectedIndex >= 0 &&
-												allItems[selectedIndex]?.id === item.id &&
+												allItemsForNavigation[selectedIndex]?.id === item.id &&
 												item.color === 'blue' &&
 												'bg-blue-200 dark:bg-blue-900/50',
 											selectedIndex >= 0 &&
-												allItems[selectedIndex]?.id === item.id &&
+												allItemsForNavigation[selectedIndex]?.id === item.id &&
 												item.color === 'green' &&
 												'bg-green-200 dark:bg-green-900/50',
 											selectedIndex >= 0 &&
-												allItems[selectedIndex]?.id === item.id &&
+												allItemsForNavigation[selectedIndex]?.id === item.id &&
 												item.color === 'purple' &&
 												'bg-purple-200 dark:bg-purple-900/50',
 											selectedIndex >= 0 &&
-												allItems[selectedIndex]?.id === item.id &&
+												allItemsForNavigation[selectedIndex]?.id === item.id &&
 												item.color === 'orange' &&
 												'bg-orange-200 dark:bg-orange-900/50',
 											selectedIndex >= 0 &&
-												allItems[selectedIndex]?.id === item.id &&
+												allItemsForNavigation[selectedIndex]?.id === item.id &&
 												item.color === 'pink' &&
 												'bg-pink-200 dark:bg-pink-900/50',
 											selectedIndex >= 0 &&
-												allItems[selectedIndex]?.id === item.id &&
+												allItemsForNavigation[selectedIndex]?.id === item.id &&
 												item.color === 'amber' &&
 												'bg-amber-200 dark:bg-amber-900/50',
 											selectedIndex >= 0 &&
-												allItems[selectedIndex]?.id === item.id &&
+												allItemsForNavigation[selectedIndex]?.id === item.id &&
 												item.color === 'red' &&
 												'bg-red-200 dark:bg-red-900/50',
 											selectedIndex >= 0 &&
-												allItems[selectedIndex]?.id === item.id &&
+												allItemsForNavigation[selectedIndex]?.id === item.id &&
 												item.color === 'indigo' &&
 												'bg-indigo-200 dark:bg-indigo-900/50'
 										)}>
@@ -424,8 +529,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 												{item.label}
 											</span>
 										</div>
-										{item.shortcut && (
-											<KeyboardShortcut shortcut={item.shortcut} />
+										{item.activationEvent && (
+											<KeyboardShortcut
+												shortcut={getShortcutDisplay(item.activationEvent)}
+											/>
 										)}
 									</button>
 								))}

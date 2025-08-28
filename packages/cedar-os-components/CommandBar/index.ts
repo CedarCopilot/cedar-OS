@@ -5,3 +5,4 @@ export type {
 	CommandBarGroup,
 	CommandBarContents,
 } from './CommandBar';
+export { getShortcutDisplay } from './utils';
