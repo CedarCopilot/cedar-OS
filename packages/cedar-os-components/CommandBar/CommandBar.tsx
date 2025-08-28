@@ -283,7 +283,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					editor?.commands.focus();
 				}
 			} else if (
-				e.key === 'ArrowDown' &&
+				(e.key === 'ArrowRight' || e.key === 'ArrowDown') &&
 				isFocused &&
 				allItemsForNavigation.length > 0
 			) {
@@ -292,25 +292,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					prev < allItemsForNavigation.length - 1 ? prev + 1 : 0
 				);
 			} else if (
-				e.key === 'ArrowUp' &&
-				isFocused &&
-				allItemsForNavigation.length > 0
-			) {
-				e.preventDefault();
-				setSelectedIndex((prev) =>
-					prev > 0 ? prev - 1 : allItemsForNavigation.length - 1
-				);
-			} else if (
-				e.key === 'ArrowRight' &&
-				isFocused &&
-				allItemsForNavigation.length > 0
-			) {
-				e.preventDefault();
-				setSelectedIndex((prev) =>
-					prev < allItemsForNavigation.length - 1 ? prev + 1 : 0
-				);
-			} else if (
-				e.key === 'ArrowLeft' &&
+				(e.key === 'ArrowLeft' || e.key === 'ArrowUp') &&
 				isFocused &&
 				allItemsForNavigation.length > 0
 			) {
