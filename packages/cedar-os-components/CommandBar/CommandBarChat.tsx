@@ -2,15 +2,7 @@ import React, { useCallback } from 'react';
 import { CommandBar, CommandBarContents } from './CommandBar';
 import { useCedarStore } from 'cedar-os';
 import { cn } from 'cedar-os';
-import {
-	Send,
-	HelpCircle,
-	Bot,
-	Plus,
-	PlusCircle,
-	Link,
-	Wand2,
-} from 'lucide-react';
+import { Send, HelpCircle, Bot, Plus, PlusCircle, Wand2 } from 'lucide-react';
 
 interface CommandBarChatProps {
 	/** Whether the command bar is open/visible */
@@ -171,7 +163,8 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 					id: 'ask-ai',
 					label: 'Ask AI',
 					icon: <Bot className='w-4 h-4' />,
-					shortcut: '⌘⇧A',
+					shortcut: '⌘A',
+					color: 'blue',
 					onSelect: () => {
 						const question = window.prompt(
 							'What would you like to ask the AI?'
@@ -184,9 +177,10 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 				},
 				{
 					id: 'create-new-item',
-					label: 'Create New Item',
+					label: 'Create Item',
 					icon: <Plus className='w-4 h-4' />,
 					shortcut: '⌘N',
+					color: 'green',
 					onSelect: () => {
 						handleSendMessage(
 							'Help me create a new item for the product roadmap. What should we add?'
@@ -208,7 +202,8 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 					id: 'add-item',
 					label: 'Add Item',
 					icon: <PlusCircle className='w-4 h-4' />,
-					shortcut: '⌘⇧N',
+					shortcut: '⌘N',
+					color: 'purple',
 					onSelect: () => {
 						handleSendMessage(
 							'I want to add a specific item to the roadmap. Can you help me structure it properly?'
@@ -226,32 +221,11 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 					},
 				},
 				{
-					id: 'connect',
-					label: 'Connect',
-					icon: <Link className='w-4 h-4' />,
-					shortcut: '⌘L',
-					onSelect: () => {
-						handleSendMessage(
-							'Help me connect items in the roadmap or establish relationships between features.'
-						);
-					},
-					searchFunction: (searchText, item) => {
-						const terms = [
-							item.label.toLowerCase(),
-							'connect',
-							'link',
-							'relate',
-							'relationship',
-							'dependency',
-						];
-						return terms.some((term) => term.includes(searchText));
-					},
-				},
-				{
 					id: 'autoformat',
 					label: 'Autoformat',
 					icon: <Wand2 className='w-4 h-4' />,
-					shortcut: '⌘⇧F',
+					shortcut: '⌘F',
+					color: 'pink',
 					onSelect: () => {
 						handleSendMessage(
 							'Please help me automatically format and organize the roadmap items for better clarity and structure.'
@@ -288,7 +262,6 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 				contents={contents}
 				onClose={onClose}
 				placeholder='Type a command, ask a question, or search...'
-				emptyMessage="No commands found. Try typing 'help' or 'send message'."
 			/>
 		</div>
 	);

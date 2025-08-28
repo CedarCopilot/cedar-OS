@@ -1,17 +1,16 @@
-import React from 'react';
+import { ContextBadgeRow } from '@/chatInput/ContextBadgeRow';
 import {
 	Command,
-	CommandEmpty,
 	CommandGroup,
 	CommandItem,
 	CommandList,
 	CommandSeparator,
 } from '@/ui/command';
-import { cn, useCedarEditor } from 'cedar-os';
 import { KeyboardShortcut } from '@/ui/KeyboardShortcut';
-import { ContextBadgeRow } from '@/chatInput/ContextBadgeRow';
 import { EditorContent } from '@tiptap/react';
+import { cn, useCedarEditor } from 'cedar-os';
 import { motion } from 'motion/react';
+import React from 'react';
 
 export interface CommandBarItem {
 	/** Unique identifier for the item */
@@ -28,6 +27,8 @@ export interface CommandBarItem {
 	disabled?: boolean;
 	/** Optional custom search function to determine if item matches search text */
 	searchFunction?: (searchText: string, item: CommandBarItem) => boolean;
+	/** Optional color for background styling (e.g., 'blue', 'green', 'purple') */
+	color?: string;
 }
 
 export interface CommandBarGroup {
@@ -53,8 +54,6 @@ interface CommandBarProps {
 	contents: CommandBarContents;
 	/** Placeholder text for the search input */
 	placeholder?: string;
-	/** Message to show when no results are found */
-	emptyMessage?: string;
 	/** Additional CSS classes */
 	className?: string;
 	/** Callback when the command bar should close */
@@ -67,7 +66,6 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 	open,
 	contents,
 	placeholder = 'Type a command or search...',
-	emptyMessage = 'No results found.',
 	className,
 	onClose,
 	collapsed: controlledCollapsed,
@@ -289,7 +287,6 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					}}>
 					{!isCollapsed && (
 						<CommandList className='max-h-[50vh] overflow-y-auto'>
-							<CommandEmpty>{emptyMessage}</CommandEmpty>
 							{filteredContents.groups.map((group, groupIndex) => (
 								<React.Fragment key={group.id}>
 									{/* Add separator between groups (except before first group) */}
@@ -304,7 +301,24 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 												disabled={item.disabled}
 												className={cn(
 													'flex items-center gap-2',
-													item.disabled && 'opacity-50 cursor-not-allowed'
+													item.disabled && 'opacity-50 cursor-not-allowed',
+													// Apply color-based styling if color is specified
+													item.color === 'blue' &&
+														'bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 data-[selected=true]:bg-blue-200 dark:data-[selected=true]:bg-blue-900/50',
+													item.color === 'green' &&
+														'bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50 data-[selected=true]:bg-green-200 dark:data-[selected=true]:bg-green-900/50',
+													item.color === 'purple' &&
+														'bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50 data-[selected=true]:bg-purple-200 dark:data-[selected=true]:bg-purple-900/50',
+													item.color === 'orange' &&
+														'bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50 data-[selected=true]:bg-orange-200 dark:data-[selected=true]:bg-orange-900/50',
+													item.color === 'pink' &&
+														'bg-pink-50 dark:bg-pink-950/30 hover:bg-pink-100 dark:hover:bg-pink-950/50 data-[selected=true]:bg-pink-200 dark:data-[selected=true]:bg-pink-900/50',
+													item.color === 'amber' &&
+														'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 data-[selected=true]:bg-amber-200 dark:data-[selected=true]:bg-amber-900/50',
+													item.color === 'red' &&
+														'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 data-[selected=true]:bg-red-200 dark:data-[selected=true]:bg-red-900/50',
+													item.color === 'indigo' &&
+														'bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 data-[selected=true]:bg-indigo-200 dark:data-[selected=true]:bg-indigo-900/50'
 												)}>
 												{item.icon && (
 													<span className='flex-shrink-0'>
@@ -335,33 +349,84 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 							<div className='text-xs font-medium text-muted-foreground mb-2 px-2'>
 								{filteredContents.fixedBottomGroup.heading}
 							</div>
-							<div className='grid grid-cols-5 gap-1'>
+							<div className='flex gap-1'>
 								{filteredContents.fixedBottomGroup.items.map((item) => (
 									<button
 										key={item.id}
 										onClick={() => handleItemSelect(item)}
 										disabled={item.disabled}
 										className={cn(
-											'flex items-center gap-1 p-2 rounded-md text-xs hover:bg-accent hover:text-accent-foreground transition-colors',
+											'flex-1 flex items-center justify-between gap-1 p-2 rounded-md text-xs transition-colors',
 											'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
 											item.disabled && 'opacity-50 cursor-not-allowed',
-											// Highlight if selected via keyboard navigation
+											// Apply color-based styling if color is specified
+											item.color === 'blue' &&
+												'bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50',
+											item.color === 'green' &&
+												'bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50',
+											item.color === 'purple' &&
+												'bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50',
+											item.color === 'orange' &&
+												'bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50',
+											item.color === 'pink' &&
+												'bg-pink-50 dark:bg-pink-950/30 hover:bg-pink-100 dark:hover:bg-pink-950/50',
+											item.color === 'amber' &&
+												'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50',
+											item.color === 'red' &&
+												'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50',
+											item.color === 'indigo' &&
+												'bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50',
+											// Selection highlights
 											selectedIndex >= 0 &&
 												allItems[selectedIndex]?.id === item.id &&
-												'bg-accent text-accent-foreground'
+												item.color === 'blue' &&
+												'bg-blue-200 dark:bg-blue-900/50',
+											selectedIndex >= 0 &&
+												allItems[selectedIndex]?.id === item.id &&
+												item.color === 'green' &&
+												'bg-green-200 dark:bg-green-900/50',
+											selectedIndex >= 0 &&
+												allItems[selectedIndex]?.id === item.id &&
+												item.color === 'purple' &&
+												'bg-purple-200 dark:bg-purple-900/50',
+											selectedIndex >= 0 &&
+												allItems[selectedIndex]?.id === item.id &&
+												item.color === 'orange' &&
+												'bg-orange-200 dark:bg-orange-900/50',
+											selectedIndex >= 0 &&
+												allItems[selectedIndex]?.id === item.id &&
+												item.color === 'pink' &&
+												'bg-pink-200 dark:bg-pink-900/50',
+											selectedIndex >= 0 &&
+												allItems[selectedIndex]?.id === item.id &&
+												item.color === 'amber' &&
+												'bg-amber-200 dark:bg-amber-900/50',
+											selectedIndex >= 0 &&
+												allItems[selectedIndex]?.id === item.id &&
+												item.color === 'red' &&
+												'bg-red-200 dark:bg-red-900/50',
+											selectedIndex >= 0 &&
+												allItems[selectedIndex]?.id === item.id &&
+												item.color === 'indigo' &&
+												'bg-indigo-200 dark:bg-indigo-900/50'
 										)}>
-										{item.icon && (
-											<span className='flex-shrink-0'>
-												{typeof item.icon === 'string' ? (
-													<span className='text-sm'>{item.icon}</span>
-												) : (
-													item.icon
-												)}
+										<div className='flex items-center gap-1'>
+											{item.icon && (
+												<span className='flex-shrink-0'>
+													{typeof item.icon === 'string' ? (
+														<span className='text-sm'>{item.icon}</span>
+													) : (
+														item.icon
+													)}
+												</span>
+											)}
+											<span className='leading-tight truncate'>
+												{item.label}
 											</span>
+										</div>
+										{item.shortcut && (
+											<KeyboardShortcut shortcut={item.shortcut} />
 										)}
-										<span className='text-center leading-tight truncate'>
-											{item.label}
-										</span>
 									</button>
 								))}
 							</div>
