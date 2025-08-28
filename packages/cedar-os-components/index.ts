@@ -76,7 +76,7 @@ export type {
 export { default as TooltipMenuSpell } from './spells/TooltipMenuSpell';
 
 // CommandBar
-export { CommandBar, CommandBarChat } from './CommandBar';
+export { CommandBar } from './CommandBar';
 export type {
 	CommandBarItem,
 	CommandBarGroup,
