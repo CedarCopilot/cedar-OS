@@ -45,7 +45,7 @@ export const MentionNodeView = ({ node }: { node: ProseMirrorNode }) => {
 	return (
 		<NodeViewWrapper className='inline' contentEditable={false}>
 			<span
-				className='rounded-sm px-1 py-0.5 pt-0 -my-1 inline-flex items-center gap-0.5 select-none'
+				className='rounded-sm px-1 pb-0.5 -my-1 inline-flex items-center gap-0.5 select-none'
 				style={bgStyle}
 				contentEditable={false}>
 				{icon ? withClassName(icon, 'w-3 h-3') : '@'}

@@ -183,6 +183,7 @@ export {
 	useChatInput,
 	useDebugger,
 	useMessages,
+	useMultipleSpells,
 	useSpell,
 	useSpells,
 	useStyling,
