@@ -13,7 +13,7 @@ export const KeyboardShortcut: React.FC<KeyboardShortcutProps> = ({
 }) => {
 	return (
 		<span
-			className={`flex items-center justify-center px-1.5 py-0.5 min-w-[16px] rounded text-muted-foreground text-sm bg-muted-foreground/30  whitespace-nowrap ${className}`}
+			className={`flex items-center justify-center px-1.5 py-0.5 min-w-[16px] rounded text-muted-foreground text-sm bg-muted-foreground/30 whitespace-nowrap ${className}`}
 			aria-hidden='true'>
 			{shortcut}
 			{children}

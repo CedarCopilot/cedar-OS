@@ -13,7 +13,7 @@ import type { ActivationEvent, ActivationMode } from 'cedar-os';
 import { ActivationMode as ActivationModeEnum } from 'cedar-os';
 import { motion } from 'motion/react';
 import React from 'react';
-import { getShortcutDisplay } from './utils';
+import { getShortcutDisplay } from './getShortcutDisplay';
 
 /**
  * Determine if an activation event should ignore input elements
@@ -141,6 +141,9 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		placeholder,
 		onFocus: () => setIsFocused(true),
 		onBlur: () => setIsFocused(false),
+		onSubmit: (text) => {
+			console.log('onSubmit', text);
+		},
 	});
 
 	// Collect all items with activation events
@@ -352,7 +355,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				)}
 				style={{ willChange: 'transform' }}
 				animate={{
-					height: isCollapsed ? 'auto' : 'auto',
+					height: isCollapsed ? 0 : 'auto',
 				}}
 				transition={{
 					type: 'spring',
@@ -383,7 +386,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 							{!isFocused && <KeyboardShortcut shortcut='⇥' />}
 							<motion.div
 								layoutId='chatInput'
-								className='flex-1 justify-center py-'
+								className='flex-1 justify-center'
 								aria-label='Message input'>
 								<EditorContent
 									editor={editor}

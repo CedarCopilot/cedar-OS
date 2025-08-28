@@ -642,11 +642,7 @@ export default function ProductMapPage() {
 					onChatModeChange={setChatMode}
 					currentChatMode={chatMode}
 				/>
-				{chatMode === 'command' && (
-					<>
-						<CommandBarChat open={true} />
-					</>
-				)}
+				{chatMode === 'command' && <CommandBarChat open={true} />}
 				{chatMode === 'caption' && <CedarCaptionChat stream={false} />}
 				{chatMode === 'floating' && (
 					<FloatingCedarChat

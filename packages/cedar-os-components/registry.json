@@ -573,6 +573,23 @@
 				"displayName": "Voice Indicator",
 				"description": "Visual indicator for voice states (listening, speaking, errors)"
 			}
+		},
+		{
+			"name": "command-bar",
+			"type": "CommandBar",
+			"dependencies": ["react", "motion", "@tiptap/react"],
+			"registryDependencies": [
+				"cedar-os",
+				"context-badge-row",
+				"keyboard-shortcut",
+				"command"
+			],
+			"files": ["CommandBar.tsx", "getShortcutDisplay.ts", "index.ts"],
+			"meta": {
+				"importName": "CommandBar",
+				"displayName": "Command Bar",
+				"description": "Searchable command palette with keyboard navigation and spell integration"
+			}
 		}
 	]
 }
