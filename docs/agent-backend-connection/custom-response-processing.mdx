@@ -313,7 +313,81 @@ const progressUpdateResponseProcessor = {
 };
 ```
 
-**⚠️ Important**: If you override any of these default types, you lose the built-in behavior. Since processors completely override default handling, ensure your custom implementation covers all functionality you need, including adding messages to the chat if desired.
+### `"humanInTheLoop"` Type
+
+- **Behavior**: Suspends workflow execution and creates interactive UI for user input/approval
+- **Properties**: `status: 'suspended'`, `runId: string`, `stepPath: [string[], ...string[][]]`, `suspendPayload?: object`, `message?: string`, `timeoutMs?: number`
+- **Default Processor**: `humanInTheLoopResponseProcessor` manages workflow suspension/resume lifecycle
+- **Learn More**: See the complete [Human-in-the-Loop documentation](/workflows/human-in-the-loop) for detailed implementation examples
+
+```tsx
+// Default humanInTheLoopResponseProcessor implementation
+const humanInTheLoopResponseProcessor = {
+	type: 'humanInTheLoop',
+	execute: (obj, store) => {
+		// Store workflow suspension data in 'humanInTheLoop' state
+		store.registerState({
+			key: 'humanInTheLoop',
+			value: { [obj.runId]: { ...obj, suspendedAt: new Date().toISOString() } },
+			customSetters: {
+				resume: /* resume workflow logic */,
+				cancel: /* cancel workflow logic */
+			}
+		});
+
+		// Add interactive message with resume/cancel callbacks
+		store.addMessage({
+			type: 'humanInTheLoop',
+			state: 'suspended',
+			runId: obj.runId,
+			suspendPayload: obj.suspendPayload,
+			resumeCallback: /* typed resume function */,
+			cancelCallback: /* typed cancel function */
+		});
+	}
+};
+```
+
+## Zod Schema Validation
+
+Cedar exports Zod schemas for all default response processor types, enabling runtime validation and type safety:
+
+```tsx
+import { z } from 'zod';
+import {
+	BackendMessageResponseSchema,
+	SetStateResponseSchema,
+	LegacyActionResponseSchema,
+	ProgressUpdateResponseSchema,
+	HumanInTheLoopResponseSchema,
+} from 'cedar-os';
+
+// Runtime validation
+const validatedResponse = HumanInTheLoopResponseSchema.parse(agentResponse);
+
+// Type inference from schema
+type HumanInTheLoopType = z.infer<typeof HumanInTheLoopResponseSchema>;
+
+// Validate custom response objects
+if (BackendMessageResponseSchema.safeParse(responseObject).success) {
+	// Handle as message response
+}
+```
+
+**Available Zod Schemas:**
+
+- `BackendMessageResponseSchema` - For `"message"` type responses
+- `SetStateResponseSchema` - For `"setState"` type responses
+- `LegacyActionResponseSchema` - For `"action"` type responses (backwards compatibility)
+- `ProgressUpdateResponseSchema` - For `"progress_update"` type responses
+- `HumanInTheLoopResponseSchema` - For `"humanInTheLoop"` type responses
+
+<Warning>
+	If you override any of these default types, you lose the built-in behavior.
+	Since processors completely override default handling, ensure your custom
+	implementation covers all functionality you need, including adding messages to
+	the chat if desired.
+</Warning>
 
 ## Recommended File Structure
 

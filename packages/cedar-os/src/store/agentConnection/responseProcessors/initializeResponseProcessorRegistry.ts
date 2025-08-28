@@ -6,12 +6,14 @@ import { setStateResponseProcessor } from '@/store/agentConnection/responseProce
 import { legacyActionResponseProcessor } from '@/store/agentConnection/responseProcessors/legacyActionResponseProcessor';
 import { messageResponseProcessor } from '@/store/agentConnection/responseProcessors/messageResponseProcessor';
 import { progressUpdateResponseProcessor } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
+import { humanInTheLoopResponseProcessor } from '@/store/agentConnection/responseProcessors/humanInTheLoopResponseProcessor';
 
 export const defaultResponseProcessors = [
 	messageResponseProcessor,
 	setStateResponseProcessor,
 	legacyActionResponseProcessor, // Backwards compatibility for 'action' type
 	progressUpdateResponseProcessor,
+	humanInTheLoopResponseProcessor, // Human-in-the-loop workflow support
 ];
 
 // Helper function to initialize processor registry with defaults

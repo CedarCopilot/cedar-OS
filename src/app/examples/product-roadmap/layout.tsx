@@ -41,6 +41,7 @@ export default function ProductRoadmapLayout({
 		baseURL: 'http://localhost:4111',
 		chatPath: '/chat/execute-function',
 		voiceRoute: '/chat/voice-execute',
+		resumePath: '/chat/resume',
 	};
 
 	// const llmProvider: ProviderConfig = {

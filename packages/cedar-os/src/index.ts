@@ -57,6 +57,11 @@ export type {
 	MentionItem,
 	MentionProvider,
 	StateBasedMentionProviderConfig,
+	// Phase 1: Backend context types moved from AgentConnectionTypes
+	AdditionalContextParam,
+	BackendSetterSchema,
+	BackendStateSchema,
+	BackendContextEntry,
 } from '@/store/agentInputContext/AgentInputContextTypes';
 
 // Export message types
@@ -93,6 +98,7 @@ export type { CedarStore } from '@/store/CedarOSTypes';
 export type {
 	AISDKParams,
 	AnthropicParams,
+	BaseParams,
 	CustomParams,
 	InferProviderParams,
 	InferProviderType,
@@ -115,17 +121,44 @@ export type {
 	ResponseProcessorRegistry,
 } from '@/store/agentConnection/AgentConnectionTypes';
 
+// Export SendMessageParams from the slice
+export type { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice';
+
+export {
+	// Generic schema factories (for configurable providers)
+	BaseParamsSchema,
+	MastraParamsSchema,
+	CustomParamsSchema,
+	// Fixed schemas (for standardized providers)
+	OpenAIParamsSchema,
+	AnthropicParamsSchema,
+	AISDKParamsSchema,
+	// Convenience schemas (no extra fields)
+	// Response Schema System
+	LLMResponseSchema,
+	BaseStructuredResponseSchema,
+	StructuredResponseSchema,
+	StreamEventSchema,
+	VoiceLLMResponseSchema,
+} from '@/store/agentConnection/AgentConnectionTypes';
+
+// Export additional context schemas from AgentInputContextTypes
+export {
+	// Backend context schema factories
+	AdditionalContextParamSchema,
+	// Standard frontend context schemas
+	ContextEntrySchema,
+	AdditionalContextSchema,
+	ChatRequestSchema,
+	ChatResponseSchema,
+	createChatRequestSchema,
+} from '@/store/agentInputContext/AgentInputContextTypes';
+
 // Export Mastra message types
 export type {
 	MastraStreamedResponse,
 	MastraStreamedResponseType,
 } from '@/store/agentConnection/providers/mastra';
-
-// Export progress update response processor
-export type {
-	ProgressUpdateResponse,
-	ProgressUpdateResponsePayload,
-} from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 
 // Export storage configuration types
 export type {
@@ -156,7 +189,28 @@ export {
 	useVoice,
 } from '@/store/CedarStore';
 
-// Export setState response processor hooks
+// Response processors
+export type {
+	HumanInTheLoopResponse,
+	HumanInTheLoopMessage,
+	HumanInTheLoopState,
+} from '@/store/agentConnection/responseProcessors/humanInTheLoopTypes';
+
+export { HumanInTheLoopResponseSchema } from '@/store/agentConnection/responseProcessors/humanInTheLoopTypes';
+export { humanInTheLoopResponseProcessor } from '@/store/agentConnection/responseProcessors/humanInTheLoopResponseProcessor';
+
+export {
+	HumanInTheLoopRenderer,
+	humanInTheLoopMessageRenderer,
+} from '@/store/messages/renderers/HumanInTheLoopRenderer';
+
+export type {
+	ProgressUpdateResponse,
+	ProgressUpdateResponsePayload,
+} from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
+
+export { ProgressUpdateResponseSchema } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
+
 export {
 	SetStateResponsePayload,
 	SetStateResponse,
@@ -167,7 +221,15 @@ export {
 	LegacyActionResponseFor,
 	createLegacyActionResponseProcessor,
 	createResponseProcessor,
+	SetStateResponseSchema,
+	LegacyActionResponseSchema,
 } from '@/store/agentConnection/responseProcessors/createResponseProcessor';
+
+export {
+	BackendMessageResponseSchema,
+	messageResponseProcessor,
+	BackendMessageResponse,
+} from '@/store/agentConnection/responseProcessors/messageResponseProcessor';
 
 // Export message renderer factory function
 export {

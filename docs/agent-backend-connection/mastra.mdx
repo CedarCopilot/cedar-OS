@@ -76,6 +76,28 @@ Your backend and frontend are now linked! You're ready to start bringing the pow
 </Step>
 </Steps>
 
+## Type Safety
+
+Mastra backends support full end-to-end type safety using `MastraParams<T, E>`:
+
+```typescript
+// Use MastraParams for type-safe requests
+type MastraParams<
+  T extends Record<string, unknown> = Record<string, never>,
+  E = object
+> = BaseParams<T, E> & {
+  route: string;
+  resourceId?: string;
+  threadId?: string;
+}
+```
+
+The `MastraParams` type allows you to:
+- **T**: Define types for your `additionalContext` data
+- **E**: Define types for custom fields (userId, sessionId, etc.)
+
+For complete type safety implementation, validation with Zod schemas, and detailed examples, see [Typing Agent Requests](/type-safety/typing-agent-requests).
+
 ## Features to explore
 
 Now that you have Cedar-OS connected to Mastra, explore these powerful features:
