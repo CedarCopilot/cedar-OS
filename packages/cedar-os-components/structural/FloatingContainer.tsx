@@ -10,7 +10,11 @@ export interface FloatingDimensions {
 	maxHeight?: number;
 }
 
-export type FloatingPosition = 'bottom-left' | 'bottom-right' | 'bottom-center';
+export type FloatingPosition =
+	| 'bottom-left'
+	| 'bottom-right'
+	| 'bottom-center'
+	| 'top-center';
 
 interface FloatingContainerProps {
 	children?: React.ReactNode;
@@ -252,6 +256,8 @@ export const FloatingContainer: React.FC<FloatingContainerProps> = ({
 				return 'fixed bottom-4 right-4';
 			case 'bottom-center':
 				return 'fixed bottom-8 left-1/2 transform -translate-x-1/2';
+			case 'top-center':
+				return 'fixed top-8 left-1/2 transform -translate-x-1/2';
 			default:
 				return 'fixed bottom-4 right-4';
 		}
@@ -279,6 +285,12 @@ export const FloatingContainer: React.FC<FloatingContainerProps> = ({
 					initial: { y: '120%' },
 					animate: { y: 0 },
 					exit: { y: '120%' },
+				};
+			case 'top-center':
+				return {
+					initial: { y: '-120%' },
+					animate: { y: 0 },
+					exit: { y: '-120%' },
 				};
 			default:
 				return {

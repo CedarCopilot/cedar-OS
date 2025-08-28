@@ -37,9 +37,11 @@ import {
 import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
+import { CommandBarChat } from '@/app/examples/product-roadmap/components/CommandBarChat';
 import {
 	ActivationMode,
 	Hotkey,
+	useCedarState,
 	HumanInTheLoopState,
 	useRegisterState,
 	useStateBasedMentionProvider,
@@ -577,12 +579,9 @@ function FlowCanvas() {
 // -----------------------------------------------------------------------------
 
 function SelectedNodesPanel() {
-	const [selected, setSelected] = React.useState<Node<FeatureNodeData>[]>([]);
-
-	useRegisterState<Node<FeatureNodeData>[]>({
+	const [selected, setSelected] = useCedarState<Node<FeatureNodeData>[]>({
 		key: 'selectedNodes',
-		value: selected,
-		setValue: setSelected,
+		initialValue: [],
 		description: 'Selected nodes',
 	});
 
@@ -642,8 +641,8 @@ function SelectedNodesPanel() {
 
 export default function ProductMapPage() {
 	const [chatMode, setChatMode] = React.useState<
-		'floating' | 'sidepanel' | 'caption'
-	>('caption');
+		'floating' | 'sidepanel' | 'caption' | 'command'
+	>('command');
 
 	const renderContent = () => (
 		<ReactFlowProvider>
@@ -654,6 +653,7 @@ export default function ProductMapPage() {
 					onChatModeChange={setChatMode}
 					currentChatMode={chatMode}
 				/>
+				{chatMode === 'command' && <CommandBarChat open={true} />}
 				{chatMode === 'caption' && <CedarCaptionChat stream={false} />}
 				{chatMode === 'floating' && (
 					<FloatingCedarChat

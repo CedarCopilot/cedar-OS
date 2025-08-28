@@ -140,12 +140,12 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 	const isDarkMode = useCedarStore((s) => s.styling.darkMode);
 
 	return (
-		<div id='input-context' className='flex items-center gap-2 flex-wrap mb-1'>
+		<div id='input-context' className='flex items-center gap-2 flex-wrap'>
 			<div
 				className={`px-2 py-1 border text-xs rounded-sm flex items-center gap-1 whitespace-nowrap ${
 					isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
 				}`}>
-				<span>@ add context</span>
+				<span>@ to add context</span>
 			</div>
 			{contextElements}
 		</div>

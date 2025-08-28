@@ -11,6 +11,7 @@ import {
 	MessageCircle,
 	PanelRight,
 	Subtitles,
+	Terminal,
 	Sun,
 	Moon,
 } from 'lucide-react';
@@ -20,8 +21,10 @@ import Container3D from '@/containers/Container3D';
 import { Button } from '@/components/ui/button';
 
 interface FloatingMenuProps {
-	onChatModeChange: (mode: 'floating' | 'sidepanel' | 'caption') => void;
-	currentChatMode: 'floating' | 'sidepanel' | 'caption';
+	onChatModeChange: (
+		mode: 'floating' | 'sidepanel' | 'caption' | 'command'
+	) => void;
+	currentChatMode: 'floating' | 'sidepanel' | 'caption' | 'command';
 }
 
 export const FloatingMenu: React.FC<FloatingMenuProps> = ({
@@ -137,6 +140,12 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
 	];
 
 	const chatModeOptions = [
+		{
+			id: 'command',
+			icon: Terminal,
+			label: 'Command',
+			mode: 'command' as const,
+		},
 		{
 			id: 'floating',
 			icon: MessageCircle,
