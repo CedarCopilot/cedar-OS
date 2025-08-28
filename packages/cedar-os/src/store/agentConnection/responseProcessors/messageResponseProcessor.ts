@@ -1,6 +1,8 @@
+import { z } from 'zod';
 import {
 	CustomStructuredResponseType,
 	ResponseProcessor,
+	StructuredResponseSchema,
 } from '@/store/agentConnection/AgentConnectionTypes';
 
 // Response processor for 'message' type - execute logic + use default text renderer
@@ -31,3 +33,19 @@ export const messageResponseProcessor: ResponseProcessor<BackendMessageResponse>
 			obj.type === 'message' &&
 			typeof (obj as BackendMessageResponse).content === 'string',
 	};
+
+// ===============================================================================
+// Zod Schema Definitions
+// ===============================================================================
+
+/**
+ * Zod schema for BackendMessageResponse
+ */
+export const BackendMessageResponseSchema = StructuredResponseSchema(
+	'message'
+).and(
+	z.object({
+		role: z.enum(['user', 'assistant', 'bot']).optional(),
+		content: z.string(),
+	})
+);

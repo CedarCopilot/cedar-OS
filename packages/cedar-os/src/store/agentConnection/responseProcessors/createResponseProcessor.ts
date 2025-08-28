@@ -1,9 +1,11 @@
+import { z } from 'zod';
 import {
 	BaseStructuredResponseType,
 	CustomStructuredResponseType,
 	ResponseProcessorExecute,
 	StructuredResponseType,
 	ResponseProcessor,
+	StructuredResponseSchema,
 } from '@/store/agentConnection/AgentConnectionTypes';
 
 export function createResponseProcessor<T extends StructuredResponseType>(
@@ -118,3 +120,31 @@ export function createLegacyActionResponseProcessor<
 		validate: validate ?? defaultValidate,
 	} as unknown as ResponseProcessor<StructuredResponseType>;
 }
+
+// ===============================================================================
+// Zod Schema Definitions
+// ===============================================================================
+
+/**
+ * Zod schema for SetStateResponse
+ */
+export const SetStateResponseSchema = StructuredResponseSchema('setState').and(
+	z.object({
+		stateKey: z.string(),
+		setterKey: z.string(),
+		args: z.array(z.unknown()).optional(),
+	})
+);
+
+/**
+ * Zod schema for LegacyActionResponse
+ */
+export const LegacyActionResponseSchema = StructuredResponseSchema(
+	'action'
+).and(
+	z.object({
+		stateKey: z.string(),
+		setterKey: z.string(),
+		args: z.array(z.unknown()).optional(),
+	})
+);

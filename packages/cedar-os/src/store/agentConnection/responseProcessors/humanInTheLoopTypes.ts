@@ -1,4 +1,8 @@
-import { CustomStructuredResponseType } from '@/store/agentConnection/AgentConnectionTypes';
+import { z } from 'zod';
+import {
+	CustomStructuredResponseType,
+	StructuredResponseSchema,
+} from '@/store/agentConnection/AgentConnectionTypes';
 import { CustomMessage } from '@/store/messages/MessageTypes';
 
 // ===============================================================================
@@ -65,3 +69,24 @@ export interface HumanInTheLoopState<
 		messageId: string;
 	};
 }
+
+// ===============================================================================
+// Zod Schema Definitions
+// ===============================================================================
+
+/**
+ * Zod schema for HumanInTheLoopResponse
+ */
+export const HumanInTheLoopResponseSchema = StructuredResponseSchema(
+	'humanInTheLoop'
+).and(
+	z.object({
+		status: z.literal('suspended'),
+		runId: z.string(),
+		stepPath: z.array(z.array(z.string())).min(1), // [string[], ...string[][]]
+		suspendPayload: z.record(z.unknown()).optional(),
+		message: z.string().optional(),
+		timeoutMs: z.number().optional(),
+		metadata: z.record(z.unknown()).optional(),
+	})
+);
