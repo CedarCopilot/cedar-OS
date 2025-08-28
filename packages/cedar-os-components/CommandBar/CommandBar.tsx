@@ -350,13 +350,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 			)}>
 			<motion.div
 				className={cn(
-					'rounded-lg border shadow-md overflow-hidden text-sm',
+					'rounded-lg border shadow-md overflow-hidden text-sm h-auto',
 					className
 				)}
 				style={{ willChange: 'transform' }}
-				animate={{
-					height: isCollapsed ? 0 : 'auto',
-				}}
 				transition={{
 					type: 'spring',
 					stiffness: 300,
