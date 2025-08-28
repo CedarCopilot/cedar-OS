@@ -253,6 +253,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		if (!item.disabled) {
 			item.onSelect();
 			onClose?.();
+			editor?.commands.blur();
 		}
 	};
 
@@ -339,109 +340,221 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 	if (!open) return null;
 
 	return (
-		<motion.div
+		<div
 			className={cn(
-				'rounded-lg border shadow-md overflow-hidden text-sm',
+				'fixed top-8 left-1/2 transform -translate-x-1/2 z-[9999] w-2xl',
 				className
-			)}
-			style={{ willChange: 'transform' }}
-			animate={{
-				height: isCollapsed ? 'auto' : 'auto',
-			}}
-			transition={{
-				type: 'spring',
-				stiffness: 300,
-				damping: 30,
-				mass: 0.8,
-			}}>
-			<Command
-				className='h-full'
-				shouldFilter={false}
-				value={
-					selectedIndex >= 0 && allItemsForNavigation[selectedIndex]
-						? allItemsForNavigation[selectedIndex].id
-						: ''
-				}
-				onValueChange={(value) => {
-					// Find the index of the selected item
-					const index = allItemsForNavigation.findIndex(
-						(item) => item.id === value
-					);
-					if (index >= 0) {
-						setSelectedIndex(index);
-					}
+			)}>
+			<motion.div
+				className={cn(
+					'rounded-lg border shadow-md overflow-hidden text-sm',
+					className
+				)}
+				style={{ willChange: 'transform' }}
+				animate={{
+					height: isCollapsed ? 'auto' : 'auto',
+				}}
+				transition={{
+					type: 'spring',
+					stiffness: 300,
+					damping: 30,
+					mass: 0.8,
 				}}>
-				<div className='flex w-full flex-col gap-2 px-3 py-2'>
-					<ContextBadgeRow editor={editor} />
-					<div className='flex w-full items-center gap-2'>
-						{!isFocused && <KeyboardShortcut shortcut='⇥' />}
-						<motion.div
-							layoutId='chatInput'
-							className='flex-1 justify-center py-'
-							aria-label='Message input'>
-							<EditorContent
-								editor={editor}
-								className='prose prose-sm max-w-none focus:outline-none outline-none focus:ring-0 ring-0 [&_*]:focus:outline-none [&_*]:outline-none [&_*]:focus:ring-0 [&_*]:ring-0 placeholder-gray-500 dark:placeholder-gray-400 [&_.ProseMirror]:p-0 [&_.ProseMirror]:outline-none'
-							/>
-						</motion.div>
-					</div>
-				</div>
-
-				<motion.div
-					ref={commandListRef}
-					animate={{
-						height: isCollapsed ? 0 : 'auto',
-						opacity: isCollapsed ? 0 : 1,
-					}}
-					transition={{
-						type: 'spring',
-						stiffness: 300,
-						damping: 30,
-						mass: 0.8,
-					}}
-					style={{
-						overflow: 'hidden',
-						willChange: 'transform',
-						maxHeight: '50vh',
+				<Command
+					className='h-full'
+					shouldFilter={false}
+					value={
+						selectedIndex >= 0 && allItemsForNavigation[selectedIndex]
+							? allItemsForNavigation[selectedIndex].id
+							: ''
+					}
+					onValueChange={(value) => {
+						// Find the index of the selected item
+						const index = allItemsForNavigation.findIndex(
+							(item) => item.id === value
+						);
+						if (index >= 0) {
+							setSelectedIndex(index);
+						}
 					}}>
-					{!isCollapsed && (
-						<CommandList className='max-h-[50vh] overflow-y-auto'>
-							{filteredContents.groups.map((group, groupIndex) => (
-								<React.Fragment key={group.id}>
-									{/* Add separator between groups (except before first group) */}
-									{groupIndex > 0 && <CommandSeparator />}
+					<div className='flex w-full flex-col gap-2 px-3 py-2'>
+						<ContextBadgeRow editor={editor} />
+						<div className='flex w-full items-center gap-2'>
+							{!isFocused && <KeyboardShortcut shortcut='⇥' />}
+							<motion.div
+								layoutId='chatInput'
+								className='flex-1 justify-center py-'
+								aria-label='Message input'>
+								<EditorContent
+									editor={editor}
+									className='prose prose-sm max-w-none focus:outline-none outline-none focus:ring-0 ring-0 [&_*]:focus:outline-none [&_*]:outline-none [&_*]:focus:ring-0 [&_*]:ring-0 placeholder-gray-500 dark:placeholder-gray-400 [&_.ProseMirror]:p-0 [&_.ProseMirror]:outline-none'
+								/>
+							</motion.div>
+						</div>
+					</div>
 
-									<CommandGroup heading={group.heading}>
-										{group.items.map((item) => (
-											<CommandItem
-												key={item.id}
-												value={item.id}
-												onSelect={() => {}}
-												onMouseDown={() => {
-													handleItemSelect(item);
-												}}
-												disabled={item.disabled}
-												className={cn(
-													'flex items-center gap-2 cursor-pointer',
-													item.disabled && 'opacity-50 cursor-not-allowed',
-													// Apply color-based styling if color is specified
+					<motion.div
+						ref={commandListRef}
+						animate={{
+							height: isCollapsed ? 0 : 'auto',
+							opacity: isCollapsed ? 0 : 1,
+						}}
+						transition={{
+							type: 'spring',
+							stiffness: 300,
+							damping: 30,
+							mass: 0.8,
+						}}
+						style={{
+							overflow: 'hidden',
+							willChange: 'transform',
+							maxHeight: '50vh',
+						}}>
+						{!isCollapsed && (
+							<CommandList className='max-h-[50vh] overflow-y-auto'>
+								{filteredContents.groups.map((group, groupIndex) => (
+									<React.Fragment key={group.id}>
+										{/* Add separator between groups (except before first group) */}
+										{groupIndex > 0 && <CommandSeparator />}
+
+										<CommandGroup heading={group.heading}>
+											{group.items.map((item) => (
+												<CommandItem
+													key={item.id}
+													value={item.id}
+													onSelect={() => {
+														handleItemSelect(item);
+													}}
+													onMouseDown={() => {
+														handleItemSelect(item);
+													}}
+													disabled={item.disabled}
+													className={cn(
+														'flex items-center gap-2 cursor-pointer',
+														item.disabled && 'opacity-50 cursor-not-allowed',
+														// Apply color-based styling if color is specified
+														item.color === 'blue' &&
+															'bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 data-[selected=true]:bg-blue-200 dark:data-[selected=true]:bg-blue-900/50',
+														item.color === 'green' &&
+															'bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50 data-[selected=true]:bg-green-200 dark:data-[selected=true]:bg-green-900/50',
+														item.color === 'purple' &&
+															'bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50 data-[selected=true]:bg-purple-200 dark:data-[selected=true]:bg-purple-900/50',
+														item.color === 'orange' &&
+															'bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50 data-[selected=true]:bg-orange-200 dark:data-[selected=true]:bg-orange-900/50',
+														item.color === 'pink' &&
+															'bg-pink-50 dark:bg-pink-950/30 hover:bg-pink-100 dark:hover:bg-pink-950/50 data-[selected=true]:bg-pink-200 dark:data-[selected=true]:bg-pink-900/50',
+														item.color === 'amber' &&
+															'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 data-[selected=true]:bg-amber-200 dark:data-[selected=true]:bg-amber-900/50',
+														item.color === 'red' &&
+															'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 data-[selected=true]:bg-red-200 dark:data-[selected=true]:bg-red-900/50',
+														item.color === 'indigo' &&
+															'bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 data-[selected=true]:bg-indigo-200 dark:data-[selected=true]:bg-indigo-900/50'
+													)}>
+													{item.icon && (
+														<span className='flex-shrink-0'>
+															{typeof item.icon === 'string' ? (
+																<span className='text-sm'>{item.icon}</span>
+															) : (
+																item.icon
+															)}
+														</span>
+													)}
+													<span className='flex-1'>{item.label}</span>
+													{item.activationEvent && (
+														<KeyboardShortcut
+															shortcut={getShortcutDisplay(
+																item.activationEvent
+															)}
+														/>
+													)}
+												</CommandItem>
+											))}
+										</CommandGroup>
+									</React.Fragment>
+								))}
+							</CommandList>
+						)}
+					</motion.div>
+
+					{/* Fixed bottom group - always visible when expanded */}
+					{!isCollapsed && filteredContents.fixedBottomGroup && (
+						<div className='border-t'>
+							<div className='p-2'>
+								<div className='text-xs font-medium text-muted-foreground mb-2 px-2'>
+									{filteredContents.fixedBottomGroup.heading}
+								</div>
+								<div className='flex gap-1'>
+									{filteredContents.fixedBottomGroup.items.map((item) => (
+										<button
+											key={item.id}
+											onMouseDown={() => {
+												handleItemSelect(item);
+											}}
+											disabled={item.disabled}
+											className={cn(
+												'flex-1 flex items-center justify-between gap-1 p-2 rounded-md text-xs transition-colors',
+												'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+												item.disabled && 'opacity-50 cursor-not-allowed',
+												// Apply color-based styling if color is specified
+												item.color === 'blue' &&
+													'bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50',
+												item.color === 'green' &&
+													'bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50',
+												item.color === 'purple' &&
+													'bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50',
+												item.color === 'orange' &&
+													'bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50',
+												item.color === 'pink' &&
+													'bg-pink-50 dark:bg-pink-950/30 hover:bg-pink-100 dark:hover:bg-pink-950/50',
+												item.color === 'amber' &&
+													'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50',
+												item.color === 'red' &&
+													'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50',
+												item.color === 'indigo' &&
+													'bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50',
+												// Selection highlights
+												selectedIndex >= 0 &&
+													allItemsForNavigation[selectedIndex]?.id ===
+														item.id &&
 													item.color === 'blue' &&
-														'bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 data-[selected=true]:bg-blue-200 dark:data-[selected=true]:bg-blue-900/50',
+													'bg-blue-200 dark:bg-blue-900/50',
+												selectedIndex >= 0 &&
+													allItemsForNavigation[selectedIndex]?.id ===
+														item.id &&
 													item.color === 'green' &&
-														'bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50 data-[selected=true]:bg-green-200 dark:data-[selected=true]:bg-green-900/50',
+													'bg-green-200 dark:bg-green-900/50',
+												selectedIndex >= 0 &&
+													allItemsForNavigation[selectedIndex]?.id ===
+														item.id &&
 													item.color === 'purple' &&
-														'bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50 data-[selected=true]:bg-purple-200 dark:data-[selected=true]:bg-purple-900/50',
+													'bg-purple-200 dark:bg-purple-900/50',
+												selectedIndex >= 0 &&
+													allItemsForNavigation[selectedIndex]?.id ===
+														item.id &&
 													item.color === 'orange' &&
-														'bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50 data-[selected=true]:bg-orange-200 dark:data-[selected=true]:bg-orange-900/50',
+													'bg-orange-200 dark:bg-orange-900/50',
+												selectedIndex >= 0 &&
+													allItemsForNavigation[selectedIndex]?.id ===
+														item.id &&
 													item.color === 'pink' &&
-														'bg-pink-50 dark:bg-pink-950/30 hover:bg-pink-100 dark:hover:bg-pink-950/50 data-[selected=true]:bg-pink-200 dark:data-[selected=true]:bg-pink-900/50',
+													'bg-pink-200 dark:bg-pink-900/50',
+												selectedIndex >= 0 &&
+													allItemsForNavigation[selectedIndex]?.id ===
+														item.id &&
 													item.color === 'amber' &&
-														'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 data-[selected=true]:bg-amber-200 dark:data-[selected=true]:bg-amber-900/50',
+													'bg-amber-200 dark:bg-amber-900/50',
+												selectedIndex >= 0 &&
+													allItemsForNavigation[selectedIndex]?.id ===
+														item.id &&
 													item.color === 'red' &&
-														'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 data-[selected=true]:bg-red-200 dark:data-[selected=true]:bg-red-900/50',
+													'bg-red-200 dark:bg-red-900/50',
+												selectedIndex >= 0 &&
+													allItemsForNavigation[selectedIndex]?.id ===
+														item.id &&
 													item.color === 'indigo' &&
-														'bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 data-[selected=true]:bg-indigo-200 dark:data-[selected=true]:bg-indigo-900/50'
-												)}>
+													'bg-indigo-200 dark:bg-indigo-900/50'
+											)}>
+											<div className='flex items-center gap-1'>
 												{item.icon && (
 													<span className='flex-shrink-0'>
 														{typeof item.icon === 'string' ? (
@@ -451,117 +564,23 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 														)}
 													</span>
 												)}
-												<span className='flex-1'>{item.label}</span>
-												{item.activationEvent && (
-													<KeyboardShortcut
-														shortcut={getShortcutDisplay(item.activationEvent)}
-													/>
-												)}
-											</CommandItem>
-										))}
-									</CommandGroup>
-								</React.Fragment>
-							))}
-						</CommandList>
-					)}
-				</motion.div>
-
-				{/* Fixed bottom group - always visible when expanded */}
-				{!isCollapsed && filteredContents.fixedBottomGroup && (
-					<div className='border-t'>
-						<div className='p-2'>
-							<div className='text-xs font-medium text-muted-foreground mb-2 px-2'>
-								{filteredContents.fixedBottomGroup.heading}
-							</div>
-							<div className='flex gap-1'>
-								{filteredContents.fixedBottomGroup.items.map((item) => (
-									<button
-										key={item.id}
-										onMouseDown={() => {
-											handleItemSelect(item);
-										}}
-										disabled={item.disabled}
-										className={cn(
-											'flex-1 flex items-center justify-between gap-1 p-2 rounded-md text-xs transition-colors',
-											'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-											item.disabled && 'opacity-50 cursor-not-allowed',
-											// Apply color-based styling if color is specified
-											item.color === 'blue' &&
-												'bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50',
-											item.color === 'green' &&
-												'bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50',
-											item.color === 'purple' &&
-												'bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50',
-											item.color === 'orange' &&
-												'bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50',
-											item.color === 'pink' &&
-												'bg-pink-50 dark:bg-pink-950/30 hover:bg-pink-100 dark:hover:bg-pink-950/50',
-											item.color === 'amber' &&
-												'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50',
-											item.color === 'red' &&
-												'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50',
-											item.color === 'indigo' &&
-												'bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50',
-											// Selection highlights
-											selectedIndex >= 0 &&
-												allItemsForNavigation[selectedIndex]?.id === item.id &&
-												item.color === 'blue' &&
-												'bg-blue-200 dark:bg-blue-900/50',
-											selectedIndex >= 0 &&
-												allItemsForNavigation[selectedIndex]?.id === item.id &&
-												item.color === 'green' &&
-												'bg-green-200 dark:bg-green-900/50',
-											selectedIndex >= 0 &&
-												allItemsForNavigation[selectedIndex]?.id === item.id &&
-												item.color === 'purple' &&
-												'bg-purple-200 dark:bg-purple-900/50',
-											selectedIndex >= 0 &&
-												allItemsForNavigation[selectedIndex]?.id === item.id &&
-												item.color === 'orange' &&
-												'bg-orange-200 dark:bg-orange-900/50',
-											selectedIndex >= 0 &&
-												allItemsForNavigation[selectedIndex]?.id === item.id &&
-												item.color === 'pink' &&
-												'bg-pink-200 dark:bg-pink-900/50',
-											selectedIndex >= 0 &&
-												allItemsForNavigation[selectedIndex]?.id === item.id &&
-												item.color === 'amber' &&
-												'bg-amber-200 dark:bg-amber-900/50',
-											selectedIndex >= 0 &&
-												allItemsForNavigation[selectedIndex]?.id === item.id &&
-												item.color === 'red' &&
-												'bg-red-200 dark:bg-red-900/50',
-											selectedIndex >= 0 &&
-												allItemsForNavigation[selectedIndex]?.id === item.id &&
-												item.color === 'indigo' &&
-												'bg-indigo-200 dark:bg-indigo-900/50'
-										)}>
-										<div className='flex items-center gap-1'>
-											{item.icon && (
-												<span className='flex-shrink-0'>
-													{typeof item.icon === 'string' ? (
-														<span className='text-sm'>{item.icon}</span>
-													) : (
-														item.icon
-													)}
+												<span className='leading-tight truncate'>
+													{item.label}
 												</span>
+											</div>
+											{item.activationEvent && (
+												<KeyboardShortcut
+													shortcut={getShortcutDisplay(item.activationEvent)}
+												/>
 											)}
-											<span className='leading-tight truncate'>
-												{item.label}
-											</span>
-										</div>
-										{item.activationEvent && (
-											<KeyboardShortcut
-												shortcut={getShortcutDisplay(item.activationEvent)}
-											/>
-										)}
-									</button>
-								))}
+										</button>
+									))}
+								</div>
 							</div>
 						</div>
-					</div>
-				)}
-			</Command>
-		</motion.div>
+					)}
+				</Command>
+			</motion.div>
+		</div>
 	);
 };

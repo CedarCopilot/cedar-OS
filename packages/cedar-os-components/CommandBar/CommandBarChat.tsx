@@ -276,18 +276,12 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 	if (!open) return null;
 
 	return (
-		<div
-			className={cn(
-				'fixed top-8 left-1/2 transform -translate-x-1/2 z-[9999] w-2xl',
-				className
-			)}>
-			<CommandBar
-				open={open}
-				contents={contents}
-				onClose={onClose}
-				placeholder='Type a command, ask a question, or search...'
-				onSearchChange={setSearchText}
-			/>
-		</div>
+		<CommandBar
+			open={open}
+			contents={contents}
+			onClose={onClose}
+			placeholder='Type a command, ask a question, or search...'
+			onSearchChange={setSearchText}
+		/>
 	);
 };
