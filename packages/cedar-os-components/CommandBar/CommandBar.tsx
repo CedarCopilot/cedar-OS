@@ -116,6 +116,12 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		},
 	});
 
+	// Use a ref to always get the current editor instance in callbacks
+	const editorRef = React.useRef(editor);
+	React.useEffect(() => {
+		editorRef.current = editor;
+	}, [editor]);
+
 	// Collect all items with activation events
 	const allItems: CommandBarItem[] = React.useMemo(
 		() => [
@@ -139,6 +145,12 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					if (open && !item.disabled) {
 						item.onSelect();
 						onClose?.();
+						// Use ref to get current editor instance
+						const currentEditor = editorRef.current;
+						if (currentEditor) {
+							currentEditor.commands.blur();
+							currentEditor.commands.clearContent();
+						}
 					}
 				},
 				preventDefaultEvents: true,
@@ -146,7 +158,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					item.ignoreInputElements ??
 					shouldIgnoreInputElements(item.activationEvent!),
 			}));
-	}, [allItems, open, onClose]);
+	}, [allItems, open, onClose]); // No editor dependency - we use ref instead
 
 	// Register all command bar item spells using the new hook
 	useMultipleSpells({ spells: spellConfigs });
