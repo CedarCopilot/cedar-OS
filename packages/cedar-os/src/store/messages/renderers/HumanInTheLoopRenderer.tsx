@@ -44,7 +44,7 @@ export const HumanInTheLoopRenderer: React.FC<HumanInTheLoopRendererProps> = ({
 	};
 
 	// Is this message the latest one
-	const messages = useCedarStore.getState().messages;
+	const messages = useCedarStore((state) => state.messages);
 	const isLatestMessage = messages[messages.length - 1].id === message.id;
 
 	// Different UI based on state
@@ -110,7 +110,6 @@ export const HumanInTheLoopRenderer: React.FC<HumanInTheLoopRendererProps> = ({
 						state='error'
 						payload={{
 							reason: 'Workflow timed out and was automatically cancelled',
-							timeoutAt: new Date().toISOString(),
 						}}
 					/>
 				</div>

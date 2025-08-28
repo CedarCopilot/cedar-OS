@@ -57,7 +57,7 @@ export interface HumanInTheLoopState<
 		stepPath: [string[], ...string[][]];
 		suspendPayload: SuspendPayload;
 		suspendedAt: string;
-		state: 'suspended' | 'resumed' | 'cancelled';
+		state: 'suspended' | 'resumed' | 'cancelled' | 'timeout';
 		resumeData?: ResumeData;
 		resumedAt?: string;
 		cancelledAt?: string;
