@@ -155,6 +155,7 @@ export type ProviderConfig =
 			baseURL: string;
 			chatPath?: string;
 			voiceRoute?: string;
+			resumePath?: string; // Human-in-the-loop workflow resume endpoint
 	  }
 	| { provider: 'ai-sdk'; providers: AISDKProviderConfig }
 	| { provider: 'custom'; config: Record<string, unknown> };

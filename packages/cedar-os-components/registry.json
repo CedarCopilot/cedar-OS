@@ -81,7 +81,8 @@
 				"cedar-os",
 				"context-badge-row",
 				"container-3d-button",
-				"voice-indicator"
+				"voice-indicator",
+				"human-in-the-loop-indicator"
 			],
 			"files": ["ChatInput.tsx", "ChatInput.css", "index.ts"],
 			"meta": {
@@ -572,6 +573,18 @@
 				"importName": "VoiceIndicator",
 				"displayName": "Voice Indicator",
 				"description": "Visual indicator for voice states (listening, speaking, errors)"
+			}
+		},
+		{
+			"name": "human-in-the-loop-indicator",
+			"type": "chatInput",
+			"dependencies": ["react", "motion", "lucide-react"],
+			"registryDependencies": ["cedar-os"],
+			"files": ["HumanInTheLoopIndicator.tsx"],
+			"meta": {
+				"importName": "HumanInTheLoopIndicator",
+				"displayName": "Human-in-the-Loop Indicator",
+				"description": "Visual indicator for human-in-the-loop workflow states (suspended, resumed, cancelled, timeout)"
 			}
 		}
 	]

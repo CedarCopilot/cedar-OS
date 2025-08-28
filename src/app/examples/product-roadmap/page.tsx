@@ -40,6 +40,7 @@ import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import {
 	ActivationMode,
 	Hotkey,
+	HumanInTheLoopState,
 	useRegisterState,
 	useStateBasedMentionProvider,
 	useSubscribeStateToInputContext,
@@ -603,6 +604,16 @@ function SelectedNodesPanel() {
 		onChange: ({ nodes }: { nodes: Node<FeatureNodeData>[] }) =>
 			setSelected(nodes),
 	});
+
+	useSubscribeStateToInputContext<HumanInTheLoopState>(
+		'humanInTheLoop',
+		(state) => ({
+			humanInTheLoop: state,
+		}),
+		{
+			showInChat: false,
+		}
+	);
 
 	return (
 		<div className='absolute right-4 top-4 rounded-lg p-3 shadow-md backdrop-blur'>

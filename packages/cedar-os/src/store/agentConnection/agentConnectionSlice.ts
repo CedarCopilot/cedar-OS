@@ -563,12 +563,14 @@ export const createAgentConnectionSlice: StateCreator<
 			// Step 2: Unify it into a single string to send to the LLM
 			const unifiedMessage = fullContext;
 
-			// Step 3: Add the stringified chatInputContent as a message from the user
-			state.addMessage({
-				role: 'user' as const,
-				type: 'text' as const,
-				content: editorContent,
-			});
+			if (editorContent) {
+				// Step 3: Add the stringified chatInputContent as a message from the user
+				state.addMessage({
+					role: 'user' as const,
+					type: 'text' as const,
+					content: editorContent,
+				});
+			}
 
 			// Clear the chat specific contextEntries (mentions)
 			state.clearMentions();
