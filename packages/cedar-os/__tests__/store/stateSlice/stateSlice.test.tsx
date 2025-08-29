@@ -575,4 +575,160 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			expect(mockSetter).toHaveBeenCalledWith('', testArg);
 		});
 	});
+
+	describe('Args Validation', () => {
+		let consoleSpy: jest.SpyInstance;
+
+		beforeEach(() => {
+			consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+		});
+
+		afterEach(() => {
+			consoleSpy.mockRestore();
+		});
+
+		it('should validate args against schema and execute on valid args', () => {
+			const mockSetter = jest.fn();
+			const validationSchema = z.object({
+				id: z.string(),
+				name: z.string(),
+				age: z.number(),
+			});
+
+			const setter: Setter<unknown[], typeof validationSchema> = {
+				name: 'addUser',
+				description: 'Add a user with validation',
+				argsSchema: validationSchema,
+				execute: mockSetter,
+			};
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'validationTest',
+					value: [],
+					customSetters: { addUser: setter },
+				});
+			});
+
+			const validArgs = { id: '123', name: 'John', age: 30 };
+
+			act(() => {
+				useCedarStore.getState().executeCustomSetter({
+					key: 'validationTest',
+					setterKey: 'addUser',
+					args: validArgs,
+				});
+			});
+
+			expect(mockSetter).toHaveBeenCalledWith([], validArgs);
+			// No validation errors should be logged for valid args
+			expect(consoleSpy).not.toHaveBeenCalledWith(
+				expect.stringContaining('Args validation failed')
+			);
+		});
+
+		it('should log error and not execute setter on invalid args', () => {
+			const mockSetter = jest.fn();
+			const validationSchema = z.object({
+				id: z.string(),
+				name: z.string(),
+				age: z.number(),
+			});
+
+			const setter: Setter<unknown[], typeof validationSchema> = {
+				name: 'addUser',
+				description: 'Add a user with validation',
+				argsSchema: validationSchema,
+				execute: mockSetter,
+			};
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'validationTest',
+					value: [],
+					customSetters: { addUser: setter },
+				});
+			});
+
+			// Invalid args - age is string instead of number
+			const invalidArgs = { id: '123', name: 'John', age: 'thirty' };
+
+			act(() => {
+				useCedarStore.getState().executeCustomSetter({
+					key: 'validationTest',
+					setterKey: 'addUser',
+					args: invalidArgs,
+				});
+			});
+
+			// Setter should not be called with invalid args
+			expect(mockSetter).not.toHaveBeenCalled();
+
+			// Error should be logged in a single consolidated message
+			expect(consoleSpy).toHaveBeenCalledTimes(1);
+			const errorMessage = consoleSpy.mock.calls[0][0];
+
+			// Check that the consolidated error message contains all expected parts
+			expect(errorMessage).toContain(
+				'Args validation failed for setter "addUser" on state "validationTest"'
+			);
+			expect(errorMessage).toContain('📥 Received args:');
+			expect(errorMessage).toContain('📋 Expected schema:');
+			expect(errorMessage).toContain('🔍 Validation errors:');
+			expect(errorMessage).toContain(
+				'💡 Tip: Check your backend response format'
+			);
+
+			// Check that the received args are included in the message
+			expect(errorMessage).toContain('"age": "thirty"'); // Part of the invalid args
+			expect(errorMessage).toContain('"name": "John"'); // Part of the invalid args
+
+			// Log the actual error message format for documentation purposes
+			console.log('\n=== VALIDATION ERROR MESSAGE FORMAT ===');
+			console.log(errorMessage);
+			console.log('=== END ERROR MESSAGE ===\n');
+		});
+
+		it('should log warning for setters without schema', () => {
+			const mockSetter = jest.fn();
+			const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+			const setter: Setter<unknown[], z.ZodTypeAny> = {
+				name: 'noSchemaTest',
+				description: 'Test setter without schema',
+				// No argsSchema provided
+				execute: mockSetter,
+			};
+
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'noSchemaTest',
+					value: [],
+					customSetters: { noSchemaTest: setter },
+				});
+			});
+
+			const testArgs = { anything: 'goes' };
+
+			act(() => {
+				useCedarStore.getState().executeCustomSetter({
+					key: 'noSchemaTest',
+					setterKey: 'noSchemaTest',
+					args: testArgs,
+				});
+			});
+
+			// Setter should still be called
+			expect(mockSetter).toHaveBeenCalledWith([], testArgs);
+
+			// Warning should be logged
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining(
+					'No schema validation for setter "noSchemaTest" on state "noSchemaTest"'
+				)
+			);
+
+			warnSpy.mockRestore();
+		});
+	});
 });

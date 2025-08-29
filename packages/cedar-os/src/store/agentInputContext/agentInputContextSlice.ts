@@ -473,9 +473,6 @@ export function useSubscribeStateToInputContext<T>(
 	useEffect(() => {
 		// Check if state key exists
 		if (!stateExists) {
-			console.warn(
-				`[useSubscribeStateToInputContext] State with key "${stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
-			);
 			return;
 		}
 

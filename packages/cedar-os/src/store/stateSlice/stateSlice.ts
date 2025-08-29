@@ -298,19 +298,90 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 			}
 			const setter = setters[setterKey];
 
-			// Handle args - always pass as single parameter or no parameter
-			// Type assertion is necessary here because we support flexible args at runtime
-			const executeFunction = setter.execute as (
-				state: BasicStateValue,
-				args?: unknown
-			) => void;
+			// Validate args against schema if available
+			const schema = setter.argsSchema || setter.schema; // Support both new and deprecated property
+			if (schema) {
+				try {
+					// Validate args against the schema
+					const validatedArgs = schema.parse(args);
 
-			if (args !== undefined) {
-				// Any type (array, object, string, number, etc.): pass as single parameter
-				executeFunction(existingState.value, args);
+					// Handle args - always pass as single parameter or no parameter
+					// Type assertion is necessary here because we support flexible args at runtime
+					const executeFunction = setter.execute as (
+						state: BasicStateValue,
+						args?: unknown
+					) => void;
+
+					if (validatedArgs !== undefined) {
+						// Any type (array, object, string, number, etc.): pass as single parameter
+						executeFunction(existingState.value, validatedArgs);
+					} else {
+						// No args (void)
+						executeFunction(existingState.value);
+					}
+				} catch (error) {
+					// Schema validation failed - log all error information in a single message
+					let validationErrors: unknown[] = [];
+
+					if (error instanceof z.ZodError) {
+						validationErrors = error.issues.map((err: z.ZodIssue) => {
+							const errorInfo: Record<string, unknown> = {
+								path: err.path.join('.') || 'root',
+								message: err.message,
+								code: err.code,
+							};
+
+							// Add received/expected if available (depends on error type)
+							if ('received' in err) {
+								errorInfo.received = (
+									err as unknown as Record<string, unknown>
+								).received;
+							}
+							if ('expected' in err) {
+								errorInfo.expected = (
+									err as unknown as Record<string, unknown>
+								).expected;
+							}
+
+							return errorInfo;
+						});
+					}
+
+					// Single consolidated error message with all information
+					const errorMessage = [
+						`❌ Args validation failed for setter "${setterKey}" on state "${key}"`,
+						`📥 Received args: ${JSON.stringify(args, null, 2)}`,
+						`🔍 Validation errors: ${JSON.stringify(
+							validationErrors.length > 0 ? validationErrors : error,
+							null,
+							2
+						)}`,
+						`💡 Tip: Check your backend response format or update the setter's argsSchema`,
+					].join('\n');
+
+					console.error(errorMessage);
+					return; // Don't execute the setter with invalid args
+				}
 			} else {
-				// No args (void)
-				executeFunction(existingState.value);
+				// No schema validation - execute with original args
+				console.warn(
+					`⚠️ No schema validation for setter "${setterKey}" on state "${key}". Consider adding an argsSchema for better type safety.`
+				);
+
+				// Handle args - always pass as single parameter or no parameter
+				// Type assertion is necessary here because we support flexible args at runtime
+				const executeFunction = setter.execute as (
+					state: BasicStateValue,
+					args?: unknown
+				) => void;
+
+				if (args !== undefined) {
+					// Any type (array, object, string, number, etc.): pass as single parameter
+					executeFunction(existingState.value, args);
+				} else {
+					// No args (void)
+					executeFunction(existingState.value);
+				}
 			}
 		},
 	};
@@ -355,5 +426,13 @@ export function useRegisterState<T extends BasicStateValue>(config: {
 
 	useEffect(() => {
 		registerState(config);
-	}, [config, registerState]);
+	}, [
+		config.key,
+		config.value,
+		config.setValue,
+		config.description,
+		config.schema,
+		config.customSetters,
+		registerState,
+	]);
 }
