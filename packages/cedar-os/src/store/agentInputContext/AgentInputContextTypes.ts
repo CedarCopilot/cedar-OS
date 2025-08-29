@@ -3,19 +3,23 @@ import z from 'zod';
 
 // -------- Backend context structure (after compileAdditionalContext transformation) -----------
 // Note: These are different from the stateSlice Setter types - these are for serialized context
-export interface BackendSetterSchema {
+export interface BackendStateSetterSchema {
 	name: string;
 	stateKey: string;
 	description: string;
 	argsSchema?: unknown;
-	/** @deprecated Use argsSchema instead */
-	schema?: unknown;
 }
 
 export interface BackendStateSchema {
 	stateKey: string;
 	description?: string;
 	schema: unknown;
+}
+
+export interface BackendFrontendToolSchema {
+	name: string;
+	description?: string;
+	argsSchema: Record<string, unknown>; // JSON Schema
 }
 
 // Backend context entry (simplified format sent to backend)
@@ -29,9 +33,8 @@ export type AdditionalContextParam<
 	T extends Record<string, unknown> = Record<string, never>
 > = {
 	// Cedar OS system fields (added by compileAdditionalContext)
-	stateSetters?: Record<string, BackendSetterSchema>;
-	/** @deprecated Use stateSetters instead */
-	setters?: Record<string, BackendSetterSchema>;
+	frontendTools?: Record<string, BackendFrontendToolSchema>;
+	stateSetters?: Record<string, BackendStateSetterSchema>;
 	schemas?: Record<string, BackendStateSchema>;
 } & {
 	// User context fields - auto-transformed to backend format
@@ -97,7 +100,7 @@ export interface MentionProvider {
 	renderMenuItem?: (item: MentionItem) => ReactNode;
 	renderEditorItem?: (
 		item: MentionItem,
-		attrs: Record<string, any>
+		attrs: Record<string, unknown>
 	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
 }
@@ -108,7 +111,7 @@ export interface MentionProvider {
 export interface StateBasedMentionProviderConfig {
 	stateKey: string;
 	trigger?: string;
-	labelField?: string | ((item: any) => string);
+	labelField?: string | ((item: unknown) => string);
 	searchFields?: string[];
 	description?: string;
 	icon?: ReactNode;
@@ -117,7 +120,7 @@ export interface StateBasedMentionProviderConfig {
 	renderMenuItem?: (item: MentionItem) => ReactNode;
 	renderEditorItem?: (
 		item: MentionItem,
-		attrs: Record<string, any>
+		attrs: Record<string, unknown>
 	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
 }
@@ -190,6 +193,15 @@ export const AdditionalContextParamSchema = <
 	z
 		.object({
 			// Cedar OS system fields (added by compileAdditionalContext)
+			frontendTools: z
+				.record(
+					z.object({
+						name: z.string(),
+						description: z.string().optional(),
+						argsSchema: z.record(z.unknown()),
+					})
+				)
+				.optional(),
 			stateSetters: z
 				.record(
 					z.object({
@@ -197,20 +209,9 @@ export const AdditionalContextParamSchema = <
 						stateKey: z.string(),
 						description: z.string(),
 						argsSchema: z.unknown().optional(),
-						schema: z.unknown().optional(), // Deprecated but maintained for compatibility
 					})
 				)
 				.optional(),
-			setters: z
-				.record(
-					z.object({
-						name: z.string(),
-						stateKey: z.string(),
-						description: z.string(),
-						schema: z.unknown().optional(),
-					})
-				)
-				.optional(), // Deprecated but maintained for compatibility
 			schemas: z
 				.record(
 					z.object({

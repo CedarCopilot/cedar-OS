@@ -456,7 +456,7 @@ export const createAgentInputContextSlice: StateCreator<
 		};
 
 		// Sanitize before stringifying
-		const sanitizedContext = sanitizeJson(mergedContext);
+		const sanitizedContext = sanitizeJson(mergedContext) as object;
 		return sanitizedContext;
 	},
 
