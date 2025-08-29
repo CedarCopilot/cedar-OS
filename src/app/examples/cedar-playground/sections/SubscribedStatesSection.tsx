@@ -40,16 +40,16 @@ export function SubscribedStatesSection() {
 
 	// Subscribe state to input context
 	useSubscribeStateToInputContext(
-		'parameters', // stateKey
+		'parameters',
 		(parametersState: Parameters) => ({
 			parameters: parametersState,
-		}), // mapFn returns the state assigned to the key
+		}),
 		{
 			icon: <SlidersHorizontal />,
 			color: '#2ECC40',
 			labelField: (parameters) => `${parameters.name}: ${parameters.value}`,
 			order: 1,
-		} // options
+		}
 	);
 
 	const addParameter = () => {

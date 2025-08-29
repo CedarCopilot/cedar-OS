@@ -148,6 +148,14 @@ export interface AgentInputContextSlice {
 	stringifyEditor: () => string;
 	stringifyInputContext: () => string;
 	stringifyAdditionalContext: () => string;
+	stringifyFrontendTools: () => Record<
+		string,
+		{
+			name: string;
+			description?: string;
+			argsSchema: Record<string, unknown>;
+		}
+	>;
 }
 
 // Create the agent input context slice
@@ -417,32 +425,24 @@ export const createAgentInputContextSlice: StateCreator<
 						argsSchema: setter.argsSchema
 							? zodToJsonSchema(setter.argsSchema, setter.name)
 							: undefined,
-						// Deprecated schema property for backward compatibility
-						schema: setter.argsSchema
-							? zodToJsonSchema(setter.argsSchema, setter.name)
-							: undefined,
 					};
 
 					// Add to new stateSetters structure
 					stateSetters[setterKey] = setterInfo;
-					// Also add to deprecated setters structure for backward compatibility
-					setters[setterKey] = {
-						name: setter.name,
-						stateKey,
-						description: setter.description,
-						schema: setterInfo.schema,
-					};
 				});
 			}
 		});
 
-		// Merge simplified context with setter schemas and state schemas
-		// Include both new and deprecated keys for backward compatibility
+		// Get frontend tools
+		const frontendTools = get().stringifyFrontendTools();
+
+		// Merge simplified context with setter schemas, state schemas, and frontend tools
 		const mergedContext = {
 			...simplifiedContext,
 			stateSetters, // New key
-			setters, // Deprecated key for backward compatibility
+			setters,
 			schemas,
+			...(Object.keys(frontendTools).length > 0 && { frontendTools }),
 		};
 
 		// Sanitize before stringifying
@@ -459,6 +459,12 @@ export const createAgentInputContextSlice: StateCreator<
 		result += `Additional Context: ${contextString}`;
 
 		return result;
+	},
+
+	stringifyFrontendTools: () => {
+		// Use the existing getRegisteredTools method from the toolsSlice
+		const tools = get().getRegisteredTools();
+		return tools;
 	},
 });
 

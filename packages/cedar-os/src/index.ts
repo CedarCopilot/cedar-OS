@@ -204,6 +204,8 @@ export {
 	useSpells,
 	useStyling,
 	useVoice,
+	useTools,
+	useRegisterFrontendTool,
 } from '@/store/CedarStore';
 
 // Response processors
@@ -216,10 +218,32 @@ export type {
 export { HumanInTheLoopResponseSchema } from '@/store/agentConnection/responseProcessors/humanInTheLoopTypes';
 export { humanInTheLoopResponseProcessor } from '@/store/agentConnection/responseProcessors/humanInTheLoopResponseProcessor';
 
+// Frontend tool response processor
+export type {
+	FrontendToolResponse,
+	FrontendToolResponseFor,
+} from '@/store/agentConnection/responseProcessors/frontendToolResponseProcessor';
+
+export {
+	FrontendToolResponseSchema,
+	frontendToolResponseProcessor,
+	createFrontendToolResponseProcessor,
+} from '@/store/agentConnection/responseProcessors/frontendToolResponseProcessor';
+
 export {
 	HumanInTheLoopRenderer,
 	humanInTheLoopMessageRenderer,
 } from '@/store/messages/renderers/HumanInTheLoopRenderer';
+
+// Frontend tool message renderer
+export type { FrontendToolMessage } from '@/store/messages/renderers/FrontendToolRenderer';
+
+export {
+	FrontendToolRenderer,
+	frontendToolMessageRenderer,
+	createFrontendToolMessageRenderer,
+	defaultFrontendToolMessageRenderer,
+} from '@/store/messages/renderers/FrontendToolRenderer';
 
 export type {
 	ProgressUpdateResponse,
@@ -281,6 +305,22 @@ export type {
 	UseSpellOptions,
 	UseSpellReturn,
 } from '@/store/spellSlice/useSpell';
+
+// Export tools slice types and utilities
+export { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
+
+export type {
+	ToolsSlice,
+	ToolsState,
+	ToolsActions,
+	ToolFunction,
+	RegisteredTool,
+	RegisteredToolBase,
+	ToolRegistrationConfig,
+	ToolsMap,
+} from '@/store/toolsSlice/ToolsTypes';
+
+export type { UseRegisterFrontendToolOptions } from '@/store/toolsSlice/useRegisterFrontendTool';
 
 // Export Tiptap components
 export {

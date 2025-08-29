@@ -46,6 +46,7 @@ import {
 	useRegisterState,
 	useStateBasedMentionProvider,
 	useSubscribeStateToInputContext,
+	useRegisterFrontendTool,
 	type CedarStore,
 	type Setter,
 } from 'cedar-os';
@@ -404,6 +405,27 @@ function FlowCanvas() {
 		value: edges,
 		setValue: setEdges,
 		description: 'Product roadmap edges',
+	});
+
+	// Example 1: Simple notification tool
+	useRegisterFrontendTool({
+		name: 'showNotification',
+		description: 'Show a notification to the user',
+		argsSchema: z.object({
+			message: z.string().describe('The notification message'),
+			type: z
+				.enum(['success', 'error', 'info', 'warning'])
+				.describe('Notification type'),
+			duration: z.number().optional().describe('Duration in ms (optional)'),
+		}),
+		// ✅ SIMPLE: Just receive typed args directly
+		execute: async (args) => {
+			// args is fully typed as { message: string; type: 'success' | 'error' | 'info' | 'warning'; duration?: number }
+			console.log(`Showing ${args.type} notification: ${args.message}`);
+
+			// In a real app, you'd use a toast library
+			alert(`${args.type.toUpperCase()}: ${args.message}`);
+		},
 	});
 
 	// Register mention provider for nodes
