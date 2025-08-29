@@ -1,9 +1,9 @@
 // Jest setup file for cedar-os package
-import '@testing-library/jest-dom';
+require('@testing-library/jest-dom');
 
 // Polyfill for TransformStream (needed for AI SDK)
 if (typeof globalThis.TransformStream === 'undefined') {
-  const { TransformStream } = import('stream/web');
+  const { TransformStream } = require('stream/web');
   globalThis.TransformStream = TransformStream;
 }
 
