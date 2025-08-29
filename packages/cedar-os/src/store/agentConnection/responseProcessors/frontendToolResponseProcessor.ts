@@ -8,8 +8,6 @@ export const FrontendToolResponseSchema = z.object({
 	type: z.literal('frontendTool'),
 	toolName: z.string(),
 	args: z.unknown(), // Will be validated by the tool's own schema
-	// Optional fields for UI display
-	description: z.string().optional(),
 });
 
 export type FrontendToolResponse = z.infer<typeof FrontendToolResponseSchema>;
@@ -72,7 +70,6 @@ export type FrontendToolResponseFor<ToolName extends string, Args = unknown> = {
 	type: 'frontendTool';
 	toolName: ToolName;
 	args: Args;
-	description?: string;
 };
 
 // Factory function for creating typed frontend tool response processors
