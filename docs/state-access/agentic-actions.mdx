@@ -26,17 +26,17 @@ import { useRegisterState } from 'cedar-os';
 import { Node } from 'reactflow';
 import { z } from 'zod';
 
-// Register nodes state with custom setters
+// Register nodes state with state setters
 useRegisterState({
 	key: 'nodes',
 	value: nodes,
 	setValue: setNodes,
 	description: 'Product roadmap nodes',
-	customSetters: {
+	stateSetters: {
 		addNode: {
 			name: 'addNode',
 			description: 'Add a new node to the roadmap',
-			schema: z.object({
+			argsSchema: z.object({
 				node: z.object({
 					data: z.object({
 						title: z.string(),
@@ -46,7 +46,6 @@ useRegisterState({
 					}),
 				}),
 			}),
-			execute: (currentNodes, node) => {
 				const newNode = {
 					...node,
 					id: node.id || uuidv4(),
@@ -67,10 +66,9 @@ useRegisterState({
 		removeNode: {
 			name: 'removeNode',
 			description: 'Remove a node from the roadmap',
-			schema: z.object({
+			argsSchema: z.object({
 				id: z.string().describe('The ID of the node to remove'),
 			}),
-			execute: async (currentNodes, id) => {
 				// Mark as removed with diff instead of immediate deletion
 				setNodes(
 					currentNodes.map((node) =>
@@ -84,8 +82,7 @@ useRegisterState({
 		acceptAllDiffs: {
 			name: 'acceptAllDiffs',
 			description: 'Accept all pending diffs',
-			schema: z.object({}),
-			execute: async (currentNodes) => {
+			argsSchema: z.object({}),
 				const nodesWithDiffs = currentNodes.filter((n) => n.data.diff);
 
 				// Process removals
@@ -135,7 +132,7 @@ export const addFeatureTool = createTool({
 		type: z.literal('setState'),
 		stateKey: z.literal('nodes'),
 		setterKey: z.literal('addNode'),
-		args: z.array(z.any()),
+		args: z.any(),
 	}),
 	execute: async ({ context }) => {
 		// Return structured response for Cedar to interpret
@@ -143,8 +140,8 @@ export const addFeatureTool = createTool({
 			type: 'setState',
 			stateKey: 'nodes',
 			setterKey: 'addNode',
-			args: [
-				{
+			args: {
+				node: {
 					data: {
 						title: context.title,
 						description: context.description,
@@ -152,7 +149,7 @@ export const addFeatureTool = createTool({
 						nodeType: context.nodeType,
 					},
 				},
-			],
+			},
 		};
 	},
 });
@@ -173,11 +170,11 @@ handleLLMResult: (response: LLMResponse) => {
 
 		// Handle setState type responses
 		if (structuredResponse.type === 'setState') {
-			// Execute the custom setter with provided parameters
-			state.executeCustomSetter(
+			// Execute the state setter with provided parameters
+			state.executeStateSetter(
 				structuredResponse.stateKey,
 				structuredResponse.setterKey,
-				...structuredResponse.args
+				structuredResponse.args
 			);
 			return; // Action executed, no message needed
 		}
@@ -209,11 +206,9 @@ Execute a custom setter on registered state:
 	"type": "setState",
 	"stateKey": "nodes",
 	"setterKey": "addNode",
-	"args": [
-		{
-			/* node data */
-		}
-	]
+	"args": {
+		/* node data */
+	}
 }
 ```
 
@@ -239,23 +234,23 @@ You can trigger actions directly from your UI components:
 import { useCedarStore } from 'cedar-os';
 
 function ActionButtons() {
-	const executeCustomSetter = useCedarStore(
-		(state) => state.executeCustomSetter
-	);
+	const executeStateSetter = useCedarStore((state) => state.executeStateSetter);
 
 	const handleAddFeature = () => {
-		executeCustomSetter('nodes', 'addNode', {
-			data: {
-				title: 'New Feature',
-				description: 'Describe your feature here',
-				status: 'planned',
-				nodeType: 'feature',
+		executeStateSetter('nodes', 'addNode', {
+			node: {
+				data: {
+					title: 'New Feature',
+					description: 'Describe your feature here',
+					status: 'planned',
+					nodeType: 'feature',
+				},
 			},
 		});
 	};
 
 	const handleAcceptAllDiffs = () => {
-		executeCustomSetter('nodes', 'acceptAllDiffs');
+		executeStateSetter('nodes', 'acceptAllDiffs', {});
 	};
 
 	return (
@@ -275,17 +270,24 @@ Make your setter names clear and action-oriented:
 
 ```tsx
 // Good
-customSetters: {
+stateSetters: {
   addTodo: { /* ... */ },
   toggleTodoComplete: { /* ... */ },
   deleteTodo: { /* ... */ }
 }
 
 // Avoid
-customSetters: {
+stateSetters: {
   setter1: { /* ... */ },
   update: { /* ... */ },
   change: { /* ... */ }
+}
+
+// Legacy (still supported)
+customSetters: {
+  addTodo: { /* ... */ },
+  toggleTodoComplete: { /* ... */ },
+  deleteTodo: { /* ... */ }
 }
 ```
 
@@ -294,7 +296,7 @@ customSetters: {
 Help your agent understand what parameters to provide using Zod's describe method:
 
 ```tsx
-schema: z.object({
+argsSchema: z.object({
 	priority: z
 		.enum(['low', 'medium', 'high', 'critical'])
 		.describe('Priority level: low, medium, high, or critical'),
@@ -306,8 +308,9 @@ schema: z.object({
 Add error handling in your custom setters:
 
 ```tsx
-execute: async (currentState, id) => {
+execute: async (currentState, args) => {
 	try {
+		const { id } = args;
 		const item = currentState.find((item) => item.id === id);
 		if (!item) {
 			console.error(`Item with id ${id} not found`);
@@ -325,8 +328,9 @@ execute: async (currentState, id) => {
 Implement diff patterns for actions that users might want to review:
 
 ```tsx
-execute: (currentNodes, nodeData) => {
+execute: (currentNodes, args) => {
 	// Add with diff marker
+	const { nodeData } = args;
 	const newNode = {
 		...nodeData,
 		data: { ...nodeData.data, diff: 'added' },
@@ -348,13 +352,13 @@ For complex workflows, you can chain multiple actions:
       "type": "setState",
       "stateKey": "nodes",
       "setterKey": "addNode",
-      "args": [/* node 1 */]
+      "args": { /* node 1 */ }
     },
     {
       "type": "setState",
       "stateKey": "edges",
       "setterKey": "connectNodes",
-      "args": ["node1", "node2"]
+      "args": { "nodeIds": ["node1", "node2"] }
     }
   ]
 }
@@ -377,7 +381,7 @@ console.log('Available actions:', registeredStates);
 
 ## Automatic Schema Distribution
 
-When you subscribe a state to input context using `useSubscribeStateToInputContext`, Cedar automatically includes both the state's schema (if defined) and the schemas of all custom setters for that state in the context sent to your agent. This enables your agent to understand both the data structure and what actions are available.
+When you subscribe a state to input context using `useSubscribeStateToInputContext`, Cedar automatically includes both the state's schema (if defined) and the schemas of all state setters for that state in the context sent to your agent. This enables your agent to understand both the data structure and what actions are available.
 
 ### Setter Schema Structure
 
@@ -440,11 +444,11 @@ Custom setters use Zod schemas to define parameter validation and provide rich t
 
 ```tsx
 // In your useRegisterState hook call
-customSetters: {
+stateSetters: {
   addNode: {
     name: 'addNode',
     description: 'Add a new node to the roadmap',
-    schema: z.object({
+    argsSchema: z.object({
       node: z.object({
         data: z.object({
           title: z.string().describe('Feature title'),
@@ -454,11 +458,13 @@ customSetters: {
         })
       })
     }),
-    execute: (currentNodes, node) => {
+    execute: (currentNodes, args) => {
       // Implementation with full type safety
+      const { node } = args;
     }
   }
 }
+
 ```
 
 This schema-based approach provides several benefits:
