@@ -7,10 +7,13 @@ import { useCedarStore } from '@/store/CedarStore';
  * @returns Object containing computedValue, undo, and redo functions
  */
 export const useDiffStateHelpers = <T = unknown>(key: string) => {
-	// Get the computed value for the state
-	const computedValue = useCedarStore((state) =>
-		state.getComputedState<T>(key)
-	);
+	// Get the computed value for the state by subscribing to the specific diff history state
+	// This ensures the component re-renders when the computed state changes
+	const computedValue = useCedarStore((state) => {
+		const diffHistoryState = state.diffHistoryStates[key];
+		if (!diffHistoryState) return undefined;
+		return diffHistoryState.diffState.computedState as T;
+	});
 
 	// Get the store methods
 	const undoMethod = useCedarStore((state) => state.undo);

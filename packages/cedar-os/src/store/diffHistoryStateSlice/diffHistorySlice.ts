@@ -121,10 +121,386 @@ export interface DiffHistorySlice {
 	// Diff management methods
 	acceptAllDiffs: (key: string) => boolean;
 	rejectAllDiffs: (key: string) => boolean;
+	acceptDiff: <T>(
+		key: string,
+		jsonPath: string,
+		identificationField: string | ((item: T) => unknown),
+		targetId?: unknown
+	) => boolean;
+	rejectDiff: <T>(
+		key: string,
+		jsonPath: string,
+		identificationField: string | ((item: T) => unknown),
+		targetId?: unknown
+	) => boolean;
 
 	// Undo/Redo methods
 	undo: (key: string) => boolean;
 	redo: (key: string) => boolean;
+}
+
+/**
+ * Helper function to get value at a JSON path
+ */
+function getValueAtPath<T>(obj: T, path: string): unknown {
+	if (!path || path === '' || path === '/') {
+		return obj;
+	}
+
+	const pathParts = path.startsWith('/')
+		? path.slice(1).split('/')
+		: path.split('/');
+
+	let current: unknown = obj;
+	for (const part of pathParts) {
+		if (current == null || typeof current !== 'object') {
+			return undefined;
+		}
+		current = (current as Record<string, unknown>)[part];
+	}
+
+	return current;
+}
+
+/**
+ * Helper function to set value at a JSON path
+ */
+function setValueAtPathForDiff<T>(obj: T, path: string, value: unknown): T {
+	if (!path || path === '' || path === '/') {
+		return value as T;
+	}
+
+	const pathParts = path.startsWith('/')
+		? path.slice(1).split('/')
+		: path.split('/');
+
+	const result = JSON.parse(JSON.stringify(obj));
+	let current = result;
+
+	for (let i = 0; i < pathParts.length - 1; i++) {
+		const part = pathParts[i];
+		if (!(part in current)) {
+			current[part] = {};
+		}
+		current = current[part];
+	}
+
+	const lastPart = pathParts[pathParts.length - 1];
+	current[lastPart] = value;
+
+	return result;
+}
+
+/**
+ * Helper function to identify an item using either a field name or function
+ */
+function getItemIdentifier<T>(
+	item: T,
+	identificationField: string | ((item: T) => unknown)
+): unknown {
+	if (typeof identificationField === 'function') {
+		return identificationField(item);
+	}
+	return (item as Record<string, unknown>)[identificationField];
+}
+
+/**
+ * Helper function to handle single diff accept/reject operations
+ */
+function handleSingleDiff<T>(
+	get: () => CedarStore,
+	key: string,
+	jsonPath: string,
+	identificationField: string | ((item: T) => unknown),
+	action: 'accept' | 'reject',
+	targetId?: unknown
+): boolean {
+	const currentDiffHistoryState = get().getDiffHistoryState<T>(key);
+
+	// If no existing state or not in diff mode, return false
+	if (
+		!currentDiffHistoryState ||
+		!currentDiffHistoryState.diffState.isDiffMode
+	) {
+		return false;
+	}
+
+	const { diffState, history, diffMode, computeState } =
+		currentDiffHistoryState;
+
+	// Get the array at the specified path from both old and new states
+	const oldArray = getValueAtPath(diffState.oldState, jsonPath) as T[];
+	const newArray = getValueAtPath(diffState.newState, jsonPath) as T[];
+
+	if (!Array.isArray(oldArray) || !Array.isArray(newArray)) {
+		console.warn(`Value at path "${jsonPath}" is not an array`);
+		return false;
+	}
+
+	// Create maps for easier lookup
+	const oldMap = new Map(
+		oldArray.map((item) => [getItemIdentifier(item, identificationField), item])
+	);
+	const newMap = new Map(
+		newArray.map((item) => [getItemIdentifier(item, identificationField), item])
+	);
+
+	// Identify all items that have differences between old and new state
+	const allIds = new Set([...oldMap.keys(), ...newMap.keys()]);
+	const changedIds = new Set<unknown>();
+
+	// Find which items have changed
+	for (const id of allIds) {
+		// If targetId is specified, only process that specific item
+		if (targetId !== undefined && id !== targetId) {
+			continue;
+		}
+
+		const oldItem = oldMap.get(id);
+		const newItem = newMap.get(id);
+
+		if (!oldItem && newItem) {
+			// Item was added
+			changedIds.add(id);
+		} else if (oldItem && !newItem) {
+			// Item was removed (shouldn't happen in newState, but handle it)
+			changedIds.add(id);
+		} else if (oldItem && newItem) {
+			// Check if item has changed
+			if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
+				changedIds.add(id);
+			}
+		}
+	}
+
+	if (changedIds.size === 0) {
+		return false; // No differences to process (or targetId not found)
+	}
+
+	// Process based on action
+	let resultArray: T[] = [];
+
+	if (action === 'accept') {
+		// Accept changes - use the new state but remove any diff markers
+		resultArray = newArray.map((item) => {
+			const itemId = getItemIdentifier(item, identificationField);
+
+			// When targetId is specified, only process that item
+			if (targetId !== undefined && itemId !== targetId) {
+				// Not the target - keep as is (don't remove diff markers)
+				return item;
+			}
+
+			// If targetId is specified, only process the target item
+			// If no targetId, process all changed items
+			const shouldProcessItem = targetId === undefined || itemId === targetId;
+
+			if (!shouldProcessItem || !changedIds.has(itemId)) {
+				// Item hasn't changed or shouldn't be processed, keep as is
+				return item;
+			}
+			// Item has changed and should be processed, remove any diff markers if they exist
+			let cleanedItem = { ...item };
+
+			// Try to remove diff from data.diff first, then from root
+			if (getValueAtPath(cleanedItem, '/data/diff')) {
+				const itemData = (cleanedItem as Record<string, unknown>)
+					.data as Record<string, unknown>;
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
+				const { diff: _, ...dataWithoutDiff } = itemData;
+				cleanedItem = setValueAtPathForDiff(
+					cleanedItem,
+					'/data',
+					dataWithoutDiff
+				);
+			} else if (getValueAtPath(cleanedItem, '/diff')) {
+				const itemRecord = cleanedItem as Record<string, unknown>;
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
+				const { diff: _, ...itemWithoutDiff } = itemRecord;
+				cleanedItem = itemWithoutDiff as T;
+			}
+
+			return cleanedItem;
+		});
+	} else if (action === 'reject') {
+		// Reject changes - revert to old state for changed items
+
+		// When targetId is specified, we need to handle single-item rejection differently
+		if (targetId !== undefined) {
+			// Process all items from newArray, but only revert the targeted one
+			for (const item of newArray) {
+				const itemId = getItemIdentifier(item, identificationField);
+
+				if (itemId === targetId && changedIds.has(itemId)) {
+					// This is the targeted item with changes
+					const oldItem = oldMap.get(itemId);
+					if (oldItem) {
+						// Item was changed - revert to old version
+						resultArray.push(oldItem);
+					}
+					// If oldItem doesn't exist, it means this was added - exclude it
+				} else {
+					// Not the target item - keep as is in new state
+					resultArray.push(item);
+				}
+			}
+		} else {
+			// Original logic for rejecting all changes
+			for (const item of oldArray) {
+				const itemId = getItemIdentifier(item, identificationField);
+				if (changedIds.has(itemId)) {
+					// This item has changes, use the old version
+					resultArray.push(item);
+				} else {
+					// No changes, keep the current version (which should be same as old)
+					const newItem = newMap.get(itemId);
+					if (newItem) {
+						resultArray.push(newItem);
+					}
+				}
+			}
+			// Don't include items that were added (not in oldArray)
+			// They will be excluded naturally since we're iterating over oldArray
+		}
+	}
+
+	// Update the state with the modified array
+	const newStateWithUpdatedArray = setValueAtPathForDiff(
+		diffState.newState,
+		jsonPath,
+		resultArray
+	);
+
+	// For single-item operations, we need to carefully preserve diff markers
+	let finalOldState = diffState.oldState;
+	const finalNewState = newStateWithUpdatedArray;
+	let finalComputedState: T;
+
+	if (targetId !== undefined) {
+		// Single-item operation - we need to preserve diff markers for other items
+		// Get the current computed state with all diff markers
+		const currentComputedArray = getValueAtPath(
+			diffState.computedState,
+			jsonPath
+		) as T[];
+
+		// Build the final computed array by:
+		// 1. Taking the processed item from resultArray (with diff marker removed if accepted)
+		// 2. Keeping all other items from currentComputedArray (with their diff markers intact)
+		const finalComputedArray = currentComputedArray
+			.map((item: T) => {
+				const itemId = getItemIdentifier(item, identificationField);
+				if (itemId === targetId) {
+					// This is the target item - use the processed version from resultArray
+					const processedItem = resultArray.find(
+						(i) => getItemIdentifier(i, identificationField) === targetId
+					);
+					return processedItem || item;
+				}
+				// Not the target - keep as is with diff markers
+				return item;
+			})
+			.filter((item: T) => {
+				// For reject action on added items, filter out the rejected item
+				if (action === 'reject') {
+					const itemId = getItemIdentifier(item, identificationField);
+					if (itemId === targetId) {
+						// Check if this was an added item that should be removed
+						const oldItem = oldMap.get(itemId);
+						if (!oldItem) {
+							// Item was added and is being rejected - remove it
+							return false;
+						}
+					}
+				}
+				return true;
+			});
+
+		// Set the final computed state directly
+		finalComputedState = setValueAtPathForDiff(
+			diffState.computedState,
+			jsonPath,
+			finalComputedArray
+		) as T;
+
+		// Update oldState for accepted items to prevent re-diffing
+		if (action === 'accept') {
+			const updatedOldArray = [...oldArray];
+			const targetIndex = updatedOldArray.findIndex(
+				(item) => getItemIdentifier(item, identificationField) === targetId
+			);
+			const acceptedItem = resultArray.find(
+				(item) => getItemIdentifier(item, identificationField) === targetId
+			);
+
+			if (acceptedItem) {
+				if (targetIndex >= 0) {
+					updatedOldArray[targetIndex] = acceptedItem;
+				} else {
+					updatedOldArray.push(acceptedItem);
+				}
+				finalOldState = setValueAtPathForDiff(
+					diffState.oldState,
+					jsonPath,
+					updatedOldArray
+				);
+			}
+		}
+	} else {
+		// Accept/reject all - bypass computeState to avoid re-adding diff markers
+		finalComputedState = newStateWithUpdatedArray;
+		if (action === 'accept') {
+			finalOldState = newStateWithUpdatedArray;
+		}
+	}
+
+	// Check if we're still in diff mode
+	const stillInDiffMode =
+		targetId !== undefined
+			? // For single-item, check if computed state has any remaining diff markers
+			  (() => {
+					const computedArray = getValueAtPath(
+						finalComputedState,
+						jsonPath
+					) as T[];
+					return (
+						computedArray?.some((item: T) => {
+							const diffValue =
+								getValueAtPath(item, '/data/diff') ||
+								getValueAtPath(item, '/diff');
+							return (
+								diffValue === 'added' ||
+								diffValue === 'changed' ||
+								diffValue === 'removed'
+							);
+						}) || false
+					);
+			  })()
+			: false; // For accept/reject all, no more diffs
+
+	const updatedDiffState: DiffState<T> = {
+		oldState: finalOldState,
+		newState: finalNewState,
+		computedState: finalComputedState,
+		isDiffMode: stillInDiffMode,
+		patches: [],
+	};
+
+	// Save current state to history
+	const updatedHistory = [...history, diffState];
+
+	const updatedDiffHistoryState: DiffHistoryState<T> = {
+		diffState: updatedDiffState,
+		history: updatedHistory,
+		redoStack: [], // Clear redo stack on changes
+		diffMode,
+		computeState,
+	};
+
+	// Update the store
+	get().setDiffState(key, updatedDiffHistoryState);
+
+	return true;
 }
 
 export const createDiffHistorySlice: StateCreator<
@@ -690,5 +1066,37 @@ export const createDiffHistorySlice: StateCreator<
 		get().setDiffState(key, updatedDiffHistoryState);
 
 		return true; // Successfully performed redo
+	},
+
+	acceptDiff: <T>(
+		key: string,
+		jsonPath: string,
+		identificationField: string | ((item: T) => unknown),
+		targetId?: unknown
+	): boolean => {
+		return handleSingleDiff(
+			get,
+			key,
+			jsonPath,
+			identificationField,
+			'accept',
+			targetId
+		);
+	},
+
+	rejectDiff: <T>(
+		key: string,
+		jsonPath: string,
+		identificationField: string | ((item: T) => unknown),
+		targetId?: unknown
+	): boolean => {
+		return handleSingleDiff(
+			get,
+			key,
+			jsonPath,
+			identificationField,
+			'reject',
+			targetId
+		);
 	},
 });
