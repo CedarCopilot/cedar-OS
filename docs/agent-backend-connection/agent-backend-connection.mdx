@@ -213,6 +213,13 @@ You can still override this by passing a custom `route` parameter to `sendMessag
 
 Cedar-OS provides full TypeScript support with provider-specific parameter types:
 
+<Info>
+	**Important**: The `additionalContext` field is now passed as a structured
+	object (not stringified) to Mastra and Custom backends. For direct LLM
+	providers (OpenAI, Anthropic, AI-SDK), Cedar automatically stringifies the
+	context within the prompt text.
+</Info>
+
 ### Request Types
 
 **Configurable Providers** (support custom fields via generics):

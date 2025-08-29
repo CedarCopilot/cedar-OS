@@ -214,7 +214,7 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 			}
 
 			// Get the stringified additional context from the store
-			const contextString = get().stringifyAdditionalContext();
+			const contextString = get().compileAdditionalContext();
 
 			// Use the agent connection's voiceLLM method
 			const response = await get().voiceLLM({

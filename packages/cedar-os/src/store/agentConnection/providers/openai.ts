@@ -201,7 +201,7 @@ export const openAIProvider: ProviderImplementation<
 		formData.append('audio', audioData, 'recording.webm');
 		formData.append('settings', JSON.stringify(voiceSettings));
 		if (context) {
-			formData.append('context', context);
+			formData.append('context', JSON.stringify(context));
 		}
 
 		const response = await fetch(fullUrl, {

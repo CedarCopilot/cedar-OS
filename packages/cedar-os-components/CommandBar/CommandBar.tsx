@@ -15,6 +15,39 @@ import { motion } from 'motion/react';
 import React from 'react';
 import { getShortcutDisplay } from './getShortcutDisplay';
 
+// Color class mappings to avoid duplication
+const COLOR_CLASSES = {
+	blue: 'bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-950/60 data-[selected=true]:bg-blue-200 dark:data-[selected=true]:bg-blue-800/60',
+	green:
+		'bg-green-50 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-950/60 data-[selected=true]:bg-green-200 dark:data-[selected=true]:bg-green-800/60',
+	purple:
+		'bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-950/60 data-[selected=true]:bg-purple-200 dark:data-[selected=true]:bg-purple-800/60',
+	orange:
+		'bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 dark:hover:bg-orange-950/60 data-[selected=true]:bg-orange-200 dark:data-[selected=true]:bg-orange-800/60',
+	pink: 'bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 dark:hover:bg-pink-950/60 data-[selected=true]:bg-pink-200 dark:data-[selected=true]:bg-pink-800/60',
+	amber:
+		'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-950/60 data-[selected=true]:bg-amber-200 dark:data-[selected=true]:bg-amber-800/60',
+	red: 'bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950/60 data-[selected=true]:bg-red-200 dark:data-[selected=true]:bg-red-800/60',
+	indigo:
+		'bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 data-[selected=true]:bg-indigo-200 dark:data-[selected=true]:bg-indigo-800/60',
+	white:
+		'bg-white dark:bg-gray-50 hover:bg-gray-100 dark:hover:bg-gray-200 data-[selected=true]:bg-gray-200 dark:data-[selected=true]:bg-gray-800',
+} as const;
+
+const FIXED_BOTTOM_SELECTED_CLASSES = {
+	blue: 'bg-blue-200 dark:bg-blue-900/60',
+	green: 'bg-green-200 dark:bg-green-900/60',
+	purple: 'bg-purple-200 dark:bg-purple-900/60',
+	orange: 'bg-orange-200 dark:bg-orange-900/60',
+	pink: 'bg-pink-200 dark:bg-pink-900/60',
+	amber: 'bg-amber-200 dark:bg-amber-900/60',
+	red: 'bg-red-200 dark:bg-red-900/60',
+	indigo: 'bg-indigo-200 dark:bg-indigo-900/60',
+	white: 'bg-gray-200 dark:bg-gray-300',
+} as const;
+
+type ColorVariant = keyof typeof COLOR_CLASSES;
+
 /**
  * Determine if an activation event should ignore input elements
  * Non-modifier single keys should ignore inputs, modifier combinations should not
@@ -40,6 +73,8 @@ export interface CommandBarItem {
 	id: string;
 	/** Display text for the item */
 	label: string;
+	/** Optional description text shown below the label */
+	description?: string;
 	/** Optional icon (emoji string or React node) */
 	icon?: React.ReactNode;
 	/** Callback when item is selected */
@@ -327,7 +362,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 	return (
 		<div
 			className={cn(
-				'fixed top-8 left-1/2 transform -translate-x-1/2 z-[9999] w-2xl',
+				'fixed top-8 left-1/2 transform -translate-x-1/2 z-[9999] w-full max-w-2xl',
 				className
 			)}>
 			<motion.div
@@ -428,22 +463,8 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 														'flex items-center gap-2 cursor-pointer',
 														item.disabled && 'opacity-50 cursor-not-allowed',
 														// Apply color-based styling if color is specified
-														item.color === 'blue' &&
-															'bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 data-[selected=true]:bg-blue-200 dark:data-[selected=true]:bg-blue-900/50',
-														item.color === 'green' &&
-															'bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50 data-[selected=true]:bg-green-200 dark:data-[selected=true]:bg-green-900/50',
-														item.color === 'purple' &&
-															'bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50 data-[selected=true]:bg-purple-200 dark:data-[selected=true]:bg-purple-900/50',
-														item.color === 'orange' &&
-															'bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50 data-[selected=true]:bg-orange-200 dark:data-[selected=true]:bg-orange-900/50',
-														item.color === 'pink' &&
-															'bg-pink-50 dark:bg-pink-950/30 hover:bg-pink-100 dark:hover:bg-pink-950/50 data-[selected=true]:bg-pink-200 dark:data-[selected=true]:bg-pink-900/50',
-														item.color === 'amber' &&
-															'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 data-[selected=true]:bg-amber-200 dark:data-[selected=true]:bg-amber-900/50',
-														item.color === 'red' &&
-															'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 data-[selected=true]:bg-red-200 dark:data-[selected=true]:bg-red-900/50',
-														item.color === 'indigo' &&
-															'bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 data-[selected=true]:bg-indigo-200 dark:data-[selected=true]:bg-indigo-900/50'
+														item.color &&
+															COLOR_CLASSES[item.color as ColorVariant]
 													)}>
 													{item.icon && (
 														<span className='flex-shrink-0'>
@@ -454,7 +475,16 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 															)}
 														</span>
 													)}
-													<span className='flex-1'>{item.label}</span>
+													<div className='flex-1'>
+														<div className='text-sm font-medium'>
+															{item.label}
+														</div>
+														{item.description && (
+															<div className='text-xs text-muted-foreground'>
+																{item.description}
+															</div>
+														)}
+													</div>
 													{item.activationEvent && (
 														<KeyboardShortcut
 															shortcut={getShortcutDisplay(
@@ -487,67 +517,27 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 											}}
 											disabled={item.disabled}
 											className={cn(
-												'flex-1 flex items-center justify-between gap-1 p-2 rounded-md text-xs transition-colors',
+												'flex-1 flex items-center justify-between gap-1 p-2 rounded-md text-xs transition-colors cursor-pointer',
 												'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
 												item.disabled && 'opacity-50 cursor-not-allowed',
+												// Default styling when no color is specified (match CommandItem)
+												!item.color && 'hover:bg-muted hover:text-foreground',
 												// Apply color-based styling if color is specified
-												item.color === 'blue' &&
-													'bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50',
-												item.color === 'green' &&
-													'bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50',
-												item.color === 'purple' &&
-													'bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50',
-												item.color === 'orange' &&
-													'bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50',
-												item.color === 'pink' &&
-													'bg-pink-50 dark:bg-pink-950/30 hover:bg-pink-100 dark:hover:bg-pink-950/50',
-												item.color === 'amber' &&
-													'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50',
-												item.color === 'red' &&
-													'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50',
-												item.color === 'indigo' &&
-													'bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50',
+												item.color && COLOR_CLASSES[item.color as ColorVariant],
 												// Selection highlights
 												selectedIndex >= 0 &&
 													allItemsForNavigation[selectedIndex]?.id ===
 														item.id &&
-													item.color === 'blue' &&
-													'bg-blue-200 dark:bg-blue-900/50',
+													item.color &&
+													FIXED_BOTTOM_SELECTED_CLASSES[
+														item.color as ColorVariant
+													],
+												// Default selection highlight when no color is specified
 												selectedIndex >= 0 &&
 													allItemsForNavigation[selectedIndex]?.id ===
 														item.id &&
-													item.color === 'green' &&
-													'bg-green-200 dark:bg-green-900/50',
-												selectedIndex >= 0 &&
-													allItemsForNavigation[selectedIndex]?.id ===
-														item.id &&
-													item.color === 'purple' &&
-													'bg-purple-200 dark:bg-purple-900/50',
-												selectedIndex >= 0 &&
-													allItemsForNavigation[selectedIndex]?.id ===
-														item.id &&
-													item.color === 'orange' &&
-													'bg-orange-200 dark:bg-orange-900/50',
-												selectedIndex >= 0 &&
-													allItemsForNavigation[selectedIndex]?.id ===
-														item.id &&
-													item.color === 'pink' &&
-													'bg-pink-200 dark:bg-pink-900/50',
-												selectedIndex >= 0 &&
-													allItemsForNavigation[selectedIndex]?.id ===
-														item.id &&
-													item.color === 'amber' &&
-													'bg-amber-200 dark:bg-amber-900/50',
-												selectedIndex >= 0 &&
-													allItemsForNavigation[selectedIndex]?.id ===
-														item.id &&
-													item.color === 'red' &&
-													'bg-red-200 dark:bg-red-900/50',
-												selectedIndex >= 0 &&
-													allItemsForNavigation[selectedIndex]?.id ===
-														item.id &&
-													item.color === 'indigo' &&
-													'bg-indigo-200 dark:bg-indigo-900/50'
+													!item.color &&
+													'bg-muted text-foreground'
 											)}>
 											<div className='flex items-center gap-1'>
 												{item.icon && (

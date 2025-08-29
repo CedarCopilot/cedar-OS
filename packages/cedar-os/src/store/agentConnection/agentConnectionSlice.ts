@@ -1,6 +1,3 @@
-import type { StateCreator } from 'zustand';
-import type { CedarStore } from '@/store/CedarOSTypes';
-import { getProviderImplementation } from '@/store/agentConnection/providers/index';
 import type {
 	AISDKParams,
 	AnthropicParams,
@@ -10,18 +7,19 @@ import type {
 	MastraParams,
 	OpenAIParams,
 	ProviderConfig,
+	ResponseProcessor,
+	ResponseProcessorRegistry,
 	StreamHandler,
 	StreamResponse,
 	StructuredParams,
-	VoiceParams,
-	VoiceLLMResponse,
-	ResponseProcessor,
-	ResponseProcessorRegistry,
 	StructuredResponseType,
+	VoiceLLMResponse,
+	VoiceParams,
 } from '@/store/agentConnection/AgentConnectionTypes';
-import { useCedarStore } from '@/store/CedarStore';
-import { getCedarState } from '@/store/CedarStore';
-import { sanitizeJson } from '@/utils/sanitizeJson';
+import { getProviderImplementation } from '@/store/agentConnection/providers/index';
+import type { CedarStore } from '@/store/CedarOSTypes';
+import { getCedarState, useCedarStore } from '@/store/CedarStore';
+import type { StateCreator } from 'zustand';
 import {
 	defaultResponseProcessors,
 	initializeResponseProcessorRegistry,
@@ -610,7 +608,7 @@ export const createAgentConnectionSlice: StateCreator<
 						...llmParams,
 						prompt: editorContent,
 						additionalContext:
-							additionalContext || state.stringifyAdditionalContext(),
+							additionalContext || state.compileAdditionalContext(),
 						route: route || `${chatPath}`,
 						resourceId: resolvedUserId,
 						threadId: resolvedThreadId,
@@ -628,7 +626,7 @@ export const createAgentConnectionSlice: StateCreator<
 						...llmParams,
 						prompt: editorContent,
 						additionalContext:
-							additionalContext || sanitizeJson(state.additionalContext),
+							additionalContext || state.compileAdditionalContext(),
 						userId: resolvedUserId,
 						threadId: resolvedThreadId,
 						...customFields,

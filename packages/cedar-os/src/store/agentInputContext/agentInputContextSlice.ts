@@ -147,7 +147,7 @@ export interface AgentInputContextSlice {
 	// New stringify functions
 	stringifyEditor: () => string;
 	stringifyInputContext: () => string;
-	stringifyAdditionalContext: () => string;
+	compileAdditionalContext: () => object | string;
 	compileFrontendTools: () => Record<
 		string,
 		{
@@ -423,7 +423,7 @@ export const createAgentInputContextSlice: StateCreator<
 		};
 	},
 
-	stringifyAdditionalContext: () => {
+	compileAdditionalContext: () => {
 		const context = get().additionalContext;
 
 		// Process context to simplify structure
@@ -457,16 +457,16 @@ export const createAgentInputContextSlice: StateCreator<
 
 		// Sanitize before stringifying
 		const sanitizedContext = sanitizeJson(mergedContext);
-		return JSON.stringify(sanitizedContext, null, 2);
+		return sanitizedContext;
 	},
 
 	stringifyInputContext: () => {
 		const state = get();
 		const editorContent = state.stringifyEditor();
-		const contextString = state.stringifyAdditionalContext();
+		const contextData = JSON.stringify(state.compileAdditionalContext());
 
 		let result = `User Text: ${editorContent}\n\n`;
-		result += `Additional Context: ${contextString}`;
+		result += `Additional Context: ${contextData}`;
 
 		return result;
 	},
