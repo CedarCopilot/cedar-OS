@@ -7,6 +7,7 @@ import { createMessagesSlice } from '@/store/messages/messagesSlice';
 import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
 import type { CedarStore } from '@/store/CedarOSTypes';
 import { createSpellSlice } from '@/store/spellSlice/spellSlice';
+import { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
 
 // Type helper to extract state from StateCreator
 type ExtractState<S> = S extends StateCreator<infer T, any, any, any>
@@ -30,6 +31,7 @@ const createDefaultSlices = (set: any, get: any, api: any) => ({
 	...createAgentConnectionSlice(set, get, api),
 	...createMessagesSlice(set, get, api),
 	...createSpellSlice(set, get, api),
+	...createToolsSlice(set, get, api),
 });
 
 // Options for creating a Cedar store

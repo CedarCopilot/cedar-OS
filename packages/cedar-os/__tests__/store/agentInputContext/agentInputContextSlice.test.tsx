@@ -10,6 +10,7 @@ import type {
 	MentionProvider,
 } from '../../../src/store/agentInputContext/AgentInputContextTypes';
 import type { JSONContent } from '@tiptap/core';
+import { z } from 'zod';
 
 /**
  * Tests for the AgentInputContextSlice to verify all functionality
@@ -25,8 +26,12 @@ describe('AgentInputContextSlice', () => {
 			overrideInputContent: { input: null },
 			additionalContext: {},
 			mentionProviders: new Map(),
-			registeredStates: {},
 		}));
+		// Also clear tools for the new tests
+		const store = useCedarStore.getState();
+		if (store.clearTools) {
+			store.clearTools();
+		}
 	});
 
 	describe('Basic state management', () => {
@@ -1431,6 +1436,108 @@ describe('AgentInputContextSlice', () => {
 
 			expect(renderers.nonExistent).not.toHaveBeenCalled();
 			expect(result.current).toHaveLength(0);
+		});
+	});
+
+	describe('stringifyFrontendTools', () => {
+		it('should return an empty object when no tools are registered', () => {
+			const { result } = renderHook(() => useCedarStore());
+
+			const tools = result.current.stringifyFrontendTools();
+			expect(tools).toEqual({});
+		});
+
+		it('should return registered tools with their schemas', () => {
+			const { result } = renderHook(() => useCedarStore());
+
+			// Register a test tool
+			act(() => {
+				result.current.registerTool({
+					name: 'testTool',
+					description: 'A test tool',
+					argsSchema: z.object({
+						message: z.string(),
+						count: z.number().optional(),
+					}),
+					execute: async (args) => {
+						console.log('Test tool executed', args);
+					},
+				});
+			});
+
+			const tools = result.current.stringifyFrontendTools();
+
+			expect(Object.keys(tools)).toHaveLength(1);
+			expect(tools.testTool).toBeDefined();
+			expect(tools.testTool.name).toBe('testTool');
+			expect(tools.testTool.description).toBe('A test tool');
+			expect(tools.testTool.argsSchema).toBeDefined();
+			expect(tools.testTool.argsSchema.type).toBe('object');
+			expect(tools.testTool.argsSchema.properties).toBeDefined();
+		});
+
+		it('should include frontend tools in stringifyAdditionalContext when tools are registered', () => {
+			const { result } = renderHook(() => useCedarStore());
+
+			// Register multiple tools
+			act(() => {
+				result.current.registerTool({
+					name: 'tool1',
+					description: 'First tool',
+					argsSchema: z.object({
+						input: z.string(),
+					}),
+					execute: async (args) => {
+						console.log('Tool 1', args);
+					},
+				});
+
+				result.current.registerTool({
+					name: 'tool2',
+					description: 'Second tool',
+					argsSchema: z.object({
+						value: z.number(),
+						enabled: z.boolean(),
+					}),
+					execute: async (args) => {
+						console.log('Tool 2', args);
+					},
+				});
+			});
+
+			const contextString = result.current.stringifyAdditionalContext();
+			const context = JSON.parse(contextString);
+
+			expect(context.frontendTools).toBeDefined();
+			expect(Object.keys(context.frontendTools)).toHaveLength(2);
+
+			// Check first tool
+			expect(context.frontendTools.tool1).toBeDefined();
+			expect(context.frontendTools.tool1.name).toBe('tool1');
+			expect(context.frontendTools.tool1.description).toBe('First tool');
+			expect(
+				context.frontendTools.tool1.argsSchema.properties.input
+			).toBeDefined();
+
+			// Check second tool
+			expect(context.frontendTools.tool2).toBeDefined();
+			expect(context.frontendTools.tool2.name).toBe('tool2');
+			expect(context.frontendTools.tool2.description).toBe('Second tool');
+			expect(
+				context.frontendTools.tool2.argsSchema.properties.value
+			).toBeDefined();
+			expect(
+				context.frontendTools.tool2.argsSchema.properties.enabled
+			).toBeDefined();
+		});
+
+		it('should not include frontendTools field when no tools are registered', () => {
+			const { result } = renderHook(() => useCedarStore());
+
+			const contextString = result.current.stringifyAdditionalContext();
+			const context = JSON.parse(contextString);
+
+			expect(context.frontendTools).toBeUndefined();
 		});
 	});
 });

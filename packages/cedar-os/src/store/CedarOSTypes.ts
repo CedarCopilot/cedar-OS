@@ -6,6 +6,7 @@ import { AgentConnectionSlice } from '@/store/agentConnection/agentConnectionSli
 import { VoiceSlice } from '@/store/voice/voiceSlice';
 import { DebuggerSlice } from '@/store/debugger/debuggerSlice';
 import { SpellSlice } from '@/store/spellSlice/spellSlice';
+import { ToolsSlice } from '@/store/toolsSlice/ToolsTypes';
 
 /**
  * The main Cedar store type that combines all slices
@@ -18,7 +19,8 @@ export interface CedarStore
 		AgentConnectionSlice,
 		VoiceSlice,
 		DebuggerSlice,
-		SpellSlice {}
+		SpellSlice,
+		ToolsSlice {}
 
 // Re-export StylingConfig for convenience
 export type { StylingConfig };

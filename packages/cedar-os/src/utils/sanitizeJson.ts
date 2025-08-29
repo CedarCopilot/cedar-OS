@@ -1,9 +1,9 @@
 // Helper function to sanitize context data for JSON serialization
 export const sanitizeJson = (
-	obj: unknown,
+	obj: object,
 	visited = new Map<unknown, string>(),
 	path = '$'
-): unknown => {
+): object | string => {
 	if (obj === null || obj === undefined) {
 		return obj;
 	}

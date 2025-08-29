@@ -49,7 +49,7 @@ export const humanInTheLoopResponseProcessor: ResponseProcessor<HumanInTheLoopRe
 					key: stateKey,
 					value: newState as HumanInTheLoopState,
 					description: 'Human-in-the-loop workflow suspend/resume data',
-					customSetters: {
+					stateSetters: {
 						resume: {
 							name: 'resume',
 							description: 'Resume a suspended workflow',

@@ -1,0 +1,108 @@
+import { getJsonSchema } from '@/utils/getJsonSchema';
+import type { CedarRequestBody } from '@/types';
+import type { JSONSchema7 } from 'json-schema';
+
+/**
+ * Extract a single frontend tool schema from additionalContext
+ * Returns JSON Schema directly (for use with experimental_output)
+ */
+export function getFrontendToolSchema(
+	requestBody: CedarRequestBody,
+	toolName: string
+): JSONSchema7 | null {
+	const additionalContext = requestBody.additionalContext;
+	if (!additionalContext?.frontendTools?.[toolName]) {
+		return null;
+	}
+
+	const tool = additionalContext.frontendTools[toolName];
+	if (!tool.argsSchema) {
+		return null;
+	}
+
+	return getJsonSchema(tool.argsSchema);
+}
+
+/**
+ * Extract all frontend tool schemas from additionalContext
+ * Returns JSON Schemas directly (for use with experimental_output)
+ */
+export function getFrontendToolSchemas(
+	requestBody: CedarRequestBody
+): Record<string, JSONSchema7> {
+	const additionalContext = requestBody.additionalContext;
+	if (!additionalContext?.frontendTools) {
+		return {};
+	}
+
+	const schemas: Record<string, JSONSchema7> = {};
+
+	for (const [toolName, tool] of Object.entries(
+		additionalContext.frontendTools
+	)) {
+		if (tool.argsSchema) {
+			const jsonSchema = getJsonSchema(tool.argsSchema);
+			if (jsonSchema) {
+				schemas[toolName] = jsonSchema;
+			}
+		}
+	}
+
+	return schemas;
+}
+
+/**
+ * Extract a single state setter schema from additionalContext
+ * Returns JSON Schema directly (for use with experimental_output)
+ */
+export function getStateSetterSchema(args: {
+	requestBody: CedarRequestBody;
+	setterKey: string;
+	stateKey: string;
+}): JSONSchema7 | null {
+	const { requestBody, setterKey } = args;
+	const additionalContext = requestBody.additionalContext;
+	const stateSetters = additionalContext?.stateSetters;
+
+	if (!stateSetters?.[setterKey]) {
+		return null;
+	}
+
+	const setter = stateSetters[setterKey];
+	const schema = setter.argsSchema;
+
+	if (!schema) {
+		return null;
+	}
+
+	return getJsonSchema(schema);
+}
+
+/**
+ * Extract all state setter schemas from additionalContext
+ * Returns JSON Schemas directly (for use with experimental_output)
+ */
+export function getStateSetterSchemas(
+	requestBody: CedarRequestBody
+): Record<string, JSONSchema7> {
+	const additionalContext = requestBody.additionalContext;
+	const stateSetters = additionalContext?.stateSetters;
+
+	if (!stateSetters) {
+		return {};
+	}
+
+	const schemas: Record<string, JSONSchema7> = {};
+
+	for (const [setterKey, setter] of Object.entries(stateSetters)) {
+		const schema = setter.argsSchema;
+		if (schema) {
+			const jsonSchema = getJsonSchema(schema);
+			if (jsonSchema) {
+				schemas[setterKey] = jsonSchema;
+			}
+		}
+	}
+
+	return schemas;
+}

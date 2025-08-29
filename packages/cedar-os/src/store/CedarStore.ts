@@ -8,6 +8,7 @@ import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnect
 import { createVoiceSlice } from '@/store/voice/voiceSlice';
 import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
 import { createSpellSlice } from '@/store/spellSlice/spellSlice';
+import { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
 
 // Create the combined store (default for backwards compatibility)
 export const useCedarStore = create<CedarStore>()((...a) => ({
@@ -19,6 +20,7 @@ export const useCedarStore = create<CedarStore>()((...a) => ({
 	...createVoiceSlice(...a),
 	...createDebuggerSlice(...a),
 	...createSpellSlice(...a),
+	...createToolsSlice(...a),
 }));
 
 export const useMessages = () => ({
@@ -173,4 +175,32 @@ export const useSpells = () => ({
 	deactivateSpell: useCedarStore((state) => state.deactivateSpell),
 	toggleSpell: useCedarStore((state) => state.toggleSpell),
 	clearSpells: useCedarStore((state) => state.clearSpells),
+});
+
+// Export tools slice and utilities
+export { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
+export type {
+	ToolsSlice,
+	ToolsState,
+	ToolsActions,
+	ToolFunction,
+	RegisteredTool,
+	RegisteredToolBase,
+	ToolRegistrationConfig,
+	ToolsMap,
+} from '@/store/toolsSlice/ToolsTypes';
+
+// Export the useRegisterFrontendTool hook
+export { useRegisterFrontendTool } from '@/store/toolsSlice/useRegisterFrontendTool';
+export type { UseRegisterFrontendToolOptions } from '@/store/toolsSlice/useRegisterFrontendTool';
+
+// Export a hook for tools functionality
+export const useTools = () => ({
+	registeredTools: useCedarStore((state) => state.registeredTools),
+
+	registerTool: useCedarStore((state) => state.registerTool),
+	unregisterTool: useCedarStore((state) => state.unregisterTool),
+	executeTool: useCedarStore((state) => state.executeTool),
+	getRegisteredTools: useCedarStore((state) => state.getRegisteredTools),
+	clearTools: useCedarStore((state) => state.clearTools),
 });
