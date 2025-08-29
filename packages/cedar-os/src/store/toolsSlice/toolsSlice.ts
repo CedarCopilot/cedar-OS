@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { StateCreator } from 'zustand';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import type {
 	ToolRegistrationConfig,
 	ToolsSlice,

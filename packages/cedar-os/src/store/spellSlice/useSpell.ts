@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useSpells } from '@/store/CedarStore';
 import type {
 	ActivationConditions,
@@ -74,6 +74,12 @@ export function useSpell(options: UseSpellOptions): UseSpellReturn {
 		onDeactivateRef.current = options.onDeactivate;
 	}, [options.onActivate, options.onDeactivate]);
 
+	// Create a memoized hash of activation conditions to avoid JSON.stringify in dependencies
+	const activationConditionsHash = useMemo(
+		() => JSON.stringify(options.activationConditions),
+		[options.activationConditions]
+	);
+
 	// Register the spell on mount and when key dependencies change
 	useEffect(() => {
 		registerSpell({
@@ -91,8 +97,7 @@ export function useSpell(options: UseSpellOptions): UseSpellReturn {
 		};
 	}, [
 		options.id,
-		// Stringify conditions to detect deep changes
-		JSON.stringify(options.activationConditions),
+		activationConditionsHash,
 		options.preventDefaultEvents,
 		options.ignoreInputElements,
 		registerSpell,

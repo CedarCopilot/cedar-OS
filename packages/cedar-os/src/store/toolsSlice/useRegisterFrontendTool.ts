@@ -22,7 +22,7 @@ export interface UseRegisterFrontendToolOptions<TArgs> {
  * const MyComponent = () => {
  *   useRegisterFrontendTool({
  *     name: 'showNotification',
- *     callback: ({ message, type }) => {
+ *     execute: ({ message, type }) => {
  *       toast[type](message);
  *     },
  *     argsSchema: z.object({

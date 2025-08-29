@@ -22,7 +22,7 @@ export function createResponseProcessor<T extends StructuredResponseType>(
 export type SetStateResponsePayload = {
 	stateKey: string;
 	setterKey: string;
-	args?: unknown[];
+	args?: unknown;
 };
 
 // Generic setState structured response type
@@ -35,7 +35,7 @@ export type SetStateResponse = CustomStructuredResponseType<
 export type SetStateResponseFor<
 	StateKey extends string,
 	SetterKey extends string,
-	Args extends unknown[] = []
+	Args = unknown
 > = BaseStructuredResponseType & {
 	type: 'setState';
 	stateKey: StateKey;
@@ -55,7 +55,7 @@ export type LegacyActionResponse = CustomStructuredResponseType<
 export type LegacyActionResponseFor<
 	StateKey extends string,
 	SetterKey extends string,
-	Args extends unknown[] = []
+	Args = unknown
 > = BaseStructuredResponseType & {
 	type: 'action';
 	stateKey: StateKey;
@@ -132,7 +132,7 @@ export const SetStateResponseSchema = StructuredResponseSchema('setState').and(
 	z.object({
 		stateKey: z.string(),
 		setterKey: z.string(),
-		args: z.array(z.unknown()).optional(),
+		args: z.unknown().optional(),
 	})
 );
 
@@ -145,6 +145,6 @@ export const LegacyActionResponseSchema = StructuredResponseSchema(
 	z.object({
 		stateKey: z.string(),
 		setterKey: z.string(),
-		args: z.array(z.unknown()).optional(),
+		args: z.unknown().optional(),
 	})
 );

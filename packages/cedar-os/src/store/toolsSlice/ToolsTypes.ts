@@ -9,7 +9,7 @@ export interface RegisteredToolBase<TArgs> {
 	// The actual function to execute - accepts unknown args for runtime flexibility
 	execute: (args: TArgs) => void | Promise<void>;
 	// Zod schema for validating arguments - can validate unknown type
-	argsSchema: z.ZodSchema<unknown>;
+	argsSchema: z.ZodSchema<TArgs>;
 	// Optional metadata
 	description?: string;
 }
