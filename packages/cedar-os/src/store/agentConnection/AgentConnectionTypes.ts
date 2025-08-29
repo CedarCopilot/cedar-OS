@@ -42,7 +42,7 @@ export type VoiceParams<
 		autoAddToMessages?: boolean;
 		endpoint?: string;
 	};
-	context?: string;
+	context?: object | string;
 };
 
 export type StreamEvent =

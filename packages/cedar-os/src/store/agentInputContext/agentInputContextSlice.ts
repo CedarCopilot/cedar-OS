@@ -453,10 +453,10 @@ export const createAgentInputContextSlice: StateCreator<
 	stringifyInputContext: () => {
 		const state = get();
 		const editorContent = state.stringifyEditor();
-		const contextString = state.compileAdditionalContext();
+		const contextData = JSON.stringify(state.compileAdditionalContext());
 
 		let result = `User Text: ${editorContent}\n\n`;
-		result += `Additional Context: ${contextString}`;
+		result += `Additional Context: ${contextData}`;
 
 		return result;
 	},
