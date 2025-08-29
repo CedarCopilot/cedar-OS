@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { StateCreator } from 'zustand';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import type {
 	ToolRegistrationConfig,
 	ToolsSlice,
@@ -71,8 +72,11 @@ export const createToolsSlice: StateCreator<ToolsSlice> = (set, get) => ({
 			toolsObject[name] = {
 				name,
 				description: tool.description,
-				// Convert Zod schema to JSON schema for agent compatibility
-				argsSchema: zodToJsonSchema(tool.argsSchema),
+				// Convert Zod schema to JSON schema using zod-to-json-schema library
+				argsSchema: zodToJsonSchema(tool.argsSchema, name) as Record<
+					string,
+					unknown
+				>,
 			};
 		});
 
@@ -84,47 +88,3 @@ export const createToolsSlice: StateCreator<ToolsSlice> = (set, get) => ({
 		set({ registeredTools: new Map() });
 	},
 });
-
-// Helper function to convert Zod schema to a simplified JSON schema
-// This is a basic implementation - you might want to use a library like zod-to-json-schema
-function zodToJsonSchema(schema: z.ZodSchema): Record<string, unknown> {
-	// This is a simplified version - in production, consider using zod-to-json-schema package
-	try {
-		// Get the shape if it's an object
-		if (schema instanceof z.ZodObject) {
-			const shape = schema.shape;
-			const properties: Record<string, Record<string, unknown>> = {};
-
-			for (const [key, value] of Object.entries(shape)) {
-				properties[key] = {
-					type: getZodType(value as z.ZodSchema),
-					required: !(value as z.ZodSchema).isOptional(),
-				};
-			}
-
-			return {
-				type: 'object',
-				properties,
-			};
-		}
-
-		// For other types, return a simple type descriptor
-		return {
-			type: getZodType(schema),
-		};
-	} catch {
-		// Fallback to a generic descriptor
-		return { type: 'unknown' };
-	}
-}
-
-function getZodType(schema: z.ZodSchema): string {
-	if (schema instanceof z.ZodString) return 'string';
-	if (schema instanceof z.ZodNumber) return 'number';
-	if (schema instanceof z.ZodBoolean) return 'boolean';
-	if (schema instanceof z.ZodArray) return 'array';
-	if (schema instanceof z.ZodObject) return 'object';
-	if (schema instanceof z.ZodNull) return 'null';
-	if (schema instanceof z.ZodUndefined) return 'undefined';
-	return 'unknown';
-}

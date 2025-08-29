@@ -425,21 +425,10 @@ export const createAgentInputContextSlice: StateCreator<
 						argsSchema: setter.argsSchema
 							? zodToJsonSchema(setter.argsSchema, setter.name)
 							: undefined,
-						// Deprecated schema property for backward compatibility
-						schema: setter.argsSchema
-							? zodToJsonSchema(setter.argsSchema, setter.name)
-							: undefined,
 					};
 
 					// Add to new stateSetters structure
 					stateSetters[setterKey] = setterInfo;
-					// Also add to deprecated setters structure for backward compatibility
-					setters[setterKey] = {
-						name: setter.name,
-						stateKey,
-						description: setter.description,
-						schema: setterInfo.schema,
-					};
 				});
 			}
 		});
