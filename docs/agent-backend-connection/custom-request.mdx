@@ -28,7 +28,7 @@ Cedar collects all subscribed state and additional context that has been registe
 
 ```tsx
 // Cedar automatically gathers additional context
-const additionalContext = state.stringifyAdditionalContext();
+const additionalContext = state.compileAdditionalContext();
 // Result includes: subscribed state, custom setters, mention data, etc.
 ```
 
@@ -169,7 +169,7 @@ Use Cedar's context system to get exactly the data your workflow needs. You can 
 
 ```tsx
 function getProjectContext(state: CedarState) {
-	const additionalContext = state.stringifyAdditionalContext();
+	const additionalContext = state.compileAdditionalContext();
 
 	// Extract only the data relevant to project summaries
 	const projectContext = {

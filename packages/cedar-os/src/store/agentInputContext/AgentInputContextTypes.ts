@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import z from 'zod';
 
-// -------- Backend context structure (after stringifyAdditionalContext transformation) -----------
+// -------- Backend context structure (after compileAdditionalContext transformation) -----------
 // Note: These are different from the stateSlice Setter types - these are for serialized context
 export interface BackendSetterSchema {
 	name: string;
@@ -26,7 +26,7 @@ export interface BackendContextEntry {
 export type AdditionalContextParam<
 	T extends Record<string, unknown> = Record<string, never>
 > = {
-	// Cedar OS system fields (added by stringifyAdditionalContext)
+	// Cedar OS system fields (added by compileAdditionalContext)
 	setters?: Record<string, BackendSetterSchema>;
 	schemas?: Record<string, BackendStateSchema>;
 } & {
@@ -185,7 +185,7 @@ export const AdditionalContextParamSchema = <
 ) =>
 	z
 		.object({
-			// Cedar OS system fields (added by stringifyAdditionalContext)
+			// Cedar OS system fields (added by compileAdditionalContext)
 			setters: z
 				.record(
 					z.object({

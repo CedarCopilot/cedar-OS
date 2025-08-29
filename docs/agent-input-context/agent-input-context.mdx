@@ -246,7 +246,7 @@ function ContextInspector() {
 import { useCedarStore } from 'cedar-os';
 
 function ContextStringifier() {
-	const { stringifyEditor, stringifyAdditionalContext, stringifyInputContext } =
+	const { stringifyEditor, compileAdditionalContext, stringifyInputContext } =
 		useCedarStore();
 
 	const inspectContext = () => {
@@ -255,7 +255,7 @@ function ContextStringifier() {
 		console.log('User text:', userText);
 
 		// Get additional context as JSON (includes state data, setters, and schemas)
-		const contextData = stringifyAdditionalContext();
+		const contextData = compileAdditionalContext();
 		console.log('Context data:', contextData);
 
 		// Get combined input and context (what gets sent to AI)

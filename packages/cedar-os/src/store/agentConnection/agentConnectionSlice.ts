@@ -610,7 +610,7 @@ export const createAgentConnectionSlice: StateCreator<
 						...llmParams,
 						prompt: editorContent,
 						additionalContext:
-							additionalContext || state.stringifyAdditionalContext(),
+							additionalContext || state.compileAdditionalContext(),
 						route: route || `${chatPath}`,
 						resourceId: resolvedUserId,
 						threadId: resolvedThreadId,
@@ -628,7 +628,7 @@ export const createAgentConnectionSlice: StateCreator<
 						...llmParams,
 						prompt: editorContent,
 						additionalContext:
-							additionalContext || sanitizeJson(state.additionalContext),
+							additionalContext || state.compileAdditionalContext(),
 						userId: resolvedUserId,
 						threadId: resolvedThreadId,
 						...customFields,
