@@ -1,5 +1,6 @@
 import { getJsonSchema } from '@/utils/getJsonSchema';
 import type { CedarRequestBody } from '@/types';
+import type { JSONSchema7 } from 'json-schema';
 
 /**
  * Extract a single frontend tool schema from additionalContext
@@ -8,7 +9,7 @@ import type { CedarRequestBody } from '@/types';
 export function getFrontendToolSchema(
 	requestBody: CedarRequestBody,
 	toolName: string
-): Record<string, unknown> | null {
+): JSONSchema7 | null {
 	const additionalContext = requestBody.additionalContext;
 	if (!additionalContext?.frontendTools?.[toolName]) {
 		return null;
@@ -28,13 +29,13 @@ export function getFrontendToolSchema(
  */
 export function getFrontendToolSchemas(
 	requestBody: CedarRequestBody
-): Record<string, Record<string, unknown>> {
+): Record<string, JSONSchema7> {
 	const additionalContext = requestBody.additionalContext;
 	if (!additionalContext?.frontendTools) {
 		return {};
 	}
 
-	const schemas: Record<string, Record<string, unknown>> = {};
+	const schemas: Record<string, JSONSchema7> = {};
 
 	for (const [toolName, tool] of Object.entries(
 		additionalContext.frontendTools
@@ -58,7 +59,7 @@ export function getStateSetterSchema(args: {
 	requestBody: CedarRequestBody;
 	setterKey: string;
 	stateKey: string;
-}): Record<string, unknown> | null {
+}): JSONSchema7 | null {
 	const { requestBody, setterKey } = args;
 	const additionalContext = requestBody.additionalContext;
 	const stateSetters = additionalContext?.stateSetters;
@@ -83,7 +84,7 @@ export function getStateSetterSchema(args: {
  */
 export function getStateSetterSchemas(
 	requestBody: CedarRequestBody
-): Record<string, Record<string, unknown>> {
+): Record<string, JSONSchema7> {
 	const additionalContext = requestBody.additionalContext;
 	const stateSetters = additionalContext?.stateSetters;
 
@@ -91,7 +92,7 @@ export function getStateSetterSchemas(
 		return {};
 	}
 
-	const schemas: Record<string, Record<string, unknown>> = {};
+	const schemas: Record<string, JSONSchema7> = {};
 
 	for (const [setterKey, setter] of Object.entries(stateSetters)) {
 		const schema = setter.argsSchema;
