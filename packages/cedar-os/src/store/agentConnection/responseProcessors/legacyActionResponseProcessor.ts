@@ -11,7 +11,7 @@ export const legacyActionResponseProcessor: ResponseProcessor<LegacyActionRespon
 		execute: async (obj, store) => {
 			const args = 'args' in obj && Array.isArray(obj.args) ? obj.args : [];
 			// Pass options with isDiff set to true for action responses
-			store.executeCustomSetter({
+			store.executeStateSetter({
 				key: obj.stateKey,
 				setterKey: obj.setterKey,
 				options: { isDiff: true },

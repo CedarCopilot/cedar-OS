@@ -379,9 +379,10 @@ export const createAgentInputContextSlice: StateCreator<
 
 	stringifyAdditionalContext: () => {
 		const context = get().additionalContext;
-		// Collect setter schemas for each subscribed state (keys present in additionalContext)
+		// Collect setter schemas for ALL registered states (comprehensive coverage)
 		const registeredStates = get().registeredStates;
-		const setters: Record<string, unknown> = {};
+		const stateSetters: Record<string, unknown> = {};
+		const setters: Record<string, unknown> = {}; // Deprecated but maintained for compatibility
 		const schemas: Record<string, unknown> = {};
 
 		// Process context to simplify structure
@@ -400,7 +401,8 @@ export const createAgentInputContextSlice: StateCreator<
 				simplified.length === 1 ? simplified[0] : simplified;
 		});
 
-		Object.keys(context).forEach((stateKey) => {
+		// Process ALL registered states (not just subscribed ones) for comprehensive setter coverage
+		Object.keys(registeredStates).forEach((stateKey) => {
 			const state = registeredStates[stateKey];
 
 			// Add state schema if it exists
@@ -412,16 +414,31 @@ export const createAgentInputContextSlice: StateCreator<
 				};
 			}
 
-			// Add custom setter schemas
-			if (state?.customSetters) {
-				Object.entries(state.customSetters).forEach(([setterKey, setter]) => {
+			// Add state setter schemas (with backward compatibility for customSetters)
+			const settersToProcess = state?.stateSetters || state?.customSetters;
+			if (settersToProcess) {
+				Object.entries(settersToProcess).forEach(([setterKey, setter]) => {
+					const setterInfo = {
+						name: setter.name,
+						stateKey,
+						description: setter.description,
+						argsSchema: setter.argsSchema
+							? zodToJsonSchema(setter.argsSchema, setter.name)
+							: undefined,
+						// Deprecated schema property for backward compatibility
+						schema: setter.argsSchema
+							? zodToJsonSchema(setter.argsSchema, setter.name)
+							: undefined,
+					};
+
+					// Add to new stateSetters structure
+					stateSetters[setterKey] = setterInfo;
+					// Also add to deprecated setters structure for backward compatibility
 					setters[setterKey] = {
 						name: setter.name,
 						stateKey,
 						description: setter.description,
-						schema: setter.schema
-							? zodToJsonSchema(setter.schema, setter.name)
-							: undefined,
+						schema: setterInfo.schema,
 					};
 				});
 			}
@@ -433,6 +450,7 @@ export const createAgentInputContextSlice: StateCreator<
 		// Merge simplified context with setter schemas, state schemas, and frontend tools
 		const mergedContext = {
 			...simplifiedContext,
+			stateSetters, // New key
 			setters,
 			schemas,
 			...(Object.keys(frontendTools).length > 0 && { frontendTools }),
@@ -495,9 +513,6 @@ export function useSubscribeStateToInputContext<T>(
 	useEffect(() => {
 		// Check if state key exists
 		if (!stateExists) {
-			console.warn(
-				`[useSubscribeStateToInputContext] State with key "${stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
-			);
 			return;
 		}
 

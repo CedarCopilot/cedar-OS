@@ -37,9 +37,7 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
 	// Use Cedar store for dark mode state
 	const isDarkMode = useCedarStore((state) => state.styling.darkMode);
 	const toggleDarkMode = useCedarStore((state) => state.toggleDarkMode);
-	const executeCustomSetter = useCedarStore(
-		(state) => state.executeCustomSetter
-	);
+	const executeStateSetter = useCedarStore((state) => state.executeStateSetter);
 
 	// Initialize theme from localStorage or system preference and sync with Cedar store
 	useEffect(() => {
@@ -102,14 +100,14 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
 					diff: 'added' as const,
 				},
 			};
-			executeCustomSetter({
+			executeStateSetter({
 				key: 'nodes',
 				setterKey: 'addNode',
 				args: [newNode],
 			});
 			setShowAddMenu(false);
 		},
-		[executeCustomSetter]
+		[executeStateSetter]
 	);
 
 	const menuItems = [

@@ -7,6 +7,8 @@ export interface BackendSetterSchema {
 	name: string;
 	stateKey: string;
 	description: string;
+	argsSchema?: unknown;
+	/** @deprecated Use argsSchema instead */
 	schema?: unknown;
 }
 
@@ -27,6 +29,8 @@ export type AdditionalContextParam<
 	T extends Record<string, unknown> = Record<string, never>
 > = {
 	// Cedar OS system fields (added by stringifyAdditionalContext)
+	stateSetters?: Record<string, BackendSetterSchema>;
+	/** @deprecated Use stateSetters instead */
 	setters?: Record<string, BackendSetterSchema>;
 	schemas?: Record<string, BackendStateSchema>;
 } & {
@@ -186,6 +190,17 @@ export const AdditionalContextParamSchema = <
 	z
 		.object({
 			// Cedar OS system fields (added by stringifyAdditionalContext)
+			stateSetters: z
+				.record(
+					z.object({
+						name: z.string(),
+						stateKey: z.string(),
+						description: z.string(),
+						argsSchema: z.unknown().optional(),
+						schema: z.unknown().optional(), // Deprecated but maintained for compatibility
+					})
+				)
+				.optional(),
 			setters: z
 				.record(
 					z.object({
@@ -195,7 +210,7 @@ export const AdditionalContextParamSchema = <
 						schema: z.unknown().optional(),
 					})
 				)
-				.optional(),
+				.optional(), // Deprecated but maintained for compatibility
 			schemas: z
 				.record(
 					z.object({

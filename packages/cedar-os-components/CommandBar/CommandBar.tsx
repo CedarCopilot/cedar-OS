@@ -8,7 +8,7 @@ import {
 } from '@/ui/command';
 import { KeyboardShortcut } from '@/ui/KeyboardShortcut';
 import { EditorContent } from '@tiptap/react';
-import { cn, useCedarEditor, useSpell } from 'cedar-os';
+import { cn, useCedarEditor, useMultipleSpells } from 'cedar-os';
 import type { ActivationEvent, ActivationMode } from 'cedar-os';
 import { ActivationMode as ActivationModeEnum } from 'cedar-os';
 import { motion } from 'motion/react';
@@ -93,36 +93,6 @@ interface CommandBarProps {
 	onSearchChange?: (searchText: string) => void;
 }
 
-/**
- * Hook to register a command bar item as a spell
- */
-const useCommandBarItemSpell = (
-	item: CommandBarItem,
-	isOpen: boolean,
-	onClose?: () => void
-) => {
-	const spellId = `command-bar-${item.id}`;
-
-	useSpell({
-		id: spellId,
-		activationConditions: {
-			events: item.activationEvent ? [item.activationEvent] : [],
-			mode: item.activationMode || ActivationModeEnum.TRIGGER, // Default to trigger mode for command items
-		},
-		onActivate: () => {
-			if (isOpen && !item.disabled) {
-				item.onSelect();
-
-				onClose?.();
-			}
-		},
-		preventDefaultEvents: true, // Prevent default browser behavior
-		ignoreInputElements:
-			item.ignoreInputElements ??
-			shouldIgnoreInputElements(item.activationEvent || ''),
-	});
-};
-
 export const CommandBar: React.FC<CommandBarProps> = ({
 	open,
 	contents,
@@ -146,6 +116,12 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		},
 	});
 
+	// Use a ref to always get the current editor instance in callbacks
+	const editorRef = React.useRef(editor);
+	React.useEffect(() => {
+		editorRef.current = editor;
+	}, [editor]);
+
 	// Collect all items with activation events
 	const allItems: CommandBarItem[] = React.useMemo(
 		() => [
@@ -155,13 +131,37 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		[contents]
 	);
 
-	// Register spells for all items with activation events
-	allItems.forEach((item) => {
-		if (item.activationEvent) {
-			// eslint-disable-next-line react-hooks/rules-of-hooks
-			useCommandBarItemSpell(item, open, onClose);
-		}
-	});
+	// Create spell configurations for all items with activation events
+	const spellConfigs = React.useMemo(() => {
+		return allItems
+			.filter((item) => item.activationEvent)
+			.map((item) => ({
+				id: `command-bar-${item.id}`,
+				activationConditions: {
+					events: [item.activationEvent!],
+					mode: item.activationMode || ActivationModeEnum.TRIGGER,
+				},
+				onActivate: () => {
+					if (open && !item.disabled) {
+						item.onSelect();
+						onClose?.();
+						// Use ref to get current editor instance
+						const currentEditor = editorRef.current;
+						if (currentEditor) {
+							currentEditor.commands.blur();
+							currentEditor.commands.clearContent();
+						}
+					}
+				},
+				preventDefaultEvents: true,
+				ignoreInputElements:
+					item.ignoreInputElements ??
+					shouldIgnoreInputElements(item.activationEvent!),
+			}));
+	}, [allItems, open, onClose]); // No editor dependency - we use ref instead
+
+	// Register all command bar item spells using the new hook
+	useMultipleSpells({ spells: spellConfigs });
 
 	// Get the current search text
 	const searchText = getEditorText().toLowerCase().trim();

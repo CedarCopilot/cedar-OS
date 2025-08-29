@@ -140,8 +140,9 @@ export type {
 	SpellRegistration,
 } from '@/store/spellSlice/spellSlice';
 
-// Export the new useSpell hook
+// Export the spell hooks
 export { useSpell } from '@/store/spellSlice/useSpell';
+export { useMultipleSpells } from '@/store/spellSlice/useMultipleSpells';
 
 export type {
 	UseSpellOptions,

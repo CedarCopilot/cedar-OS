@@ -32,7 +32,7 @@ export function SubscribedStatesSection() {
 		] as Parameters,
 		description:
 			'A tool to set values for a specific parameter on the dashboard',
-		customSetters: {},
+		stateSetters: {}, // No custom setters for this example
 		schema: parametersSchema,
 	});
 	const [newParamName, setNewParamName] = useState('');

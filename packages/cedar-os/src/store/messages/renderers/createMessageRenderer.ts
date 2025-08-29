@@ -46,7 +46,7 @@ export type LegacyActionMessage = CustomMessage<
 export type LegacyActionMessageFor<
 	StateKey extends string,
 	SetterKey extends string,
-	Args extends unknown[] = []
+	Args = unknown
 > = CustomMessage<
 	'action',
 	{ stateKey: StateKey; setterKey: SetterKey; args: Args }
