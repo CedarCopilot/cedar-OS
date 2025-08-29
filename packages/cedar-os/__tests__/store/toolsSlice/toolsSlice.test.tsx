@@ -19,8 +19,8 @@ describe('ToolsSlice', () => {
 			act(() => {
 				result.current.registerTool({
 					name: 'testTool',
-					callback: (args: { message: string }) => {
-						return `Received: ${args.message}`;
+					execute: (args: { message: string }) => {
+						console.log(`Received: ${args.message}`);
 					},
 					argsSchema: z.object({
 						message: z.string(),
@@ -30,10 +30,10 @@ describe('ToolsSlice', () => {
 			});
 
 			// Check that tool is registered
-			const tools = result.current.getRegisteredTools();
-			expect(tools).toHaveLength(1);
-			expect(tools[0].name).toBe('testTool');
-			expect(tools[0].description).toBe('A test tool');
+			const tools = result.current.registeredTools;
+			expect(tools.size).toBe(1);
+			expect(tools.has('testTool')).toBe(true);
+			expect(tools.get('testTool')?.description).toBe('A test tool');
 
 			// Unregister the tool
 			act(() => {
@@ -41,19 +41,19 @@ describe('ToolsSlice', () => {
 			});
 
 			// Check that tool is unregistered
-			const toolsAfter = result.current.getRegisteredTools();
-			expect(toolsAfter).toHaveLength(0);
+			const toolsAfter = result.current.registeredTools;
+			expect(toolsAfter.size).toBe(0);
 		});
 
 		it('should execute a registered tool with validation', async () => {
 			const { result } = renderHook(() => useCedarStore());
-			const mockCallback = jest.fn((args) => `Hello, ${args.name}!`);
+			const mockExecute = jest.fn();
 
 			// Register a tool
 			act(() => {
 				result.current.registerTool({
 					name: 'greetingTool',
-					callback: mockCallback,
+					execute: mockExecute,
 					argsSchema: z.object({
 						name: z.string(),
 					}),
@@ -61,15 +61,13 @@ describe('ToolsSlice', () => {
 			});
 
 			// Execute the tool with valid arguments
-			let executeResult;
 			await act(async () => {
-				executeResult = await result.current.executeTool('greetingTool', {
+				await result.current.executeTool('greetingTool', {
 					name: 'World',
 				});
 			});
 
-			expect(mockCallback).toHaveBeenCalledWith({ name: 'World' });
-			expect(executeResult).toBe('Hello, World!');
+			expect(mockExecute).toHaveBeenCalledWith({ name: 'World' });
 		});
 
 		it('should handle validation errors when executing tools', async () => {
@@ -80,7 +78,9 @@ describe('ToolsSlice', () => {
 			act(() => {
 				result.current.registerTool({
 					name: 'strictTool',
-					callback: (args: { count: number }) => args.count * 2,
+					execute: (args: { count: number }) => {
+						console.log(args.count * 2);
+					},
 					argsSchema: z.object({
 						count: z.number(),
 					}),
@@ -88,14 +88,12 @@ describe('ToolsSlice', () => {
 			});
 
 			// Execute with invalid arguments
-			let executeResult;
 			await act(async () => {
-				executeResult = await result.current.executeTool('strictTool', {
+				await result.current.executeTool('strictTool', {
 					count: 'not a number', // Invalid type
 				});
 			});
 
-			expect(executeResult).toBeUndefined();
 			expect(consoleErrorSpy).toHaveBeenCalled();
 
 			consoleErrorSpy.mockRestore();
@@ -107,7 +105,9 @@ describe('ToolsSlice', () => {
 			const TestComponent = () => {
 				useRegisterFrontendTool({
 					name: 'componentTool',
-					callback: (args: { value: number }) => args.value + 1,
+					execute: (args: { value: number }) => {
+						console.log(args.value + 1);
+					},
 					argsSchema: z.object({
 						value: z.number(),
 					}),
@@ -120,23 +120,23 @@ describe('ToolsSlice', () => {
 			const { unmount } = renderHook(() => TestComponent());
 
 			// Check tool is registered
-			const tools = useCedarStore.getState().getRegisteredTools();
-			expect(tools).toHaveLength(1);
-			expect(tools[0].name).toBe('componentTool');
+			const tools = useCedarStore.getState().registeredTools;
+			expect(tools.size).toBe(1);
+			expect(tools.has('componentTool')).toBe(true);
 
 			// Unmount component
 			unmount();
 
 			// Check tool is unregistered
-			const toolsAfter = useCedarStore.getState().getRegisteredTools();
-			expect(toolsAfter).toHaveLength(0);
+			const toolsAfter = useCedarStore.getState().registeredTools;
+			expect(toolsAfter.size).toBe(0);
 		});
 
 		it('should handle enabled flag correctly', () => {
 			const TestComponent = ({ enabled }: { enabled: boolean }) => {
 				useRegisterFrontendTool({
 					name: 'conditionalTool',
-					callback: () => 'test',
+					execute: () => console.log('test'),
 					argsSchema: z.object({}),
 					enabled,
 				});
@@ -152,25 +152,26 @@ describe('ToolsSlice', () => {
 			);
 
 			// Tool should not be registered
-			let tools = useCedarStore.getState().getRegisteredTools();
-			expect(tools).toHaveLength(0);
+			let tools = useCedarStore.getState().registeredTools;
+			expect(tools.size).toBe(0);
 
 			// Enable the tool
 			rerender({ enabled: true });
 
 			// Tool should now be registered
-			tools = useCedarStore.getState().getRegisteredTools();
-			expect(tools).toHaveLength(1);
-			expect(tools[0].name).toBe('conditionalTool');
+			tools = useCedarStore.getState().registeredTools;
+			expect(tools.size).toBe(1);
+			expect(tools.has('conditionalTool')).toBe(true);
 		});
 
-		it('should use latest callback without re-registering', async () => {
+		it('should use latest execute function without re-registering', async () => {
 			let callbackValue = 'initial';
+			const mockLog = jest.spyOn(console, 'log').mockImplementation();
 
 			const TestComponent = () => {
 				useRegisterFrontendTool({
 					name: 'dynamicTool',
-					callback: () => callbackValue,
+					execute: () => console.log(callbackValue),
 					argsSchema: z.object({}),
 				});
 				return null;
@@ -179,50 +180,35 @@ describe('ToolsSlice', () => {
 			renderHook(() => TestComponent());
 
 			// Execute with initial value
-			let result = await useCedarStore
-				.getState()
-				.executeTool('dynamicTool', {});
-			expect(result).toBe('initial');
+			await useCedarStore.getState().executeTool('dynamicTool', {});
+			expect(mockLog).toHaveBeenCalledWith('initial');
 
 			// Change the callback value
 			callbackValue = 'updated';
 
 			// Execute again - should use new value without re-registering
-			result = await useCedarStore.getState().executeTool('dynamicTool', {});
-			expect(result).toBe('updated');
+			await useCedarStore.getState().executeTool('dynamicTool', {});
+			expect(mockLog).toHaveBeenCalledWith('updated');
+
+			mockLog.mockRestore();
 		});
 	});
 
-	describe('Tool schema conversion', () => {
-		it('should convert Zod schemas to JSON schema format', () => {
+	describe('Tool error handling', () => {
+		it('should handle non-existent tool execution', async () => {
 			const { result } = renderHook(() => useCedarStore());
+			const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-			// Register a tool with complex schema
-			act(() => {
-				result.current.registerTool({
-					name: 'complexTool',
-					callback: (args: unknown) => args,
-					argsSchema: z.object({
-						name: z.string(),
-						age: z.number(),
-						isActive: z.boolean(),
-						tags: z.array(z.string()),
-					}),
-				});
+			// Try to execute a tool that doesn't exist
+			await act(async () => {
+				await result.current.executeTool('nonExistentTool', {});
 			});
 
-			const tools = result.current.getRegisteredTools();
-			const schema = tools[0].argsSchema;
+			expect(consoleErrorSpy).toHaveBeenCalledWith(
+				'Tool "nonExistentTool" not found'
+			);
 
-			expect(schema).toEqual({
-				type: 'object',
-				properties: {
-					name: { type: 'string', required: true },
-					age: { type: 'number', required: true },
-					isActive: { type: 'boolean', required: true },
-					tags: { type: 'array', required: true },
-				},
-			});
+			consoleErrorSpy.mockRestore();
 		});
 	});
 });

@@ -5,6 +5,7 @@ export type ToolFunction<TArgs> = (args: TArgs) => void | Promise<void>;
 
 // Base interface for registered tools - type-erased for storage
 export interface RegisteredToolBase<TArgs> {
+	name: string;
 	// The actual function to execute - accepts unknown args for runtime flexibility
 	execute: (args: TArgs) => void | Promise<void>;
 	// Zod schema for validating arguments - can validate unknown type
@@ -48,14 +49,7 @@ export interface ToolsActions {
 	// Execute a tool with validated arguments
 	executeTool: <TArgs>(name: string, args: TArgs) => Promise<void>;
 	// Get all registered tools (for passing to agent)
-	getRegisteredTools: () => Record<
-		string,
-		{
-			name: string;
-			description?: string;
-			argsSchema: Record<string, unknown>; // Will be serialized for agent
-		}
-	>;
+	getRegisteredTools: () => ToolsMap;
 	// Clear all tools
 	clearTools: () => void;
 }

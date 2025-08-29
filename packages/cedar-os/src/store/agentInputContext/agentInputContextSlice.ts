@@ -455,9 +455,26 @@ export const createAgentInputContextSlice: StateCreator<
 	},
 
 	stringifyFrontendTools: () => {
-		// Use the existing getRegisteredTools method from the toolsSlice
-		const tools = get().getRegisteredTools();
-		return tools;
+		const tools = get().registeredTools;
+		const toolsObject: Record<
+			string,
+			{
+				name: string;
+				description?: string;
+				argsSchema: Record<string, unknown>;
+			}
+		> = {};
+
+		tools.forEach((tool, name) => {
+			toolsObject[name] = {
+				name,
+				description: tool.description,
+				// Convert Zod schema to JSON schema for agent compatibility
+				argsSchema: zodToJsonSchema(tool.argsSchema),
+			};
+		});
+
+		return toolsObject;
 	},
 });
 
