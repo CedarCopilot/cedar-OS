@@ -148,6 +148,14 @@ export interface AgentInputContextSlice {
 	stringifyEditor: () => string;
 	stringifyInputContext: () => string;
 	stringifyAdditionalContext: () => string;
+	stringifyFrontendTools: () => Record<
+		string,
+		{
+			name: string;
+			description?: string;
+			argsSchema: Record<string, unknown>;
+		}
+	>;
 }
 
 // Create the agent input context slice
@@ -419,8 +427,16 @@ export const createAgentInputContextSlice: StateCreator<
 			}
 		});
 
-		// Merge simplified context with setter schemas and state schemas
-		const mergedContext = { ...simplifiedContext, setters, schemas };
+		// Get frontend tools
+		const frontendTools = get().stringifyFrontendTools();
+
+		// Merge simplified context with setter schemas, state schemas, and frontend tools
+		const mergedContext = {
+			...simplifiedContext,
+			setters,
+			schemas,
+			...(Object.keys(frontendTools).length > 0 && { frontendTools }),
+		};
 
 		// Sanitize before stringifying
 		const sanitizedContext = sanitizeJson(mergedContext);
@@ -436,6 +452,12 @@ export const createAgentInputContextSlice: StateCreator<
 		result += `Additional Context: ${contextString}`;
 
 		return result;
+	},
+
+	stringifyFrontendTools: () => {
+		// Use the existing getRegisteredTools method from the toolsSlice
+		const tools = get().getRegisteredTools();
+		return tools;
 	},
 });
 

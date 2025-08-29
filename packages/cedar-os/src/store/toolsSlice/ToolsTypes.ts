@@ -24,7 +24,7 @@ export interface RegisteredTool<TArgs> {
 }
 
 // Map of all registered tools - uses base type for storage flexibility
-export type ToolsMap = Map<string, RegisteredToolBase>;
+export type ToolsMap = Map<string, RegisteredToolBase<unknown>>;
 
 // Configuration for registering a tool
 export interface ToolRegistrationConfig<TArgs> {
@@ -48,11 +48,14 @@ export interface ToolsActions {
 	// Execute a tool with validated arguments
 	executeTool: <TArgs>(name: string, args: TArgs) => Promise<void>;
 	// Get all registered tools (for passing to agent)
-	getRegisteredTools: () => Array<{
-		name: string;
-		description?: string;
-		argsSchema: Record<string, unknown>; // Will be serialized for agent
-	}>;
+	getRegisteredTools: () => Record<
+		string,
+		{
+			name: string;
+			description?: string;
+			argsSchema: Record<string, unknown>; // Will be serialized for agent
+		}
+	>;
 	// Clear all tools
 	clearTools: () => void;
 }

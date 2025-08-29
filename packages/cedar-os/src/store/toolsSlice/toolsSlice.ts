@@ -14,11 +14,11 @@ export const createToolsSlice: StateCreator<ToolsSlice> = (set, get) => ({
 	registerTool: <TArgs>(config: ToolRegistrationConfig<TArgs>) => {
 		set((state) => {
 			const newTools = new Map(state.registeredTools);
-			const toolEntry: RegisteredToolBase<TArgs> = {
-				execute: config.execute,
-				argsSchema: config.argsSchema,
+			const toolEntry = {
+				execute: config.execute as (args: unknown) => void | Promise<void>,
+				argsSchema: config.argsSchema as z.ZodSchema<unknown>,
 				description: config.description,
-			};
+			} as RegisteredToolBase<unknown>;
 			newTools.set(config.name, toolEntry);
 			return { registeredTools: newTools };
 		});
@@ -58,22 +58,25 @@ export const createToolsSlice: StateCreator<ToolsSlice> = (set, get) => ({
 	// Get all registered tools for agent
 	getRegisteredTools: () => {
 		const tools = get().registeredTools;
-		const toolsArray: Array<{
-			name: string;
-			description?: string;
-			argsSchema: Record<string, unknown>;
-		}> = [];
+		const toolsObject: Record<
+			string,
+			{
+				name: string;
+				description?: string;
+				argsSchema: Record<string, unknown>;
+			}
+		> = {};
 
 		tools.forEach((tool, name) => {
-			toolsArray.push({
+			toolsObject[name] = {
 				name,
 				description: tool.description,
 				// Convert Zod schema to JSON schema for agent compatibility
 				argsSchema: zodToJsonSchema(tool.argsSchema),
-			});
+			};
 		});
 
-		return toolsArray;
+		return toolsObject;
 	},
 
 	// Clear all tools
