@@ -18,6 +18,7 @@ export {
 	hexToRgb,
 	luminanceThreshold,
 	withClassName,
+	isDarkMode,
 } from '@/styles/stylingUtils';
 
 // Store
