@@ -477,7 +477,7 @@ export const createAgentInputContextSlice: StateCreator<
 				name,
 				description: tool.description,
 				// Convert Zod schema to JSON schema for agent compatibility
-				argsSchema: zodToJsonSchema(tool.argsSchema),
+				argsSchema: zodToJsonSchema(tool.argsSchema, name),
 			};
 		});
 
