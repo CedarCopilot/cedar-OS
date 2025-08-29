@@ -31,6 +31,22 @@ export { createStylingSlice } from '@/store/stylingSlice';
 export { useRegisterState } from '@/store/stateSlice/stateSlice';
 export { useCedarState } from '@/store/stateSlice/useCedarState';
 
+// Export state slice types
+export type {
+	BasicStateValue,
+	Setter,
+	SetterFunction,
+	SetterArgs,
+	registeredState,
+	StateSlice,
+	// New types
+	ExecuteStateSetterParams,
+	ExecuteStateSetterOptions,
+	// Deprecated types (for backward compatibility)
+	ExecuteCustomSetterParams,
+	ExecuteCustomSetterOptions,
+} from '@/store/stateSlice/stateSlice';
+
 // Export context management
 export {
 	useRenderAdditionalContext,

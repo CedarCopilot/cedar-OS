@@ -24,16 +24,17 @@ export const parametersSchema = z
 export type Parameters = z.infer<typeof parametersSchema>;
 
 export function SubscribedStatesSection() {
-	const [parameters, setParameters] = useCedarState<Parameters>(
-		'parameters', // stateKey
-		[
+	const [parameters, setParameters] = useCedarState<Parameters>({
+		key: 'parameters',
+		initialValue: [
 			{ value: 0, name: 'temperature' },
 			{ value: 0.9, name: 'opacity' },
-		] as Parameters, // initialValue
-		'A tool to set values for a specific parameter on the dashboard',
-		{}, // customSetters
-		parametersSchema // schema
-	);
+		] as Parameters,
+		description:
+			'A tool to set values for a specific parameter on the dashboard',
+		stateSetters: {}, // No custom setters for this example
+		schema: parametersSchema,
+	});
 	const [newParamName, setNewParamName] = useState('');
 	const [newParamValue, setNewParamValue] = useState('');
 
