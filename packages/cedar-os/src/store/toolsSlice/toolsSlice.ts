@@ -1,10 +1,9 @@
 import { z } from 'zod';
 import { StateCreator } from 'zustand';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import type {
+	RegisteredToolBase,
 	ToolRegistrationConfig,
 	ToolsSlice,
-	RegisteredToolBase,
 } from './ToolsTypes';
 
 export const createToolsSlice: StateCreator<ToolsSlice> = (set, get) => ({
@@ -16,6 +15,7 @@ export const createToolsSlice: StateCreator<ToolsSlice> = (set, get) => ({
 		set((state) => {
 			const newTools = new Map(state.registeredTools);
 			const toolEntry = {
+				name: config.name,
 				execute: config.execute as (args: unknown) => void | Promise<void>,
 				argsSchema: config.argsSchema as z.ZodSchema<unknown>,
 				description: config.description,
@@ -57,31 +57,7 @@ export const createToolsSlice: StateCreator<ToolsSlice> = (set, get) => ({
 	},
 
 	// Get all registered tools for agent
-	getRegisteredTools: () => {
-		const tools = get().registeredTools;
-		const toolsObject: Record<
-			string,
-			{
-				name: string;
-				description?: string;
-				argsSchema: Record<string, unknown>;
-			}
-		> = {};
-
-		tools.forEach((tool, name) => {
-			toolsObject[name] = {
-				name,
-				description: tool.description,
-				// Convert Zod schema to JSON schema using zod-to-json-schema library
-				argsSchema: zodToJsonSchema(tool.argsSchema, name) as Record<
-					string,
-					unknown
-				>,
-			};
-		});
-
-		return toolsObject;
-	},
+	getRegisteredTools: () => get().registeredTools,
 
 	// Clear all tools
 	clearTools: () => {

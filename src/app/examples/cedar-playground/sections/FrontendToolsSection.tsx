@@ -405,7 +405,7 @@ export function FrontendToolsSection() {
 							<div className='flex items-center justify-between mb-4'>
 								<h3 className='text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2'>
 									<Wrench className='w-5 h-5' />
-									Registered Tools ({toolsInfo.length})
+									Registered Tools ({toolsInfo.size})
 								</h3>
 								<Button onClick={clearTools} variant='outline' size='sm'>
 									<Trash2 className='w-4 h-4 mr-2' />
@@ -414,13 +414,13 @@ export function FrontendToolsSection() {
 							</div>
 
 							<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-								{toolsInfo.map((tool) => (
+								{Array.from(toolsInfo).map(([name, tool]) => (
 									<div
-										key={tool.name}
+										key={name}
 										className='p-4 border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'>
 										<div className='flex items-start justify-between mb-2'>
 											<h4 className='font-semibold text-gray-900 dark:text-white'>
-												{tool.name}
+												{name}
 											</h4>
 											<Zap className='w-4 h-4 text-blue-500' />
 										</div>
@@ -439,7 +439,7 @@ export function FrontendToolsSection() {
 								))}
 							</div>
 
-							{toolsInfo.length === 0 && (
+							{toolsInfo.size === 0 && (
 								<div className='text-center py-8'>
 									<p className='text-gray-500 dark:text-gray-400'>
 										No tools registered yet. Tools are registered when their
