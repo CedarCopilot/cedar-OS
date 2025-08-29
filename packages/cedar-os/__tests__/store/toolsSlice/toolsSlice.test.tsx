@@ -19,7 +19,7 @@ describe('ToolsSlice', () => {
 			act(() => {
 				result.current.registerTool({
 					name: 'testTool',
-					callback: (args: { message: string }) => {
+					execute: (args: { message: string }) => {
 						return `Received: ${args.message}`;
 					},
 					argsSchema: z.object({
@@ -53,7 +53,7 @@ describe('ToolsSlice', () => {
 			act(() => {
 				result.current.registerTool({
 					name: 'greetingTool',
-					callback: mockCallback,
+					execute: mockCallback,
 					argsSchema: z.object({
 						name: z.string(),
 					}),
@@ -80,7 +80,7 @@ describe('ToolsSlice', () => {
 			act(() => {
 				result.current.registerTool({
 					name: 'strictTool',
-					callback: (args: { count: number }) => args.count * 2,
+					execute: (args: { count: number }) => args.count * 2,
 					argsSchema: z.object({
 						count: z.number(),
 					}),
@@ -107,7 +107,7 @@ describe('ToolsSlice', () => {
 			const TestComponent = () => {
 				useRegisterFrontendTool({
 					name: 'componentTool',
-					callback: (args: { value: number }) => args.value + 1,
+					execute: (args: { value: number }) => args.value + 1,
 					argsSchema: z.object({
 						value: z.number(),
 					}),
@@ -136,7 +136,7 @@ describe('ToolsSlice', () => {
 			const TestComponent = ({ enabled }: { enabled: boolean }) => {
 				useRegisterFrontendTool({
 					name: 'conditionalTool',
-					callback: () => 'test',
+					execute: () => 'test',
 					argsSchema: z.object({}),
 					enabled,
 				});
@@ -170,7 +170,7 @@ describe('ToolsSlice', () => {
 			const TestComponent = () => {
 				useRegisterFrontendTool({
 					name: 'dynamicTool',
-					callback: () => callbackValue,
+					execute: () => callbackValue,
 					argsSchema: z.object({}),
 				});
 				return null;
@@ -201,7 +201,7 @@ describe('ToolsSlice', () => {
 			act(() => {
 				result.current.registerTool({
 					name: 'complexTool',
-					callback: (args: unknown) => args,
+					execute: (args: unknown) => args,
 					argsSchema: z.object({
 						name: z.string(),
 						age: z.number(),

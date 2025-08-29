@@ -93,8 +93,20 @@ export function createFrontendToolResponseProcessor<
 				await config.beforeExecute(obj as T, store);
 			}
 
-			// Execute the tool
-			await store.executeTool(obj.toolName, obj.args);
+			try {
+				// Execute the tool
+				await store.executeTool(obj.toolName, obj.args);
+			} catch {
+				const toolMessage: MessageInput = {
+					...obj,
+					type: 'frontendTool',
+					role: 'assistant',
+					content: `Failed to execute tool: ${obj.toolName}`,
+					status: 'error',
+				};
+
+				store.addMessage(toolMessage);
+			}
 
 			// Run after hook if provided
 			if (config.afterExecute) {
