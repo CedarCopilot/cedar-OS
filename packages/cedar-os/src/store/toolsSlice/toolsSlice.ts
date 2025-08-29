@@ -1,10 +1,9 @@
 import { z } from 'zod';
 import { StateCreator } from 'zustand';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import type {
+	RegisteredToolBase,
 	ToolRegistrationConfig,
 	ToolsSlice,
-	RegisteredToolBase,
 } from './ToolsTypes';
 
 export const createToolsSlice: StateCreator<ToolsSlice> = (set, get) => ({

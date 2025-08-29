@@ -20,11 +20,7 @@ describe('ToolsSlice', () => {
 				result.current.registerTool({
 					name: 'testTool',
 					execute: (args: { message: string }) => {
-<<<<<<< HEAD
 						console.log(`Received: ${args.message}`);
-=======
-						return `Received: ${args.message}`;
->>>>>>> origin/main
 					},
 					argsSchema: z.object({
 						message: z.string(),
@@ -57,11 +53,7 @@ describe('ToolsSlice', () => {
 			act(() => {
 				result.current.registerTool({
 					name: 'greetingTool',
-<<<<<<< HEAD
 					execute: mockExecute,
-=======
-					execute: mockCallback,
->>>>>>> origin/main
 					argsSchema: z.object({
 						name: z.string(),
 					}),
@@ -86,13 +78,9 @@ describe('ToolsSlice', () => {
 			act(() => {
 				result.current.registerTool({
 					name: 'strictTool',
-<<<<<<< HEAD
 					execute: (args: { count: number }) => {
 						console.log(args.count * 2);
 					},
-=======
-					execute: (args: { count: number }) => args.count * 2,
->>>>>>> origin/main
 					argsSchema: z.object({
 						count: z.number(),
 					}),
@@ -117,13 +105,9 @@ describe('ToolsSlice', () => {
 			const TestComponent = () => {
 				useRegisterFrontendTool({
 					name: 'componentTool',
-<<<<<<< HEAD
 					execute: (args: { value: number }) => {
 						console.log(args.value + 1);
 					},
-=======
-					execute: (args: { value: number }) => args.value + 1,
->>>>>>> origin/main
 					argsSchema: z.object({
 						value: z.number(),
 					}),
@@ -152,11 +136,7 @@ describe('ToolsSlice', () => {
 			const TestComponent = ({ enabled }: { enabled: boolean }) => {
 				useRegisterFrontendTool({
 					name: 'conditionalTool',
-<<<<<<< HEAD
 					execute: () => console.log('test'),
-=======
-					execute: () => 'test',
->>>>>>> origin/main
 					argsSchema: z.object({}),
 					enabled,
 				});
@@ -191,11 +171,7 @@ describe('ToolsSlice', () => {
 			const TestComponent = () => {
 				useRegisterFrontendTool({
 					name: 'dynamicTool',
-<<<<<<< HEAD
 					execute: () => console.log(callbackValue),
-=======
-					execute: () => callbackValue,
->>>>>>> origin/main
 					argsSchema: z.object({}),
 				});
 				return null;
@@ -223,24 +199,9 @@ describe('ToolsSlice', () => {
 			const { result } = renderHook(() => useCedarStore());
 			const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-<<<<<<< HEAD
 			// Try to execute a tool that doesn't exist
 			await act(async () => {
 				await result.current.executeTool('nonExistentTool', {});
-=======
-			// Register a tool with complex schema
-			act(() => {
-				result.current.registerTool({
-					name: 'complexTool',
-					execute: (args: unknown) => args,
-					argsSchema: z.object({
-						name: z.string(),
-						age: z.number(),
-						isActive: z.boolean(),
-						tags: z.array(z.string()),
-					}),
-				});
->>>>>>> origin/main
 			});
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
