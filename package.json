@@ -38,6 +38,7 @@
 		"@types/diff": "^8.0.0",
 		"ai": "^5.0.0-beta.14",
 		"cedar-os": "workspace:*",
+		"@cedar-os/backend": "workspace:*",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"diff": "^8.0.2",
