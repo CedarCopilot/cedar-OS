@@ -19,6 +19,7 @@ import MastraEventRenderer, {
 } from './MastraEventRenderer';
 import { MastraStreamedResponseType } from '@/store/agentConnection/providers/mastra';
 import { humanInTheLoopMessageRenderer } from './HumanInTheLoopRenderer';
+import { defaultFrontendToolMessageRenderer } from './FrontendToolRenderer';
 
 /* -------------------------------------------------------------------------
  * Default renderer configs
@@ -83,6 +84,7 @@ export const defaultMessageRenderers: MessageRenderer<Message>[] = [
 	setStateResponseMessageRenderer,
 	legacyActionMessageRenderer, // Backwards compatibility for 'action' type
 	humanInTheLoopMessageRenderer, // Human-in-the-loop workflow support
+	defaultFrontendToolMessageRenderer, // Simple frontend tool renderer (like tool but for frontend)
 	...mastraEventRenderers,
 ];
 
