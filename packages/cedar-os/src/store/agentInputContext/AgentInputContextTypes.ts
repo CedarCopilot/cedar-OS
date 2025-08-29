@@ -189,7 +189,7 @@ export const AdditionalContextParamSchema = <
 ) =>
 	z
 		.object({
-			// Cedar OS system fields (added by stringifyAdditionalContext)
+			// Cedar OS system fields (added by compileAdditionalContext)
 			stateSetters: z
 				.record(
 					z.object({

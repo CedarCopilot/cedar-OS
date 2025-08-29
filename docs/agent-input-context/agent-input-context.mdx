@@ -18,7 +18,7 @@ When a user sends a message, Cedar automatically gathers context from various so
 3. **Additional Context**: Context entries you've manually added (via `addContextEntry`)
 4. **Chat Input Content**: The current editor content with mentions
 
-Cedar provides several methods to stringify and access this context for your AI agents.
+Cedar provides several methods to compile and access this context for your AI agents.
 
 # Adding Context
 
@@ -113,7 +113,7 @@ Cedar's `sendMessage` function automatically handles context based on your provi
 ```tsx
 // Inside sendMessage for Mastra/Custom providers
 const editorContent = state.stringifyEditor(); // "Update @task-123 status"
-const structuredContext = sanitizeJson(state.additionalContext); // Raw object
+const structuredContext = state.compileAdditionalContext(); // Raw object (no longer stringified)
 
 // Sent as separate fields:
 const llmParams = {
@@ -254,7 +254,7 @@ function ContextStringifier() {
 		const userText = stringifyEditor();
 		console.log('User text:', userText);
 
-		// Get additional context as JSON (includes state data, setters, and schemas)
+		// Get additional context as object (includes state data, setters, and schemas)
 		const contextData = compileAdditionalContext();
 		console.log('Context data:', contextData);
 
