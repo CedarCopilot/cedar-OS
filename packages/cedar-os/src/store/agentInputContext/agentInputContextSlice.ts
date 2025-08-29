@@ -371,9 +371,10 @@ export const createAgentInputContextSlice: StateCreator<
 
 	stringifyAdditionalContext: () => {
 		const context = get().additionalContext;
-		// Collect setter schemas for each subscribed state (keys present in additionalContext)
+		// Collect setter schemas for ALL registered states (comprehensive coverage)
 		const registeredStates = get().registeredStates;
-		const setters: Record<string, unknown> = {};
+		const stateSetters: Record<string, unknown> = {};
+		const setters: Record<string, unknown> = {}; // Deprecated but maintained for compatibility
 		const schemas: Record<string, unknown> = {};
 
 		// Process context to simplify structure
@@ -392,7 +393,8 @@ export const createAgentInputContextSlice: StateCreator<
 				simplified.length === 1 ? simplified[0] : simplified;
 		});
 
-		Object.keys(context).forEach((stateKey) => {
+		// Process ALL registered states (not just subscribed ones) for comprehensive setter coverage
+		Object.keys(registeredStates).forEach((stateKey) => {
 			const state = registeredStates[stateKey];
 
 			// Add state schema if it exists
@@ -408,25 +410,40 @@ export const createAgentInputContextSlice: StateCreator<
 			const settersToProcess = state?.stateSetters || state?.customSetters;
 			if (settersToProcess) {
 				Object.entries(settersToProcess).forEach(([setterKey, setter]) => {
+					const setterInfo = {
+						name: setter.name,
+						stateKey,
+						description: setter.description,
+						argsSchema: setter.argsSchema
+							? zodToJsonSchema(setter.argsSchema, setter.name)
+							: undefined,
+						// Deprecated schema property for backward compatibility
+						schema: setter.argsSchema
+							? zodToJsonSchema(setter.argsSchema, setter.name)
+							: undefined,
+					};
+
+					// Add to new stateSetters structure
+					stateSetters[setterKey] = setterInfo;
+					// Also add to deprecated setters structure for backward compatibility
 					setters[setterKey] = {
 						name: setter.name,
 						stateKey,
 						description: setter.description,
-						schema: setter.argsSchema
-							? zodToJsonSchema(
-									setter.argsSchema as unknown as Parameters<
-										typeof zodToJsonSchema
-									>[0],
-									setter.name
-							  )
-							: undefined,
+						schema: setterInfo.schema,
 					};
 				});
 			}
 		});
 
 		// Merge simplified context with setter schemas and state schemas
-		const mergedContext = { ...simplifiedContext, setters, schemas };
+		// Include both new and deprecated keys for backward compatibility
+		const mergedContext = {
+			...simplifiedContext,
+			stateSetters, // New key
+			setters, // Deprecated key for backward compatibility
+			schemas,
+		};
 
 		// Sanitize before stringifying
 		const sanitizedContext = sanitizeJson(mergedContext);

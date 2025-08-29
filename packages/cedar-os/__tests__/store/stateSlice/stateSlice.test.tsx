@@ -784,7 +784,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			expect(errorMessage).toContain('"name": "John"'); // Part of the invalid args
 		});
 
-		it('should log warning for setters without schema', () => {
+		it('should execute setters without schema (no validation warnings)', () => {
 			const mockSetter = jest.fn();
 			const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
@@ -816,11 +816,9 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			// Setter should still be called
 			expect(mockSetter).toHaveBeenCalledWith([], testArgs);
 
-			// Warning should be logged
-			expect(warnSpy).toHaveBeenCalledWith(
-				expect.stringContaining(
-					'No schema validation for setter "noSchemaTest" on state "noSchemaTest"'
-				)
+			// No warning should be logged (performance optimization)
+			expect(warnSpy).not.toHaveBeenCalledWith(
+				expect.stringContaining('No schema validation')
 			);
 
 			warnSpy.mockRestore();

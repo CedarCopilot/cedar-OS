@@ -45,8 +45,10 @@ export function useCedarState<T extends BasicStateValue>(config: {
 	// Determine Zod schema to use
 	const effectiveSchema = schema ?? (z.any() as unknown as ZodSchema<T>);
 
-	// Register state on first render (and only once)
+	// Register state on first render with cleanup on unmount
 	const registerStateFn = useCedarStore((s) => s.registerState);
+	const unregisterState = useCedarStore((s) => s.unregisterState);
+
 	useEffect(() => {
 		registerStateFn<T>({
 			key,
@@ -56,8 +58,13 @@ export function useCedarState<T extends BasicStateValue>(config: {
 			customSetters, // Keep for backward compatibility
 			schema: effectiveSchema,
 		});
+
+		// Cleanup on unmount
+		return () => {
+			unregisterState(key);
+		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [key]);
+	}, [key, unregisterState]);
 
 	// Selector for the state value
 	const stateValue = useCedarStore(

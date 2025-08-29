@@ -142,6 +142,11 @@ export interface StateSlice {
 	 * @param value The new value to set.
 	 */
 	setCedarState: <T extends BasicStateValue>(key: string, value: T) => void;
+	/**
+	 * Unregister a state from the store.
+	 * @param key The state key to unregister.
+	 */
+	unregisterState: (key: string) => void;
 }
 
 // Create the registered state slice
@@ -457,6 +462,20 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 				args: params.args,
 			});
 		},
+
+		/**
+		 * Unregister a state from the store.
+		 * @param key The state key to unregister.
+		 */
+		unregisterState: (key: string) => {
+			set((state) => {
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
+				const { [key]: removed, ...remainingStates } = state.registeredStates;
+				return {
+					registeredStates: remainingStates,
+				} as Partial<CedarStore>;
+			});
+		},
 	};
 };
 
@@ -499,9 +518,15 @@ export function useRegisterState<T extends BasicStateValue>(config: {
 	customSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
 }): void {
 	const registerState = useCedarStore((s: CedarStore) => s.registerState);
+	const unregisterState = useCedarStore((s: CedarStore) => s.unregisterState);
 
 	useEffect(() => {
 		registerState(config);
+
+		// Cleanup on unmount
+		return () => {
+			unregisterState(config.key);
+		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
 		config.key,
@@ -512,5 +537,6 @@ export function useRegisterState<T extends BasicStateValue>(config: {
 		config.stateSetters,
 		config.customSetters,
 		registerState,
+		unregisterState,
 	]);
 }
