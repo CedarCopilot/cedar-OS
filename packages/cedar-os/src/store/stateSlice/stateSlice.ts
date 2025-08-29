@@ -3,7 +3,7 @@
 import { StateCreator } from 'zustand';
 import { CedarStore } from '@/store/CedarOSTypes';
 import type { ZodSchema } from 'zod';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
 
@@ -47,17 +47,17 @@ export type SetterFunction<
 	: (state: T, args: TArgs) => void; // Any type (array, object, string, etc.) passed as single parameter
 
 // Enhanced Setter interface with generic schema
-export interface Setter<
-	T = BasicStateValue,
-	TArgsSchema extends z.ZodTypeAny = z.ZodTypeAny
-> {
+export interface Setter<T = BasicStateValue, TArgsSchema = z.ZodTypeAny> {
 	name: string;
 	description: string;
 	/** @deprecated Use argsSchema instead */
 	schema?: TArgsSchema;
 	/** Zod schema describing the input shape expected by this setter. */
 	argsSchema?: TArgsSchema;
-	execute: SetterFunction<T, z.infer<TArgsSchema>>;
+	execute: SetterFunction<
+		T,
+		TArgsSchema extends z.ZodTypeAny ? z.infer<TArgsSchema> : unknown
+	>;
 }
 
 // Represents a single registered state with separate primary setter and additional custom setters

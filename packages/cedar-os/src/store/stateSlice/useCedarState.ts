@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import type { ZodSchema } from 'zod';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import { useCedarStore } from '@/store/CedarStore';
 import type { BasicStateValue, Setter } from '@/store/stateSlice/stateSlice';
 

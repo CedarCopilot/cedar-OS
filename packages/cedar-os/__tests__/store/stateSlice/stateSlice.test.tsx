@@ -1,5 +1,5 @@
 import { act } from 'react-dom/test-utils';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import { useCedarStore } from '../../../src/store/CedarStore';
 import type { Setter } from '../../../src/store/stateSlice/stateSlice';
 

@@ -411,8 +411,13 @@ export const createAgentInputContextSlice: StateCreator<
 						name: setter.name,
 						stateKey,
 						description: setter.description,
-						schema: setter.schema
-							? zodToJsonSchema(setter.schema, setter.name)
+						schema: setter.argsSchema
+							? zodToJsonSchema(
+									setter.argsSchema as unknown as Parameters<
+										typeof zodToJsonSchema
+									>[0],
+									setter.name
+							  )
 							: undefined,
 					};
 				});

@@ -47,6 +47,7 @@ import {
 	useStateBasedMentionProvider,
 	useSubscribeStateToInputContext,
 	type CedarStore,
+	type Setter,
 } from 'cedar-os';
 import { isSupabaseAvailable } from '@/app/examples/product-roadmap/supabase/client';
 import { z } from 'zod';
@@ -93,10 +94,8 @@ function FlowCanvas() {
 		key: 'nodes',
 		description: 'Product roadmap nodes',
 		customSetters: {
-			addNode: {
-				name: 'addNode',
-				description: 'Add a new node to the roadmap',
-				schema: z.object({
+			addNode: (() => {
+				const addNodeArgsSchema = z.object({
 					node: z.object({
 						id: z.string().optional(),
 						data: z.object({
@@ -111,55 +110,78 @@ function FlowCanvas() {
 								.describe('Type of node'),
 							upvotes: z.number().default(0).describe('Number of upvotes'),
 							comments: z
-								.array(z.any())
+								.array(
+									z.object({
+										id: z.string(),
+										author: z.string(),
+										text: z.string(),
+									})
+								)
 								.default([])
 								.describe('Array of comments'),
 						}),
 					}),
-				}),
-				execute: (currentNodes, node) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const nodeData = node as Node<FeatureNodeData>;
-					const newNode: Node<FeatureNodeData> = {
-						...nodeData,
-						type: 'featureNode',
-						position: { x: Math.random() * 400, y: Math.random() * 400 },
-						id: nodeData.id || uuidv4(),
-						data: {
-							...nodeData.data,
-							nodeType: nodeData.data.nodeType || 'feature',
-							status: nodeData.data.status || 'planned',
-							upvotes: nodeData.data.upvotes || 0,
-							comments: nodeData.data.comments || [],
-							diff: 'added' as const,
-						},
-					};
-					setNodes([...nodes, newNode]);
-				},
-			},
-			removeNode: {
-				name: 'removeNode',
-				description: 'Remove a node from the roadmap',
-				schema: z.object({
+				});
+
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof addNodeArgsSchema
+				> = {
+					name: 'addNode',
+					description: 'Add a new node to the roadmap',
+					argsSchema: addNodeArgsSchema,
+					execute: (currentNodes, args) => {
+						// args is fully typed as { node: { id?: string, data: { ... } } }
+						const newNode: Node<FeatureNodeData> = {
+							...args.node,
+							type: 'featureNode',
+							position: { x: Math.random() * 400, y: Math.random() * 400 },
+							id: args.node.id || uuidv4(),
+							data: {
+								...args.node.data,
+								nodeType: args.node.data.nodeType || 'feature',
+								status: args.node.data.status || 'planned',
+								upvotes: args.node.data.upvotes || 0,
+								comments: args.node.data.comments || [],
+								diff: 'added' as const,
+							},
+						};
+						setNodes([...currentNodes, newNode]);
+					},
+				};
+				return setter;
+			})(),
+			removeNode: (() => {
+				const removeNodeArgsSchema = z.object({
 					id: z.string().describe('The ID of the node to remove'),
-				}),
-				execute: async (currentNodes, id) => {
-					const nodeId = id as string;
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					// Instead of removing, mark as removed with diff
-					setNodes(
-						nodes.map((node) =>
-							node.id === nodeId
-								? { ...node, data: { ...node.data, diff: 'removed' as const } }
-								: node
-						)
-					);
-				},
-			},
-			changeNode: {
-				name: 'changeNode',
-				description: 'Update an existing node in the roadmap',
-				schema: z.object({
+				});
+
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof removeNodeArgsSchema
+				> = {
+					name: 'removeNode',
+					description: 'Remove a node from the roadmap',
+					argsSchema: removeNodeArgsSchema,
+					execute: async (currentNodes, args) => {
+						// args is typed as { id: string }
+						// Instead of removing, mark as removed with diff
+						setNodes(
+							currentNodes.map((node) =>
+								node.id === args.id
+									? {
+											...node,
+											data: { ...node.data, diff: 'removed' as const },
+									  }
+									: node
+							)
+						);
+					},
+				};
+				return setter;
+			})(),
+			changeNode: (() => {
+				const changeNodeArgsSchema = z.object({
 					newNode: z.object({
 						id: z.string().describe('The ID of the node to update'),
 						data: z.object({
@@ -174,152 +196,208 @@ function FlowCanvas() {
 								.describe('Type of node'),
 							upvotes: z.number().default(0).describe('Number of upvotes'),
 							comments: z
-								.array(z.any())
+								.array(
+									z.object({
+										id: z.string(),
+										author: z.string(),
+										text: z.string(),
+									})
+								)
 								.default([])
 								.describe('Array of comments'),
 						}),
 					}),
-				}),
-				execute: (currentNodes, newNode) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const updatedNode = newNode as Node<FeatureNodeData>;
-					setNodes(
-						nodes.map((node) =>
-							node.id === updatedNode.id
-								? {
-										...updatedNode,
-										data: { ...updatedNode.data, diff: 'changed' as const },
-								  }
-								: node
-						)
-					);
-				},
-			},
-			acceptDiff: {
-				name: 'acceptDiff',
-				description: 'Accept a diff for a node',
-				schema: z.object({
+				});
+
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof changeNodeArgsSchema
+				> = {
+					name: 'changeNode',
+					description: 'Update an existing node in the roadmap',
+					argsSchema: changeNodeArgsSchema,
+					execute: (currentNodes, args) => {
+						// args is typed as { newNode: { id: string, data: { ... } } }
+						setNodes(
+							currentNodes.map((node) =>
+								node.id === args.newNode.id
+									? {
+											...args.newNode,
+											type: 'featureNode',
+											position: node.position, // Keep existing position
+											data: { ...args.newNode.data, diff: 'changed' as const },
+									  }
+									: node
+							)
+						);
+					},
+				};
+				return setter;
+			})(),
+			acceptDiff: (() => {
+				const acceptDiffArgsSchema = z.object({
 					nodeId: z
 						.string()
 						.describe('The ID of the node to accept the diff for'),
-				}),
-				execute: async (currentNodes, nodeId) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const nodeIdStr = nodeId as string;
-					const node = nodes.find((n) => n.id === nodeIdStr);
+				});
 
-					if (!node || !node.data.diff) return;
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof acceptDiffArgsSchema
+				> = {
+					name: 'acceptDiff',
+					description: 'Accept a diff for a node',
+					argsSchema: acceptDiffArgsSchema,
+					execute: async (currentNodes, args) => {
+						// args is typed as { nodeId: string }
+						const node = currentNodes.find((n) => n.id === args.nodeId);
 
-					if (node.data.diff === 'removed') {
-						// Actually remove the node
-						await deleteNode(nodeIdStr);
-						setNodes(nodes.filter((n) => n.id !== nodeIdStr));
-						// Also remove any edges connected to this node
-						setEdges((edges) =>
-							edges.filter(
-								(edge) => edge.source !== nodeIdStr && edge.target !== nodeIdStr
-							)
-						);
-					} else {
-						// Remove diff property for added/changed nodes
-						setNodes(
-							nodes.map((n) =>
-								n.id === nodeIdStr
-									? { ...n, data: { ...n.data, diff: undefined } }
-									: n
-							)
-						);
-					}
-				},
-			},
-			rejectDiff: {
-				name: 'rejectDiff',
-				description: 'Reject a diff for a node',
-				schema: z.object({
+						if (!node || !node.data.diff) return;
+
+						if (node.data.diff === 'removed') {
+							// Actually remove the node
+							await deleteNode(args.nodeId);
+							setNodes(currentNodes.filter((n) => n.id !== args.nodeId));
+							// Also remove any edges connected to this node
+							setEdges((edges) =>
+								edges.filter(
+									(edge) =>
+										edge.source !== args.nodeId && edge.target !== args.nodeId
+								)
+							);
+						} else {
+							// Remove diff property for added/changed nodes
+							setNodes(
+								currentNodes.map((n) =>
+									n.id === args.nodeId
+										? { ...n, data: { ...n.data, diff: undefined } }
+										: n
+								)
+							);
+						}
+					},
+				};
+				return setter;
+			})(),
+			rejectDiff: (() => {
+				const rejectDiffArgsSchema = z.object({
 					nodeId: z
 						.string()
 						.describe('The ID of the node to reject the diff for'),
-				}),
-				execute: (currentNodes, nodeId) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const node = nodes.find((n) => n.id === nodeId);
+				});
 
-					if (!node || !node.data.diff) return;
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof rejectDiffArgsSchema
+				> = {
+					name: 'rejectDiff',
+					description: 'Reject a diff for a node',
+					argsSchema: rejectDiffArgsSchema,
+					execute: (currentNodes, args) => {
+						// args is typed as { nodeId: string }
+						const node = currentNodes.find((n) => n.id === args.nodeId);
 
-					if (node.data.diff === 'added') {
-						// Remove newly added nodes
-						setNodes(nodes.filter((n) => n.id !== nodeId));
-					} else {
-						// Just remove diff property for removed/changed nodes
+						if (!node || !node.data.diff) return;
+
+						if (node.data.diff === 'added') {
+							// Remove newly added nodes
+							setNodes(currentNodes.filter((n) => n.id !== args.nodeId));
+						} else {
+							// Just remove diff property for removed/changed nodes
+							setNodes(
+								currentNodes.map((n) =>
+									n.id === args.nodeId
+										? { ...n, data: { ...n.data, diff: undefined } }
+										: n
+								)
+							);
+						}
+					},
+				};
+				return setter;
+			})(),
+			acceptAllDiffs: (() => {
+				// For void args, we use z.void() or an empty object
+				const acceptAllDiffsArgsSchema = z.void();
+
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof acceptAllDiffsArgsSchema
+				> = {
+					name: 'acceptAllDiffs',
+					description: 'Accept all pending diffs',
+					argsSchema: acceptAllDiffsArgsSchema,
+					execute: async (currentNodes) => {
+						// No args for this function
+						const nodesWithDiffs = currentNodes.filter((n) => n.data.diff);
+
+						// Process removals first
+						const removedNodeIds = nodesWithDiffs
+							.filter((n) => n.data.diff === 'removed')
+							.map((n) => n.id);
+
+						for (const nodeId of removedNodeIds) {
+							await deleteNode(nodeId);
+						}
+
+						// Update nodes
+						const remainingNodes = currentNodes.filter(
+							(n) => !removedNodeIds.includes(n.id)
+						);
 						setNodes(
-							nodes.map((n) =>
-								n.id === nodeId
-									? { ...n, data: { ...n.data, diff: undefined } }
-									: n
-							)
+							remainingNodes.map((n) => ({
+								...n,
+								data: { ...n.data, diff: undefined },
+							}))
 						);
-					}
-				},
-			},
-			acceptAllDiffs: {
-				name: 'acceptAllDiffs',
-				description: 'Accept all pending diffs',
-				schema: z.object({}),
-				execute: async (currentNodes) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const nodesWithDiffs = nodes.filter((n) => n.data.diff);
 
-					// Process removals first
-					const removedNodeIds = nodesWithDiffs
-						.filter((n) => n.data.diff === 'removed')
-						.map((n) => n.id);
+						// Remove edges for deleted nodes
+						if (removedNodeIds.length > 0) {
+							setEdges((edges) =>
+								edges.filter(
+									(edge) =>
+										!removedNodeIds.includes(edge.source) &&
+										!removedNodeIds.includes(edge.target)
+								)
+							);
+						}
+					},
+				};
+				return setter;
+			})(),
+			rejectAllDiffs: (() => {
+				// For void args, we use z.void()
+				const rejectAllDiffsArgsSchema = z.void();
 
-					for (const nodeId of removedNodeIds) {
-						await deleteNode(nodeId);
-					}
-
-					// Update nodes
-					const remainingNodes = nodes.filter(
-						(n) => !removedNodeIds.includes(n.id)
-					);
-					setNodes(
-						remainingNodes.map((n) => ({
-							...n,
-							data: { ...n.data, diff: undefined },
-						}))
-					);
-
-					// Remove edges for deleted nodes
-					if (removedNodeIds.length > 0) {
-						setEdges((edges) =>
-							edges.filter(
-								(edge) =>
-									!removedNodeIds.includes(edge.source) &&
-									!removedNodeIds.includes(edge.target)
-							)
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof rejectAllDiffsArgsSchema
+				> = {
+					name: 'rejectAllDiffs',
+					description: 'Reject all pending diffs',
+					argsSchema: rejectAllDiffsArgsSchema,
+					execute: (currentNodes) => {
+						// No args for this function
+						// Remove added nodes and clear diffs from others
+						const filteredNodes = currentNodes.filter(
+							(n) => n.data.diff !== 'added'
 						);
-					}
-				},
-			},
-			rejectAllDiffs: {
-				name: 'rejectAllDiffs',
-				description: 'Reject all pending diffs',
-				schema: z.object({}),
-				execute: (currentNodes) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-
-					// Remove added nodes and clear diffs from others
-					const filteredNodes = nodes.filter((n) => n.data.diff !== 'added');
-					setNodes(
-						filteredNodes.map((n) => ({
-							...n,
-							data: { ...n.data, diff: undefined },
-						}))
-					);
-				},
-			},
+						setNodes(
+							filteredNodes.map((n) => ({
+								...n,
+								data: { ...n.data, diff: undefined },
+							}))
+						);
+					},
+				};
+				return setter;
+			})(),
 		},
 	});
+
+	useSubscribeStateToInputContext('nodes', (nodes) => ({
+		nodes,
+	}));
 
 	useRegisterState({
 		key: 'edges',
@@ -654,7 +732,7 @@ export default function ProductMapPage() {
 					currentChatMode={chatMode}
 				/>
 				{chatMode === 'command' && <CommandBarChat open={true} />}
-				{chatMode === 'caption' && <CedarCaptionChat stream={false} />}
+				{chatMode === 'caption' && <CedarCaptionChat />}
 				{chatMode === 'floating' && (
 					<FloatingCedarChat
 						stream={false}
