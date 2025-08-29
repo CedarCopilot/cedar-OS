@@ -602,7 +602,7 @@ describe('AgentInputContextSlice', () => {
 				useCedarStore.getState().updateAdditionalContext(contextData);
 			});
 
-			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			const stringified = useCedarStore.getState().compileAdditionalContext();
 			expect(stringified).toContain('testItems');
 			expect(JSON.parse(stringified)).toHaveProperty('testItems');
 		});
@@ -626,7 +626,7 @@ describe('AgentInputContextSlice', () => {
 			expect(stringified).toContain('Additional Context:');
 		});
 
-		it('should simplify context structure in stringifyAdditionalContext', () => {
+		it('should simplify context structure in compileAdditionalContext', () => {
 			const testData = [
 				{ id: '1', name: 'Item 1', value: 100 },
 				{ id: '2', name: 'Item 2', value: 200 },
@@ -640,7 +640,7 @@ describe('AgentInputContextSlice', () => {
 					});
 			});
 
-			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			const stringified = useCedarStore.getState().compileAdditionalContext();
 			const parsed = JSON.parse(stringified);
 
 			// Should be an array since there are multiple items
@@ -662,7 +662,7 @@ describe('AgentInputContextSlice', () => {
 			expect(parsed.multipleItems[0]).not.toHaveProperty('metadata');
 		});
 
-		it('should extract single-item arrays in stringifyAdditionalContext', () => {
+		it('should extract single-item arrays in compileAdditionalContext', () => {
 			const singleItem = { id: '1', name: 'Single Item', value: 42 };
 
 			act(() => {
@@ -673,7 +673,7 @@ describe('AgentInputContextSlice', () => {
 					});
 			});
 
-			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			const stringified = useCedarStore.getState().compileAdditionalContext();
 			const parsed = JSON.parse(stringified);
 
 			// Should be a single object, not an array
@@ -688,7 +688,7 @@ describe('AgentInputContextSlice', () => {
 			expect(parsed.singleItem).not.toHaveProperty('metadata');
 		});
 
-		it('should handle mixed sources in stringifyAdditionalContext', () => {
+		it('should handle mixed sources in compileAdditionalContext', () => {
 			// Add context via putAdditionalContext (function source)
 			act(() => {
 				useCedarStore.getState().putAdditionalContext('functionItems', {
@@ -709,7 +709,7 @@ describe('AgentInputContextSlice', () => {
 				});
 			});
 
-			const stringified = useCedarStore.getState().stringifyAdditionalContext();
+			const stringified = useCedarStore.getState().compileAdditionalContext();
 			const parsed = JSON.parse(stringified);
 
 			// Function source should be simplified and extracted (single item)

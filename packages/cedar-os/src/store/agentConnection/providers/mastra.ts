@@ -155,7 +155,7 @@ export const mastraProvider: ProviderImplementation<
 		formData.append('audio', audioData, 'recording.webm');
 		formData.append('settings', JSON.stringify(voiceSettings));
 		if (context) {
-			formData.append('context', context);
+			formData.append('context', JSON.stringify(context));
 		}
 
 		for (const [key, value] of Object.entries(rest)) {

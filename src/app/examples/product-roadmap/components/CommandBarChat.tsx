@@ -110,7 +110,6 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 					label: 'Ask AI',
 					icon: <Bot className='w-4 h-4' />,
 					activationEvent: 'cmd+enter',
-					color: 'blue',
 					onSelect: () => {
 						sendMessage();
 					},

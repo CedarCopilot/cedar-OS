@@ -10,6 +10,15 @@ import {
 export const luminanceThreshold = 0.412;
 
 /**
+ * Detects if dark mode is currently active
+ * Checks for Tailwind's dark class on the document element
+ */
+export function isDarkMode(): boolean {
+	if (typeof window === 'undefined') return false;
+	return document.documentElement.classList.contains('dark');
+}
+
+/**
  * Combines class names with Tailwind's merge utility
  */
 export function cn(...inputs: ClassValue[]) {

@@ -87,7 +87,7 @@ export const ChatInput: React.FC<{
 		if (voice.voicePermissionStatus === 'denied') {
 			return 'p-1 text-gray-400 cursor-not-allowed';
 		}
-		return 'p-1 text-gray-600 dark:text-gray-200 hover:text-black cursor-pointer';
+		return 'p-1 text-gray-600 dark:text-gray-200 hover:text-black dark:hover:text-white cursor-pointer';
 	};
 
 	// Focus the editor when isInputFocused changes to allow for controlled focusing
@@ -236,12 +236,12 @@ export const ChatInput: React.FC<{
 					</button>
 					<button
 						type='button'
-						className='p-1 text-gray-600 dark:text-gray-200 hover:text-black cursor-pointer'>
+						className='p-1 text-gray-600 dark:text-gray-200 hover:text-black dark:hover:text-white cursor-pointer'>
 						<Image className='w-4 h-4' />
 					</button>
 					<button
 						type='button'
-						className='p-1 text-gray-600 dark:text-gray-200 hover:text-black cursor-pointer'>
+						className='p-1 text-gray-600 dark:text-gray-200 hover:text-black dark:hover:text-white cursor-pointer'>
 						<Code className='w-4 h-4' />
 					</button>
 				</div>
