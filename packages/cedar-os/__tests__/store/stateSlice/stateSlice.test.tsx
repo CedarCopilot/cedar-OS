@@ -782,11 +782,6 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			// Check that the received args are included in the message
 			expect(errorMessage).toContain('"age": "thirty"'); // Part of the invalid args
 			expect(errorMessage).toContain('"name": "John"'); // Part of the invalid args
-
-			// Log the actual error message format for documentation purposes
-			console.log('\n=== VALIDATION ERROR MESSAGE FORMAT ===');
-			console.log(errorMessage);
-			console.log('=== END ERROR MESSAGE ===\n');
 		});
 
 		it('should log warning for setters without schema', () => {

@@ -424,11 +424,6 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 					return; // Don't execute the setter with invalid args
 				}
 			} else {
-				// No schema validation - execute with original args
-				console.warn(
-					`⚠️ No schema validation for setter "${setterKey}" on state "${key}". Consider adding an argsSchema for better type safety.`
-				);
-
 				// Handle args - always pass as single parameter or no parameter
 				// Type assertion is necessary here because we support flexible args at runtime
 				const executeFunction = setter.execute as (
