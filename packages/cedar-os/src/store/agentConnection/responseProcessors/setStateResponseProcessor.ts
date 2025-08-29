@@ -7,7 +7,8 @@ export const setStateResponseProcessor: ResponseProcessor<SetStateResponse> = {
 	type: 'setState' as const,
 	namespace: 'default',
 	execute: async (obj, store) => {
-		const args = 'args' in obj && Array.isArray(obj.args) ? obj.args : [];
+		// Support both array and any other args format
+		const args = 'args' in obj ? obj.args : undefined;
 		// Pass options with isDiff set to true for setState responses
 		store.executeCustomSetter({
 			key: obj.stateKey,

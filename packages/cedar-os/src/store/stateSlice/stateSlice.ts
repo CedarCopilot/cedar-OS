@@ -25,33 +25,39 @@ export interface ExecuteCustomSetterOptions {
 	[key: string]: unknown;
 }
 
+export type SetterArgs = unknown;
+
 // Parameters for executeCustomSetter
 export interface ExecuteCustomSetterParams {
 	key: string;
 	setterKey: string;
 	options?: ExecuteCustomSetterOptions;
-	args?: unknown[];
+	args?: SetterArgs; // Now supports any type
 }
 
 // A setter function that takes an input value and the current state to produce updates
 export type BaseSetter<T = BasicStateValue> = (state: T) => void;
 
-// A setter function that takes an input value and the current state to produce updates
+// Enhanced SetterFunction with typed args - supports any type or void
 export type SetterFunction<
 	T = BasicStateValue,
-	Args extends unknown[] = unknown[]
-> = (state: T, ...args: Args) => void;
+	TArgs = SetterArgs
+> = TArgs extends void
+	? (state: T) => void // No args
+	: (state: T, args: TArgs) => void; // Any type (array, object, string, etc.) passed as single parameter
 
-// Setter object that includes both metadata and execution function
+// Enhanced Setter interface with generic schema
 export interface Setter<
 	T = BasicStateValue,
-	Args extends unknown[] = unknown[]
+	TArgsSchema extends z.ZodTypeAny = z.ZodTypeAny
 > {
 	name: string;
 	description: string;
+	/** @deprecated Use argsSchema instead */
+	schema?: TArgsSchema;
 	/** Zod schema describing the input shape expected by this setter. */
-	schema?: ZodSchema;
-	execute: SetterFunction<T, Args>;
+	argsSchema?: TArgsSchema;
+	execute: SetterFunction<T, z.infer<TArgsSchema>>;
 }
 
 // Represents a single registered state with separate primary setter and additional custom setters
@@ -63,7 +69,7 @@ export interface registeredState<T = BasicStateValue> {
 	schema?: ZodSchema<T>;
 	// Primary state updater
 	// Additional named setter functions
-	customSetters?: Record<string, Setter<T>>;
+	customSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
 }
 
 // Define the registered state slice
@@ -85,15 +91,18 @@ export interface StateSlice {
 		key: string;
 		value: T;
 		// Primary state updater: (inputValue, currentState)
-		setValue?: SetterFunction<T>;
+		setValue?: BaseSetter<T>;
 		description?: string;
 		schema?: ZodSchema<T>;
-		customSetters?: Record<string, Setter<T>>;
+		customSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
 	}) => void;
 	getState: (key: string) => registeredState | undefined;
 
 	// Method to add custom setters to an existing state
-	addCustomSetters: (key: string, setters: Record<string, Setter>) => boolean;
+	addCustomSetters: (
+		key: string,
+		setters: Record<string, Setter<BasicStateValue, z.ZodTypeAny>>
+	) => boolean;
 	/**
 	 * Execute a named custom setter for a state.
 	 * @param params Object containing key, setterKey, optional options, and optional args
@@ -122,10 +131,10 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		registerState: <T extends BasicStateValue>(config: {
 			key: string;
 			value: T;
-			setValue?: SetterFunction<T>;
+			setValue?: BaseSetter<T>;
 			description?: string;
 			schema?: ZodSchema<T>;
-			customSetters?: Record<string, Setter<T>>;
+			customSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
 		}) => {
 			const stateExists = Boolean(get().registeredStates[config.key]);
 			if (stateExists) {
@@ -220,7 +229,7 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		// Add custom setters to an existing state
 		addCustomSetters: (
 			key: string,
-			setters: Record<string, Setter>
+			setters: Record<string, Setter<BasicStateValue, z.ZodTypeAny>>
 		): boolean => {
 			const existingState = get().registeredStates[key];
 
@@ -273,7 +282,7 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		 */
 		executeCustomSetter: (params: ExecuteCustomSetterParams) => {
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			const { key, setterKey, options = {}, args = [] } = params;
+			const { key, setterKey, options = {}, args } = params;
 			// Note: options will be used for features like diff tracking
 			const existingState = get().registeredStates[key];
 			if (!existingState) {
@@ -288,7 +297,21 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 				return;
 			}
 			const setter = setters[setterKey];
-			setter.execute(existingState.value, ...args);
+
+			// Handle args - always pass as single parameter or no parameter
+			// Type assertion is necessary here because we support flexible args at runtime
+			const executeFunction = setter.execute as (
+				state: BasicStateValue,
+				args?: unknown
+			) => void;
+
+			if (args !== undefined) {
+				// Any type (array, object, string, number, etc.): pass as single parameter
+				executeFunction(existingState.value, args);
+			} else {
+				// No args (void)
+				executeFunction(existingState.value);
+			}
 		},
 	};
 };
@@ -323,22 +346,14 @@ export function isRegisteredState<T>(
 export function useRegisterState<T extends BasicStateValue>(config: {
 	key: string;
 	value: T;
-	setValue?: SetterFunction<T>;
+	setValue?: BaseSetter<T>;
 	description?: string;
 	schema?: ZodSchema<T>;
-	customSetters?: Record<string, Setter<T>>;
+	customSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
 }): void {
 	const registerState = useCedarStore((s: CedarStore) => s.registerState);
 
 	useEffect(() => {
 		registerState(config);
-	}, [
-		config.key,
-		config.value,
-		config.setValue,
-		config.description,
-		config.schema,
-		config.customSetters,
-		registerState,
-	]);
+	}, [config, registerState]);
 }

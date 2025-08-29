@@ -20,7 +20,7 @@ export function useCedarState<T extends BasicStateValue>(config: {
 	key: string;
 	initialValue: T;
 	description?: string;
-	customSetters?: Record<string, Setter<T>>;
+	customSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
 	schema?: ZodSchema<T>;
 }): [T, (newValue: T) => void] {
 	const { key, initialValue, description, customSetters, schema } = config;
