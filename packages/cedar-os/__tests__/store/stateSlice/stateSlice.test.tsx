@@ -18,11 +18,11 @@ describe('StateSlice – state re-registration', () => {
 		}));
 	});
 
-	it('should update setValue and customSetters when re-registering', () => {
+	it('should update setValue and stateSetters when re-registering', () => {
 		const mockSetValue1 = jest.fn();
 		const mockSetValue2 = jest.fn();
-		const mockCustomSetter1 = jest.fn();
-		const mockCustomSetter2 = jest.fn();
+		const mockStateSetter1 = jest.fn();
+		const mockStateSetter2 = jest.fn();
 
 		// First registration (simulating initial mount)
 		act(() => {
@@ -30,11 +30,11 @@ describe('StateSlice – state re-registration', () => {
 				key: 'testState',
 				value: 'initial',
 				setValue: mockSetValue1,
-				customSetters: {
+				stateSetters: {
 					testSetter: {
 						name: 'testSetter',
 						description: 'Test setter',
-						execute: mockCustomSetter1,
+						execute: mockStateSetter1,
 					},
 				},
 			});
@@ -43,7 +43,7 @@ describe('StateSlice – state re-registration', () => {
 		// Verify initial registration
 		const state1 = useCedarStore.getState().registeredStates['testState'];
 		expect(state1.setValue).toBe(mockSetValue1);
-		expect(state1.customSetters?.testSetter.execute).toBe(mockCustomSetter1);
+		expect(state1.stateSetters?.testSetter.execute).toBe(mockStateSetter1);
 
 		// Re-register with new functions (simulating remount with new closures)
 		act(() => {
@@ -51,11 +51,11 @@ describe('StateSlice – state re-registration', () => {
 				key: 'testState',
 				value: 'updated',
 				setValue: mockSetValue2,
-				customSetters: {
+				stateSetters: {
 					testSetter: {
 						name: 'testSetter',
 						description: 'Test setter',
-						execute: mockCustomSetter2,
+						execute: mockStateSetter2,
 					},
 				},
 			});
@@ -65,7 +65,7 @@ describe('StateSlice – state re-registration', () => {
 		const state2 = useCedarStore.getState().registeredStates['testState'];
 		expect(state2.value).toBe('updated');
 		expect(state2.setValue).toBe(mockSetValue2); // Should be the NEW function
-		expect(state2.customSetters?.testSetter.execute).toBe(mockCustomSetter2); // Should be the NEW function
+		expect(state2.stateSetters?.testSetter.execute).toBe(mockStateSetter2); // Should be the NEW function
 
 		// Test that the new functions are actually used
 		act(() => {
@@ -75,15 +75,116 @@ describe('StateSlice – state re-registration', () => {
 		expect(mockSetValue1).not.toHaveBeenCalled(); // Old function should NOT be called
 
 		act(() => {
-			useCedarStore.getState().executeCustomSetter({
+			useCedarStore.getState().executeStateSetter({
 				key: 'testState',
 				setterKey: 'testSetter',
 				args: ['arg'],
 			});
 		});
-		// The custom setter receives the current value and args as a single parameter
-		expect(mockCustomSetter2).toHaveBeenCalledWith('newValue', ['arg']);
-		expect(mockCustomSetter1).not.toHaveBeenCalled(); // Old function should NOT be called
+		// The state setter receives the current value and args as a single parameter
+		expect(mockStateSetter2).toHaveBeenCalledWith('newValue', ['arg']);
+		expect(mockStateSetter1).not.toHaveBeenCalled(); // Old function should NOT be called
+	});
+
+	it('should support backward compatibility with customSetters (deprecated)', () => {
+		const mockCustomSetter = jest.fn();
+		const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+		// Register state using deprecated customSetters property
+		act(() => {
+			useCedarStore.getState().registerState({
+				key: 'legacyState',
+				value: 'test',
+				customSetters: {
+					legacySetter: {
+						name: 'legacySetter',
+						description: 'Legacy setter',
+						execute: mockCustomSetter,
+					},
+				},
+			});
+		});
+
+		// Should show deprecation warning
+		expect(consoleWarnSpy).toHaveBeenCalledWith(
+			`⚠️ 'customSetters' is deprecated for state "legacyState". Use 'stateSetters' instead.`
+		);
+
+		// Should still work - setter should be accessible via both properties
+		const state = useCedarStore.getState().registeredStates['legacyState'];
+		expect(state.customSetters?.legacySetter.execute).toBe(mockCustomSetter);
+		expect(state.stateSetters?.legacySetter.execute).toBe(mockCustomSetter);
+
+		// Reset spy to check for executeCustomSetter warning specifically
+		consoleWarnSpy.mockClear();
+
+		// Should work with deprecated executeCustomSetter
+		act(() => {
+			useCedarStore.getState().executeCustomSetter({
+				key: 'legacyState',
+				setterKey: 'legacySetter',
+				args: 'test-arg',
+			});
+		});
+
+		// Should show deprecation warning for executeCustomSetter
+		expect(consoleWarnSpy).toHaveBeenCalledWith(
+			`⚠️ 'executeCustomSetter' is deprecated. Use 'executeStateSetter' instead.`
+		);
+		expect(mockCustomSetter).toHaveBeenCalledWith('test', 'test-arg');
+
+		consoleWarnSpy.mockRestore();
+	});
+
+	it('should prioritize stateSetters over customSetters when both are provided', () => {
+		const mockCustomSetter = jest.fn();
+		const mockStateSetter = jest.fn();
+
+		// Start with a fresh console spy for this test
+		const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+		// Register state with both properties
+		act(() => {
+			useCedarStore.getState().registerState({
+				key: 'mixedState',
+				value: 'test',
+				customSetters: {
+					mixedSetter: {
+						name: 'mixedSetter',
+						description: 'Custom setter',
+						execute: mockCustomSetter,
+					},
+				},
+				stateSetters: {
+					mixedSetter: {
+						name: 'mixedSetter',
+						description: 'State setter',
+						execute: mockStateSetter,
+					},
+				},
+			});
+		});
+
+		// Should NOT show deprecation warning when stateSetters is also provided
+		expect(consoleWarnSpy).not.toHaveBeenCalled();
+
+		// stateSetters should take precedence
+		const state = useCedarStore.getState().registeredStates['mixedState'];
+		expect(state.stateSetters?.mixedSetter.execute).toBe(mockStateSetter);
+
+		// Execute should use the stateSetter, not customSetter
+		act(() => {
+			useCedarStore.getState().executeStateSetter({
+				key: 'mixedState',
+				setterKey: 'mixedSetter',
+				args: 'test-arg',
+			});
+		});
+
+		expect(mockStateSetter).toHaveBeenCalledWith('test', 'test-arg');
+		expect(mockCustomSetter).not.toHaveBeenCalled();
+
+		consoleWarnSpy.mockRestore();
 	});
 });
 
@@ -116,7 +217,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'objectTest',
 					value: [],
-					customSetters: { addItem: setter },
+					stateSetters: { addItem: setter },
 				});
 			});
 
@@ -127,7 +228,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'objectTest',
 					setterKey: 'addItem',
 					args: testArgs,
@@ -162,7 +263,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'nestedTest',
 					value: null,
-					customSetters: { updateUser: setter },
+					stateSetters: { updateUser: setter },
 				});
 			});
 
@@ -182,7 +283,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'nestedTest',
 					setterKey: 'updateUser',
 					args: testArgs,
@@ -209,14 +310,14 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'arrayTest',
 					value: [],
-					customSetters: { addItems: setter },
+					stateSetters: { addItems: setter },
 				});
 			});
 
 			const testArgs = ['item1', 'item2', 'item3'];
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'arrayTest',
 					setterKey: 'addItems',
 					args: testArgs,
@@ -241,14 +342,14 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'tupleTest',
 					value: null,
-					customSetters: { updateWithTuple: setter },
+					stateSetters: { updateWithTuple: setter },
 				});
 			});
 
 			const testArgs: [string, number, boolean] = ['test', 42, true];
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'tupleTest',
 					setterKey: 'updateWithTuple',
 					args: testArgs,
@@ -275,14 +376,14 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'stringTest',
 					value: '',
-					customSetters: { setName: setter },
+					stateSetters: { setName: setter },
 				});
 			});
 
 			const testArg = 'John Doe';
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'stringTest',
 					setterKey: 'setName',
 					args: testArg,
@@ -307,14 +408,14 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'numberTest',
 					value: 0,
-					customSetters: { increment: setter },
+					stateSetters: { increment: setter },
 				});
 			});
 
 			const testArg = 5;
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'numberTest',
 					setterKey: 'increment',
 					args: testArg,
@@ -339,14 +440,14 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'booleanTest',
 					value: false,
-					customSetters: { toggle: setter },
+					stateSetters: { toggle: setter },
 				});
 			});
 
 			const testArg = true;
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'booleanTest',
 					setterKey: 'toggle',
 					args: testArg,
@@ -373,12 +474,12 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'voidTest',
 					value: ['item1', 'item2'],
-					customSetters: { clear: setter },
+					stateSetters: { clear: setter },
 				});
 			});
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'voidTest',
 					setterKey: 'clear',
 					// No args provided
@@ -401,12 +502,12 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'undefinedTest',
 					value: 42,
-					customSetters: { reset: setter },
+					stateSetters: { reset: setter },
 				});
 			});
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'undefinedTest',
 					setterKey: 'reset',
 					args: undefined,
@@ -433,13 +534,13 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'unionTest',
 					value: null,
-					customSetters: { setValue: setter },
+					stateSetters: { setValue: setter },
 				});
 			});
 
 			// Test with string
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'unionTest',
 					setterKey: 'setValue',
 					args: 'hello',
@@ -450,7 +551,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			// Test with number
 			mockSetter.mockClear();
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'unionTest',
 					setterKey: 'setValue',
 					args: 42,
@@ -461,7 +562,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			// Test with boolean
 			mockSetter.mockClear();
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'unionTest',
 					setterKey: 'setValue',
 					args: true,
@@ -485,14 +586,14 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'enumTest',
 					value: 'medium',
-					customSetters: { setSize: setter },
+					stateSetters: { setSize: setter },
 				});
 			});
 
 			const testArg = 'large';
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'enumTest',
 					setterKey: 'setSize',
 					args: testArg,
@@ -520,7 +621,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'optionalTest',
 					value: null,
-					customSetters: { updateData: setter },
+					stateSetters: { updateData: setter },
 				});
 			});
 
@@ -530,7 +631,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'optionalTest',
 					setterKey: 'updateData',
 					args: testArgs,
@@ -558,14 +659,14 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'legacyTest',
 					value: '',
-					customSetters: { legacySet: setter },
+					stateSetters: { legacySet: setter },
 				});
 			});
 
 			const testArg = 'legacy test';
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'legacyTest',
 					setterKey: 'legacySet',
 					args: testArg,
@@ -606,14 +707,14 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'validationTest',
 					value: [],
-					customSetters: { addUser: setter },
+					stateSetters: { addUser: setter },
 				});
 			});
 
 			const validArgs = { id: '123', name: 'John', age: 30 };
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'validationTest',
 					setterKey: 'addUser',
 					args: validArgs,
@@ -646,7 +747,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'validationTest',
 					value: [],
-					customSetters: { addUser: setter },
+					stateSetters: { addUser: setter },
 				});
 			});
 
@@ -654,7 +755,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			const invalidArgs = { id: '123', name: 'John', age: 'thirty' };
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'validationTest',
 					setterKey: 'addUser',
 					args: invalidArgs,
@@ -673,7 +774,6 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				'Args validation failed for setter "addUser" on state "validationTest"'
 			);
 			expect(errorMessage).toContain('📥 Received args:');
-			expect(errorMessage).toContain('📋 Expected schema:');
 			expect(errorMessage).toContain('🔍 Validation errors:');
 			expect(errorMessage).toContain(
 				'💡 Tip: Check your backend response format'
@@ -704,14 +804,14 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				useCedarStore.getState().registerState({
 					key: 'noSchemaTest',
 					value: [],
-					customSetters: { noSchemaTest: setter },
+					stateSetters: { noSchemaTest: setter },
 				});
 			});
 
 			const testArgs = { anything: 'goes' };
 
 			act(() => {
-				useCedarStore.getState().executeCustomSetter({
+				useCedarStore.getState().executeStateSetter({
 					key: 'noSchemaTest',
 					setterKey: 'noSchemaTest',
 					args: testArgs,

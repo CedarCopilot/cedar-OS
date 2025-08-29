@@ -404,9 +404,10 @@ export const createAgentInputContextSlice: StateCreator<
 				};
 			}
 
-			// Add custom setter schemas
-			if (state?.customSetters) {
-				Object.entries(state.customSetters).forEach(([setterKey, setter]) => {
+			// Add state setter schemas (with backward compatibility for customSetters)
+			const settersToProcess = state?.stateSetters || state?.customSetters;
+			if (settersToProcess) {
+				Object.entries(settersToProcess).forEach(([setterKey, setter]) => {
 					setters[setterKey] = {
 						name: setter.name,
 						stateKey,

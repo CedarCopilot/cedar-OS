@@ -93,7 +93,7 @@ function FlowCanvas() {
 		setValue: setNodes,
 		key: 'nodes',
 		description: 'Product roadmap nodes',
-		customSetters: {
+		stateSetters: {
 			addNode: (() => {
 				const addNodeArgsSchema = z.object({
 					node: z.object({

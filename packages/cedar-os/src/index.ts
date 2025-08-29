@@ -39,6 +39,12 @@ export type {
 	SetterArgs,
 	registeredState,
 	StateSlice,
+	// New types
+	ExecuteStateSetterParams,
+	ExecuteStateSetterOptions,
+	// Deprecated types (for backward compatibility)
+	ExecuteCustomSetterParams,
+	ExecuteCustomSetterOptions,
 } from '@/store/stateSlice/stateSlice';
 
 // Export context management

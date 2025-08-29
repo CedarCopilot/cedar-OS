@@ -10,7 +10,7 @@ export const setStateResponseProcessor: ResponseProcessor<SetStateResponse> = {
 		// Support both array and any other args format
 		const args = 'args' in obj ? obj.args : undefined;
 		// Pass options with isDiff set to true for setState responses
-		store.executeCustomSetter({
+		store.executeStateSetter({
 			key: obj.stateKey,
 			setterKey: obj.setterKey,
 			options: { isDiff: true },
