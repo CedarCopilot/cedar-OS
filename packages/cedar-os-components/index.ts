@@ -29,6 +29,11 @@ export { default as Flat3dButton } from './containers/Flat3dButton';
 export { default as Flat3dContainer } from './containers/Flat3dContainer';
 export { default as GlassyPaneContainer } from './containers/GlassyPaneContainer';
 
+// DebugPanel 
+export { DebugPanel, MessagesTab, NetworkTab, StatesTab } from './debugPanel';
+
+
+
 // Diffs
 export { default as DiffContainer } from './diffs/DiffContainer';
 export { default as DiffText } from './diffs/DiffText';
