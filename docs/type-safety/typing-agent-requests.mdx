@@ -3,12 +3,13 @@ title: 'Typing Agent Requests'
 description: 'Learn how to implement end-to-end type safety for agent requests in Cedar-OS'
 ---
 
-Cedar-OS provides comprehensive end-to-end type safety for agent requests. There are **two custom ways** you can type your backend requests:
+Cedar-OS provides comprehensive end-to-end type safety for agent requests. There are **three main areas** where you can implement type safety:
 
 1. **The type of additionalContext** - Define TypeScript types for context data (user profiles, projects, etc.)
 2. **The type of additional params** - Define custom fields for your specific backend needs
+3. **Frontend tool and state setter schemas** - Define Zod schemas for tool arguments and state setter parameters
 
-For both customization points, Cedar exposes:
+For all customization points, Cedar exposes:
 
 - **TypeScript types** for compile-time checking
 - **Zod schemas** for runtime validation and schema factories
@@ -174,7 +175,7 @@ type BackendContextEntry = {
 // The full additionalContext structure on your backend
 type AdditionalContextParam<T extends Record<string, unknown>> = {
 	// Cedar system fields (automatically added)
-	setters?: Record<string, BackendSetterSchema>; // Available state setters
+	setters?: Record<string, BackendStateSetterSchema>; // Available state setters
 	schemas?: Record<string, BackendStateSchema>; // Available state schemas,
 	// All the fields of your additional context
 	userProfile: BackendContextEntry;
@@ -198,22 +199,145 @@ The `sendMessage` function (used by Cedar's chat interface) and `callLLM` functi
 ```typescript
 // sendMessage - used by chat interface
 await sendMessage<UserContextData, CustomFields>({
-  route: '/chat',
-  userId: 'user123',
-  priority: 'high', 
-  additionalContext: { /* your typed context */ }
+	route: '/chat',
+	userId: 'user123',
+	priority: 'high',
+	additionalContext: {
+		/* your typed context */
+	},
 });
 
-// callLLM - direct usage  
+// callLLM - direct usage
 await callLLM<UserContextData, CustomFields>({
-  route: '/chat', 
-  userId: 'user123',
-  priority: 'high',
-  additionalContext: { /* your typed context */ }
+	route: '/chat',
+	userId: 'user123',
+	priority: 'high',
+	additionalContext: {
+		/* your typed context */
+	},
 });
 ```
 
 Both functions use the same two-generic typing system and pass your typed request to the backend for validation.
+
+## Frontend Tool and State Setter Schema Typing
+
+Cedar has comprehensive Zod schema support for frontend tools and state setters, providing runtime validation and automatic schema generation for agents. You can pick any schema off of the `additionalContext` object and pass it as a JSON schema to an agent's output schema.
+
+### Frontend Tool Schema Typing
+
+```typescript
+import { useRegisterFrontendTool } from 'cedar-os';
+import { z } from 'zod';
+
+// Define comprehensive argument schemas
+const sendNotificationSchema = z.object({
+	title: z.string().min(1, 'Title is required'),
+	message: z.string().min(1, 'Message is required'),
+	type: z.enum(['success', 'error', 'warning', 'info']).default('info'),
+	duration: z.number().positive().optional().default(3000),
+	actions: z
+		.array(
+			z.object({
+				label: z.string(),
+				action: z.string(),
+			})
+		)
+		.optional(),
+});
+
+function NotificationComponent() {
+	useRegisterFrontendTool({
+		name: 'sendNotification',
+		description: 'Display a notification to the user',
+		argsSchema: sendNotificationSchema,
+		execute: async (args) => {
+			// args is fully typed based on the schema
+			const { title, message, type, duration, actions } = args;
+
+			return await showNotification({
+				title,
+				message,
+				type,
+				duration,
+				actions,
+			});
+		},
+	});
+}
+
+// Type inference from schema
+type NotificationArgs = z.infer<typeof sendNotificationSchema>;
+// { title: string; message: string; type: 'success' | 'error' | 'warning' | 'info'; duration?: number; actions?: Array<{label: string; action: string}> }
+```
+
+### State Setter Schema Typing
+
+```typescript
+import { useRegisterState } from 'cedar-os';
+import { z } from 'zod';
+
+// Define argument schemas for state setters
+const addTodoSchema = z.object({
+	text: z.string().min(1, 'Todo text cannot be empty'),
+	priority: z.enum(['low', 'medium', 'high']).default('medium'),
+	dueDate: z.string().datetime().optional(),
+	tags: z.array(z.string()).default([]),
+});
+
+const updateTodoSchema = z.object({
+	id: z.number().positive(),
+	updates: z.object({
+		text: z.string().min(1).optional(),
+		completed: z.boolean().optional(),
+		priority: z.enum(['low', 'medium', 'high']).optional(),
+		dueDate: z.string().datetime().nullable().optional(),
+		tags: z.array(z.string()).optional(),
+	}),
+});
+
+function TodoComponent() {
+	const [todos, setTodos] = useState([]);
+
+	useRegisterState({
+		key: 'todos',
+		value: todos,
+		setValue: setTodos,
+		description: 'List of user todos with priorities and due dates',
+		stateSetters: {
+			addTodo: {
+				name: 'addTodo',
+				description: 'Add a new todo item',
+				argsSchema: addTodoSchema,
+				execute: (currentTodos, args) => {
+					// args is fully typed: { text: string; priority: 'low' | 'medium' | 'high'; dueDate?: string; tags: string[] }
+					const newTodo = {
+						id: Date.now(),
+						...args,
+						completed: false,
+						createdAt: new Date().toISOString(),
+					};
+					setTodos([...currentTodos, newTodo]);
+				},
+			},
+		},
+	});
+}
+
+// Type inference from schemas
+type AddTodoArgs = z.infer<typeof addTodoSchema>;
+type UpdateTodoArgs = z.infer<typeof updateTodoSchema>;
+```
+
+### Schema Benefits
+
+Using Zod schemas for frontend tools and state setters provides:
+
+1. **Runtime Validation**: Arguments are validated before execution
+2. **Type Safety**: Full TypeScript support with inferred types
+3. **Agent Context**: Schemas are automatically converted to JSON Schema and sent to agents
+4. **Error Handling**: Clear validation error messages
+5. **Documentation**: Schema descriptions help agents understand parameters
 
 ## End-to-End Example
 
@@ -265,7 +389,7 @@ const MyMastraRequestSchema = MastraParamsSchema(
 export async function POST(req: Request) {
 	const body = await req.json();
 	const validatedRequest = MyMastraRequestSchema.parse(body);
-	
+
 	// ✅ Fully typed access to all fields
 	const userEmail = validatedRequest.additionalContext?.userProfile?.data.email; // string
 	const priority = validatedRequest.priority; // 'low' | 'medium' | 'high'

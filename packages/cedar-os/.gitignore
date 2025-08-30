@@ -5,3 +5,5 @@ coverage/
 # yalc
 .yalc
 yalc.lock
+
+coverage/

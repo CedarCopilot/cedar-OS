@@ -224,8 +224,8 @@ const messageResponseProcessor = {
 
 ### `"setState"` Type
 
-- **Behavior**: Executes state actions via custom setters and adds setState message to chat
-- **Properties**: `stateKey: string`, `setterKey: string`, `args?: unknown[]`
+- **Behavior**: Executes state actions via state setters and adds setState message to chat
+- **Properties**: `stateKey: string`, `setterKey: string`, `args?: unknown`
 - **Default Processor**: `setStateResponseProcessor` executes state actions and adds to chat
 
 ```tsx
@@ -234,9 +234,8 @@ const setStateResponseProcessor = {
 	type: 'setState',
 	namespace: 'default',
 	execute: async (obj, store) => {
-		// Execute the state action
-		const args = Array.isArray(obj.args) ? obj.args : [];
-		store.executeCustomSetter(obj.stateKey, obj.setterKey, ...args);
+		// Execute the state action with new parameter handling
+		store.executeStateSetter(obj.stateKey, obj.setterKey, obj.args);
 
 		// Add setState message to chat
 		store.addMessage(obj as unknown as MessageInput);
@@ -259,7 +258,7 @@ import { createSetStateResponseProcessor, SetStateResponseFor } from 'cedar-os';
 type UpdateCounterResponse = SetStateResponseFor<
 	'counter', // StateKey
 	'increment', // SetterKey
-	[number] // Args
+	{ amount: number } // Args
 >;
 
 // Create custom setState processor with filtering
@@ -268,9 +267,9 @@ const CounterSetStateProcessor =
 		namespace: 'counter',
 		setterKey: 'increment', // Only handle increment actions
 		execute: (obj, store) => {
-			// Custom processing logic
-			const amount = obj.args?.[0] || 1;
-			store.executeCustomSetter('counter', 'increment', amount);
+			// Custom processing logic with new parameter handling
+			const amount = obj.args?.amount || 1;
+			store.executeStateSetter('counter', 'increment', { amount });
 
 			// Custom message instead of default
 			store.addMessage({
@@ -310,6 +309,50 @@ const progressUpdateResponseProcessor = {
 			});
 		}
 	},
+};
+```
+
+### `"frontendTool"` Type
+
+- **Behavior**: Executes registered frontend tools with full type safety and validation
+- **Properties**: `toolName: string`, `args?: unknown`
+- **Default Processor**: `frontendToolResponseProcessor` executes tools and adds execution message to chat
+- **Learn More**: See the complete [Frontend Tools documentation](/tools/frontend-tools) for detailed implementation examples
+
+```tsx
+// Default frontendToolResponseProcessor implementation
+const frontendToolResponseProcessor = {
+	type: 'frontendTool',
+	execute: async (obj, store) => {
+		try {
+			// Execute the frontend tool with validation
+			const result = await store.executeFrontendTool(obj.toolName, obj.args);
+
+			// Add success message to chat
+			store.addMessage({
+				type: 'frontendTool',
+				role: 'assistant',
+				toolName: obj.toolName,
+				args: obj.args,
+				result: result,
+				status: 'success',
+			});
+		} catch (error) {
+			// Add error message to chat
+			store.addMessage({
+				type: 'frontendTool',
+				role: 'assistant',
+				toolName: obj.toolName,
+				args: obj.args,
+				error: error.message,
+				status: 'error',
+			});
+		}
+	},
+	validate: (obj): obj is FrontendToolResponse =>
+		obj.type === 'frontendTool' &&
+		'toolName' in obj &&
+		typeof obj.toolName === 'string',
 };
 ```
 
@@ -360,6 +403,7 @@ import {
 	LegacyActionResponseSchema,
 	ProgressUpdateResponseSchema,
 	HumanInTheLoopResponseSchema,
+	FrontendToolResponseSchema,
 } from 'cedar-os';
 
 // Runtime validation
@@ -381,6 +425,7 @@ if (BackendMessageResponseSchema.safeParse(responseObject).success) {
 - `LegacyActionResponseSchema` - For `"action"` type responses (backwards compatibility)
 - `ProgressUpdateResponseSchema` - For `"progress_update"` type responses
 - `HumanInTheLoopResponseSchema` - For `"humanInTheLoop"` type responses
+- `FrontendToolResponseSchema` - For `"frontendTool"` type responses
 
 <Warning>
 	If you override any of these default types, you lose the built-in behavior.

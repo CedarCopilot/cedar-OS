@@ -76,7 +76,7 @@ export type {
 	StateBasedMentionProviderConfig,
 	// Phase 1: Backend context types moved from AgentConnectionTypes
 	AdditionalContextParam,
-	BackendSetterSchema,
+	BackendStateSetterSchema,
 	BackendStateSchema,
 	BackendContextEntry,
 } from '@/store/agentInputContext/AgentInputContextTypes';
@@ -231,27 +231,18 @@ export {
 	createFrontendToolResponseProcessor,
 } from '@/store/agentConnection/responseProcessors/frontendToolResponseProcessor';
 
-export {
-	HumanInTheLoopRenderer,
-	humanInTheLoopMessageRenderer,
-} from '@/store/messages/renderers/HumanInTheLoopRenderer';
+export { humanInTheLoopMessageRenderer } from '@/store/messages/renderers/HumanInTheLoopRenderer';
 
 // Frontend tool message renderer
 export type { FrontendToolMessage } from '@/store/messages/renderers/FrontendToolRenderer';
 
-export {
-	FrontendToolRenderer,
-	frontendToolMessageRenderer,
-	createFrontendToolMessageRenderer,
-	defaultFrontendToolMessageRenderer,
-} from '@/store/messages/renderers/FrontendToolRenderer';
+export { defaultFrontendToolMessageRenderer } from '@/store/messages/renderers/FrontendToolRenderer';
 
 export type {
 	ProgressUpdateResponse,
 	ProgressUpdateResponsePayload,
+	ProgressUpdateResponseSchema,
 } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
-
-export { ProgressUpdateResponseSchema } from '@/store/agentConnection/responseProcessors/progressUpdateResponseProcessor';
 
 export {
 	SetStateResponsePayload,

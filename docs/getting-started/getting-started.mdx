@@ -246,14 +246,15 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
           value: todos,
           setValue: setTodos,
           description: 'User todo list manageable by AI',
-          customSetters: {
+          stateSetters: {
             addTodo: {
               name: 'addTodo',
               description: 'Add a new todo item',
-              schema: z.object({
+              argsSchema: z.object({
                 text: z.string().describe('Todo text')
               }),
-              execute: (currentTodos, text) => {
+              execute: (currentTodos, args) => {
+                const { text } = args;
                 setTodos([...currentTodos, {
                   id: Date.now(),
                   text,
@@ -264,10 +265,11 @@ Cedar-OS is an open-source framework for building AI-native applications. This g
             toggleTodo: {
               name: 'toggleTodo',
               description: 'Toggle todo completion status',
-              schema: z.object({
+              argsSchema: z.object({
                 id: z.number().describe('Todo ID')
               }),
-              execute: (currentTodos, id) => {
+              execute: (currentTodos, args) => {
+                const { id } = args;
                 setTodos(currentTodos.map(t =>
                   t.id === id ? { ...t, completed: !t.completed } : t
                 ));
