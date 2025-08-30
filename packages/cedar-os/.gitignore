@@ -4,3 +4,5 @@ dist/
 # yalc
 .yalc
 yalc.lock
+
+coverage/
