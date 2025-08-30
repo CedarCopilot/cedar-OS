@@ -125,13 +125,15 @@ export interface DiffHistorySlice {
 		key: string,
 		jsonPath: string,
 		identificationField: string | ((item: T) => unknown),
-		targetId?: unknown
+		targetId?: unknown,
+		diffMarkerPaths?: string[]
 	) => boolean;
 	rejectDiff: <T>(
 		key: string,
 		jsonPath: string,
 		identificationField: string | ((item: T) => unknown),
-		targetId?: unknown
+		targetId?: unknown,
+		diffMarkerPaths?: string[]
 	) => boolean;
 
 	// Undo/Redo methods
@@ -207,13 +209,57 @@ function getItemIdentifier<T>(
 /**
  * Helper function to handle single diff accept/reject operations
  */
+// Helper function to remove diff markers from an object at various paths
+function removeDiffMarkers<T>(item: T, diffMarkerPaths?: string[]): T {
+	let cleanedItem = { ...item } as T;
+
+	// Default paths if not specified
+	const pathsToCheck = diffMarkerPaths || ['/data/diff', '/diff', '/meta/diff'];
+
+	for (const path of pathsToCheck) {
+		const diffValue = getValueAtPath(cleanedItem, path);
+		if (diffValue) {
+			// Parse the path to determine how to remove the diff marker
+			const pathParts = path.split('/').filter((p) => p);
+
+			if (pathParts.length === 1) {
+				// Root level diff
+				const itemRecord = cleanedItem as Record<string, unknown>;
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
+				const { [pathParts[0]]: _, ...itemWithoutDiff } = itemRecord;
+				cleanedItem = itemWithoutDiff as T;
+			} else {
+				// Nested diff - use setValueAtPathForDiff to remove it
+				// Build the parent path
+				const parentPathStr = '/' + pathParts.slice(0, -1).join('/');
+				const parentValue = getValueAtPath(cleanedItem, parentPathStr);
+
+				if (parentValue && typeof parentValue === 'object') {
+					const parentRecord = parentValue as Record<string, unknown>;
+					const diffField = pathParts[pathParts.length - 1];
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars
+					const { [diffField]: _, ...parentWithoutDiff } = parentRecord;
+					cleanedItem = setValueAtPathForDiff(
+						cleanedItem,
+						parentPathStr,
+						parentWithoutDiff
+					) as T;
+				}
+			}
+		}
+	}
+
+	return cleanedItem;
+}
+
 function handleSingleDiff<T>(
 	get: () => CedarStore,
 	key: string,
 	jsonPath: string,
 	identificationField: string | ((item: T) => unknown),
 	action: 'accept' | 'reject',
-	targetId?: unknown
+	targetId?: unknown,
+	diffMarkerPaths?: string[]
 ): boolean {
 	const currentDiffHistoryState = get().getDiffHistoryState<T>(key);
 
@@ -228,14 +274,161 @@ function handleSingleDiff<T>(
 	const { diffState, history, diffMode, computeState } =
 		currentDiffHistoryState;
 
-	// Get the array at the specified path from both old and new states
-	const oldArray = getValueAtPath(diffState.oldState, jsonPath) as T[];
-	const newArray = getValueAtPath(diffState.newState, jsonPath) as T[];
+	// Get the value at the specified path from both old and new states
+	const oldValue = getValueAtPath(diffState.oldState, jsonPath);
+	const newValue = getValueAtPath(diffState.newState, jsonPath);
 
-	if (!Array.isArray(oldArray) || !Array.isArray(newArray)) {
-		console.warn(`Value at path "${jsonPath}" is not an array`);
-		return false;
+	// Check if we're dealing with arrays or single objects/fields
+	const isArray = Array.isArray(oldValue) || Array.isArray(newValue);
+
+	if (isArray) {
+		// Handle array case (existing logic)
+		const oldArray = oldValue as T[];
+		const newArray = newValue as T[];
+
+		if (!Array.isArray(oldArray) || !Array.isArray(newArray)) {
+			console.warn(`Value at path "${jsonPath}" is not consistently an array`);
+			return false;
+		}
+		return handleArrayDiff(
+			get,
+			key,
+			jsonPath,
+			oldArray,
+			newArray,
+			identificationField,
+			action,
+			targetId,
+			diffMarkerPaths,
+			currentDiffHistoryState
+		);
+	} else {
+		// Handle single object/field case
+		return handleObjectFieldDiff(
+			get,
+			key,
+			jsonPath,
+			oldValue,
+			newValue,
+			action,
+			diffMarkerPaths,
+			currentDiffHistoryState
+		);
 	}
+}
+
+// Handle single object/field accept/reject
+function handleObjectFieldDiff<T>(
+	get: () => CedarStore,
+	key: string,
+	jsonPath: string,
+	oldValue: unknown,
+	newValue: unknown,
+	action: 'accept' | 'reject',
+	diffMarkerPaths?: string[],
+	currentDiffHistoryState: DiffHistoryState<T>
+): boolean {
+	const { diffState, history, diffMode, computeState } =
+		currentDiffHistoryState;
+
+	// For object fields, we accept or reject the entire value at the path
+	let finalValue: unknown;
+
+	if (action === 'accept') {
+		// Accept the new value and remove any diff markers if it's an object
+		finalValue =
+			typeof newValue === 'object' && newValue !== null
+				? removeDiffMarkers(newValue, diffMarkerPaths)
+				: newValue;
+	} else {
+		// Reject - use the old value
+		finalValue = oldValue;
+	}
+
+	// Update the state with the new value at the path
+	const updatedNewState = setValueAtPathForDiff(
+		diffState.newState,
+		jsonPath,
+		finalValue
+	);
+
+	// For accept, also update oldState to prevent re-diffing
+	const updatedOldState =
+		action === 'accept'
+			? setValueAtPathForDiff(diffState.oldState, jsonPath, finalValue)
+			: diffState.oldState;
+
+	// Determine if we're still in diff mode by checking if there are other differences
+	let finalComputedState: T;
+	let stillInDiffMode = false;
+
+	if (computeState) {
+		finalComputedState = computeState(updatedOldState, updatedNewState, []);
+		// Check if computed state has any remaining diff markers
+		const checkForDiffs = (obj: unknown): boolean => {
+			if (!obj || typeof obj !== 'object') return false;
+
+			const pathsToCheck = diffMarkerPaths || [
+				'/data/diff',
+				'/diff',
+				'/meta/diff',
+			];
+			for (const path of pathsToCheck) {
+				if (getValueAtPath(obj, path)) return true;
+			}
+
+			// Recursively check nested objects and arrays
+			for (const value of Object.values(obj)) {
+				if (checkForDiffs(value)) return true;
+			}
+
+			return false;
+		};
+
+		stillInDiffMode = checkForDiffs(finalComputedState);
+	} else {
+		finalComputedState = updatedNewState;
+	}
+
+	const updatedDiffState: DiffState<T> = {
+		oldState: updatedOldState,
+		newState: updatedNewState,
+		computedState: finalComputedState,
+		isDiffMode: stillInDiffMode,
+		patches: [],
+	};
+
+	const updatedHistory = [...history, diffState];
+
+	const updatedDiffHistoryState: DiffHistoryState<T> = {
+		diffState: updatedDiffState,
+		history: updatedHistory,
+		redoStack: [],
+		diffMode,
+		computeState,
+	};
+
+	// Update the store
+	get().setDiffState(key, updatedDiffHistoryState);
+
+	return true;
+}
+
+// Handle array-based accept/reject (existing logic refactored)
+function handleArrayDiff<T>(
+	get: () => CedarStore,
+	key: string,
+	jsonPath: string,
+	oldArray: T[],
+	newArray: T[],
+	identificationField: string | ((item: T) => unknown),
+	action: 'accept' | 'reject',
+	targetId?: unknown,
+	diffMarkerPaths?: string[],
+	currentDiffHistoryState: DiffHistoryState<T>
+): boolean {
+	const { diffState, history, diffMode, computeState } =
+		currentDiffHistoryState;
 
 	// Create maps for easier lookup
 	const oldMap = new Map(
@@ -300,27 +493,7 @@ function handleSingleDiff<T>(
 				return item;
 			}
 			// Item has changed and should be processed, remove any diff markers if they exist
-			let cleanedItem = { ...item };
-
-			// Try to remove diff from data.diff first, then from root
-			if (getValueAtPath(cleanedItem, '/data/diff')) {
-				const itemData = (cleanedItem as Record<string, unknown>)
-					.data as Record<string, unknown>;
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				const { diff: _, ...dataWithoutDiff } = itemData;
-				cleanedItem = setValueAtPathForDiff(
-					cleanedItem,
-					'/data',
-					dataWithoutDiff
-				);
-			} else if (getValueAtPath(cleanedItem, '/diff')) {
-				const itemRecord = cleanedItem as Record<string, unknown>;
-				// eslint-disable-next-line @typescript-eslint/no-unused-vars
-				const { diff: _, ...itemWithoutDiff } = itemRecord;
-				cleanedItem = itemWithoutDiff as T;
-			}
-
-			return cleanedItem;
+			return removeDiffMarkers(item, diffMarkerPaths);
 		});
 	} else if (action === 'reject') {
 		// Reject changes - revert to old state for changed items
@@ -463,16 +636,24 @@ function handleSingleDiff<T>(
 						finalComputedState,
 						jsonPath
 					) as T[];
+					const pathsToCheck = diffMarkerPaths || [
+						'/data/diff',
+						'/diff',
+						'/meta/diff',
+					];
 					return (
 						computedArray?.some((item: T) => {
-							const diffValue =
-								getValueAtPath(item, '/data/diff') ||
-								getValueAtPath(item, '/diff');
-							return (
-								diffValue === 'added' ||
-								diffValue === 'changed' ||
-								diffValue === 'removed'
-							);
+							for (const path of pathsToCheck) {
+								const diffValue = getValueAtPath(item, path);
+								if (
+									diffValue === 'added' ||
+									diffValue === 'changed' ||
+									diffValue === 'removed'
+								) {
+									return true;
+								}
+							}
+							return false;
 						}) || false
 					);
 			  })()
@@ -1072,7 +1253,8 @@ export const createDiffHistorySlice: StateCreator<
 		key: string,
 		jsonPath: string,
 		identificationField: string | ((item: T) => unknown),
-		targetId?: unknown
+		targetId?: unknown,
+		diffMarkerPaths?: string[]
 	): boolean => {
 		return handleSingleDiff(
 			get,
@@ -1080,7 +1262,8 @@ export const createDiffHistorySlice: StateCreator<
 			jsonPath,
 			identificationField,
 			'accept',
-			targetId
+			targetId,
+			diffMarkerPaths
 		);
 	},
 
@@ -1088,7 +1271,8 @@ export const createDiffHistorySlice: StateCreator<
 		key: string,
 		jsonPath: string,
 		identificationField: string | ((item: T) => unknown),
-		targetId?: unknown
+		targetId?: unknown,
+		diffMarkerPaths?: string[]
 	): boolean => {
 		return handleSingleDiff(
 			get,
@@ -1096,7 +1280,8 @@ export const createDiffHistorySlice: StateCreator<
 			jsonPath,
 			identificationField,
 			'reject',
-			targetId
+			targetId,
+			diffMarkerPaths
 		);
 	},
 });
