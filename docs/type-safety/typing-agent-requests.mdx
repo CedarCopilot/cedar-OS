@@ -27,7 +27,7 @@ Configurable providers like Mastra and Custom backends allow you to define addit
 ```typescript
 // MastraParams - supports custom fields via E generic
 type MastraParams<
-	T extends Record<string, unknown> = Record<string, never>,
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E = object // <-- Your custom fields type goes here
 > = BaseParams<T, E> & {
 	route: string;
@@ -37,7 +37,7 @@ type MastraParams<
 
 // CustomParams - supports custom fields via E generic
 type CustomParams<
-	T extends Record<string, unknown> = Record<string, never>,
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E = object
 > = BaseParams<T, E> & {
 	userId?: string;
@@ -166,20 +166,25 @@ Your backend receives the transformed context with Cedar system fields added and
 **TypeScript Types:**
 
 ```typescript
-// What your backend receives for each context item
-type BackendContextEntry = {
-	data: unknown; // Your actual data (same as frontend)
+// What your backend receives for each context item (now generic)
+interface BackendContextEntry<TData = unknown> {
+	data: TData; // Your actual data with proper type inference
 	source: 'mention' | 'subscription' | 'manual' | 'function';
-};
+}
 
-// The full additionalContext structure on your backend
-type AdditionalContextParam<T extends Record<string, unknown>> = {
+// The full additionalContext structure on your backend (improved with Zod inference)
+type AdditionalContextParam<TSchemas extends Record<string, z.ZodTypeAny>> = {
 	// Cedar system fields (automatically added)
-	setters?: Record<string, BackendStateSetterSchema>; // Available state setters
-	schemas?: Record<string, BackendStateSchema>; // Available state schemas,
-	// All the fields of your additional context
-	userProfile: BackendContextEntry;
-	projects: BackendContextEntry;
+	frontendTools?: Record<string, unknown>;
+	stateSetters?: Record<string, unknown>;
+	schemas?: Record<string, unknown>;
+} & {
+	// Properly typed context fields with conditional types for arrays
+	[K in keyof TSchemas]: TSchemas[K] extends z.ZodOptional<z.ZodArray<infer U>>
+		? BackendContextEntry<z.infer<U>>[] | undefined
+		: TSchemas[K] extends z.ZodArray<infer U>
+		? BackendContextEntry<z.infer<U>>[]
+		: BackendContextEntry<z.infer<TSchemas[K]>>;
 };
 ```
 
@@ -370,13 +375,10 @@ const CustomFieldsSchema = z.object({
 });
 
 // 2. Create TypeScript types that infer from the Zod schemas
-type UserContextData = z.infer<typeof UserContextSchemas.userProfile> & {
-	activeProjects: z.infer<typeof UserContextSchemas.activeProjects>;
-};
 type CustomFields = z.infer<typeof CustomFieldsSchema>;
 
 // 3. Declare TypeScript type for the entire backend object
-type MyMastraRequest = MastraParams<UserContextData, CustomFields>;
+type MyMastraRequest = MastraParams<typeof UserContextSchemas, CustomFields>;
 // ✅ Use this type for compile-time checking, IDE autocomplete, and frontend type safety
 
 // 4. Declare Zod schema for runtime validation and parse incoming requests
@@ -391,7 +393,8 @@ export async function POST(req: Request) {
 	const validatedRequest = MyMastraRequestSchema.parse(body);
 
 	// ✅ Fully typed access to all fields
-	const userEmail = validatedRequest.additionalContext?.userProfile?.data.email; // string
+	const userProfile = validatedRequest.additionalContext?.userProfile;
+	const userEmail = userProfile?.data.email; // string (from BackendContextEntry<UserProfile>)
 	const priority = validatedRequest.priority; // 'low' | 'medium' | 'high'
 }
 ```
