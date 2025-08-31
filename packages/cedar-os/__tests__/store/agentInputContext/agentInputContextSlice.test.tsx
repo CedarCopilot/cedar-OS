@@ -1439,11 +1439,11 @@ describe('AgentInputContextSlice', () => {
 		});
 	});
 
-	describe('stringifyFrontendTools', () => {
+	describe('compileFrontendTools', () => {
 		it('should return an empty object when no tools are registered', () => {
 			const { result } = renderHook(() => useCedarStore());
 
-			const tools = result.current.stringifyFrontendTools();
+			const tools = result.current.compileFrontendTools();
 			expect(tools).toEqual({});
 		});
 
@@ -1465,15 +1465,30 @@ describe('AgentInputContextSlice', () => {
 				});
 			});
 
-			const tools = result.current.stringifyFrontendTools();
+			const tools = result.current.compileFrontendTools();
 
 			expect(Object.keys(tools)).toHaveLength(1);
 			expect(tools.testTool).toBeDefined();
 			expect(tools.testTool.name).toBe('testTool');
 			expect(tools.testTool.description).toBe('A test tool');
 			expect(tools.testTool.argsSchema).toBeDefined();
-			expect(tools.testTool.argsSchema.type).toBe('object');
-			expect(tools.testTool.argsSchema.properties).toBeDefined();
+
+			// The schema should have $ref structure
+			expect(tools.testTool.argsSchema.$ref).toBe('#/definitions/testTool');
+			expect(tools.testTool.argsSchema.definitions).toBeDefined();
+			expect(tools.testTool.argsSchema.definitions.testTool).toBeDefined();
+			expect(tools.testTool.argsSchema.definitions.testTool.type).toBe(
+				'object'
+			);
+			expect(
+				tools.testTool.argsSchema.definitions.testTool.properties
+			).toBeDefined();
+			expect(
+				tools.testTool.argsSchema.definitions.testTool.properties.message
+			).toBeDefined();
+			expect(
+				tools.testTool.argsSchema.definitions.testTool.properties.count
+			).toBeDefined();
 		});
 
 		it('should include frontend tools in stringifyAdditionalContext when tools are registered', () => {
@@ -1515,19 +1530,28 @@ describe('AgentInputContextSlice', () => {
 			expect(context.frontendTools.tool1).toBeDefined();
 			expect(context.frontendTools.tool1.name).toBe('tool1');
 			expect(context.frontendTools.tool1.description).toBe('First tool');
+			expect(context.frontendTools.tool1.argsSchema.$ref).toBe(
+				'#/definitions/tool1'
+			);
 			expect(
-				context.frontendTools.tool1.argsSchema.properties.input
+				context.frontendTools.tool1.argsSchema.definitions.tool1.properties
+					.input
 			).toBeDefined();
 
 			// Check second tool
 			expect(context.frontendTools.tool2).toBeDefined();
 			expect(context.frontendTools.tool2.name).toBe('tool2');
 			expect(context.frontendTools.tool2.description).toBe('Second tool');
+			expect(context.frontendTools.tool2.argsSchema.$ref).toBe(
+				'#/definitions/tool2'
+			);
 			expect(
-				context.frontendTools.tool2.argsSchema.properties.value
+				context.frontendTools.tool2.argsSchema.definitions.tool2.properties
+					.value
 			).toBeDefined();
 			expect(
-				context.frontendTools.tool2.argsSchema.properties.enabled
+				context.frontendTools.tool2.argsSchema.definitions.tool2.properties
+					.enabled
 			).toBeDefined();
 		});
 
@@ -1780,6 +1804,98 @@ describe('AgentInputContextSlice', () => {
 			);
 
 			expect(renderCount).toBe(2);
+		});
+	});
+
+	describe('compileStateSetters', () => {
+		it('should return empty objects when no states are registered', () => {
+			const { result } = renderHook(() => useCedarStore());
+
+			const compiled = result.current.compileStateSetters();
+
+			expect(compiled.stateSetters).toEqual({});
+			expect(compiled.setters).toEqual({});
+			expect(compiled.schemas).toEqual({});
+		});
+
+		it('should compile state setters and schemas correctly', () => {
+			const { result } = renderHook(() => useCedarStore());
+
+			// Register a state with setters
+			act(() => {
+				result.current.registerState({
+					key: 'testState',
+					initialValue: { count: 0 },
+					schema: z.object({ count: z.number() }),
+					description: 'A test state',
+					stateSetters: {
+						increment: {
+							name: 'increment',
+							description: 'Increment the count',
+							argsSchema: z.object({ amount: z.number().optional() }),
+							execute: (args, setValue) => {
+								setValue((prev) => ({
+									count: prev.count + (args.amount || 1),
+								}));
+							},
+						},
+					},
+				});
+			});
+
+			const compiled = result.current.compileStateSetters();
+
+			// Check stateSetters
+			expect(compiled.stateSetters).toBeDefined();
+			expect(compiled.stateSetters.increment).toBeDefined();
+			expect(compiled.stateSetters.increment.name).toBe('increment');
+			expect(compiled.stateSetters.increment.stateKey).toBe('testState');
+			expect(compiled.stateSetters.increment.description).toBe(
+				'Increment the count'
+			);
+			expect(compiled.stateSetters.increment.argsSchema).toBeDefined();
+
+			// Check schemas
+			expect(compiled.schemas).toBeDefined();
+			expect(compiled.schemas.testState).toBeDefined();
+			expect(compiled.schemas.testState.stateKey).toBe('testState');
+			expect(compiled.schemas.testState.description).toBe('A test state');
+			expect(compiled.schemas.testState.schema).toBeDefined();
+		});
+
+		it('should be used by stringifyAdditionalContext', () => {
+			const { result } = renderHook(() => useCedarStore());
+
+			// Register a state with setters
+			act(() => {
+				result.current.registerState({
+					key: 'testState',
+					initialValue: { value: 'test' },
+					schema: z.object({ value: z.string() }),
+					stateSetters: {
+						setValue: {
+							name: 'setValue',
+							description: 'Set the value',
+							argsSchema: z.object({ newValue: z.string() }),
+							execute: (args, setValue) => {
+								setValue({ value: args.newValue });
+							},
+						},
+					},
+				});
+			});
+
+			const contextString = result.current.stringifyAdditionalContext();
+			const context = JSON.parse(contextString);
+
+			// Verify that the compiled state setters are included
+			expect(context.stateSetters).toBeDefined();
+			expect(context.stateSetters.setValue).toBeDefined();
+			expect(context.stateSetters.setValue.name).toBe('setValue');
+			expect(context.stateSetters.setValue.stateKey).toBe('testState');
+
+			expect(context.schemas).toBeDefined();
+			expect(context.schemas.testState).toBeDefined();
 		});
 	});
 });

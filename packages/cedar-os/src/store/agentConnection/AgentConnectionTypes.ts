@@ -28,7 +28,7 @@ export interface VoiceLLMResponse extends LLMResponse {
 
 // Voice parameters for LLM calls
 export type VoiceParams<
-	T extends Record<string, unknown> = Record<string, never>,
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E = object
 > = BaseParams<T, E> & {
 	audioData: Blob;
@@ -65,7 +65,7 @@ export interface StreamResponse {
 // Provider-specific parameter types
 // Updated to use AdditionalContextParam for better type safety
 export type BaseParams<
-	T extends Record<string, unknown> = Record<string, never>,
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E = object
 > = {
 	prompt?: string;
@@ -91,7 +91,7 @@ export interface AISDKParams extends BaseParams {
 
 // Configurable providers support custom context data
 export type MastraParams<
-	T extends Record<string, unknown> = Record<string, never>,
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E = object
 > = BaseParams<T, E> & {
 	route: string;
@@ -100,7 +100,7 @@ export type MastraParams<
 };
 
 export type CustomParams<
-	T extends Record<string, unknown> = Record<string, never>,
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E = object
 > = BaseParams<T, E> & {
 	userId?: string;
@@ -109,7 +109,7 @@ export type CustomParams<
 
 // Structured output params extend base params with schema
 export type StructuredParams<
-	T extends Record<string, unknown> = Record<string, never>,
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E = object,
 	TSchema = unknown
 > = BaseParams<T, E> & {

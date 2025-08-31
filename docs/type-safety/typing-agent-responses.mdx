@@ -3,7 +3,7 @@ title: 'Typing Agent Responses'
 description: 'Learn how to type agent responses and structured outputs in Cedar-OS'
 ---
 
-Cedar-OS provides TypeScript types and Zod schemas for agent responses, enabling type-safe handling of LLM outputs, structured responses, and streaming events.
+Cedar-OS provides TypeScript types and Zod schemas for agent responses, enabling type-safe handling of LLM outputs, structured responses, streaming events, and frontend tool execution.
 
 ## Basic LLM Responses
 
@@ -99,6 +99,155 @@ const CreateTaskResponseSchema = StructuredResponseSchema('create_task').and(
 
 // Usage with LLMResponse
 const TaskResponseSchema = LLMResponseSchema(CreateTaskResponseSchema);
+```
+
+## Built-in Response Types
+
+Cedar provides several built-in response types with corresponding TypeScript types and Zod schemas:
+
+### FrontendToolResponse
+
+For executing registered frontend tools:
+
+**TypeScript Type:**
+
+```typescript
+type FrontendToolResponse = CustomStructuredResponseType<
+	'frontendTool',
+	{
+		toolName: string;
+		args?: unknown;
+	}
+>;
+
+// Example usage
+type SendEmailToolResponse = CustomStructuredResponseType<
+	'frontendTool',
+	{
+		toolName: 'sendEmail';
+		args: {
+			to: string;
+			subject: string;
+			body: string;
+		};
+	}
+>;
+```
+
+**Corresponding Zod Schema:**
+
+```typescript
+import { FrontendToolResponseSchema } from 'cedar-os';
+
+// Basic frontend tool response validation
+const response = FrontendToolResponseSchema.parse({
+	type: 'frontendTool',
+	toolName: 'sendEmail',
+	args: {
+		to: 'user@example.com',
+		subject: 'Hello',
+		body: 'This is a test email',
+	},
+});
+
+// Create specific tool response schemas
+const SendEmailToolSchema = FrontendToolResponseSchema.and(
+	z.object({
+		toolName: z.literal('sendEmail'),
+		args: z.object({
+			to: z.string().email(),
+			subject: z.string(),
+			body: z.string(),
+		}),
+	})
+);
+```
+
+### SetStateResponse
+
+For executing state setter functions:
+
+**TypeScript Type:**
+
+```typescript
+type SetStateResponse = CustomStructuredResponseType<
+	'setState',
+	{
+		stateKey: string;
+		setterKey: string;
+		args?: unknown; // Single object parameter (v0.1.11+)
+	}
+>;
+
+// Example usage
+type AddTodoResponse = CustomStructuredResponseType<
+	'setState',
+	{
+		stateKey: 'todos';
+		setterKey: 'addTodo';
+		args: {
+			text: string;
+			priority: 'low' | 'medium' | 'high';
+		};
+	}
+>;
+```
+
+**Corresponding Zod Schema:**
+
+```typescript
+import { SetStateResponseSchema } from 'cedar-os';
+
+// Basic setState response validation
+const response = SetStateResponseSchema.parse({
+	type: 'setState',
+	stateKey: 'todos',
+	setterKey: 'addTodo',
+	args: {
+		text: 'Learn Cedar-OS',
+		priority: 'high',
+	},
+});
+
+// Create specific setter response schemas
+const AddTodoResponseSchema = SetStateResponseSchema.and(
+	z.object({
+		stateKey: z.literal('todos'),
+		setterKey: z.literal('addTodo'),
+		args: z.object({
+			text: z.string(),
+			priority: z.enum(['low', 'medium', 'high']),
+		}),
+	})
+);
+```
+
+### MessageResponse
+
+For adding custom messages to chat:
+
+**TypeScript Type:**
+
+```typescript
+type MessageResponse = CustomStructuredResponseType<
+	'message',
+	{
+		role?: 'user' | 'assistant' | 'bot';
+		content: string;
+	}
+>;
+```
+
+**Corresponding Zod Schema:**
+
+```typescript
+import { BackendMessageResponseSchema } from 'cedar-os';
+
+const messageResponse = BackendMessageResponseSchema.parse({
+	type: 'message',
+	role: 'assistant',
+	content: 'Task completed successfully!',
+});
 ```
 
 ## Streaming Responses

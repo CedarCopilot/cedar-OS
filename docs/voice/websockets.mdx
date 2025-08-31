@@ -196,12 +196,8 @@ export const createWebSocketVoiceSlice: StateCreator<
 			case 'setState':
 				// Handle structured actions
 				if (message.stateKey && message.setterKey) {
-					const { executeCustomSetter } = get();
-					executeCustomSetter(
-						message.stateKey,
-						message.setterKey,
-						...message.args
-					);
+					const { executeStateSetter } = get();
+					executeStateSetter(message.stateKey, message.setterKey, message.args);
 				}
 				break;
 

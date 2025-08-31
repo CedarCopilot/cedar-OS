@@ -3,6 +3,7 @@ import type { JSONContent } from '@tiptap/core';
 import type { StateCreator } from 'zustand';
 import type {
 	AdditionalContext,
+	AdditionalContextParam,
 	ContextEntry,
 	MentionProvider,
 } from '@/store/agentInputContext/AgentInputContextTypes';
@@ -163,8 +164,8 @@ export interface AgentInputContextSlice {
 	// New stringify functions
 	stringifyEditor: () => string;
 	stringifyInputContext: () => string;
-	compileAdditionalContext: () => object | string;
-	stringifyFrontendTools: () => Record<
+	compileAdditionalContext: () => AdditionalContextParam<Record<string, never>>;
+	compileFrontendTools: () => Record<
 		string,
 		{
 			name: string;
@@ -172,6 +173,7 @@ export interface AgentInputContextSlice {
 			argsSchema: Record<string, unknown>;
 		}
 	>;
+	compileStateSetters: () => Record<string, unknown>;
 }
 
 // Create the agent input context slice
@@ -393,29 +395,11 @@ export const createAgentInputContextSlice: StateCreator<
 		return extractText(content).trim();
 	},
 
-	compileAdditionalContext: () => {
-		const context = get().additionalContext;
-		// Collect setter schemas for ALL registered states (comprehensive coverage)
+	compileStateSetters: () => {
 		const registeredStates = get().registeredStates;
 		const stateSetters: Record<string, unknown> = {};
 		const setters: Record<string, unknown> = {}; // Deprecated but maintained for compatibility
 		const schemas: Record<string, unknown> = {};
-
-		// Process context to simplify structure
-		const simplifiedContext: Record<string, unknown> = {};
-		Object.entries(context).forEach(([key, value]) => {
-			const entries = normalizeToArray(value);
-
-			// Extract just the data and source from each entry
-			const simplified = entries.map((entry) => ({
-				data: entry.data,
-				source: entry.source,
-			}));
-
-			// If single entry, extract it; otherwise keep as array
-			simplifiedContext[key] =
-				simplified.length === 1 ? simplified[0] : simplified;
-		});
 
 		// Process ALL registered states (not just subscribed ones) for comprehensive setter coverage
 		Object.keys(registeredStates).forEach((stateKey) => {
@@ -449,20 +433,48 @@ export const createAgentInputContextSlice: StateCreator<
 			}
 		});
 
+		return {
+			stateSetters,
+			setters, // Deprecated but maintained for compatibility
+			schemas,
+		};
+	},
+
+	compileAdditionalContext: () => {
+		const context = get().additionalContext;
+
+		// Process context to simplify structure
+		const simplifiedContext: Record<string, unknown> = {};
+		Object.entries(context).forEach(([key, value]) => {
+			const entries = normalizeToArray(value);
+
+			// Extract just the data and source from each entry
+			const simplified = entries.map((entry) => ({
+				data: entry.data,
+				source: entry.source,
+			}));
+
+			// If single entry, extract it; otherwise keep as array
+			simplifiedContext[key] = simplified;
+		});
+
+		// Get compiled state setters and schemas
+		const compiledStateSetters = get().compileStateSetters();
+
 		// Get frontend tools
-		const frontendTools = get().stringifyFrontendTools();
+		const frontendTools = get().compileFrontendTools();
 
 		// Merge simplified context with setter schemas, state schemas, and frontend tools
 		const mergedContext = {
 			...simplifiedContext,
-			stateSetters, // New key
-			setters,
-			schemas,
+			...compiledStateSetters,
 			...(Object.keys(frontendTools).length > 0 && { frontendTools }),
 		};
 
 		// Sanitize before stringifying
-		const sanitizedContext = sanitizeJson(mergedContext);
+		const sanitizedContext = sanitizeJson(
+			mergedContext
+		) as AdditionalContextParam<Record<string, never>>;
 		return sanitizedContext;
 	},
 
@@ -477,10 +489,27 @@ export const createAgentInputContextSlice: StateCreator<
 		return result;
 	},
 
-	stringifyFrontendTools: () => {
-		// Use the existing getRegisteredTools method from the toolsSlice
-		const tools = get().getRegisteredTools();
-		return tools;
+	compileFrontendTools: () => {
+		const tools = get().registeredTools;
+		const toolsObject: Record<
+			string,
+			{
+				name: string;
+				description?: string;
+				argsSchema: Record<string, unknown>;
+			}
+		> = {};
+
+		tools.forEach((tool, name) => {
+			toolsObject[name] = {
+				name,
+				description: tool.description,
+				// Convert Zod schema to JSON schema for agent compatibility
+				argsSchema: zodToJsonSchema(tool.argsSchema, name),
+			};
+		});
+
+		return toolsObject;
 	},
 });
 
@@ -540,6 +569,9 @@ export function useSubscribeStateToInputContext<T>(
 	useEffect(() => {
 		// Check if state key exists
 		if (!stateExists) {
+			console.warn(
+				`State with key "${stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
+			);
 			return;
 		}
 

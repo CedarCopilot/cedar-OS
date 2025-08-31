@@ -3,13 +3,11 @@ import z from 'zod';
 
 // -------- Backend context structure (after compileAdditionalContext transformation) -----------
 // Note: These are different from the stateSlice Setter types - these are for serialized context
-export interface BackendSetterSchema {
+export interface BackendStateSetterSchema {
 	name: string;
 	stateKey: string;
 	description: string;
 	argsSchema?: unknown;
-	/** @deprecated Use argsSchema instead */
-	schema?: unknown;
 }
 
 export interface BackendStateSchema {
@@ -18,26 +16,35 @@ export interface BackendStateSchema {
 	schema: unknown;
 }
 
-// Backend context entry (simplified format sent to backend)
-export interface BackendContextEntry {
-	data: unknown;
+export interface BackendFrontendToolSchema {
+	name: string;
+	description?: string;
+	argsSchema: Record<string, unknown>; // JSON Schema
+}
+
+/**
+ * Backend Context Entry with proper generic typing
+ */
+export interface BackendContextEntry<TData = unknown> {
+	data: TData;
 	source: 'mention' | 'subscription' | 'manual' | 'function';
 }
 
-// The transformed backend type - what backends actually receive when parsing the additionalContext field
+/**
+ * The transformed backend type - what backends actually receive when parsing the additionalContext field
+ */
 export type AdditionalContextParam<
-	T extends Record<string, unknown> = Record<string, never>
+	TSchemas extends Record<string, z.ZodTypeAny>
 > = {
-	// Cedar OS system fields (added by compileAdditionalContext)
-	stateSetters?: Record<string, BackendSetterSchema>;
-	/** @deprecated Use stateSetters instead */
-	setters?: Record<string, BackendSetterSchema>;
-	schemas?: Record<string, BackendStateSchema>;
+	frontendTools?: Record<string, unknown>;
+	stateSetters?: Record<string, unknown>;
+	schemas?: Record<string, unknown>;
 } & {
-	// User context fields - auto-transformed to backend format
-	[K in keyof T]: T[K] extends unknown[]
-		? BackendContextEntry[]
-		: BackendContextEntry;
+	[K in keyof TSchemas]: TSchemas[K] extends z.ZodOptional<z.ZodArray<infer U>>
+		? BackendContextEntry<z.infer<U>>[] | undefined
+		: TSchemas[K] extends z.ZodArray<infer U>
+		? BackendContextEntry<z.infer<U>>[]
+		: BackendContextEntry<z.infer<TSchemas[K]>>;
 };
 
 /**
@@ -97,7 +104,7 @@ export interface MentionProvider {
 	renderMenuItem?: (item: MentionItem) => ReactNode;
 	renderEditorItem?: (
 		item: MentionItem,
-		attrs: Record<string, any>
+		attrs: Record<string, unknown>
 	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
 }
@@ -108,7 +115,7 @@ export interface MentionProvider {
 export interface StateBasedMentionProviderConfig {
 	stateKey: string;
 	trigger?: string;
-	labelField?: string | ((item: any) => string);
+	labelField?: string | ((item: unknown) => string);
 	searchFields?: string[];
 	description?: string;
 	icon?: ReactNode;
@@ -117,7 +124,7 @@ export interface StateBasedMentionProviderConfig {
 	renderMenuItem?: (item: MentionItem) => ReactNode;
 	renderEditorItem?: (
 		item: MentionItem,
-		attrs: Record<string, any>
+		attrs: Record<string, unknown>
 	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
 }
@@ -181,74 +188,57 @@ export const ChatResponseSchema = z.object({
 });
 
 // -------- Zod Types for AdditionalContextParam -----------
-// Schema factory for AdditionalContextParam - handles backend context structure
-export const AdditionalContextParamSchema = <
-	TData extends Record<string, z.ZodTypeAny>
->(
-	dataSchemas: TData
-) =>
-	z
-		.object({
-			// Cedar OS system fields (added by compileAdditionalContext)
-			stateSetters: z
-				.record(
-					z.object({
-						name: z.string(),
-						stateKey: z.string(),
-						description: z.string(),
-						argsSchema: z.unknown().optional(),
-						schema: z.unknown().optional(), // Deprecated but maintained for compatibility
+/**
+ * AdditionalContextParam that the backend receives (factory function)
+ */
+export function AdditionalContextParamSchema<
+	TSchemas extends Record<string, z.ZodTypeAny>
+>(dataSchemas: TSchemas) {
+	const contextEntrySchema = z.object({
+		data: z.unknown(),
+		source: z.enum(['mention', 'subscription', 'manual', 'function']),
+	});
+
+	const schemaFields: Record<string, z.ZodTypeAny> = {
+		frontendTools: z.record(z.string(), z.unknown()).optional(),
+		stateSetters: z.record(z.string(), z.unknown()).optional(),
+		schemas: z.record(z.string(), z.unknown()).optional(),
+	};
+
+	// Transform each data schema to be wrapped in BackendContextEntry
+	for (const [key, schema] of Object.entries(dataSchemas)) {
+		if (schema instanceof z.ZodOptional) {
+			// Handle optional arrays: z.array(T).optional() -> z.array(BackendContextEntry<T>).optional()
+			const innerSchema = schema.unwrap();
+			if (innerSchema instanceof z.ZodArray) {
+				schemaFields[key] = z
+					.array(
+						contextEntrySchema.extend({
+							data: innerSchema.element,
+						})
+					)
+					.optional();
+			} else {
+				schemaFields[key] = contextEntrySchema
+					.extend({
+						data: innerSchema,
 					})
-				)
-				.optional(),
-			setters: z
-				.record(
-					z.object({
-						name: z.string(),
-						stateKey: z.string(),
-						description: z.string(),
-						schema: z.unknown().optional(),
-					})
-				)
-				.optional(), // Deprecated but maintained for compatibility
-			schemas: z
-				.record(
-					z.object({
-						stateKey: z.string(),
-						description: z.string().optional(),
-						schema: z.unknown(),
-					})
-				)
-				.optional(),
-		})
-		.and(
-			// Transform user data schemas to backend format
-			z.object(
-				Object.fromEntries(
-					Object.entries(dataSchemas).map(([key, schema]) => [
-						key,
-						schema instanceof z.ZodArray
-							? z.array(
-									z.object({
-										data: schema.element,
-										source: z.enum([
-											'mention',
-											'subscription',
-											'manual',
-											'function',
-										]),
-									})
-							  )
-							: z.object({
-									data: schema,
-									source: z.enum([
-										'mention',
-										'subscription',
-										'manual',
-										'function',
-									]),
-							  }),
-					])
-				)
-			)
-		);
+					.optional();
+			}
+		} else if (schema instanceof z.ZodArray) {
+			// Handle required arrays: z.array(T) -> z.array(BackendContextEntry<T>)
+			schemaFields[key] = z.array(
+				contextEntrySchema.extend({
+					data: schema.element,
+				})
+			);
+		} else {
+			// Handle single values: T -> BackendContextEntry<T>
+			schemaFields[key] = contextEntrySchema.extend({
+				data: schema,
+			});
+		}
+	}
+
+	return z.object(schemaFields);
+}
