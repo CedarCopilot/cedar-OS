@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type {
 	AISDKParams,
 	AnthropicParams,
@@ -27,7 +28,7 @@ import {
 
 // Base send message params that all providers can accept
 export type SendMessageParams<
-	T extends Record<string, unknown> = Record<string, never>, // backend context data schemas
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>, // backend context data schemas
 	E = object // extra custom fields type - users can specify their own typed custom fields
 > = BaseParams<T, E> & {
 	model?: string; // Optional for providers that need it
@@ -39,7 +40,7 @@ export type SendMessageParams<
 
 // Union type for all possible provider params for internal use
 export type AnyProviderParams<
-	T extends Record<string, unknown> = Record<string, never>,
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 	E = object
 > =
 	| OpenAIParams
@@ -71,21 +72,21 @@ export interface AgentConnectionSlice {
 
 	// Core methods - properly typed based on current provider config
 	callLLM: <
-		T extends Record<string, unknown> = Record<string, never>,
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 		E = object
 	>(
 		params: AnyProviderParams<T, E>
 	) => Promise<LLMResponse>;
 
 	callLLMStructured: <
-		T extends Record<string, unknown> = Record<string, never>,
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 		E = object
 	>(
 		params: AnyProviderParams<T, E> & StructuredParams<T, E>
 	) => Promise<LLMResponse>;
 
 	streamLLM: <
-		T extends Record<string, unknown> = Record<string, never>,
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 		E = object
 	>(
 		params: AnyProviderParams<T, E>,
@@ -97,7 +98,7 @@ export interface AgentConnectionSlice {
 
 	// High-level methods that use callLLM/streamLLM
 	sendMessage: <
-		T extends Record<string, unknown> = Record<string, never>,
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 		E = object
 	>(
 		params?: SendMessageParams<T, E>
@@ -212,7 +213,7 @@ export const createAgentConnectionSlice: StateCreator<
 
 	// Core methods with runtime type checking
 	callLLM: async <
-		T extends Record<string, unknown> = Record<string, never>,
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 		E = object
 	>(
 		params: AnyProviderParams<T, E>
@@ -271,7 +272,7 @@ export const createAgentConnectionSlice: StateCreator<
 	},
 
 	callLLMStructured: async <
-		T extends Record<string, unknown> = Record<string, never>,
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 		E = object
 	>(
 		params: AnyProviderParams<T, E> & StructuredParams<T, E>
@@ -339,7 +340,7 @@ export const createAgentConnectionSlice: StateCreator<
 	},
 
 	streamLLM: <
-		T extends Record<string, unknown> = Record<string, never>,
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 		E = object
 	>(
 		params: AnyProviderParams<T, E>,
@@ -530,7 +531,7 @@ export const createAgentConnectionSlice: StateCreator<
 	},
 
 	sendMessage: async <
-		T extends Record<string, unknown> = Record<string, never>,
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
 		E = object
 	>(
 		params?: SendMessageParams<T, E>

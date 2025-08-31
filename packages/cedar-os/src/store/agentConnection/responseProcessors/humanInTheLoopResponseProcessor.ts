@@ -103,7 +103,7 @@ export const humanInTheLoopResponseProcessor: ResponseProcessor<HumanInTheLoopRe
 
 								// Send resume request
 								await store.sendMessage<
-									Record<string, unknown>,
+									Record<string, never>,
 									{
 										runId: string;
 										stepPath: [string[], ...string[][]];

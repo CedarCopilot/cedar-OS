@@ -3,6 +3,7 @@ import type { JSONContent } from '@tiptap/core';
 import type { StateCreator } from 'zustand';
 import type {
 	AdditionalContext,
+	AdditionalContextParam,
 	ContextEntry,
 	MentionProvider,
 } from '@/store/agentInputContext/AgentInputContextTypes';
@@ -147,7 +148,7 @@ export interface AgentInputContextSlice {
 	// New stringify functions
 	stringifyEditor: () => string;
 	stringifyInputContext: () => string;
-	compileAdditionalContext: () => object | string;
+	compileAdditionalContext: () => AdditionalContextParam<Record<string, never>>;
 	compileFrontendTools: () => Record<
 		string,
 		{
@@ -438,8 +439,7 @@ export const createAgentInputContextSlice: StateCreator<
 			}));
 
 			// If single entry, extract it; otherwise keep as array
-			simplifiedContext[key] =
-				simplified.length === 1 ? simplified[0] : simplified;
+			simplifiedContext[key] = simplified;
 		});
 
 		// Get compiled state setters and schemas
@@ -456,7 +456,9 @@ export const createAgentInputContextSlice: StateCreator<
 		};
 
 		// Sanitize before stringifying
-		const sanitizedContext = sanitizeJson(mergedContext) as object;
+		const sanitizedContext = sanitizeJson(
+			mergedContext
+		) as AdditionalContextParam<Record<string, never>>;
 		return sanitizedContext;
 	},
 
