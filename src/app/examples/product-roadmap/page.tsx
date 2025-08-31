@@ -429,10 +429,10 @@ function FlowCanvas() {
 	});
 
 	// Register mention provider for nodes
-	useStateBasedMentionProvider({
+	useStateBasedMentionProvider<Node<FeatureNodeData>>({
 		stateKey: 'nodes',
 		trigger: '@',
-		labelField: (node: Node<FeatureNodeData>) => node.data.title,
+		labelField: (node) => node.data.title,
 		searchFields: ['data.description'],
 		description: 'Product roadmap features',
 		icon: <Box />,
@@ -441,10 +441,10 @@ function FlowCanvas() {
 	});
 
 	// Register mention provider for edges
-	useStateBasedMentionProvider({
+	useStateBasedMentionProvider<Edge>({
 		stateKey: 'edges',
 		trigger: '@',
-		labelField: (edge: Edge) => {
+		labelField: (edge) => {
 			const sourceNode = nodes.find((n) => n.id === edge.source);
 			const targetNode = nodes.find((n) => n.id === edge.target);
 			const sourceTitle = sourceNode?.data.title || edge.source;
