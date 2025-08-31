@@ -6,7 +6,7 @@ import type {
 	ContextEntry,
 	MentionProvider,
 } from '@/store/agentInputContext/AgentInputContextTypes';
-import { ReactNode, useMemo, useRef } from 'react';
+import { ReactNode, useMemo, useRef, useCallback } from 'react';
 import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';
@@ -516,6 +516,21 @@ export function useSubscribeStateToInputContext<T>(
 		(s) => s.registeredStates[stateKey]?.value as T | undefined
 	);
 
+	// Automatically memoize the mapping function to prevent unnecessary re-renders
+	const memoizedMapFn = useCallback(mapFn, [mapFn]);
+
+	// Automatically memoize the options object to prevent unnecessary re-renders
+	const memoizedOptions = useMemo(
+		() => options,
+		[
+			options?.icon,
+			options?.color,
+			options?.labelField,
+			options?.order,
+			options?.showInChat,
+		]
+	);
+
 	// Track which context keys and entry IDs this subscription manages
 	const managedEntriesRef = useRef<Map<string, Set<string>>>(new Map());
 	const subscriptionIdRef = useRef<string>(
@@ -529,7 +544,7 @@ export function useSubscribeStateToInputContext<T>(
 		}
 
 		// Apply the mapping function to get the context data
-		const mapped = mapFn(stateValue as T);
+		const mapped = memoizedMapFn(stateValue as T);
 
 		// Remove old entries that are no longer in the mapped result
 		const currentKeys = new Set(Object.keys(mapped));
@@ -555,7 +570,7 @@ export function useSubscribeStateToInputContext<T>(
 		for (const [key, value] of Object.entries(mapped)) {
 			// Use the common formatting helper with subscription-specific IDs
 			const entries = formatContextEntries<ElementType<T>>(key, value, {
-				...options,
+				...memoizedOptions,
 				source: 'subscription',
 			});
 
@@ -591,10 +606,10 @@ export function useSubscribeStateToInputContext<T>(
 	}, [
 		stateExists,
 		stateValue,
-		mapFn,
+		memoizedMapFn,
 		updateAdditionalContext,
 		removeContextEntry,
-		options,
+		memoizedOptions,
 		stateKey,
 	]);
 

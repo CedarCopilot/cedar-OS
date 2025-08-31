@@ -676,9 +676,13 @@ function SelectedNodesPanel() {
 		description: 'Selected nodes',
 	});
 
-	// Memoize the subscription options to prevent constant re-renders
-	const subscriptionOptions = React.useMemo(
-		() => ({
+	// Enhanced subscription with dynamic icons and filtering - no manual memoization needed!
+	useSubscribeStateToInputContext<Node<FeatureNodeData>[]>(
+		'selectedNodes',
+		(selectedNodes: Node<FeatureNodeData>[]) => ({
+			selectedNodes,
+		}),
+		{
 			// Dynamic icons based on node status
 			icon: (item: Node<FeatureNodeData>) => {
 				const status = item?.data?.status;
@@ -703,23 +707,7 @@ function SelectedNodesPanel() {
 				return node?.data?.status !== 'backlog';
 			},
 			order: 2,
-		}),
-		[]
-	);
-
-	// Memoize the mapping function to prevent constant re-renders
-	const mappingFunction = React.useCallback(
-		(selectedNodes: Node<FeatureNodeData>[]) => ({
-			selectedNodes,
-		}),
-		[]
-	);
-
-	// Enhanced subscription with dynamic icons and filtering
-	useSubscribeStateToInputContext<Node<FeatureNodeData>[]>(
-		'selectedNodes',
-		mappingFunction,
-		subscriptionOptions
+		}
 	);
 
 	useOnSelectionChange({

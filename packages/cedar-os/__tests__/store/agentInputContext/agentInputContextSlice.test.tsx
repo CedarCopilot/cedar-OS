@@ -1540,4 +1540,246 @@ describe('AgentInputContextSlice', () => {
 			expect(context.frontendTools).toBeUndefined();
 		});
 	});
+
+	describe('useSubscribeStateToInputContext memoization', () => {
+		it('should memoize mapping function to prevent unnecessary re-renders', () => {
+			// Register a test state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'memoTestState',
+					value: [{ id: '1', title: 'Item 1' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			let renderCount = 0;
+			const mapFn = jest.fn((state: unknown[]) => {
+				renderCount++;
+				return { items: state };
+			});
+
+			// First render
+			const { rerender } = renderHook(() =>
+				useSubscribeStateToInputContext('memoTestState', mapFn)
+			);
+
+			expect(mapFn).toHaveBeenCalledTimes(1);
+			expect(renderCount).toBe(1);
+
+			// Re-render with the same function reference - should not call mapFn again
+			rerender();
+			expect(mapFn).toHaveBeenCalledTimes(1); // Still 1 because memoized
+			expect(renderCount).toBe(1);
+
+			// Create a new function with same logic - should call mapFn again
+			const newMapFn = jest.fn((state: unknown[]) => {
+				renderCount++;
+				return { items: state };
+			});
+
+			renderHook(() =>
+				useSubscribeStateToInputContext('memoTestState', newMapFn)
+			);
+
+			expect(newMapFn).toHaveBeenCalledTimes(1);
+			expect(renderCount).toBe(2); // New function was called
+		});
+
+		it('should memoize options to prevent unnecessary useEffect re-runs', () => {
+			// Register a test state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'optionsMemoTestState',
+					value: [{ id: '1', title: 'Item 1' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			let effectRunCount = 0;
+			const mapFn = jest.fn((state: unknown[]) => {
+				effectRunCount++;
+				return { items: state };
+			});
+
+			const color = '#FF0000';
+			const order = 1;
+			const labelField = 'title' as const;
+
+			// First render with individual option values
+			const { rerender } = renderHook(() =>
+				useSubscribeStateToInputContext('optionsMemoTestState', mapFn, {
+					color,
+					order,
+					labelField,
+				})
+			);
+
+			expect(effectRunCount).toBe(1);
+
+			// Re-render with same individual values in a new object - memoization should prevent useEffect re-run
+			rerender(() =>
+				useSubscribeStateToInputContext('optionsMemoTestState', mapFn, {
+					color, // Same value
+					order, // Same value
+					labelField, // Same value
+				})
+			);
+
+			// Should still be 1 because memoization recognizes same option values
+			expect(effectRunCount).toBe(1);
+		});
+
+		it('should re-render when options content actually changes', () => {
+			// Register a test state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'optionsChangeTestState',
+					value: [{ id: '1', title: 'Item 1' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			let renderCount = 0;
+			const mapFn = jest.fn((state: unknown[]) => {
+				renderCount++;
+				return { items: state };
+			});
+
+			const initialOptions = {
+				color: '#FF0000',
+				order: 1,
+			};
+
+			// First render
+			renderHook(() =>
+				useSubscribeStateToInputContext(
+					'optionsChangeTestState',
+					mapFn,
+					initialOptions
+				)
+			);
+
+			expect(renderCount).toBe(1);
+
+			// Change options content - should trigger re-render
+			const changedOptions = {
+				color: '#00FF00', // Different color
+				order: 1,
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext(
+					'optionsChangeTestState',
+					mapFn,
+					changedOptions
+				)
+			);
+
+			expect(renderCount).toBe(2); // Should have re-rendered due to color change
+		});
+
+		it('should handle function options in memoization correctly', () => {
+			// Register a test state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'functionOptionsTestState',
+					value: [{ id: '1', title: 'Item 1' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			let renderCount = 0;
+			const mapFn = jest.fn((state: unknown[]) => {
+				renderCount++;
+				return { items: state };
+			});
+
+			const iconFunction = jest.fn(() => '🎯');
+			const labelFunction = jest.fn(
+				(item: unknown) => (item as { title: string }).title
+			);
+
+			const options = {
+				icon: iconFunction,
+				labelField: labelFunction,
+				color: '#FF0000',
+			};
+
+			// First render
+			const { rerender } = renderHook(() =>
+				useSubscribeStateToInputContext(
+					'functionOptionsTestState',
+					mapFn,
+					options
+				)
+			);
+
+			expect(renderCount).toBe(1);
+
+			// Re-render with same function references - should not re-render
+			rerender();
+			expect(renderCount).toBe(1);
+
+			// Create new functions with same logic - should trigger re-render
+			const newIconFunction = jest.fn(() => '🎯');
+			const newLabelFunction = jest.fn(
+				(item: unknown) => (item as { title: string }).title
+			);
+
+			const newOptions = {
+				icon: newIconFunction,
+				labelField: newLabelFunction,
+				color: '#FF0000',
+			};
+
+			renderHook(() =>
+				useSubscribeStateToInputContext(
+					'functionOptionsTestState',
+					mapFn,
+					newOptions
+				)
+			);
+
+			expect(renderCount).toBe(2); // Should re-render due to function changes
+		});
+
+		it('should handle undefined options correctly in memoization', () => {
+			// Register a test state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'undefinedOptionsTestState',
+					value: [{ id: '1', title: 'Item 1' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			let renderCount = 0;
+			const mapFn = jest.fn((state: unknown[]) => {
+				renderCount++;
+				return { items: state };
+			});
+
+			// First render with undefined options
+			const { rerender } = renderHook(() =>
+				useSubscribeStateToInputContext(
+					'undefinedOptionsTestState',
+					mapFn,
+					undefined
+				)
+			);
+
+			expect(renderCount).toBe(1);
+
+			// Re-render with undefined options - should not re-render
+			rerender();
+			expect(renderCount).toBe(1);
+
+			// Change to empty object - should trigger re-render
+			renderHook(() =>
+				useSubscribeStateToInputContext('undefinedOptionsTestState', mapFn, {})
+			);
+
+			expect(renderCount).toBe(2);
+		});
+	});
 });
