@@ -46,11 +46,14 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 		// Get color from metadata and apply 20% opacity
 		const color = entry.metadata?.color;
 		const bgStyle = color ? { backgroundColor: `${color}33` } : {}; // 33 in hex = 20% opacity
+		const hasBgStyle = !!color;
 
 		return (
 			<div
 				key={entry.id}
-				className={`px-2 py-1 border text-xs rounded-sm cursor-pointer flex items-center gap-1 whitespace-nowrap hover:border-opacity-80 hover:text-opacity-80 group`}
+				className={`px-2 py-1 text-xs rounded-sm cursor-pointer flex items-center gap-1 whitespace-nowrap hover:border-opacity-80 hover:text-opacity-80 group box-border border ${
+					hasBgStyle ? 'border-transparent' : ''
+				}`}
 				style={bgStyle}
 				tabIndex={0}
 				aria-label={`Selected ${key} ${label}`}
@@ -140,7 +143,7 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 	return (
 		<div id='input-context' className='flex items-center gap-2 flex-wrap'>
 			<div
-				className={`px-2 py-1 text-xs rounded-sm flex items-center gap-1 whitespace-nowrap dark:bg-gray-800 bg-gray-50`}>
+				className={`px-2 py-1 text-xs rounded-sm flex items-center gap-1 whitespace-nowrap dark:bg-gray-800 bg-gray-50 box-border border border-transparent`}>
 				<span>@ to add context</span>
 			</div>
 			{contextElements}
