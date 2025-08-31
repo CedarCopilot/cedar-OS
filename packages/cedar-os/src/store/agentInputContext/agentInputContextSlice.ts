@@ -1,17 +1,16 @@
-import { CedarStore } from '@/store/CedarOSTypes';
-import type { JSONContent } from '@tiptap/core';
-import type { StateCreator } from 'zustand';
 import type {
 	AdditionalContext,
 	AdditionalContextParam,
 	ContextEntry,
 	MentionProvider,
 } from '@/store/agentInputContext/AgentInputContextTypes';
-import { ReactNode, useMemo, useRef, useCallback } from 'react';
-import { useEffect } from 'react';
+import { CedarStore } from '@/store/CedarOSTypes';
 import { useCedarStore } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';
+import type { JSONContent } from '@tiptap/core';
+import { ReactNode, useEffect, useMemo } from 'react';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import type { StateCreator } from 'zustand';
 export type ChatInput = JSONContent;
 
 /**
@@ -69,17 +68,20 @@ function formatContextEntries<T>(
 		showInChat?: boolean | ((entry: ContextEntry) => boolean);
 		source?: ContextEntry['source'];
 	}
-): ContextEntry[] {
+): ContextEntry | ContextEntry[] {
 	// Handle null/undefined values
 	if (value === null || value === undefined) {
 		return [];
 	}
 
+	// Check if input is an array to determine return type
+	const isInputArray = Array.isArray(value);
+
 	// Ensure value is an array for consistent processing
-	const items = Array.isArray(value) ? value : [value];
+	const items = isInputArray ? value : [value];
 
 	// Transform each item into a proper context entry
-	return items.map((item, index) => {
+	const entries = items.map((item, index) => {
 		// Generate a unique ID for this entry
 		const id =
 			typeof item === 'object' && item !== null && 'id' in item
@@ -120,6 +122,9 @@ function formatContextEntries<T>(
 
 		return entry;
 	});
+
+	// Return single entry if input was not an array, otherwise return array
+	return isInputArray ? entries : entries[0];
 }
 
 // Define the agent input context slice
@@ -320,13 +325,8 @@ export const createAgentInputContextSlice: StateCreator<
 				source: 'function',
 			});
 
-			// If input was an array, keep as array (even if single item)
-			// If input was not an array, unwrap to single value
-			newContext[key] = Array.isArray(value)
-				? formattedEntries
-				: formattedEntries.length === 1
-				? formattedEntries[0]
-				: formattedEntries;
+			// formatContextEntries now returns the correct type based on input
+			newContext[key] = formattedEntries;
 			return { additionalContext: newContext };
 		});
 	},
@@ -537,7 +537,6 @@ export function useSubscribeStateToInputContext<T>(
 	const updateAdditionalContext = useCedarStore(
 		(s) => s.updateAdditionalContext
 	);
-	const removeContextEntry = useCedarStore((s) => s.removeContextEntry);
 
 	// Subscribe to the cedar state value and check if state exists
 	const stateExists = useCedarStore((s) => stateKey in s.registeredStates);
@@ -545,116 +544,35 @@ export function useSubscribeStateToInputContext<T>(
 		(s) => s.registeredStates[stateKey]?.value as T | undefined
 	);
 
-	// Automatically memoize the mapping function to prevent unnecessary re-renders
-	const memoizedMapFn = useCallback(mapFn, [mapFn]);
-
-	// Automatically memoize the options object to prevent unnecessary re-renders
-	const memoizedOptions = useMemo(
-		() => options,
-		[
-			options?.icon,
-			options?.color,
-			options?.labelField,
-			options?.order,
-			options?.showInChat,
-		]
-	);
-
-	// Track which context keys and entry IDs this subscription manages
-	const managedEntriesRef = useRef<Map<string, Set<string>>>(new Map());
-	const subscriptionIdRef = useRef<string>(
-		`sub-${stateKey}-${Math.random().toString(36).substr(2, 9)}`
-	);
-
 	useEffect(() => {
 		// Check if state key exists
 		if (!stateExists) {
-			console.warn(
-				`State with key "${stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
-			);
 			return;
 		}
 
 		// Apply the mapping function to get the context data
-		const mapped = memoizedMapFn(stateValue as T);
+		const mapped = mapFn(stateValue as T);
 
-		// Remove old entries that are no longer in the mapped result
-		const currentKeys = new Set(Object.keys(mapped));
-		const keysToClean = new Set(
-			[...managedEntriesRef.current.keys()].filter(
-				(key) => !currentKeys.has(key)
-			)
-		);
-
-		// Clean up entries for keys that are no longer present
-		for (const keyToClean of keysToClean) {
-			const entryIds = managedEntriesRef.current.get(keyToClean) || new Set();
-			for (const entryId of entryIds) {
-				removeContextEntry(keyToClean, entryId);
-			}
-			managedEntriesRef.current.delete(keyToClean);
-		}
-
-		// Process new/updated entries
-		const contextToUpdate: Record<string, unknown> = {};
-		const newManagedEntries = new Map<string, Set<string>>();
+		// Transform mapped data into properly formatted context entries
+		const formattedContext: Record<string, unknown> = {};
 
 		for (const [key, value] of Object.entries(mapped)) {
-			// Use the common formatting helper with subscription-specific IDs
-			const entries = formatContextEntries<ElementType<T>>(key, value, {
-				...memoizedOptions,
-				source: 'subscription',
-			});
-
-			// Add subscription prefix to entry IDs for uniqueness
-			const trackedEntries = entries.map((entry) => ({
-				...entry,
-				id: `${subscriptionIdRef.current}-${entry.id}`,
-			}));
-
-			// Track the entry IDs for this key
-			newManagedEntries.set(key, new Set(trackedEntries.map((e) => e.id)));
-
-			// Remove old entries for this key that belong to this subscription
-			const oldEntryIds = managedEntriesRef.current.get(key) || new Set();
-			for (const oldEntryId of oldEntryIds) {
-				removeContextEntry(key, oldEntryId);
-			}
-
-			// If mapped value was an array, keep as array (even if single item)
-			// If mapped value was not an array, unwrap to single value
-			contextToUpdate[key] = Array.isArray(value)
-				? trackedEntries
-				: trackedEntries.length === 1
-				? trackedEntries[0]
-				: trackedEntries;
+			// Use the common formatting helper
+			const entries = formatContextEntries<ElementType<T>>(key, value, options);
+			// formatContextEntries now returns the correct type based on input
+			formattedContext[key] = entries;
 		}
 
-		// Update managed entries tracking
-		managedEntriesRef.current = newManagedEntries;
-
-		// Update the additional context with new values
-		updateAdditionalContext(contextToUpdate);
+		// Update the additional context
+		updateAdditionalContext(formattedContext);
 	}, [
 		stateExists,
 		stateValue,
-		memoizedMapFn,
+		mapFn,
 		updateAdditionalContext,
-		removeContextEntry,
-		memoizedOptions,
+		options,
 		stateKey,
 	]);
-
-	// Cleanup on unmount - remove only this subscription's entries
-	useEffect(() => {
-		return () => {
-			for (const [key, entryIds] of managedEntriesRef.current) {
-				for (const entryId of entryIds) {
-					removeContextEntry(key, entryId);
-				}
-			}
-		};
-	}, [removeContextEntry]);
 }
 
 // Enhanced hook to render additionalContext entries

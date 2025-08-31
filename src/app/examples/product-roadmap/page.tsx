@@ -106,7 +106,7 @@ function FlowCanvas() {
 								.enum(['done', 'planned', 'backlog', 'in progress'])
 								.describe('Current development status'),
 							nodeType: z
-								.literal('feature')
+								.enum(['feature', 'bug', 'improvement'])
 								.default('feature')
 								.describe('Type of node'),
 							upvotes: z.number().default(0).describe('Number of upvotes'),
@@ -396,9 +396,13 @@ function FlowCanvas() {
 		},
 	});
 
-	useSubscribeStateToInputContext('nodes', (nodes) => ({
-		nodes,
-	}));
+	useSubscribeStateToInputContext(
+		'nodes',
+		(nodes) => ({
+			nodes,
+		}),
+		{ showInChat: false }
+	);
 
 	useRegisterState({
 		key: 'edges',
