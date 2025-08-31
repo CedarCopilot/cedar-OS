@@ -271,8 +271,7 @@ function handleSingleDiff<T>(
 		return false;
 	}
 
-	const { diffState, history, diffMode, computeState } =
-		currentDiffHistoryState;
+	const { diffState } = currentDiffHistoryState;
 
 	// Get the value at the specified path from both old and new states
 	const oldValue = getValueAtPath(diffState.oldState, jsonPath);
@@ -290,7 +289,7 @@ function handleSingleDiff<T>(
 			console.warn(`Value at path "${jsonPath}" is not consistently an array`);
 			return false;
 		}
-		return handleArrayDiff(
+		return handleArrayDiff({
 			get,
 			key,
 			jsonPath,
@@ -298,36 +297,46 @@ function handleSingleDiff<T>(
 			newArray,
 			identificationField,
 			action,
+			currentDiffHistoryState,
 			targetId,
 			diffMarkerPaths,
-			currentDiffHistoryState
-		);
+		});
 	} else {
 		// Handle single object/field case
-		return handleObjectFieldDiff(
+		return handleObjectFieldDiff({
 			get,
 			key,
 			jsonPath,
 			oldValue,
 			newValue,
 			action,
+			currentDiffHistoryState,
 			diffMarkerPaths,
-			currentDiffHistoryState
-		);
+		});
 	}
 }
 
 // Handle single object/field accept/reject
-function handleObjectFieldDiff<T>(
-	get: () => CedarStore,
-	key: string,
-	jsonPath: string,
-	oldValue: unknown,
-	newValue: unknown,
-	action: 'accept' | 'reject',
-	diffMarkerPaths?: string[],
-	currentDiffHistoryState: DiffHistoryState<T>
-): boolean {
+function handleObjectFieldDiff<T>(params: {
+	get: () => CedarStore;
+	key: string;
+	jsonPath: string;
+	oldValue: unknown;
+	newValue: unknown;
+	action: 'accept' | 'reject';
+	currentDiffHistoryState: DiffHistoryState<T>;
+	diffMarkerPaths?: string[];
+}): boolean {
+	const {
+		get,
+		key,
+		jsonPath,
+		oldValue,
+		newValue,
+		action,
+		currentDiffHistoryState,
+		diffMarkerPaths,
+	} = params;
 	const { diffState, history, diffMode, computeState } =
 		currentDiffHistoryState;
 
@@ -415,18 +424,30 @@ function handleObjectFieldDiff<T>(
 }
 
 // Handle array-based accept/reject (existing logic refactored)
-function handleArrayDiff<T>(
-	get: () => CedarStore,
-	key: string,
-	jsonPath: string,
-	oldArray: T[],
-	newArray: T[],
-	identificationField: string | ((item: T) => unknown),
-	action: 'accept' | 'reject',
-	targetId?: unknown,
-	diffMarkerPaths?: string[],
-	currentDiffHistoryState: DiffHistoryState<T>
-): boolean {
+function handleArrayDiff<T>(params: {
+	get: () => CedarStore;
+	key: string;
+	jsonPath: string;
+	oldArray: T[];
+	newArray: T[];
+	identificationField: string | ((item: T) => unknown);
+	action: 'accept' | 'reject';
+	currentDiffHistoryState: DiffHistoryState<T>;
+	targetId?: unknown;
+	diffMarkerPaths?: string[];
+}): boolean {
+	const {
+		get,
+		key,
+		jsonPath,
+		oldArray,
+		newArray,
+		identificationField,
+		action,
+		currentDiffHistoryState,
+		targetId,
+		diffMarkerPaths,
+	} = params;
 	const { diffState, history, diffMode, computeState } =
 		currentDiffHistoryState;
 

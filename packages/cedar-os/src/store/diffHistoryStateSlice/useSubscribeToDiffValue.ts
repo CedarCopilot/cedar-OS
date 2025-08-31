@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { getValueByPointer } from 'fast-json-patch';
+import { isEqual } from 'lodash';
 import { useCedarStore } from '@/store/CedarStore';
 import { DiffHistoryState, DiffMode } from './diffHistorySlice';
 
@@ -81,7 +82,7 @@ export function useSubscribeToDiffValue<T = unknown>(
 	path: string,
 	options: UseSubscribeToDiffValueOptions = {}
 ): DiffValue<T> {
-	const { defaultValue } = options;
+	const { defaultValue, equalityFn } = options;
 
 	// Create a selector that extracts only the values we need at the specified path
 	const selector = useCallback(
@@ -150,8 +151,10 @@ export function useSubscribeToDiffValue<T = unknown>(
 		// Determine clean value based on diff mode
 		const cleanValue = diffMode === 'defaultAccept' ? newValue : oldValue;
 
-		// Check if values have changed
-		const hasChanges = oldValue !== newValue;
+		// Check if values have changed using the provided equality function or deep equality
+		const hasChanges = equalityFn
+			? !equalityFn(oldValue, newValue)
+			: !isEqual(oldValue, newValue);
 
 		return {
 			oldValue: oldValue as T | undefined,
@@ -160,7 +163,7 @@ export function useSubscribeToDiffValue<T = unknown>(
 			cleanValue: cleanValue as T | undefined,
 			hasChanges,
 		};
-	}, [diffData]);
+	}, [diffData, equalityFn]);
 
 	return result;
 }
