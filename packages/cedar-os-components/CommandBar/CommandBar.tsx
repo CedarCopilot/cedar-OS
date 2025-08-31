@@ -98,8 +98,8 @@ export interface CommandBarItem {
 export interface CommandBarGroup {
 	/** Unique identifier for the group */
 	id: string;
-	/** Heading text for the group */
-	heading: string;
+	/** Optional heading text for the group */
+	heading?: string;
 	/** Items in this group */
 	items: CommandBarItem[];
 }
@@ -220,7 +220,9 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				// Fall back to default search behavior
 				return (
 					item.label.toLowerCase().includes(searchText) ||
-					item.id.toLowerCase().includes(searchText)
+					item.id.toLowerCase().includes(searchText) ||
+					(item.description &&
+						item.description.toLowerCase().includes(searchText))
 				);
 			});
 
@@ -307,7 +309,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					// Close the command bar if input is not focused
 					onClose?.();
 				}
-			} else if (e.key === 'Tab' && !e.shiftKey && open) {
+			} else if (e.key === 'k' && (e.metaKey || e.ctrlKey) && open) {
 				e.preventDefault();
 				if (isFocused) {
 					// Unfocus the input if it's currently focused
@@ -408,7 +410,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 										damping: 25,
 										mass: 0.5,
 									}}>
-									<KeyboardShortcut shortcut='⇥' />
+									<KeyboardShortcut shortcut='⌘K' />
 								</motion.div>
 							)}
 							<motion.div
@@ -447,7 +449,8 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 										{/* Add separator between groups (except before first group) */}
 										{groupIndex > 0 && <CommandSeparator />}
 
-										<CommandGroup heading={group.heading}>
+										<CommandGroup
+											{...(group.heading && { heading: group.heading })}>
 											{group.items.map((item) => (
 												<CommandItem
 													key={item.id}
@@ -503,11 +506,13 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 
 					{/* Fixed bottom group - always visible when expanded */}
 					{!isCollapsed && filteredContents.fixedBottomGroup && (
-						<div className='border-t'>
-							<div className='p-2'>
-								<div className='text-xs font-medium text-muted-foreground mb-2 px-2'>
-									{filteredContents.fixedBottomGroup.heading}
-								</div>
+						<div className='p-1'>
+							<div className=''>
+								{filteredContents.fixedBottomGroup.heading && (
+									<div className='text-xs font-medium text-muted-foreground mb-2 px-2'>
+										{filteredContents.fixedBottomGroup.heading}
+									</div>
+								)}
 								<div className='flex gap-1'>
 									{filteredContents.fixedBottomGroup.items.map((item) => (
 										<button

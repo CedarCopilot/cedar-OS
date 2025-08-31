@@ -103,7 +103,6 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 		groups: [nodeSearchGroup],
 		fixedBottomGroup: {
 			id: 'quick-actions-bottom',
-			heading: 'Quick Actions',
 			items: [
 				{
 					id: 'ask-ai',
