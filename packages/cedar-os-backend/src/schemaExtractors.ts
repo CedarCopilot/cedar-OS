@@ -1,13 +1,20 @@
 import { getJsonSchema } from '@/utils/getJsonSchema';
-import type { CedarRequestBody } from '@/types';
+import type {
+	CedarRequestBody,
+	FrontendToolData,
+	StateSetterData,
+} from '@/types';
 import type { JSONSchema7 } from 'json-schema';
+import { z } from 'zod';
 
 /**
  * Extract a single frontend tool schema from additionalContext
  * Returns JSON Schema directly (for use with experimental_output)
  */
-export function getFrontendToolSchema(
-	requestBody: CedarRequestBody,
+export function getFrontendToolSchema<
+	TSchemas extends Record<string, z.ZodTypeAny> = Record<string, never>
+>(
+	requestBody: CedarRequestBody<TSchemas>,
 	toolName: string
 ): JSONSchema7 | null {
 	const additionalContext = requestBody.additionalContext;
@@ -15,8 +22,8 @@ export function getFrontendToolSchema(
 		return null;
 	}
 
-	const tool = additionalContext.frontendTools[toolName];
-	if (!tool.argsSchema) {
+	const tool = additionalContext.frontendTools[toolName] as FrontendToolData;
+	if (!tool?.argsSchema) {
 		return null;
 	}
 
@@ -27,9 +34,9 @@ export function getFrontendToolSchema(
  * Extract all frontend tool schemas from additionalContext
  * Returns JSON Schemas directly (for use with experimental_output)
  */
-export function getFrontendToolSchemas(
-	requestBody: CedarRequestBody
-): Record<string, JSONSchema7> {
+export function getFrontendToolSchemas<
+	TSchemas extends Record<string, z.ZodTypeAny> = Record<string, never>
+>(requestBody: CedarRequestBody<TSchemas>): Record<string, JSONSchema7> {
 	const additionalContext = requestBody.additionalContext;
 	if (!additionalContext?.frontendTools) {
 		return {};
@@ -40,8 +47,9 @@ export function getFrontendToolSchemas(
 	for (const [toolName, tool] of Object.entries(
 		additionalContext.frontendTools
 	)) {
-		if (tool.argsSchema) {
-			const jsonSchema = getJsonSchema(tool.argsSchema);
+		const toolData = tool as FrontendToolData;
+		if (toolData?.argsSchema) {
+			const jsonSchema = getJsonSchema(toolData.argsSchema);
 			if (jsonSchema) {
 				schemas[toolName] = jsonSchema;
 			}
@@ -55,8 +63,10 @@ export function getFrontendToolSchemas(
  * Extract a single state setter schema from additionalContext
  * Returns JSON Schema directly (for use with experimental_output)
  */
-export function getStateSetterSchema(args: {
-	requestBody: CedarRequestBody;
+export function getStateSetterSchema<
+	TSchemas extends Record<string, z.ZodTypeAny> = Record<string, never>
+>(args: {
+	requestBody: CedarRequestBody<TSchemas>;
 	setterKey: string;
 	stateKey: string;
 }): JSONSchema7 | null {
@@ -68,8 +78,8 @@ export function getStateSetterSchema(args: {
 		return null;
 	}
 
-	const setter = stateSetters[setterKey];
-	const schema = setter.argsSchema;
+	const setter = stateSetters[setterKey] as StateSetterData;
+	const schema = setter?.argsSchema;
 
 	if (!schema) {
 		return null;
@@ -82,9 +92,9 @@ export function getStateSetterSchema(args: {
  * Extract all state setter schemas from additionalContext
  * Returns JSON Schemas directly (for use with experimental_output)
  */
-export function getStateSetterSchemas(
-	requestBody: CedarRequestBody
-): Record<string, JSONSchema7> {
+export function getStateSetterSchemas<
+	TSchemas extends Record<string, z.ZodTypeAny> = Record<string, never>
+>(requestBody: CedarRequestBody<TSchemas>): Record<string, JSONSchema7> {
 	const additionalContext = requestBody.additionalContext;
 	const stateSetters = additionalContext?.stateSetters;
 
@@ -95,7 +105,8 @@ export function getStateSetterSchemas(
 	const schemas: Record<string, JSONSchema7> = {};
 
 	for (const [setterKey, setter] of Object.entries(stateSetters)) {
-		const schema = setter.argsSchema;
+		const setterData = setter as StateSetterData;
+		const schema = setterData?.argsSchema;
 		if (schema) {
 			const jsonSchema = getJsonSchema(schema);
 			if (jsonSchema) {
