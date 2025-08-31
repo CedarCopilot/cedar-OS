@@ -526,14 +526,6 @@ function FlowCanvas() {
 		[setEdges]
 	);
 
-	// Prevent node drag/pan selection interfering (optional)
-	const onNodeClick = React.useCallback(
-		(_event: React.MouseEvent, node: Node) => {
-			console.log('📌 Node clicked', node);
-		},
-		[]
-	);
-
 	// Edge context menu state
 	const [edgeMenu, setEdgeMenu] = React.useState<{
 		x: number;
@@ -623,7 +615,6 @@ function FlowCanvas() {
 				onNodesChange={handleNodesChange}
 				onEdgesChange={onEdgesChange}
 				onConnect={onConnect}
-				onNodeClick={onNodeClick}
 				onEdgeClick={onEdgeClick}
 				onEdgeDoubleClick={onEdgeDoubleClick}
 				connectionLineType={ConnectionLineType.SmoothStep}
@@ -685,18 +676,50 @@ function SelectedNodesPanel() {
 		description: 'Selected nodes',
 	});
 
-	// First subscription - for numSelectedNodes (order: 1)
+	// Memoize the subscription options to prevent constant re-renders
+	const subscriptionOptions = React.useMemo(
+		() => ({
+			// Dynamic icons based on node status
+			icon: (item: Node<FeatureNodeData>) => {
+				const status = item?.data?.status;
+				switch (status) {
+					case 'done':
+						return '✅';
+					case 'in progress':
+						return '🔄';
+					case 'planned':
+						return '📋';
+					case 'backlog':
+						return '📝';
+					default:
+						return <Box />;
+				}
+			},
+			color: '#8B5CF6', // Purple color for selected nodes
+			labelField: (item: Node<FeatureNodeData>) => item?.data?.title,
+			// Only show nodes that are not in backlog status in chat context
+			showInChat: (entry: { data: unknown }) => {
+				const node = entry.data as Node<FeatureNodeData>;
+				return node?.data?.status !== 'backlog';
+			},
+			order: 2,
+		}),
+		[]
+	);
+
+	// Memoize the mapping function to prevent constant re-renders
+	const mappingFunction = React.useCallback(
+		(selectedNodes: Node<FeatureNodeData>[]) => ({
+			selectedNodes,
+		}),
+		[]
+	);
+
+	// Enhanced subscription with dynamic icons and filtering
 	useSubscribeStateToInputContext<Node<FeatureNodeData>[]>(
 		'selectedNodes',
-		(nodes) => ({
-			selectedNodes: nodes,
-		}),
-		{
-			icon: <Box />,
-			color: '#8B5CF6', // Purple color for selected nodes
-			labelField: (item) => item?.data?.title,
-			order: 2, // This will appear first
-		}
+		mappingFunction,
+		subscriptionOptions
 	);
 
 	useOnSelectionChange({

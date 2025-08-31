@@ -6,7 +6,7 @@ import type {
 	ContextEntry,
 	MentionProvider,
 } from '@/store/agentInputContext/AgentInputContextTypes';
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useMemo, useRef } from 'react';
 import { useEffect } from 'react';
 import { useCedarStore } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';
@@ -61,11 +61,11 @@ function formatContextEntries<T>(
 	key: string,
 	value: unknown,
 	options?: {
-		icon?: ReactNode;
+		icon?: ReactNode | ((item: T) => ReactNode);
 		color?: string;
 		labelField?: string | ((item: T) => string);
 		order?: number;
-		showInChat?: boolean;
+		showInChat?: boolean | ((entry: ContextEntry) => boolean);
 		source?: ContextEntry['source'];
 	}
 ): ContextEntry[] {
@@ -88,20 +88,36 @@ function formatContextEntries<T>(
 		// Extract the label using the configured method
 		const label = extractLabel<T>(item, options?.labelField);
 
+		// Resolve icon - either static ReactNode or function result
+		const resolvedIcon = options?.icon
+			? typeof options.icon === 'function'
+				? options.icon(item as T)
+				: options.icon
+			: undefined;
+
 		// Create the context entry with clean separation of concerns
-		return {
+		const entry: ContextEntry = {
 			id,
 			source: options?.source || ('subscription' as const),
 			data: item, // The original data, unchanged
 			metadata: {
 				label,
-				...(options?.icon && { icon: options.icon }),
+				...(resolvedIcon && { icon: resolvedIcon }),
 				...(options?.color && { color: options.color }),
 				...(options?.order !== undefined && { order: options.order }),
-				showInChat:
-					options?.showInChat !== undefined ? options.showInChat : true,
+				showInChat: true, // Default to true, will be resolved later if function
 			},
 		};
+
+		// Resolve showInChat - either boolean or function result
+		if (options?.showInChat !== undefined) {
+			entry.metadata!.showInChat =
+				typeof options.showInChat === 'function'
+					? options.showInChat(entry)
+					: options.showInChat;
+		}
+
+		return entry;
 	});
 }
 
@@ -481,22 +497,29 @@ export function useSubscribeStateToInputContext<T>(
 	stateKey: string,
 	mapFn: (state: T) => Record<string, unknown>,
 	options?: {
-		icon?: ReactNode;
+		icon?: ReactNode | ((item: ElementType<T>) => ReactNode);
 		color?: string;
 		labelField?: string | ((item: ElementType<T>) => string);
 		order?: number;
-		/** If false, the generated context entries will not be rendered as badges in the chat UI */
-		showInChat?: boolean;
+		/** If false, the generated context entries will not be rendered as badges in the chat UI. Can also be a function to filter specific entries. */
+		showInChat?: boolean | ((entry: ContextEntry) => boolean);
 	}
 ): void {
 	const updateAdditionalContext = useCedarStore(
 		(s) => s.updateAdditionalContext
 	);
+	const removeContextEntry = useCedarStore((s) => s.removeContextEntry);
 
 	// Subscribe to the cedar state value and check if state exists
 	const stateExists = useCedarStore((s) => stateKey in s.registeredStates);
 	const stateValue = useCedarStore(
 		(s) => s.registeredStates[stateKey]?.value as T | undefined
+	);
+
+	// Track which context keys and entry IDs this subscription manages
+	const managedEntriesRef = useRef<Map<string, Set<string>>>(new Map());
+	const subscriptionIdRef = useRef<string>(
+		`sub-${stateKey}-${Math.random().toString(36).substr(2, 9)}`
 	);
 
 	useEffect(() => {
@@ -508,31 +531,83 @@ export function useSubscribeStateToInputContext<T>(
 		// Apply the mapping function to get the context data
 		const mapped = mapFn(stateValue as T);
 
-		// Transform mapped data into properly formatted context entries
-		const formattedContext: Record<string, unknown> = {};
+		// Remove old entries that are no longer in the mapped result
+		const currentKeys = new Set(Object.keys(mapped));
+		const keysToClean = new Set(
+			[...managedEntriesRef.current.keys()].filter(
+				(key) => !currentKeys.has(key)
+			)
+		);
 
-		for (const [key, value] of Object.entries(mapped)) {
-			// Use the common formatting helper
-			const entries = formatContextEntries<ElementType<T>>(key, value, options);
-			// If mapped value was an array, keep as array (even if single item)
-			// If mapped value was not an array, unwrap to single value
-			formattedContext[key] = Array.isArray(value)
-				? entries
-				: entries.length === 1
-				? entries[0]
-				: entries;
+		// Clean up entries for keys that are no longer present
+		for (const keyToClean of keysToClean) {
+			const entryIds = managedEntriesRef.current.get(keyToClean) || new Set();
+			for (const entryId of entryIds) {
+				removeContextEntry(keyToClean, entryId);
+			}
+			managedEntriesRef.current.delete(keyToClean);
 		}
 
-		// Update the additional context
-		updateAdditionalContext(formattedContext);
+		// Process new/updated entries
+		const contextToUpdate: Record<string, unknown> = {};
+		const newManagedEntries = new Map<string, Set<string>>();
+
+		for (const [key, value] of Object.entries(mapped)) {
+			// Use the common formatting helper with subscription-specific IDs
+			const entries = formatContextEntries<ElementType<T>>(key, value, {
+				...options,
+				source: 'subscription',
+			});
+
+			// Add subscription prefix to entry IDs for uniqueness
+			const trackedEntries = entries.map((entry) => ({
+				...entry,
+				id: `${subscriptionIdRef.current}-${entry.id}`,
+			}));
+
+			// Track the entry IDs for this key
+			newManagedEntries.set(key, new Set(trackedEntries.map((e) => e.id)));
+
+			// Remove old entries for this key that belong to this subscription
+			const oldEntryIds = managedEntriesRef.current.get(key) || new Set();
+			for (const oldEntryId of oldEntryIds) {
+				removeContextEntry(key, oldEntryId);
+			}
+
+			// If mapped value was an array, keep as array (even if single item)
+			// If mapped value was not an array, unwrap to single value
+			contextToUpdate[key] = Array.isArray(value)
+				? trackedEntries
+				: trackedEntries.length === 1
+				? trackedEntries[0]
+				: trackedEntries;
+		}
+
+		// Update managed entries tracking
+		managedEntriesRef.current = newManagedEntries;
+
+		// Update the additional context with new values
+		updateAdditionalContext(contextToUpdate);
 	}, [
 		stateExists,
 		stateValue,
 		mapFn,
 		updateAdditionalContext,
+		removeContextEntry,
 		options,
 		stateKey,
 	]);
+
+	// Cleanup on unmount - remove only this subscription's entries
+	useEffect(() => {
+		return () => {
+			for (const [key, entryIds] of managedEntriesRef.current) {
+				for (const entryId of entryIds) {
+					removeContextEntry(key, entryId);
+				}
+			}
+		};
+	}, [removeContextEntry]);
 }
 
 // Enhanced hook to render additionalContext entries
