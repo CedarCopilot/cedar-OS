@@ -447,6 +447,7 @@ export const createAgentInputContextSlice: StateCreator<
 		const simplifiedContext: Record<string, unknown> = {};
 		Object.entries(context).forEach(([key, value]) => {
 			const entries = normalizeToArray(value);
+			const wasArray = Array.isArray(value);
 
 			// Extract just the data and source from each entry
 			const simplified = entries.map((entry) => ({
@@ -455,7 +456,7 @@ export const createAgentInputContextSlice: StateCreator<
 			}));
 
 			// If single entry, extract it; otherwise keep as array
-			simplifiedContext[key] = simplified;
+			simplifiedContext[key] = wasArray ? simplified : simplified[0];
 		});
 
 		// Get compiled state setters and schemas
@@ -540,39 +541,58 @@ export function useSubscribeStateToInputContext<T>(
 
 	// Subscribe to the cedar state value and check if state exists
 	const stateExists = useCedarStore((s) => stateKey in s.registeredStates);
+
 	const stateValue = useCedarStore(
 		(s) => s.registeredStates[stateKey]?.value as T | undefined
 	);
 
-	useEffect(() => {
-		// Check if state key exists
+	// Memoize options to prevent unnecessary re-renders when options object is redeclared
+	const memoizedOptions = useMemo(
+		() => options,
+		[
+			options?.icon,
+			options?.color,
+			options?.labelField,
+			options?.order,
+			options?.showInChat,
+		]
+	);
+
+	// Memoize the mapped result to avoid recalculating when stateValue hasn't changed
+	const mappedData = useMemo(() => {
 		if (!stateExists) {
-			return;
+			console.warn(
+				`State with key "${stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
+			);
+			return {};
 		}
+		return mapFn(stateValue as T);
+	}, [stateExists, stateValue, mapFn]);
 
-		// Apply the mapping function to get the context data
-		const mapped = mapFn(stateValue as T);
+	// Memoize the formatted context to avoid reformatting when mapped data hasn't changed
+	const formattedContext = useMemo(() => {
+		const context: Record<string, unknown> = {};
 
-		// Transform mapped data into properly formatted context entries
-		const formattedContext: Record<string, unknown> = {};
-
-		for (const [key, value] of Object.entries(mapped)) {
+		for (const [key, value] of Object.entries(mappedData)) {
 			// Use the common formatting helper
-			const entries = formatContextEntries<ElementType<T>>(key, value, options);
+			const entries = formatContextEntries<ElementType<T>>(
+				key,
+				value,
+				memoizedOptions
+			);
 			// formatContextEntries now returns the correct type based on input
-			formattedContext[key] = entries;
+			context[key] = entries;
 		}
 
-		// Update the additional context
-		updateAdditionalContext(formattedContext);
-	}, [
-		stateExists,
-		stateValue,
-		mapFn,
-		updateAdditionalContext,
-		options,
-		stateKey,
-	]);
+		return context;
+	}, [mappedData, memoizedOptions]);
+
+	useEffect(() => {
+		// Only update if we have actual context data
+		if (Object.keys(formattedContext).length > 0) {
+			updateAdditionalContext(formattedContext);
+		}
+	}, [formattedContext, updateAdditionalContext]);
 }
 
 // Enhanced hook to render additionalContext entries

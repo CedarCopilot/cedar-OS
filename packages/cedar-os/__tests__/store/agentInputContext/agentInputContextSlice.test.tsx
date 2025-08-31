@@ -593,7 +593,7 @@ describe('AgentInputContextSlice', () => {
 			expect(stringified).toBe('');
 		});
 
-		it('should stringify additional context', () => {
+		it('should compile additional context', () => {
 			const contextData = {
 				testItems: [{ id: 'item1', title: 'Item 1' }],
 			};
@@ -602,9 +602,9 @@ describe('AgentInputContextSlice', () => {
 				useCedarStore.getState().updateAdditionalContext(contextData);
 			});
 
-			const stringified = useCedarStore.getState().compileAdditionalContext();
-			expect(stringified).toContain('testItems');
-			expect(JSON.parse(stringified)).toHaveProperty('testItems');
+			const compiled = useCedarStore.getState().compileAdditionalContext();
+			expect(compiled).toHaveProperty('testItems');
+			expect(compiled.testItems).toBeDefined();
 		});
 
 		it('should stringify input context', () => {
@@ -640,29 +640,28 @@ describe('AgentInputContextSlice', () => {
 					});
 			});
 
-			const stringified = useCedarStore.getState().compileAdditionalContext();
-			const parsed = JSON.parse(stringified);
+			const compiled = useCedarStore.getState().compileAdditionalContext();
 
 			// Should be an array since there are multiple items
-			expect(Array.isArray(parsed.multipleItems)).toBe(true);
-			expect(parsed.multipleItems).toHaveLength(2);
+			expect(Array.isArray(compiled.multipleItems)).toBe(true);
+			expect(compiled.multipleItems).toHaveLength(2);
 
 			// Each item should have simplified structure with just data and source
-			expect(parsed.multipleItems[0]).toEqual({
+			expect(compiled.multipleItems[0]).toEqual({
 				data: { id: '1', name: 'Item 1', value: 100 },
 				source: 'function',
 			});
-			expect(parsed.multipleItems[1]).toEqual({
+			expect(compiled.multipleItems[1]).toEqual({
 				data: { id: '2', name: 'Item 2', value: 200 },
 				source: 'function',
 			});
 
 			// Should not have id or metadata fields
-			expect(parsed.multipleItems[0]).not.toHaveProperty('id');
-			expect(parsed.multipleItems[0]).not.toHaveProperty('metadata');
+			expect(compiled.multipleItems[0]).not.toHaveProperty('id');
+			expect(compiled.multipleItems[0]).not.toHaveProperty('metadata');
 		});
 
-		it('should extract single-item arrays in compileAdditionalContext', () => {
+		it('should extract single objects in compileAdditionalContext', () => {
 			const singleItem = { id: '1', name: 'Single Item', value: 42 };
 
 			act(() => {
@@ -673,19 +672,41 @@ describe('AgentInputContextSlice', () => {
 					});
 			});
 
-			const stringified = useCedarStore.getState().compileAdditionalContext();
-			const parsed = JSON.parse(stringified);
+			const compiled = useCedarStore.getState().compileAdditionalContext();
 
 			// Should be a single object, not an array
-			expect(Array.isArray(parsed.singleItem)).toBe(false);
-			expect(parsed.singleItem).toEqual({
+			expect(compiled.singleItem).toEqual({
 				data: { id: '1', name: 'Single Item', value: 42 },
 				source: 'function',
 			});
+			expect(Array.isArray(compiled.singleItem)).toBe(false);
 
 			// Should not have id or metadata fields
-			expect(parsed.singleItem).not.toHaveProperty('id');
-			expect(parsed.singleItem).not.toHaveProperty('metadata');
+			expect(compiled.singleItem).not.toHaveProperty('id');
+			expect(compiled.singleItem).not.toHaveProperty('metadata');
+		});
+
+		it('should preserve single-item arrays in compileAdditionalContext', () => {
+			const singleItemArray = [{ id: '1', name: 'Array Item', value: 42 }];
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext('arrayItem', singleItemArray, {
+						labelField: 'name',
+					});
+			});
+
+			const compiled = useCedarStore.getState().compileAdditionalContext();
+
+			// Should preserve array structure since input was [item]
+			// expect(Array.isArray(compiled.arrayItem)).toBe(true);
+			expect(compiled.arrayItem).toEqual([
+				{
+					data: { id: '1', name: 'Array Item', value: 42 },
+					source: 'function',
+				},
+			]);
 		});
 
 		it('should handle mixed sources in compileAdditionalContext', () => {
@@ -709,24 +730,24 @@ describe('AgentInputContextSlice', () => {
 				});
 			});
 
-			const stringified = useCedarStore.getState().compileAdditionalContext();
-			const parsed = JSON.parse(stringified);
+			const compiled = useCedarStore.getState().compileAdditionalContext();
 
 			// Function source should be simplified and extracted (single item)
-			expect(parsed.functionItems).toEqual({
+			expect(compiled.functionItems).toEqual({
 				data: { id: '1', name: 'Function Item' },
 				source: 'function',
 			});
 
-			// Subscription source (legacy format) should be simplified and extracted (single item)
-			// Note: updateAdditionalContext creates entries in legacy format without data wrapper
-			expect(parsed.subscriptionItems).toEqual({
-				data: {
-					id: 'sub1',
-					title: 'Subscription Item',
+			// Subscription source - should preserve array structure since input was an array
+			expect(compiled.subscriptionItems).toEqual([
+				{
+					data: {
+						id: 'sub1',
+						title: 'Subscription Item',
+					},
+					source: 'subscription',
 				},
-				source: 'subscription',
-			});
+			]);
 		});
 	});
 
@@ -1491,7 +1512,7 @@ describe('AgentInputContextSlice', () => {
 			).toBeDefined();
 		});
 
-		it('should include frontend tools in stringifyAdditionalContext when tools are registered', () => {
+		it('should include frontend tools in compileAdditionalContext when tools are registered', () => {
 			const { result } = renderHook(() => useCedarStore());
 
 			// Register multiple tools
@@ -1520,8 +1541,7 @@ describe('AgentInputContextSlice', () => {
 				});
 			});
 
-			const contextString = result.current.stringifyAdditionalContext();
-			const context = JSON.parse(contextString);
+			const context = result.current.compileAdditionalContext();
 
 			expect(context.frontendTools).toBeDefined();
 			expect(Object.keys(context.frontendTools)).toHaveLength(2);
@@ -1558,8 +1578,7 @@ describe('AgentInputContextSlice', () => {
 		it('should not include frontendTools field when no tools are registered', () => {
 			const { result } = renderHook(() => useCedarStore());
 
-			const contextString = result.current.stringifyAdditionalContext();
-			const context = JSON.parse(contextString);
+			const context = result.current.compileAdditionalContext();
 
 			expect(context.frontendTools).toBeUndefined();
 		});
@@ -1863,7 +1882,7 @@ describe('AgentInputContextSlice', () => {
 			expect(compiled.schemas.testState.schema).toBeDefined();
 		});
 
-		it('should be used by stringifyAdditionalContext', () => {
+		it('should be used by compileAdditionalContext', () => {
 			const { result } = renderHook(() => useCedarStore());
 
 			// Register a state with setters
@@ -1885,8 +1904,7 @@ describe('AgentInputContextSlice', () => {
 				});
 			});
 
-			const contextString = result.current.stringifyAdditionalContext();
-			const context = JSON.parse(contextString);
+			const context = result.current.compileAdditionalContext();
 
 			// Verify that the compiled state setters are included
 			expect(context.stateSetters).toBeDefined();
