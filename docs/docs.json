@@ -71,7 +71,15 @@
 							"chat/streaming",
 							"chat/configuring-cedar-editor",
 							"chat/message-storage-configuration",
-							"chat/chat-components"
+							"chat/chat-components",
+							{
+								"group": "Components",
+								"pages": [
+									"components/command-bar",
+									"components/chat-input",
+									"components/chat-bubbles"
+								]
+							}
 						]
 					}
 				]
@@ -155,7 +163,13 @@
 			{
 				"group": "Components",
 				"icon": "puzzle-piece",
-				"pages": ["components/typewriter-text", "components/markdown-renderer"]
+				"pages": [
+					"components/typewriter-text",
+					"components/markdown-renderer",
+					"components/command-bar",
+					"components/chat-input",
+					"components/chat-bubbles"
+				]
 			},
 			{
 				"group": "Changelog",
