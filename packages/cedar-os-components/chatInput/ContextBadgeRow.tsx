@@ -50,7 +50,7 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 
 		return (
 			<div
-				key={entry.id}
+				key={key + ':' + entry.id}
 				className={`px-2 py-1 text-xs rounded-sm cursor-pointer flex items-center gap-1 whitespace-nowrap hover:border-opacity-80 hover:text-opacity-80 group box-border border ${
 					hasBgStyle ? 'border-transparent' : ''
 				}`}
