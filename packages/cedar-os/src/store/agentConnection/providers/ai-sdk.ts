@@ -371,7 +371,9 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 
 		// Generate response
 		const systemPrompt = context
-			? `Context: ${context}\n\nRespond naturally to the user's voice input.`
+			? `Context: ${JSON.stringify(
+					context
+			  )}\n\nRespond naturally to the user's voice input.`
 			: "Respond naturally to the user's voice input.";
 
 		const result = await generateText({

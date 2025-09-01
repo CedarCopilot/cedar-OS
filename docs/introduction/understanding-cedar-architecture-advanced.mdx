@@ -21,6 +21,7 @@ interface CedarStore =
   & StateSlice               // Allows the agent to read & write to the state
   & AgentInputContextSlice    // Allows us to control the context we send to the agent, including state ^
   & MessagesSlice            // Chat message storage & rendering
+  & ToolsSlice               // Frontend tool registration & execution
   // additional modules
   & SpellSlice              // Interactive UI components ("spells")
   & StylingSlice            // Theme & appearance
@@ -35,6 +36,8 @@ interface CedarStore =
 **`AgentInputContextSlice`** - Gathers and formats context (such as state) for AI consumption
 
 **`MessagesSlice`** - Stores and renders chat messages
+
+**`ToolsSlice`** - Manages frontend tool registration, execution, and lifecycle
 
 ## Breaking down an end-to-end AI workflow with Cedar-OS
 
@@ -69,7 +72,7 @@ To do this, we have `stateSlice` which provides functions like `registerState`. 
 
 **4. agentInputContext**
 
-agentInputContext handles the context that we pass into the agent. It stringifies the context & editor through `stringifyInputContext` and `stringifyAdditionalContext` and helps generally manage the context we're giving the agent.
+agentInputContext handles the context that we pass into the agent. It compiles the context & editor through `stringifyInputContext` and `compileAdditionalContext` and helps generally manage the context we're giving the agent.
 
 For example, it allows users to use @notation to mention a specific email or user through `useStateBasedMentionProvider()`.
 
@@ -92,7 +95,8 @@ When the LLM returns a response, it gets passed to `handleLLMResponse()` which p
 The system uses a switch-like mechanism through `processStructuredResponse()` that looks at the `type` field of structured responses and routes them to registered response processors:
 
 - **`message` type** - Handled by `messageResponseProcessor`, converts backend message format to chat messages
-- **`setState` type** - Handled by `setStateResponseProcessor`, executes state mutations through `executeCustomSetter()`
+- **`setState` type** - Handled by `setStateResponseProcessor`, executes state mutations through `executeStateSetter()`
+- **`frontendTool` type** - Handled by `frontendToolResponseProcessor`, executes registered frontend tools
 - **`progress_update` type** - Shows loading states and progress indicators
 
 **3. Adding to chat through `messagesSlice`**
@@ -101,7 +105,8 @@ Text content and processed messages get added to the chat history via `addMessag
 
 **4. State mutations through registered setters**
 
-For `setState` type responses, the system calls `executeCustomSetter()` which uses the parameters from `registerState()` to execute the appropriate custom setter function, allowing the AI to modify application state based on the registered schema and available setters.
+For `setState` type responses, the system calls `executeStateSetter()` which uses the parameters from `registerState()` to execute the appropriate state setter function, allowing the AI to modify application state based on the registered schema and available setters.
+For `frontendTool` type responses, the system calls `executeFrontendTool()` which validates arguments against registered Zod schemas and executes the appropriate tool function, enabling agents to interact with UI components and perform frontend actions.
 
 ---
 
@@ -111,9 +116,10 @@ Response processors handle different types of structured AI responses:
 
 ### Built-in Processors
 
-1. **SetStateResponseProcessor** - Executes state mutations
+1. **SetStateResponseProcessor** - Executes state mutations via registered state setters
 2. **MessageResponseProcessor** - Adds text messages to chat
-3. **ProgressUpdateResponseProcessor** - Handles loading states
+3. **FrontendToolResponseProcessor** - Executes registered frontend tools with validation
+4. **ProgressUpdateResponseProcessor** - Handles loading states
 
 ### Custom Response Processors
 
@@ -138,4 +144,41 @@ const emailResponseProcessor = createResponseProcessor({
 
 // Register the processor
 store.registerResponseProcessor(emailResponseProcessor);
+```
+
+### Frontend Tool Processing Example
+
+```typescript
+// Frontend tool registration happens in components
+import { useRegisterFrontendTool } from 'cedar-os';
+import { z } from 'zod';
+
+function EmailComponent() {
+	useRegisterFrontendTool({
+		name: 'sendEmail',
+		description: 'Send an email with the provided content',
+		argsSchema: z.object({
+			to: z.string().email(),
+			subject: z.string(),
+			body: z.string(),
+		}),
+		execute: async (args) => {
+			const result = await sendEmail(args.to, args.subject, args.body);
+			return { success: true, messageId: result.id };
+		},
+	});
+
+	return <div>Email interface...</div>;
+}
+
+// Agent response triggers tool execution
+// {
+//   "type": "frontendTool",
+//   "toolName": "sendEmail",
+//   "args": {
+//     "to": "user@example.com",
+//     "subject": "Hello",
+//     "body": "This is a test email"
+//   }
+// }
 ```

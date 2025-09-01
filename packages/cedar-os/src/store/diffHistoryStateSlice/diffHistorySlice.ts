@@ -73,7 +73,7 @@ export interface RegisterDiffStateConfig<T extends BasicStateValue> {
 	setValue?: BaseSetter<T>;
 	description?: string;
 	schema?: ZodSchema<T>;
-	customSetters?: Record<string, Setter<T>>;
+	stateSetters?: Record<string, Setter<T>>;
 	diffMode?: DiffMode;
 	computeState?: ComputeStateFunction<T>;
 }
@@ -108,7 +108,7 @@ export interface DiffHistorySlice {
 		key: string,
 		setterKey: string,
 		options?: { isDiff?: boolean },
-		...args: unknown[]
+		args?: unknown
 	) => void;
 
 	// Apply patches to diff state
@@ -726,7 +726,7 @@ export const createDiffHistorySlice: StateCreator<
 			setValue,
 			description,
 			schema,
-			customSetters,
+			stateSetters,
 			diffMode = 'defaultAccept',
 			computeState,
 		} = config;
@@ -741,7 +741,7 @@ export const createDiffHistorySlice: StateCreator<
 				setValue,
 				description,
 				schema,
-				customSetters,
+				stateSetters,
 			});
 
 			const initialDiffHistoryState: DiffHistoryState<T> = {
@@ -959,7 +959,7 @@ export const createDiffHistorySlice: StateCreator<
 		key: string,
 		setterKey: string,
 		options: { isDiff?: boolean } = {},
-		...args: unknown[]
+		args?: unknown
 	) => {
 		const isDiff = options.isDiff ?? false;
 		const currentDiffHistoryState = get().getDiffHistoryState(key);
@@ -980,9 +980,11 @@ export const createDiffHistorySlice: StateCreator<
 			return;
 		}
 
-		const customSetters = registeredState.customSetters;
-		if (!customSetters || !customSetters[setterKey]) {
-			console.warn(`Custom setter "${setterKey}" not found for state "${key}"`);
+		// Try stateSetters first, then fall back to customSetters for backward compatibility
+		const stateSetters =
+			registeredState.stateSetters || registeredState.customSetters;
+		if (!stateSetters || !stateSetters[setterKey]) {
+			console.warn(`State setter "${setterKey}" not found for state "${key}"`);
 			return;
 		}
 
@@ -995,9 +997,9 @@ export const createDiffHistorySlice: StateCreator<
 		};
 
 		try {
-			// Execute the custom setter with current state, setValue, and args
-			const setter = customSetters[setterKey];
-			setter.execute(currentNewState as BasicStateValue, setValueFunc, ...args);
+			// Execute the state setter with current state, setValue, and args
+			const setter = stateSetters[setterKey];
+			setter.execute(currentNewState as BasicStateValue, setValueFunc, args);
 
 			// Now call newDiffState with the captured result
 			get().newDiffState(key, resultState, isDiff);

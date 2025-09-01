@@ -49,7 +49,7 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 	}, [nodesState]);
 
 	const handleAddFeature = useCallback(() => {
-		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
+		const executeStateSetter = useCedarStore.getState().executeStateSetter;
 		const newFeature = {
 			id: uuidv4(),
 			type: 'featureNode',
@@ -63,10 +63,10 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 				nodeType: 'feature' as const,
 			},
 		};
-		executeCustomSetter({
+		executeStateSetter({
 			key: 'nodes',
 			setterKey: 'addNode',
-			args: [newFeature],
+			args: { node: newFeature },
 			options: {
 				isDiff: true,
 			},
@@ -74,7 +74,7 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 	}, []);
 
 	const handleAddIssue = useCallback(() => {
-		const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
+		const executeStateSetter = useCedarStore.getState().executeStateSetter;
 		const newIssue = {
 			id: uuidv4(),
 			type: 'featureNode',
@@ -89,10 +89,10 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 				diff: 'added' as const,
 			},
 		};
-		executeCustomSetter({
+		executeStateSetter({
 			key: 'nodes',
 			setterKey: 'addNode',
-			args: [newIssue],
+			args: { node: newIssue },
 			options: {
 				isDiff: true,
 			},

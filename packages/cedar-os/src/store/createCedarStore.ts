@@ -7,6 +7,7 @@ import { createMessagesSlice } from '@/store/messages/messagesSlice';
 import { createSpellSlice } from '@/store/spellSlice/spellSlice';
 import { createStateSlice } from '@/store/stateSlice/stateSlice';
 import { createStylingSlice } from '@/store/stylingSlice';
+import { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
 import { createVoiceSlice } from '@/store/voice/voiceSlice';
 import { create, StateCreator } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -37,6 +38,7 @@ const createDefaultSlices: StateCreator<CedarStore, [], [], CedarStore> = (
 	...createDiffHistorySlice(...a),
 	...createVoiceSlice(...a),
 	...createDebuggerSlice(...a),
+	...createToolsSlice(...a),
 });
 
 // Options for creating a Cedar store

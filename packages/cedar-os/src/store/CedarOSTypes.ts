@@ -7,6 +7,7 @@ import { VoiceSlice } from '@/store/voice/voiceSlice';
 import { DebuggerSlice } from '@/store/debugger/debuggerSlice';
 import { SpellSlice } from '@/store/spellSlice/spellSlice';
 import { DiffHistorySlice } from '@/store/diffHistoryStateSlice';
+import { ToolsSlice } from '@/store/toolsSlice/ToolsTypes';
 
 /**
  * The main Cedar store type that combines all slices
@@ -20,7 +21,8 @@ export interface CedarStore
 		VoiceSlice,
 		DebuggerSlice,
 		SpellSlice,
-		DiffHistorySlice {}
+		DiffHistorySlice,
+		ToolsSlice {}
 
 // Re-export StylingConfig for convenience
 export type { StylingConfig };

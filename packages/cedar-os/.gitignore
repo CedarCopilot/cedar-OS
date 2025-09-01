@@ -1,6 +1,9 @@
 node_modules/
 dist/
+coverage/
 
 # yalc
 .yalc
 yalc.lock
+
+coverage/

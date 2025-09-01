@@ -6,6 +6,10 @@ _For the first time in history, products can come to life. We help you build pro
 
 📖 **[Complete Documentation](https://docs.cedarcopilot.com)**
 
+**[Join Our Discord!](https://discord.com/invite/tu6XSWnqAb)**
+
+**[Landing Page ](https://cedarcopilot.com/)**
+
 ## What is Cedar OS?
 
 Cedar OS is a comprehensive React framework that bridges the gap between AI agents and React applications. It provides everything you need to build AI-native applications where agents can read, write, and interact with your application state just like users can.

@@ -74,3 +74,11 @@ export type {
 	RangeSliderSpellProps,
 } from './spells/RangeSliderSpell';
 export { default as TooltipMenuSpell } from './spells/TooltipMenuSpell';
+
+// CommandBar
+export { CommandBar } from './CommandBar';
+export type {
+	CommandBarItem,
+	CommandBarGroup,
+	CommandBarContents,
+} from './CommandBar';

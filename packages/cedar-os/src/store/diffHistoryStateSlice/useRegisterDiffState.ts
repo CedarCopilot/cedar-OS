@@ -167,7 +167,7 @@ function setValueAtPath<T>(obj: T, path: string, value: unknown): T {
  *   computeState: (oldState, newState) => {
  *     return addDiffToArrayObjs(oldState, newState, 'id', '/data');
  *   },
- *   customSetters: {
+ *   stateSetters: {
  *     addNode: {
  *       name: 'addNode',
  *       description: 'Add a new node',
@@ -203,7 +203,7 @@ export function useRegisterDiffState<T extends BasicStateValue>(
 		config.setValue,
 		config.description,
 		config.schema,
-		config.customSetters,
+		config.stateSetters,
 		config.diffMode,
 		config.computeState,
 		registerDiffState,

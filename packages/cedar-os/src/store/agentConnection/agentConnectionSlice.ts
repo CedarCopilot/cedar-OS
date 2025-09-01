@@ -1,6 +1,5 @@
 import type {
 	AISDKParams,
-	AISDKStructuredParams,
 	AnthropicParams,
 	BaseParams,
 	CustomParams,
@@ -20,27 +19,35 @@ import type {
 import { getProviderImplementation } from '@/store/agentConnection/providers/index';
 import type { CedarStore } from '@/store/CedarOSTypes';
 import { getCedarState } from '@/store/CedarStore';
-import { sanitizeJson } from '@/utils/sanitizeJson';
+import { z } from 'zod';
 import type { StateCreator } from 'zustand';
 import {
 	defaultResponseProcessors,
 	initializeResponseProcessorRegistry,
 } from './responseProcessors/initializeResponseProcessorRegistry';
 
-// Parameters for sending a message
-export interface SendMessageParams {
-	model?: string;
-	systemPrompt?: string;
-	route?: string;
-	temperature?: number;
-	// Optional conversation/thread ID
-	conversationId?: string;
-	threadId?: string;
-	userId?: string;
-	// Enable streaming responses
-	stream?: boolean;
-	[key: string]: any;
-}
+// Base send message params that all providers can accept
+export type SendMessageParams<
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>, // backend context data schemas
+	E = object // extra custom fields type - users can specify their own typed custom fields
+> = BaseParams<T, E> & {
+	model?: string; // Optional for providers that need it
+	route?: string; // Optional for Mastra
+	resourceId?: string; // Optional for Mastra/Custom
+	userId?: string; // Optional for Custom
+	threadId?: string; // Optional for Mastra/Custom
+};
+
+// Union type for all possible provider params for internal use
+export type AnyProviderParams<
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E = object
+> =
+	| OpenAIParams
+	| AnthropicParams
+	| MastraParams<T, E>
+	| AISDKParams
+	| CustomParams<T, E>;
 
 // Helper type to get params based on provider config
 type GetParamsForConfig<T> = T extends { provider: 'openai' }
@@ -64,28 +71,25 @@ export interface AgentConnectionSlice {
 	responseProcessors: ResponseProcessorRegistry;
 
 	// Core methods - properly typed based on current provider config
-	callLLM: <T extends ProviderConfig = ProviderConfig>(
-		params: T extends ProviderConfig
-			? GetParamsForConfig<T>
-			: ProviderConfig extends infer U
-			? GetParamsForConfig<U>
-			: never
+	callLLM: <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E>
 	) => Promise<LLMResponse>;
 
-	callLLMStructured: <T extends ProviderConfig = ProviderConfig>(
-		params: T extends ProviderConfig
-			? GetParamsForConfig<T> & StructuredParams
-			: ProviderConfig extends infer U
-			? GetParamsForConfig<U> & StructuredParams
-			: never
+	callLLMStructured: <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E> & StructuredParams<T, E>
 	) => Promise<LLMResponse>;
 
-	streamLLM: <T extends ProviderConfig = ProviderConfig>(
-		params: T extends ProviderConfig
-			? GetParamsForConfig<T>
-			: ProviderConfig extends infer U
-			? GetParamsForConfig<U>
-			: never,
+	streamLLM: <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E>,
 		handler: StreamHandler
 	) => StreamResponse;
 
@@ -93,7 +97,12 @@ export interface AgentConnectionSlice {
 	voiceLLM: (params: VoiceParams) => Promise<VoiceLLMResponse>;
 
 	// High-level methods that use callLLM/streamLLM
-	sendMessage: (params?: SendMessageParams) => Promise<void>;
+	sendMessage: <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params?: SendMessageParams<T, E>
+	) => Promise<void>;
 	handleLLMResponse: (
 		items: (string | StructuredResponseType)[]
 	) => Promise<void>;
@@ -154,13 +163,11 @@ export const createAgentConnectionSlice: StateCreator<
 	),
 
 	// Core methods with runtime type checking
-	callLLM: async (
-		params:
-			| OpenAIParams
-			| AnthropicParams
-			| MastraParams
-			| AISDKParams
-			| CustomParams
+	callLLM: async <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E>
 	) => {
 		const config = get().providerConfig;
 		if (!config) {
@@ -190,7 +197,10 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 
 		// Log the request
-		const requestId = get().logAgentRequest(params, config.provider);
+		const requestId = get().logAgentRequest(
+			params as BaseParams,
+			config.provider
+		);
 
 		try {
 			const provider = getProviderImplementation(config);
@@ -212,13 +222,11 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 	},
 
-	callLLMStructured: async (
-		params:
-			| (OpenAIParams & StructuredParams)
-			| (AnthropicParams & StructuredParams)
-			| (MastraParams & StructuredParams)
-			| (AISDKParams & AISDKStructuredParams)
-			| (CustomParams & StructuredParams)
+	callLLMStructured: async <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E> & StructuredParams<T, E>
 	) => {
 		const config = get().providerConfig;
 		if (!config) {
@@ -258,7 +266,10 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 
 		// Log the request
-		const requestId = get().logAgentRequest(params, config.provider);
+		const requestId = get().logAgentRequest(
+			params as BaseParams,
+			config.provider
+		);
 
 		try {
 			const provider = getProviderImplementation(config);
@@ -279,13 +290,11 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 	},
 
-	streamLLM: (
-		params:
-			| OpenAIParams
-			| AnthropicParams
-			| MastraParams
-			| AISDKParams
-			| CustomParams,
+	streamLLM: <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E>,
 		handler: StreamHandler
 	) => {
 		const config = get().providerConfig;
@@ -316,7 +325,10 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 
 		// Log the stream start
-		const streamId = get().logStreamStart(params, config.provider);
+		const streamId = get().logStreamStart(
+			params as BaseParams,
+			config.provider
+		);
 
 		const provider = getProviderImplementation(config);
 		const abortController = new AbortController();
@@ -469,8 +481,25 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 	},
 
-	sendMessage: async (params?: SendMessageParams) => {
-		const { model, systemPrompt, route, temperature, stream } = params || {};
+	sendMessage: async <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params?: SendMessageParams<T, E>
+	) => {
+		// Extract ALL fields, not just selected ones
+		const {
+			model,
+			systemPrompt,
+			temperature,
+			maxTokens,
+			route,
+			stream,
+			threadId,
+			userId,
+			additionalContext,
+			...customFields
+		} = params || {};
 		const state = get();
 
 		// Set processing state
@@ -484,12 +513,14 @@ export const createAgentConnectionSlice: StateCreator<
 			// Step 2: Unify it into a single string to send to the LLM
 			const unifiedMessage = fullContext;
 
-			// Step 3: Add the stringified chatInputContent as a message from the user
-			state.addMessage({
-				role: 'user' as const,
-				type: 'text' as const,
-				content: editorContent,
-			});
+			if (editorContent) {
+				// Step 3: Add the stringified chatInputContent as a message from the user
+				state.addMessage({
+					role: 'user' as const,
+					type: 'text' as const,
+					content: editorContent,
+				});
+			}
 
 			// Clear the chat specific contextEntries (mentions)
 			state.clearMentions();
@@ -500,46 +531,58 @@ export const createAgentConnectionSlice: StateCreator<
 				throw new Error('No provider configured');
 			}
 
-			let llmParams: BaseParams = {
-				prompt: unifiedMessage,
+			let llmParams = {
+				prompt: unifiedMessage, // Generated by Cedar
 				systemPrompt,
 				temperature,
-			};
+				maxTokens,
+				...customFields,
+			} as AnyProviderParams<T, E>;
 
-			const threadId =
-				params?.threadId || (getCedarState('threadId') as string | null);
-			const userId = params?.userId || getCedarState('userId');
+			// Use extracted values with fallback to Cedar state
+			const resolvedThreadId =
+				threadId || (getCedarState('threadId') as string | null);
+			const resolvedUserId = userId || getCedarState('userId');
 
 			// Add provider-specific params
 			switch (config.provider) {
 				case 'openai':
 				case 'anthropic':
-					llmParams = { ...llmParams, model: model || 'gpt-4o-mini' };
+					llmParams = {
+						...llmParams,
+						model: model || 'gpt-4o-mini',
+					} as OpenAIParams;
 					break;
 				case 'mastra':
 					const chatPath = config.chatPath || '/chat';
 
 					llmParams = {
 						...llmParams,
-						// we're overriding the prompt since we pass in additionalContext as a raw object.
 						prompt: editorContent,
-						additionalContext: state.stringifyAdditionalContext(),
+						additionalContext:
+							additionalContext || state.compileAdditionalContext(),
 						route: route || `${chatPath}`,
-						resourceId: userId,
-						threadId,
-					};
+						resourceId: resolvedUserId,
+						threadId: resolvedThreadId,
+						...customFields,
+					} as MastraParams<T, E>;
 					break;
 				case 'ai-sdk':
-					llmParams = { ...llmParams, model: model || 'openai/gpt-4o-mini' };
+					llmParams = {
+						...llmParams,
+						model: model || 'openai/gpt-4o-mini',
+					} as AISDKParams;
 					break;
 				case 'custom':
 					llmParams = {
 						...llmParams,
 						prompt: editorContent,
-						additionalContext: sanitizeJson(state.additionalContext),
-						userId,
-						threadId,
-					};
+						additionalContext:
+							additionalContext || state.compileAdditionalContext(),
+						userId: resolvedUserId,
+						threadId: resolvedThreadId,
+						...customFields,
+					} as AnyProviderParams<T, E>;
 					break;
 			}
 

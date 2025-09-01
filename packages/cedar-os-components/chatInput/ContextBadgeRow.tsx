@@ -1,12 +1,12 @@
-import React from 'react';
 import {
+	ContextEntry,
 	useCedarStore,
 	useRenderAdditionalContext,
-	ContextEntry,
 	withClassName,
 	type CedarEditor as Editor,
 } from 'cedar-os';
 import { X } from 'lucide-react';
+import React from 'react';
 
 /**
  * Helper to normalize context entries to an array for internal processing
@@ -137,15 +137,11 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 
 	const contextElements = useRenderAdditionalContext(contextRenderers);
 
-	const isDarkMode = useCedarStore((s) => s.styling.darkMode);
-
 	return (
-		<div id='input-context' className='flex items-center gap-2 flex-wrap mb-1'>
+		<div id='input-context' className='flex items-center gap-2 flex-wrap'>
 			<div
-				className={`px-2 py-1 border text-xs rounded-sm flex items-center gap-1 whitespace-nowrap ${
-					isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
-				}`}>
-				<span>@ add context</span>
+				className={`px-2 py-1 text-xs rounded-sm flex items-center gap-1 whitespace-nowrap dark:bg-gray-800 bg-gray-50`}>
+				<span>@ to add context</span>
 			</div>
 			{contextElements}
 		</div>

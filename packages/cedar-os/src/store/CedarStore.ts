@@ -9,6 +9,7 @@ import { createVoiceSlice } from '@/store/voice/voiceSlice';
 import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
 import { createSpellSlice } from '@/store/spellSlice/spellSlice';
 import { createDiffHistorySlice } from '@/store/diffHistoryStateSlice';
+import { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
 
 // Create the combined store (default for backwards compatibility)
 export const useCedarStore = create<CedarStore>()((...a) => ({
@@ -21,6 +22,7 @@ export const useCedarStore = create<CedarStore>()((...a) => ({
 	...createDebuggerSlice(...a),
 	...createSpellSlice(...a),
 	...createDiffHistorySlice(...a),
+	...createToolsSlice(...a),
 }));
 
 export const useMessages = () => ({
@@ -152,8 +154,9 @@ export type {
 	SpellRegistration,
 } from '@/store/spellSlice/spellSlice';
 
-// Export the new useSpell hook
+// Export the spell hooks
 export { useSpell } from '@/store/spellSlice/useSpell';
+export { useMultipleSpells } from '@/store/spellSlice/useMultipleSpells';
 
 export type {
 	UseSpellOptions,
@@ -200,4 +203,32 @@ export const useDiffHistory = () => ({
 	rejectAllDiffs: useCedarStore((state) => state.rejectAllDiffs),
 	undo: useCedarStore((state) => state.undo),
 	redo: useCedarStore((state) => state.redo),
+});
+
+// Export tools slice and utilities
+export { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
+export type {
+	ToolsSlice,
+	ToolsState,
+	ToolsActions,
+	ToolFunction,
+	RegisteredTool,
+	RegisteredToolBase,
+	ToolRegistrationConfig,
+	ToolsMap,
+} from '@/store/toolsSlice/ToolsTypes';
+
+// Export the useRegisterFrontendTool hook
+export { useRegisterFrontendTool } from '@/store/toolsSlice/useRegisterFrontendTool';
+export type { UseRegisterFrontendToolOptions } from '@/store/toolsSlice/useRegisterFrontendTool';
+
+// Export a hook for tools functionality
+export const useTools = () => ({
+	registeredTools: useCedarStore((state) => state.registeredTools),
+
+	registerTool: useCedarStore((state) => state.registerTool),
+	unregisterTool: useCedarStore((state) => state.unregisterTool),
+	executeTool: useCedarStore((state) => state.executeTool),
+	getRegisteredTools: useCedarStore((state) => state.getRegisteredTools),
+	clearTools: useCedarStore((state) => state.clearTools),
 });

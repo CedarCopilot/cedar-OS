@@ -28,7 +28,7 @@ Cedar collects all subscribed state and additional context that has been registe
 
 ```tsx
 // Cedar automatically gathers additional context
-const additionalContext = state.stringifyAdditionalContext();
+const additionalContext = state.compileAdditionalContext();
 // Result includes: subscribed state, custom setters, mention data, etc.
 ```
 
@@ -169,7 +169,7 @@ Use Cedar's context system to get exactly the data your workflow needs. You can 
 
 ```tsx
 function getProjectContext(state: CedarState) {
-	const additionalContext = state.stringifyAdditionalContext();
+	const additionalContext = state.compileAdditionalContext();
 
 	// Extract only the data relevant to project summaries
 	const projectContext = {
@@ -276,6 +276,35 @@ export async function runProjectSummaryWorkflow(state: CedarState) {
 
 </Step>
 </Steps>
+
+## Typed Backend Integration
+
+Cedar-OS now supports fully typed backend integrations with generic sendMessage parameters. You can specify custom field types and additional context types for enhanced type safety:
+
+```tsx
+// Define your custom types
+type CustomFields = {
+	userId: string;
+	sessionId: string;
+	priority?: 'low' | 'medium' | 'high';
+};
+
+type UserContext = {
+	userPreferences: Record<string, string>;
+};
+
+// Use sendMessage with full type safety
+await sendMessage<UserContext, CustomFields>({
+	route: '/chat',
+	temperature: 0.7,
+	additionalContext: { userPreferences: { theme: 'dark' } },
+	userId: 'user123', // ✅ Fully typed
+	sessionId: 'session456', // ✅ Fully typed
+	priority: 'high', // ✅ Fully typed
+});
+```
+
+This provides both compile-time type checking and runtime validation when used with the corresponding Zod schemas.
 
 <Note>
 	For more advanced response processing patterns and custom response handlers,

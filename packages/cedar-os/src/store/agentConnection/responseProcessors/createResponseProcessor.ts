@@ -1,9 +1,11 @@
+import { z } from 'zod';
 import {
 	BaseStructuredResponseType,
 	CustomStructuredResponseType,
 	ResponseProcessorExecute,
 	StructuredResponseType,
 	ResponseProcessor,
+	StructuredResponseSchema,
 } from '@/store/agentConnection/AgentConnectionTypes';
 
 export function createResponseProcessor<T extends StructuredResponseType>(
@@ -20,7 +22,7 @@ export function createResponseProcessor<T extends StructuredResponseType>(
 export type SetStateResponsePayload = {
 	stateKey: string;
 	setterKey: string;
-	args?: unknown[];
+	args?: unknown;
 };
 
 // Generic setState structured response type
@@ -33,7 +35,7 @@ export type SetStateResponse = CustomStructuredResponseType<
 export type SetStateResponseFor<
 	StateKey extends string,
 	SetterKey extends string,
-	Args extends unknown[] = []
+	Args = unknown
 > = BaseStructuredResponseType & {
 	type: 'setState';
 	stateKey: StateKey;
@@ -53,7 +55,7 @@ export type LegacyActionResponse = CustomStructuredResponseType<
 export type LegacyActionResponseFor<
 	StateKey extends string,
 	SetterKey extends string,
-	Args extends unknown[] = []
+	Args = unknown
 > = BaseStructuredResponseType & {
 	type: 'action';
 	stateKey: StateKey;
@@ -118,3 +120,31 @@ export function createLegacyActionResponseProcessor<
 		validate: validate ?? defaultValidate,
 	} as unknown as ResponseProcessor<StructuredResponseType>;
 }
+
+// ===============================================================================
+// Zod Schema Definitions
+// ===============================================================================
+
+/**
+ * Zod schema for SetStateResponse
+ */
+export const SetStateResponseSchema = StructuredResponseSchema('setState').and(
+	z.object({
+		stateKey: z.string(),
+		setterKey: z.string(),
+		args: z.unknown().optional(),
+	})
+);
+
+/**
+ * Zod schema for LegacyActionResponse
+ */
+export const LegacyActionResponseSchema = StructuredResponseSchema(
+	'action'
+).and(
+	z.object({
+		stateKey: z.string(),
+		setterKey: z.string(),
+		args: z.unknown().optional(),
+	})
+);

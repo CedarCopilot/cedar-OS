@@ -155,10 +155,7 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 						<CaptionMessages showThinking={showThinking} />
 					</div>
 
-					<ChatInput
-						className='bg-transparent dark:bg-transparent p-0'
-						stream={stream}
-					/>
+					<ChatInput className='bg-transparent p-0' stream={stream} />
 				</Container3D>
 			</div>
 		</FloatingContainer>

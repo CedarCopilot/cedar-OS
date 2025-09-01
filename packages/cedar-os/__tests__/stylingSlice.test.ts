@@ -1,5 +1,5 @@
 import { act } from 'react-dom/test-utils';
-import { useCedarStore } from '@/store/CedarStore';
+import { useCedarStore } from '../src/store/CedarStore';
 
 /**
  * Basic unit test to verify the `toggleDarkMode` action correctly

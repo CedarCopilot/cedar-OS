@@ -10,6 +10,7 @@ import {
 	ChatSection,
 	SubscribedStatesSection,
 	TextLengthSection,
+	FrontendToolsSection,
 } from './sections';
 
 export default function CedarPlaygroundPage() {
@@ -94,6 +95,8 @@ export default function CedarPlaygroundPage() {
 			<TextLengthSection />
 
 			<SubscribedStatesSection />
+
+			<FrontendToolsSection />
 
 			{/* 
 			<StateAccessSection /> */}

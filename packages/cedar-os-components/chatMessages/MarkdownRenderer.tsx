@@ -94,7 +94,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 							</code>
 						) : (
 							<div
-								className='relative group my-4 rounded-lg overflow-hidden'
+								className='relative group my-4 rounded-lg'
 								style={{
 									backgroundColor: '#1e1e1e',
 									border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -129,9 +129,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 										</div>
 									</div>
 								)}
-								<pre className='p-4 overflow-x-auto'>
+								<pre className='p-4 overflow-x-auto max-w-full'>
 									<code
-										className='text-sm font-mono'
+										className='text-sm font-mono whitespace-pre'
 										style={{ color: '#d4d4d4' }}>
 										{codeString}
 									</code>

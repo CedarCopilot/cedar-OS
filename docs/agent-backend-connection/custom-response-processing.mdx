@@ -224,8 +224,8 @@ const messageResponseProcessor = {
 
 ### `"setState"` Type
 
-- **Behavior**: Executes state actions via custom setters and adds setState message to chat
-- **Properties**: `stateKey: string`, `setterKey: string`, `args?: unknown[]`
+- **Behavior**: Executes state actions via state setters and adds setState message to chat
+- **Properties**: `stateKey: string`, `setterKey: string`, `args?: unknown`
 - **Default Processor**: `setStateResponseProcessor` executes state actions and adds to chat
 
 ```tsx
@@ -234,9 +234,8 @@ const setStateResponseProcessor = {
 	type: 'setState',
 	namespace: 'default',
 	execute: async (obj, store) => {
-		// Execute the state action
-		const args = Array.isArray(obj.args) ? obj.args : [];
-		store.executeCustomSetter(obj.stateKey, obj.setterKey, ...args);
+		// Execute the state action with new parameter handling
+		store.executeStateSetter(obj.stateKey, obj.setterKey, obj.args);
 
 		// Add setState message to chat
 		store.addMessage(obj as unknown as MessageInput);
@@ -259,7 +258,7 @@ import { createSetStateResponseProcessor, SetStateResponseFor } from 'cedar-os';
 type UpdateCounterResponse = SetStateResponseFor<
 	'counter', // StateKey
 	'increment', // SetterKey
-	[number] // Args
+	{ amount: number } // Args
 >;
 
 // Create custom setState processor with filtering
@@ -268,9 +267,9 @@ const CounterSetStateProcessor =
 		namespace: 'counter',
 		setterKey: 'increment', // Only handle increment actions
 		execute: (obj, store) => {
-			// Custom processing logic
-			const amount = obj.args?.[0] || 1;
-			store.executeCustomSetter('counter', 'increment', amount);
+			// Custom processing logic with new parameter handling
+			const amount = obj.args?.amount || 1;
+			store.executeStateSetter('counter', 'increment', { amount });
 
 			// Custom message instead of default
 			store.addMessage({
@@ -313,7 +312,127 @@ const progressUpdateResponseProcessor = {
 };
 ```
 
-**⚠️ Important**: If you override any of these default types, you lose the built-in behavior. Since processors completely override default handling, ensure your custom implementation covers all functionality you need, including adding messages to the chat if desired.
+### `"frontendTool"` Type
+
+- **Behavior**: Executes registered frontend tools with full type safety and validation
+- **Properties**: `toolName: string`, `args?: unknown`
+- **Default Processor**: `frontendToolResponseProcessor` executes tools and adds execution message to chat
+- **Learn More**: See the complete [Frontend Tools documentation](/tools/frontend-tools) for detailed implementation examples
+
+```tsx
+// Default frontendToolResponseProcessor implementation
+const frontendToolResponseProcessor = {
+	type: 'frontendTool',
+	execute: async (obj, store) => {
+		try {
+			// Execute the frontend tool with validation
+			const result = await store.executeFrontendTool(obj.toolName, obj.args);
+
+			// Add success message to chat
+			store.addMessage({
+				type: 'frontendTool',
+				role: 'assistant',
+				toolName: obj.toolName,
+				args: obj.args,
+				result: result,
+				status: 'success',
+			});
+		} catch (error) {
+			// Add error message to chat
+			store.addMessage({
+				type: 'frontendTool',
+				role: 'assistant',
+				toolName: obj.toolName,
+				args: obj.args,
+				error: error.message,
+				status: 'error',
+			});
+		}
+	},
+	validate: (obj): obj is FrontendToolResponse =>
+		obj.type === 'frontendTool' &&
+		'toolName' in obj &&
+		typeof obj.toolName === 'string',
+};
+```
+
+### `"humanInTheLoop"` Type
+
+- **Behavior**: Suspends workflow execution and creates interactive UI for user input/approval
+- **Properties**: `status: 'suspended'`, `runId: string`, `stepPath: [string[], ...string[][]]`, `suspendPayload?: object`, `message?: string`, `timeoutMs?: number`
+- **Default Processor**: `humanInTheLoopResponseProcessor` manages workflow suspension/resume lifecycle
+- **Learn More**: See the complete [Human-in-the-Loop documentation](/workflows/human-in-the-loop) for detailed implementation examples
+
+```tsx
+// Default humanInTheLoopResponseProcessor implementation
+const humanInTheLoopResponseProcessor = {
+	type: 'humanInTheLoop',
+	execute: (obj, store) => {
+		// Store workflow suspension data in 'humanInTheLoop' state
+		store.registerState({
+			key: 'humanInTheLoop',
+			value: { [obj.runId]: { ...obj, suspendedAt: new Date().toISOString() } },
+			customSetters: {
+				resume: /* resume workflow logic */,
+				cancel: /* cancel workflow logic */
+			}
+		});
+
+		// Add interactive message with resume/cancel callbacks
+		store.addMessage({
+			type: 'humanInTheLoop',
+			state: 'suspended',
+			runId: obj.runId,
+			suspendPayload: obj.suspendPayload,
+			resumeCallback: /* typed resume function */,
+			cancelCallback: /* typed cancel function */
+		});
+	}
+};
+```
+
+## Zod Schema Validation
+
+Cedar exports Zod schemas for all default response processor types, enabling runtime validation and type safety:
+
+```tsx
+import { z } from 'zod';
+import {
+	BackendMessageResponseSchema,
+	SetStateResponseSchema,
+	LegacyActionResponseSchema,
+	ProgressUpdateResponseSchema,
+	HumanInTheLoopResponseSchema,
+	FrontendToolResponseSchema,
+} from 'cedar-os';
+
+// Runtime validation
+const validatedResponse = HumanInTheLoopResponseSchema.parse(agentResponse);
+
+// Type inference from schema
+type HumanInTheLoopType = z.infer<typeof HumanInTheLoopResponseSchema>;
+
+// Validate custom response objects
+if (BackendMessageResponseSchema.safeParse(responseObject).success) {
+	// Handle as message response
+}
+```
+
+**Available Zod Schemas:**
+
+- `BackendMessageResponseSchema` - For `"message"` type responses
+- `SetStateResponseSchema` - For `"setState"` type responses
+- `LegacyActionResponseSchema` - For `"action"` type responses (backwards compatibility)
+- `ProgressUpdateResponseSchema` - For `"progress_update"` type responses
+- `HumanInTheLoopResponseSchema` - For `"humanInTheLoop"` type responses
+- `FrontendToolResponseSchema` - For `"frontendTool"` type responses
+
+<Warning>
+	If you override any of these default types, you lose the built-in behavior.
+	Since processors completely override default handling, ensure your custom
+	implementation covers all functionality you need, including adding messages to
+	the chat if desired.
+</Warning>
 
 ## Recommended File Structure
 

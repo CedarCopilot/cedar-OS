@@ -1,4 +1,51 @@
 import type { ReactNode } from 'react';
+import z from 'zod';
+
+// -------- Backend context structure (after compileAdditionalContext transformation) -----------
+// Note: These are different from the stateSlice Setter types - these are for serialized context
+export interface BackendStateSetterSchema {
+	name: string;
+	stateKey: string;
+	description: string;
+	argsSchema?: unknown;
+}
+
+export interface BackendStateSchema {
+	stateKey: string;
+	description?: string;
+	schema: unknown;
+}
+
+export interface BackendFrontendToolSchema {
+	name: string;
+	description?: string;
+	argsSchema: Record<string, unknown>; // JSON Schema
+}
+
+/**
+ * Backend Context Entry with proper generic typing
+ */
+export interface BackendContextEntry<TData = unknown> {
+	data: TData;
+	source: 'mention' | 'subscription' | 'manual' | 'function';
+}
+
+/**
+ * The transformed backend type - what backends actually receive when parsing the additionalContext field
+ */
+export type AdditionalContextParam<
+	TSchemas extends Record<string, z.ZodTypeAny>
+> = {
+	frontendTools?: Record<string, unknown>;
+	stateSetters?: Record<string, unknown>;
+	schemas?: Record<string, unknown>;
+} & {
+	[K in keyof TSchemas]: TSchemas[K] extends z.ZodOptional<z.ZodArray<infer U>>
+		? BackendContextEntry<z.infer<U>>[] | undefined
+		: TSchemas[K] extends z.ZodArray<infer U>
+		? BackendContextEntry<z.infer<U>>[]
+		: BackendContextEntry<z.infer<TSchemas[K]>>;
+};
 
 /**
  * Represents an entry in the additional context
@@ -57,7 +104,7 @@ export interface MentionProvider {
 	renderMenuItem?: (item: MentionItem) => ReactNode;
 	renderEditorItem?: (
 		item: MentionItem,
-		attrs: Record<string, any>
+		attrs: Record<string, unknown>
 	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
 }
@@ -68,7 +115,7 @@ export interface MentionProvider {
 export interface StateBasedMentionProviderConfig {
 	stateKey: string;
 	trigger?: string;
-	labelField?: string | ((item: any) => string);
+	labelField?: string | ((item: unknown) => string);
 	searchFields?: string[];
 	description?: string;
 	icon?: ReactNode;
@@ -77,7 +124,121 @@ export interface StateBasedMentionProviderConfig {
 	renderMenuItem?: (item: MentionItem) => ReactNode;
 	renderEditorItem?: (
 		item: MentionItem,
-		attrs: Record<string, any>
+		attrs: Record<string, unknown>
 	) => ReactNode;
 	renderContextBadge?: (entry: ContextEntry) => ReactNode;
+}
+
+// Schema for the existing ContextEntry type
+export const ContextEntrySchema = z.object({
+	id: z.string(),
+	source: z.enum(['mention', 'subscription', 'manual', 'function']),
+	data: z.unknown(),
+	metadata: z
+		.object({
+			label: z.string().optional(),
+			icon: z.unknown().optional(), // ReactNode - can't validate with Zod
+			color: z.string().optional(),
+			showInChat: z.boolean().optional(),
+			order: z.number().optional(),
+		})
+		.catchall(z.unknown())
+		.optional(),
+});
+
+// Schema for the existing AdditionalContext type
+export const AdditionalContextSchema = z.record(
+	z.union([ContextEntrySchema, z.array(ContextEntrySchema)])
+);
+
+// Generic chat request schema factory for backends
+export const createChatRequestSchema = <
+	T extends z.ZodTypeAny = typeof AdditionalContextSchema
+>(
+	additionalContextSchema?: T
+) =>
+	z.object({
+		message: z.string(),
+		systemPrompt: z.string().optional(),
+		temperature: z.number().min(0).max(2).optional(),
+		maxTokens: z.number().positive().optional(),
+		stream: z.boolean().optional(),
+		additionalContext: (
+			additionalContextSchema || AdditionalContextSchema
+		).optional(),
+	});
+
+// Standard chat request schema using the existing AdditionalContext
+export const ChatRequestSchema = createChatRequestSchema();
+
+// Generic response schema for backends
+export const ChatResponseSchema = z.object({
+	content: z.string(),
+	usage: z
+		.object({
+			promptTokens: z.number(),
+			completionTokens: z.number(),
+			totalTokens: z.number(),
+		})
+		.optional(),
+	metadata: z.record(z.unknown()).optional(),
+	object: z
+		.union([z.record(z.unknown()), z.array(z.record(z.unknown()))])
+		.optional(),
+});
+
+// -------- Zod Types for AdditionalContextParam -----------
+/**
+ * AdditionalContextParam that the backend receives (factory function)
+ */
+export function AdditionalContextParamSchema<
+	TSchemas extends Record<string, z.ZodTypeAny>
+>(dataSchemas: TSchemas) {
+	const contextEntrySchema = z.object({
+		data: z.unknown(),
+		source: z.enum(['mention', 'subscription', 'manual', 'function']),
+	});
+
+	const schemaFields: Record<string, z.ZodTypeAny> = {
+		frontendTools: z.record(z.string(), z.unknown()).optional(),
+		stateSetters: z.record(z.string(), z.unknown()).optional(),
+		schemas: z.record(z.string(), z.unknown()).optional(),
+	};
+
+	// Transform each data schema to be wrapped in BackendContextEntry
+	for (const [key, schema] of Object.entries(dataSchemas)) {
+		if (schema instanceof z.ZodOptional) {
+			// Handle optional arrays: z.array(T).optional() -> z.array(BackendContextEntry<T>).optional()
+			const innerSchema = schema.unwrap();
+			if (innerSchema instanceof z.ZodArray) {
+				schemaFields[key] = z
+					.array(
+						contextEntrySchema.extend({
+							data: innerSchema.element,
+						})
+					)
+					.optional();
+			} else {
+				schemaFields[key] = contextEntrySchema
+					.extend({
+						data: innerSchema,
+					})
+					.optional();
+			}
+		} else if (schema instanceof z.ZodArray) {
+			// Handle required arrays: z.array(T) -> z.array(BackendContextEntry<T>)
+			schemaFields[key] = z.array(
+				contextEntrySchema.extend({
+					data: schema.element,
+				})
+			);
+		} else {
+			// Handle single values: T -> BackendContextEntry<T>
+			schemaFields[key] = contextEntrySchema.extend({
+				data: schema,
+			});
+		}
+	}
+
+	return z.object(schemaFields);
 }

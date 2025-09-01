@@ -54,10 +54,10 @@ export function CedarCopilotClient({
 	}, [llmProvider, setProviderConfig]);
 
 	// ─── userId ────────────────────────────────────────────────
-	const [cedarUserId, setCedarUserId] = useCedarState<string>(
-		'userId',
-		userId ?? ''
-	);
+	const [cedarUserId, setCedarUserId] = useCedarState<string>({
+		key: 'userId',
+		initialValue: userId ?? '',
+	});
 
 	useEffect(() => {
 		if (userId !== null) {
@@ -66,10 +66,10 @@ export function CedarCopilotClient({
 	}, [userId, setCedarUserId]);
 
 	// ─── threadId ──────────────────────────────────────────────
-	const [cedarThreadId, setCedarThreadId] = useCedarState<string>(
-		'threadId',
-		threadId ?? ''
-	);
+	const [cedarThreadId, setCedarThreadId] = useCedarState<string>({
+		key: 'threadId',
+		initialValue: threadId ?? '',
+	});
 
 	useEffect(() => {
 		if (threadId !== null) {

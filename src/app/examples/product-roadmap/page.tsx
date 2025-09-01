@@ -39,16 +39,21 @@ import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
 import { TooltipMenu } from '@/inputs/TooltipMenu';
 import RadialMenuSpell from '@/spells/RadialMenuSpell';
+import { CommandBarChat } from '@/app/examples/product-roadmap/components/CommandBarChat';
 import {
 	ActivationMode,
 	addDiffToArrayObjs,
 	Hotkey,
 	useDiffStateHelpers,
 	useRegisterDiffState,
+	useCedarState,
+	HumanInTheLoopState,
 	useRegisterState,
 	useStateBasedMentionProvider,
 	useSubscribeStateToInputContext,
+	useRegisterFrontendTool,
 	type CedarStore,
+	type Setter,
 } from 'cedar-os';
 import { isSupabaseAvailable } from '@/app/examples/product-roadmap/supabase/client';
 import { z } from 'zod';
@@ -136,11 +141,9 @@ function FlowCanvas() {
 				type: 'listen',
 				fields: ['/data', '/position'],
 			}),
-		customSetters: {
-			addNode: {
-				name: 'addNode',
-				description: 'Add a new node to the roadmap',
-				schema: z.object({
+		stateSetters: {
+			addNode: (() => {
+				const addNodeArgsSchema = z.object({
 					node: z.object({
 						id: z.string().optional(),
 						data: z.object({
@@ -155,51 +158,70 @@ function FlowCanvas() {
 								.describe('Type of node'),
 							upvotes: z.number().default(0).describe('Number of upvotes'),
 							comments: z
-								.array(z.any())
+								.array(
+									z.object({
+										id: z.string(),
+										author: z.string(),
+										text: z.string(),
+									})
+								)
 								.default([])
 								.describe('Array of comments'),
 						}),
 					}),
-				}),
-				execute: (currentNodes, setValue, node) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const nodeData = node as Node<FeatureNodeData>;
-					const newNode: Node<FeatureNodeData> = {
-						...nodeData,
-						type: 'featureNode',
-						position: { x: Math.random() * 400, y: Math.random() * 400 },
-						id: nodeData.id || uuidv4(),
-						data: {
-							...nodeData.data,
-							nodeType: nodeData.data.nodeType || 'feature',
-							status: nodeData.data.status || 'planned',
-							upvotes: nodeData.data.upvotes || 0,
-							comments: nodeData.data.comments || [],
-						},
-						width: 320,
-						height: 150,
-					};
-					// Use the setValue parameter instead of setNodes directly
-					setValue([...nodes, newNode]);
-				},
-			},
+				});
+
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof addNodeArgsSchema
+				> = {
+					name: 'addNode',
+					description: 'Add a new node to the roadmap',
+					argsSchema: addNodeArgsSchema,
+					execute: (currentNodes, setValue, args) => {
+						// args is fully typed as { node: { id?: string, data: { ... } } }
+						const newNode: Node<FeatureNodeData> = {
+							...args.node,
+							type: 'featureNode',
+							position: { x: Math.random() * 400, y: Math.random() * 400 },
+							id: args.node.id || uuidv4(),
+							data: {
+								...args.node.data,
+								nodeType: args.node.data.nodeType || 'feature',
+								status: args.node.data.status || 'planned',
+								upvotes: args.node.data.upvotes || 0,
+								comments: args.node.data.comments || [],
+								diff: 'added' as const,
+							},
+						};
+						setValue([...currentNodes, newNode]);
+					},
+				};
+				return setter;
+			})(),
 			removeNode: {
 				name: 'removeNode',
 				description: 'Remove a node from the roadmap',
-				schema: z.object({
+				argsSchema: z.object({
 					id: z.string().describe('The ID of the node to remove'),
 				}),
-				execute: async (currentNodes, setValue, id) => {
-					const nodeId = id as string;
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					// Use setValue parameter instead of setNodes
-					setValue(nodes.filter((node) => node.id !== nodeId));
+				execute: async (currentNodes, setValue, args) => {
+					// args is typed as { id: string }
+					// Instead of removing, mark as removed with diff
+					setValue(
+						currentNodes.map((node) =>
+							node.id === args.id
+								? {
+										...node,
+										data: { ...node.data, diff: 'removed' as const },
+								  }
+								: node
+						)
+					);
 				},
 			},
-			changeNode: {
-				name: 'changeNode',
-				description: 'Update an existing node in the roadmap',
-				schema: z.object({
+			changeNode: (() => {
+				const changeNodeArgsSchema = z.object({
 					newNode: z.object({
 						id: z.string().describe('The ID of the node to update'),
 						data: z.object({
@@ -214,31 +236,159 @@ function FlowCanvas() {
 								.describe('Type of node'),
 							upvotes: z.number().default(0).describe('Number of upvotes'),
 							comments: z
-								.array(z.any())
+								.array(
+									z.object({
+										id: z.string(),
+										author: z.string(),
+										text: z.string(),
+									})
+								)
 								.default([])
 								.describe('Array of comments'),
 						}),
 					}),
-				}),
-				execute: (currentNodes, setValue, newNode) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const updatedNode = newNode as Node<FeatureNodeData>;
-					// Use setValue parameter instead of setNodes
-					setValue(
-						nodes.map((node) =>
-							node.id === updatedNode.id ? updatedNode : node
-						)
-					);
-				},
-			},
+				});
+
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof changeNodeArgsSchema
+				> = {
+					name: 'changeNode',
+					description: 'Update an existing node in the roadmap',
+					argsSchema: changeNodeArgsSchema,
+					execute: (currentNodes, setValue, args) => {
+						// args is typed as { newNode: { id: string, data: { ... } } }
+						setValue(
+							currentNodes.map((node) =>
+								node.id === args.newNode.id
+									? {
+											...args.newNode,
+											type: 'featureNode',
+											position: node.position, // Keep existing position
+											data: { ...args.newNode.data, diff: 'changed' as const },
+									  }
+									: node
+							)
+						);
+					},
+				};
+				return setter;
+			})(),
+			acceptDiff: (() => {
+				const acceptDiffArgsSchema = z.object({
+					nodeId: z
+						.string()
+						.describe('The ID of the node to accept the diff for'),
+				});
+
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof acceptDiffArgsSchema
+				> = {
+					name: 'acceptDiff',
+					description: 'Accept a diff for a node',
+					argsSchema: acceptDiffArgsSchema,
+					execute: async (currentNodes, setValue, args) => {
+						// args is typed as { nodeId: string }
+						const node = currentNodes.find((n) => n.id === args.nodeId);
+
+						if (!node || !node.data.diff) return;
+
+						if (node.data.diff === 'removed') {
+							// Actually remove the node
+							await deleteNode(args.nodeId);
+							setValue(currentNodes.filter((n) => n.id !== args.nodeId));
+							// Also remove any edges connected to this node
+							setEdges((edges) =>
+								edges.filter(
+									(edge) =>
+										edge.source !== args.nodeId && edge.target !== args.nodeId
+								)
+							);
+						} else {
+							// Remove diff property for added/changed nodes
+							setNodes(
+								currentNodes.map((n) =>
+									n.id === args.nodeId
+										? { ...n, data: { ...n.data, diff: undefined } }
+										: n
+								)
+							);
+						}
+					},
+				};
+				return setter;
+			})(),
+			rejectDiff: (() => {
+				const rejectDiffArgsSchema = z.object({
+					nodeId: z
+						.string()
+						.describe('The ID of the node to reject the diff for'),
+				});
+
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof rejectDiffArgsSchema
+				> = {
+					name: 'rejectDiff',
+					description: 'Reject a diff for a node',
+					argsSchema: rejectDiffArgsSchema,
+					execute: (currentNodes, setValue, args) => {
+						// args is typed as { nodeId: string }
+						const node = currentNodes.find((n) => n.id === args.nodeId);
+
+						if (!node || !node.data.diff) return;
+
+						if (node.data.diff === 'added') {
+							// Remove newly added nodes
+							setValue(currentNodes.filter((n) => n.id !== args.nodeId));
+						} else {
+							// Just remove diff property for removed/changed nodes
+							setValue(
+								currentNodes.map((n) =>
+									n.id === args.nodeId
+										? { ...n, data: { ...n.data, diff: undefined } }
+										: n
+								)
+							);
+						}
+					},
+				};
+				return setter;
+			})(),
 		},
 	});
+
+	useSubscribeStateToInputContext('nodes', (nodes) => ({
+		nodes,
+	}));
 
 	useRegisterState({
 		key: 'edges',
 		value: edges,
 		setValue: setEdges,
 		description: 'Product roadmap edges',
+	});
+
+	// Example 1: Simple notification tool
+	useRegisterFrontendTool({
+		name: 'showNotification',
+		description: 'Show a notification to the user',
+		argsSchema: z.object({
+			message: z.string().describe('The notification message'),
+			type: z
+				.enum(['success', 'error', 'info', 'warning'])
+				.describe('Notification type'),
+			duration: z.number().optional().describe('Duration in ms (optional)'),
+		}),
+		// ✅ SIMPLE: Just receive typed args directly
+		execute: async (args) => {
+			// args is fully typed as { message: string; type: 'success' | 'error' | 'info' | 'warning'; duration?: number }
+			console.log(`Showing ${args.type} notification: ${args.message}`);
+
+			// In a real app, you'd use a toast library
+			alert(`${args.type.toUpperCase()}: ${args.message}`);
+		},
 	});
 
 	// Register mention provider for nodes
@@ -492,12 +642,9 @@ function FlowCanvas() {
 // -----------------------------------------------------------------------------
 
 function SelectedNodesPanel() {
-	const [selected, setSelected] = React.useState<Node<FeatureNodeData>[]>([]);
-
-	useRegisterState<Node<FeatureNodeData>[]>({
+	const [selected, setSelected] = useCedarState<Node<FeatureNodeData>[]>({
 		key: 'selectedNodes',
-		value: selected,
-		setValue: setSelected,
+		initialValue: [],
 		description: 'Selected nodes',
 	});
 
@@ -519,6 +666,16 @@ function SelectedNodesPanel() {
 		onChange: ({ nodes }: { nodes: Node<FeatureNodeData>[] }) =>
 			setSelected(nodes),
 	});
+
+	useSubscribeStateToInputContext<HumanInTheLoopState>(
+		'humanInTheLoop',
+		(state) => ({
+			humanInTheLoop: state,
+		}),
+		{
+			showInChat: false,
+		}
+	);
 
 	return (
 		<div className='absolute right-4 top-4 rounded-lg p-3 shadow-md backdrop-blur'>
@@ -547,8 +704,8 @@ function SelectedNodesPanel() {
 
 export default function ProductMapPage() {
 	const [chatMode, setChatMode] = React.useState<
-		'floating' | 'sidepanel' | 'caption'
-	>('caption');
+		'floating' | 'sidepanel' | 'caption' | 'command'
+	>('command');
 
 	const renderContent = () => (
 		<ReactFlowProvider>
@@ -559,6 +716,7 @@ export default function ProductMapPage() {
 					onChatModeChange={setChatMode}
 					currentChatMode={chatMode}
 				/>
+				{chatMode === 'command' && <CommandBarChat open={true} />}
 				{chatMode === 'caption' && <ProductRoadmapChat stream={false} />}
 				{chatMode === 'floating' && (
 					<FloatingCedarChat
