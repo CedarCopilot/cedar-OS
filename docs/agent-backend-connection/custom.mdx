@@ -14,7 +14,7 @@ The Cedar-OS agent connection system is built around a **provider pattern** that
 - **Non-streaming LLM calls** (`callLLM`)
 - **Structured output calls** (`callLLMStructured`)
 - **Streaming responses** (`streamLLM`)
-- **Response parsing** (`handleResponse`, `handleStreamResponse`)
+- **Response parsing** (`handleResponse`)
 
 The system automatically handles:
 
@@ -40,7 +40,6 @@ interface ProviderImplementation<TParams, TConfig> {
 		handler: StreamHandler
 	) => StreamResponse;
 	handleResponse: (response: Response) => Promise<LLMResponse>;
-	handleStreamResponse: (chunk: string) => StreamEvent;
 }
 ```
 
@@ -318,27 +317,6 @@ handleResponse: async (response) => {
 };
 ```
 
-### 5. `handleStreamResponse` - Parse Stream Chunks
-
-**Purpose:** Convert individual stream chunks to `StreamEvent` objects.
-
-**Input:** Raw string chunk from the stream
-**Output:** `StreamEvent` object
-
-**Example Implementation:**
-
-```typescript
-handleStreamResponse: (chunk) => {
-	try {
-		const data = JSON.parse(chunk);
-		const content = data.choices?.[0]?.delta?.content || '';
-		return { type: 'chunk', content };
-	} catch (error) {
-		return { type: 'error', error: error as Error };
-	}
-};
-```
-
 ## Complete Custom Provider Example
 
 Here's a complete example of a custom provider implementation:
@@ -405,16 +383,6 @@ export const myCustomProvider: ProviderImplementation<
 			usage: data.usage,
 			metadata: { model: data.model, id: data.id },
 		};
-	},
-
-	handleStreamResponse: (chunk) => {
-		try {
-			const data = JSON.parse(chunk);
-			const content = data.delta?.content || '';
-			return { type: 'chunk', content };
-		} catch (error) {
-			return { type: 'error', error: error as Error };
-		}
 	},
 };
 ```

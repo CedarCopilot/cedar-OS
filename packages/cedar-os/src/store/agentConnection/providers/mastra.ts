@@ -229,11 +229,6 @@ export const mastraProvider: ProviderImplementation<
 			object: data.object, // Include the structured output if present
 		};
 	},
-
-	// This can be safely removed
-	handleStreamResponse: (chunk) => {
-		return { type: 'chunk', content: chunk };
-	},
 };
 
 /**
