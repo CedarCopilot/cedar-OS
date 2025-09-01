@@ -199,7 +199,6 @@ export interface ProviderImplementation<
 	) => StreamResponse;
 	voiceLLM: (params: VoiceParams, config: TConfig) => Promise<VoiceLLMResponse>;
 	handleResponse: (response: Response) => Promise<LLMResponse>;
-	handleStreamResponse: (chunk: string) => StreamEvent;
 }
 
 // Response processor types

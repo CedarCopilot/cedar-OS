@@ -30,7 +30,6 @@ interface ProviderTemplate {
 		handler: StreamHandler
 	) => StreamResponse;
 	handleResponse: (response: any) => LLMResponse;
-	handleStreamResponse: (chunk: any) => StreamEvent;
 }
 ```
 
@@ -44,7 +43,6 @@ const providerRegistry = {
     callLLM: openAICallLLM,
     streamLLM: openAIStreamLLM,
     handleResponse: openAIHandleResponse,
-    handleStreamResponse: openAIHandleStreamResponse,
   },
   anthropic: { ... },
   mastra: { ... },
