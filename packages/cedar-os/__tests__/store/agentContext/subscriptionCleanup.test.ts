@@ -1,5 +1,5 @@
 /**
- * Test to demonstrate the subscription cleanup issue in useSubscribeStateToInputContext
+ * Test to demonstrate the subscription cleanup issue in useSubscribeStateToAgentContext
  *
  * The problem: When nodes are selected and then unselected, the subscription
  * continues to run but doesn't clean up old context entries properly.
@@ -15,7 +15,7 @@
  * 3. Component unmount -> context remains (BUG) ✗
  */
 
-describe('useSubscribeStateToInputContext cleanup issues', () => {
+describe('useSubscribeStateToAgentContext cleanup issues', () => {
 	it('should demonstrate the subscription cleanup problem', () => {
 		// This test documents the expected vs actual behavior
 		// The actual implementation will be tested once we fix the hook
@@ -28,7 +28,7 @@ describe('useSubscribeStateToInputContext cleanup issues', () => {
 		};
 
 		// Currently, the hook has no cleanup mechanism:
-		// 1. useSubscribeStateToInputContext only calls updateAdditionalContext
+		// 1. useSubscribeStateToAgentContext only calls updateAdditionalContext
 		// 2. updateAdditionalContext only adds/updates context, never removes
 		// 3. No useEffect cleanup function to remove context on unmount
 		// 4. No mechanism to clear context when mapped values become empty
@@ -42,7 +42,7 @@ describe('useSubscribeStateToInputContext cleanup issues', () => {
 	it('should identify the root cause', () => {
 		// Root cause analysis:
 		const issues = {
-			noCleanupInUseEffect: true, // useSubscribeStateToInputContext has no cleanup function
+			noCleanupInUseEffect: true, // useSubscribeStateToAgentContext has no cleanup function
 			updateAdditionalContextOnlyAdds: true, // updateAdditionalContext never removes keys
 			noEmptyArrayHandling: true, // Empty arrays don't trigger context removal
 			noUnmountCleanup: true, // No cleanup when components unmount

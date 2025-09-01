@@ -1,5 +1,5 @@
-import { useMentionProvidersByTrigger } from '@/store/agentInputContext/mentionProviders';
-import { MentionItem } from '@/store/agentInputContext/AgentInputContextTypes';
+import { useMentionProvidersByTrigger } from '@/store/agentContext/mentionProviders';
+import { MentionItem } from '@/store/agentContext/AgentContextTypes';
 import { cn, withClassName } from '@/styles/stylingUtils';
 import React, {
 	forwardRef,

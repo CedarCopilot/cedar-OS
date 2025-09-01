@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { CedarStore } from '@/store/CedarOSTypes';
-import type { AdditionalContextParam } from '@/store/agentInputContext/AgentInputContextTypes';
-import { AdditionalContextParamSchema } from '@/store/agentInputContext/AgentInputContextTypes';
+import type { AdditionalContextParam } from '@/store/agentContext/AgentContextTypes';
+import { AdditionalContextParamSchema } from '@/store/agentContext/AgentContextTypes';
 
 // Base types for LLM responses and events
 export interface LLMResponse {

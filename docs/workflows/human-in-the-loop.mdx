@@ -19,7 +19,7 @@ This system uses Cedar's existing architecture patterns:
 1. **State Management**: Stores workflow data in Cedar state ([learn more about this concept](/state-access/agentic-state-access))
 2. **Response Processors**: Handles the suspend/resume logic ([learn more about this concept](/agent-backend-connection/custom-response-processing))
 3. **Message Renderers**: Creates the interactive UI ([learn more about this concept](/chat/custom-message-rendering))
-4. **Input subscriptions (optionally)**: Sends workflow states to the backend with future messages ([learn more about this concept](/agent-input-context/subscribing-state)).
+4. **Input subscriptions (optionally)**: Sends workflow states to the backend with future messages ([learn more about this concept](/agent-context/subscribing-state)).
 
 Human-in-the-loop workflows work by:
 
@@ -300,7 +300,7 @@ If you want the user to be able to resume a workflow by just typing a response, 
 const { subscribeState } = useCedarInputContext();
 
 // Subscribe workflow state to agent context
-useSubscribeStateToInputContext('humanInTheLoop', (humanInTheLoopState) => ({
+useSubscribeStateToAgentContext('humanInTheLoop', (humanInTheLoopState) => ({
 	allSuspendedWorkflows: Object.values(humanInTheLoopState),
 }));
 

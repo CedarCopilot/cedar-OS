@@ -23,7 +23,7 @@ export {
 
 // Store
 export { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
-export { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
+export { createAgentContextSlice } from '@/store/agentContext/agentContextSlice';
 export { createMessagesSlice } from '@/store/messages/messagesSlice';
 export { createStateSlice } from '@/store/stateSlice/stateSlice';
 export { createStylingSlice } from '@/store/stylingSlice';
@@ -59,15 +59,15 @@ export type {
 // Export context management
 export {
 	useRenderAdditionalContext,
-	useSubscribeStateToInputContext,
-} from '@/store/agentInputContext/agentInputContextSlice';
+	useSubscribeStateToAgentContext,
+} from '@/store/agentContext/agentContextSlice';
 
 // Export mention provider functionality
 export {
 	useMentionProviders,
 	useMentionProvidersByTrigger,
 	useStateBasedMentionProvider,
-} from '@/store/agentInputContext/mentionProviders';
+} from '@/store/agentContext/mentionProviders';
 
 // Export typed agent connection hooks
 export {
@@ -87,7 +87,7 @@ export type {
 	BackendStateSetterSchema,
 	BackendStateSchema,
 	BackendContextEntry,
-} from '@/store/agentInputContext/AgentInputContextTypes';
+} from '@/store/agentContext/AgentContextTypes';
 
 // Export message types
 export type {
@@ -167,7 +167,7 @@ export {
 	VoiceLLMResponseSchema,
 } from '@/store/agentConnection/AgentConnectionTypes';
 
-// Export additional context schemas from AgentInputContextTypes
+// Export additional context schemas from AgentContextTypes
 export {
 	// Backend context schema factories
 	AdditionalContextParamSchema,
@@ -177,7 +177,7 @@ export {
 	ChatRequestSchema,
 	ChatResponseSchema,
 	createChatRequestSchema,
-} from '@/store/agentInputContext/AgentInputContextTypes';
+} from '@/store/agentContext/AgentContextTypes';
 
 // Export Mastra message types
 export type {

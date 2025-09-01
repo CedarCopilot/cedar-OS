@@ -10,7 +10,7 @@ import {
 	type Placement,
 } from '@floating-ui/dom';
 import MentionList from '@/components/chatInput/MentionList';
-import type { MentionItem } from '@/store/agentInputContext/AgentInputContextTypes';
+import type { MentionItem } from '@/store/agentContext/AgentContextTypes';
 import { useCedarStore } from '@/store/CedarStore';
 import { MentionNodeAttrs } from '@tiptap/extension-mention';
 

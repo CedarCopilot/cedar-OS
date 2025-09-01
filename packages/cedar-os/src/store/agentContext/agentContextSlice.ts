@@ -3,7 +3,7 @@ import type {
 	AdditionalContextParam,
 	ContextEntry,
 	MentionProvider,
-} from '@/store/agentInputContext/AgentInputContextTypes';
+} from '@/store/agentContext/AgentContextTypes';
 import { CedarStore } from '@/store/CedarOSTypes';
 import { useCedarStore } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';
@@ -127,8 +127,8 @@ function formatContextEntries<T>(
 	return isInputArray ? entries : entries[0];
 }
 
-// Define the agent input context slice
-export interface AgentInputContextSlice {
+// Define the agent context slice
+export interface AgentContextSlice {
 	// The up-to-date editor JSON content
 	chatInputContent: ChatInput | null;
 	// Actions to update content
@@ -181,12 +181,12 @@ export interface AgentInputContextSlice {
 	compileStateSetters: () => Record<string, unknown>;
 }
 
-// Create the agent input context slice
-export const createAgentInputContextSlice: StateCreator<
+// Create the agent context slice
+export const createAgentContextSlice: StateCreator<
 	CedarStore,
 	[],
 	[],
-	AgentInputContextSlice
+	AgentContextSlice
 > = (set, get) => ({
 	chatInputContent: null,
 	overrideInputContent: { input: null },
@@ -523,7 +523,7 @@ type ElementType<T> = T extends readonly (infer E)[] ? E : T;
  * @param mapFn - A function that maps the state to a record of context entries
  * @param options - Optional configuration for the context entries
  */
-export function useSubscribeStateToInputContext<T>(
+export function useSubscribeStateToAgentContext<T>(
 	stateKey: string,
 	mapFn: (state: T) => Record<string, unknown>,
 	options?: {
@@ -616,3 +616,5 @@ export function useRenderAdditionalContext(
 		return elements;
 	}, [additionalContext, renderers]);
 }
+
+export { useSubscribeStateToAgentContext as useSubscribeStateToInputContext };

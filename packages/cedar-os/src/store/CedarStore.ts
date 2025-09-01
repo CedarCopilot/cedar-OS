@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
+import { createAgentContextSlice } from '@/store/agentContext/agentContextSlice';
 import { createStylingSlice } from '@/store/stylingSlice';
 import { CedarStore } from '@/store/CedarOSTypes';
 import { createStateSlice } from '@/store/stateSlice/stateSlice';
@@ -14,7 +14,7 @@ import { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
 // Create the combined store (default for backwards compatibility)
 export const useCedarStore = create<CedarStore>()((...a) => ({
 	...createStylingSlice(...a),
-	...createAgentInputContextSlice(...a),
+	...createAgentContextSlice(...a),
 	...createStateSlice(...a),
 	...createMessagesSlice(...a),
 	...createAgentConnectionSlice(...a),

@@ -1,4 +1,4 @@
-import { useMentionProvidersByTrigger } from '@/store/agentInputContext/mentionProviders';
+import { useMentionProvidersByTrigger } from '@/store/agentContext/mentionProviders';
 import { withClassName } from '@/styles/stylingUtils';
 import { NodeViewWrapper } from '@tiptap/react';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';

@@ -2,22 +2,22 @@ import React from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { useCedarStore } from '../../../src/store/CedarStore';
 import {
-	useSubscribeStateToInputContext,
+	useSubscribeStateToAgentContext,
 	useRenderAdditionalContext,
-} from '../../../src/store/agentInputContext/agentInputContextSlice';
+} from '../../../src/store/agentContext/agentContextSlice';
 import type {
 	ContextEntry,
 	MentionProvider,
-} from '../../../src/store/agentInputContext/AgentInputContextTypes';
+} from '../../../src/store/agentContext/AgentContextTypes';
 import type { JSONContent } from '@tiptap/core';
 import { z } from 'zod';
 
 /**
- * Tests for the AgentInputContextSlice to verify all functionality
+ * Tests for the AgentContextSlice to verify all functionality
  * including context management, mention providers, and state subscription
  */
 
-describe('AgentInputContextSlice', () => {
+describe('AgentContextSlice', () => {
 	beforeEach(() => {
 		// Reset the store before each test
 		useCedarStore.setState((state) => ({
@@ -856,7 +856,7 @@ describe('AgentInputContextSlice', () => {
 		});
 	});
 
-	describe('useSubscribeStateToInputContext hook', () => {
+	describe('useSubscribeStateToAgentContext hook', () => {
 		it('should subscribe to state and update context', () => {
 			// Register a state first
 			act(() => {
@@ -874,7 +874,7 @@ describe('AgentInputContextSlice', () => {
 				items: state,
 			}));
 
-			renderHook(() => useSubscribeStateToInputContext('testState', mapFn));
+			renderHook(() => useSubscribeStateToAgentContext('testState', mapFn));
 
 			expect(mapFn).toHaveBeenCalled();
 
@@ -900,7 +900,7 @@ describe('AgentInputContextSlice', () => {
 			}));
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('singleItemState', mapFn)
+				useSubscribeStateToAgentContext('singleItemState', mapFn)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -938,7 +938,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('parametersState', mapFn, options)
+				useSubscribeStateToAgentContext('parametersState', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -991,7 +991,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('functionalLabelState', mapFn, options)
+				useSubscribeStateToAgentContext('functionalLabelState', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -1047,7 +1047,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('nestedState', mapFn, options)
+				useSubscribeStateToAgentContext('nestedState', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -1073,7 +1073,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('singleValueState', mapFn, options)
+				useSubscribeStateToAgentContext('singleValueState', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -1113,7 +1113,7 @@ describe('AgentInputContextSlice', () => {
 			}));
 
 			// No labelField specified - should use fallback logic
-			renderHook(() => useSubscribeStateToInputContext('fallbackState', mapFn));
+			renderHook(() => useSubscribeStateToAgentContext('fallbackState', mapFn));
 
 			const context = useCedarStore.getState().additionalContext;
 
@@ -1153,7 +1153,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('complexState', mapFn, options)
+				useSubscribeStateToAgentContext('complexState', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -1192,7 +1192,7 @@ describe('AgentInputContextSlice', () => {
 				emptyItems: state,
 			}));
 
-			renderHook(() => useSubscribeStateToInputContext('emptyState', mapFn));
+			renderHook(() => useSubscribeStateToAgentContext('emptyState', mapFn));
 
 			expect(mapFn).toHaveBeenCalledWith([]);
 
@@ -1221,7 +1221,7 @@ describe('AgentInputContextSlice', () => {
 				validSingle: { id: '2', title: 'Single Item' },
 			}));
 
-			renderHook(() => useSubscribeStateToInputContext('testState', mapFn));
+			renderHook(() => useSubscribeStateToAgentContext('testState', mapFn));
 
 			expect(mapFn).toHaveBeenCalledWith({ someData: 'test' });
 
@@ -1272,7 +1272,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('stateWithOptions', mapFn, options)
+				useSubscribeStateToAgentContext('stateWithOptions', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -1315,7 +1315,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			const { rerender } = renderHook(() =>
-				useSubscribeStateToInputContext('updatingState', mapFn, options)
+				useSubscribeStateToAgentContext('updatingState', mapFn, options)
 			);
 
 			// Check initial context
@@ -1364,7 +1364,7 @@ describe('AgentInputContextSlice', () => {
 				selectedNodes: state,
 			}));
 
-			renderHook(() => useSubscribeStateToInputContext('nullState', mapFn));
+			renderHook(() => useSubscribeStateToAgentContext('nullState', mapFn));
 
 			expect(mapFn).toHaveBeenCalledWith(null);
 
@@ -1390,7 +1390,7 @@ describe('AgentInputContextSlice', () => {
 			}));
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('undefinedState', mapFn)
+				useSubscribeStateToAgentContext('undefinedState', mapFn)
 			);
 
 			expect(mapFn).toHaveBeenCalledWith(undefined);
@@ -1408,7 +1408,7 @@ describe('AgentInputContextSlice', () => {
 			const mapFn = jest.fn();
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('nonExistentState', mapFn)
+				useSubscribeStateToAgentContext('nonExistentState', mapFn)
 			);
 
 			expect(consoleSpy).toHaveBeenCalledWith(
@@ -1584,7 +1584,7 @@ describe('AgentInputContextSlice', () => {
 		});
 	});
 
-	describe('useSubscribeStateToInputContext memoization', () => {
+	describe('useSubscribeStateToAgentContext memoization', () => {
 		it('should memoize mapping function to prevent unnecessary re-renders', () => {
 			// Register a test state
 			act(() => {
@@ -1603,7 +1603,7 @@ describe('AgentInputContextSlice', () => {
 
 			// First render
 			const { rerender } = renderHook(() =>
-				useSubscribeStateToInputContext('memoTestState', mapFn)
+				useSubscribeStateToAgentContext('memoTestState', mapFn)
 			);
 
 			expect(mapFn).toHaveBeenCalledTimes(1);
@@ -1621,7 +1621,7 @@ describe('AgentInputContextSlice', () => {
 			});
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('memoTestState', newMapFn)
+				useSubscribeStateToAgentContext('memoTestState', newMapFn)
 			);
 
 			expect(newMapFn).toHaveBeenCalledTimes(1);
@@ -1650,7 +1650,7 @@ describe('AgentInputContextSlice', () => {
 
 			// First render with individual option values
 			const { rerender } = renderHook(() =>
-				useSubscribeStateToInputContext('optionsMemoTestState', mapFn, {
+				useSubscribeStateToAgentContext('optionsMemoTestState', mapFn, {
 					color,
 					order,
 					labelField,
@@ -1661,7 +1661,7 @@ describe('AgentInputContextSlice', () => {
 
 			// Re-render with same individual values in a new object - memoization should prevent useEffect re-run
 			rerender(() =>
-				useSubscribeStateToInputContext('optionsMemoTestState', mapFn, {
+				useSubscribeStateToAgentContext('optionsMemoTestState', mapFn, {
 					color, // Same value
 					order, // Same value
 					labelField, // Same value
@@ -1695,7 +1695,7 @@ describe('AgentInputContextSlice', () => {
 
 			// First render
 			renderHook(() =>
-				useSubscribeStateToInputContext(
+				useSubscribeStateToAgentContext(
 					'optionsChangeTestState',
 					mapFn,
 					initialOptions
@@ -1711,7 +1711,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext(
+				useSubscribeStateToAgentContext(
 					'optionsChangeTestState',
 					mapFn,
 					changedOptions
@@ -1750,7 +1750,7 @@ describe('AgentInputContextSlice', () => {
 
 			// First render
 			const { rerender } = renderHook(() =>
-				useSubscribeStateToInputContext(
+				useSubscribeStateToAgentContext(
 					'functionOptionsTestState',
 					mapFn,
 					options
@@ -1776,7 +1776,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext(
+				useSubscribeStateToAgentContext(
 					'functionOptionsTestState',
 					mapFn,
 					newOptions
@@ -1804,7 +1804,7 @@ describe('AgentInputContextSlice', () => {
 
 			// First render with undefined options
 			const { rerender } = renderHook(() =>
-				useSubscribeStateToInputContext(
+				useSubscribeStateToAgentContext(
 					'undefinedOptionsTestState',
 					mapFn,
 					undefined
@@ -1819,7 +1819,7 @@ describe('AgentInputContextSlice', () => {
 
 			// Change to empty object - should trigger re-render
 			renderHook(() =>
-				useSubscribeStateToInputContext('undefinedOptionsTestState', mapFn, {})
+				useSubscribeStateToAgentContext('undefinedOptionsTestState', mapFn, {})
 			);
 
 			expect(renderCount).toBe(2);
