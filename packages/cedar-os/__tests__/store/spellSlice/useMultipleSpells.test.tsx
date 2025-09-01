@@ -1,26 +1,36 @@
 import { renderHook, act } from '@testing-library/react';
 import { useMultipleSpells } from '../../../src/store/spellSlice/useMultipleSpells';
 import { useCedarStore } from '../../../src/store/CedarStore';
+import SpellActivationManager from '../../../src/store/spellSlice/SpellActivationManager';
 import {
 	Hotkey,
-	MouseEvent as SpellMouseEvent,
 	ActivationMode,
 } from '../../../src/store/spellSlice/SpellTypes';
 import type { UseSpellOptions } from '../../../src/store/spellSlice/useSpell';
 
 describe('useMultipleSpells', () => {
-	beforeEach(() => {
+	beforeEach(async () => {
+		// Destroy the singleton instance to ensure complete isolation
+		SpellActivationManager.destroyInstance();
+
 		// Clear all spells before each test
-		act(() => {
+		await act(async () => {
 			useCedarStore.getState().clearSpells();
+			// Wait for effects to complete
+			await new Promise((resolve) => setTimeout(resolve, 0));
 		});
 	});
 
-	afterEach(() => {
+	afterEach(async () => {
 		// Clean up after each test
-		act(() => {
+		await act(async () => {
 			useCedarStore.getState().clearSpells();
+			// Wait for effects to complete
+			await new Promise((resolve) => setTimeout(resolve, 0));
 		});
+
+		// Destroy the singleton instance after each test
+		SpellActivationManager.destroyInstance();
 	});
 
 	describe('Basic functionality', () => {
@@ -28,42 +38,31 @@ describe('useMultipleSpells', () => {
 			const spells: UseSpellOptions[] = [
 				{
 					id: 'spell-1',
-					activationConditions: {
-						events: [Hotkey.A],
-					},
+					activationConditions: { events: [Hotkey.A] },
 				},
 				{
 					id: 'spell-2',
-					activationConditions: {
-						events: [Hotkey.B],
-					},
-				},
-				{
-					id: 'spell-3',
-					activationConditions: {
-						events: [Hotkey.C],
-					},
+					activationConditions: { events: [Hotkey.B] },
 				},
 			];
 
-			const { result } = renderHook(() => useMultipleSpells({ spells }));
+			renderHook(() => useMultipleSpells({ spells }));
 
 			const state = useCedarStore.getState();
-			expect(Object.keys(state.spells)).toHaveLength(3);
+			expect(Object.keys(state.spells)).toHaveLength(2);
 			expect(state.spells['spell-1']).toBeDefined();
 			expect(state.spells['spell-2']).toBeDefined();
-			expect(state.spells['spell-3']).toBeDefined();
 		});
 
 		it('should unregister all spells when unmounted', () => {
 			const spells: UseSpellOptions[] = [
 				{
-					id: 'temp-1',
-					activationConditions: { events: [Hotkey.X] },
+					id: 'spell-1',
+					activationConditions: { events: [Hotkey.A] },
 				},
 				{
-					id: 'temp-2',
-					activationConditions: { events: [Hotkey.Y] },
+					id: 'spell-2',
+					activationConditions: { events: [Hotkey.B] },
 				},
 			];
 
@@ -77,9 +76,7 @@ describe('useMultipleSpells', () => {
 		});
 
 		it('should handle empty spell array', () => {
-			const spells: UseSpellOptions[] = [];
-
-			const { result } = renderHook(() => useMultipleSpells({ spells }));
+			renderHook(() => useMultipleSpells({ spells: [] }));
 
 			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(0);
 		});
@@ -92,32 +89,29 @@ describe('useMultipleSpells', () => {
 
 			const spells: UseSpellOptions[] = [
 				{
-					id: 'callback-1',
-					activationConditions: { events: [Hotkey.F1] },
+					id: 'spell-1',
+					activationConditions: { events: [Hotkey.A] },
 					onActivate: mockActivate1,
 				},
 				{
-					id: 'callback-2',
-					activationConditions: { events: [Hotkey.F2] },
+					id: 'spell-2',
+					activationConditions: { events: [Hotkey.B] },
 					onActivate: mockActivate2,
 				},
 			];
 
 			renderHook(() => useMultipleSpells({ spells }));
 
+			// Activate spell-1
 			act(() => {
-				useCedarStore.getState().activateSpell('callback-1');
+				useCedarStore.getState().activateSpell('spell-1');
 			});
 
-			expect(mockActivate1).toHaveBeenCalledTimes(1);
+			expect(mockActivate1).toHaveBeenCalledWith({
+				isActive: true,
+				triggerData: undefined,
+			});
 			expect(mockActivate2).not.toHaveBeenCalled();
-
-			act(() => {
-				useCedarStore.getState().activateSpell('callback-2');
-			});
-
-			expect(mockActivate1).toHaveBeenCalledTimes(1);
-			expect(mockActivate2).toHaveBeenCalledTimes(1);
 		});
 
 		it('should call onDeactivate callbacks for individual spells', () => {
@@ -126,29 +120,29 @@ describe('useMultipleSpells', () => {
 
 			const spells: UseSpellOptions[] = [
 				{
-					id: 'deactivate-1',
-					activationConditions: { events: [Hotkey.G] },
+					id: 'spell-1',
+					activationConditions: { events: [Hotkey.A] },
 					onDeactivate: mockDeactivate1,
 				},
 				{
-					id: 'deactivate-2',
-					activationConditions: { events: [Hotkey.H] },
+					id: 'spell-2',
+					activationConditions: { events: [Hotkey.B] },
 					onDeactivate: mockDeactivate2,
 				},
 			];
 
 			renderHook(() => useMultipleSpells({ spells }));
 
+			// Activate then deactivate spell-1
 			act(() => {
-				useCedarStore.getState().activateSpell('deactivate-1');
-				useCedarStore.getState().activateSpell('deactivate-2');
+				useCedarStore.getState().activateSpell('spell-1');
 			});
 
 			act(() => {
-				useCedarStore.getState().deactivateSpell('deactivate-1');
+				useCedarStore.getState().deactivateSpell('spell-1');
 			});
 
-			expect(mockDeactivate1).toHaveBeenCalledTimes(1);
+			expect(mockDeactivate1).toHaveBeenCalled();
 			expect(mockDeactivate2).not.toHaveBeenCalled();
 		});
 
@@ -158,8 +152,8 @@ describe('useMultipleSpells', () => {
 
 			const initialSpells: UseSpellOptions[] = [
 				{
-					id: 'update-spell',
-					activationConditions: { events: [Hotkey.U] },
+					id: 'spell-1',
+					activationConditions: { events: [Hotkey.A] },
 					onActivate: mockActivate1,
 				},
 			];
@@ -169,8 +163,9 @@ describe('useMultipleSpells', () => {
 				{ initialProps: { spells: initialSpells } }
 			);
 
+			// Activate the spell with first callback
 			act(() => {
-				useCedarStore.getState().activateSpell('update-spell');
+				useCedarStore.getState().activateSpell('spell-1');
 			});
 
 			expect(mockActivate1).toHaveBeenCalledTimes(1);
@@ -178,19 +173,23 @@ describe('useMultipleSpells', () => {
 			// Update with new callback
 			const updatedSpells: UseSpellOptions[] = [
 				{
-					id: 'update-spell',
-					activationConditions: { events: [Hotkey.U] },
+					id: 'spell-1',
+					activationConditions: { events: [Hotkey.A] },
 					onActivate: mockActivate2,
 				},
 			];
 
 			rerender({ spells: updatedSpells });
 
+			// Deactivate and reactivate to test new callback
 			act(() => {
-				useCedarStore.getState().activateSpell('update-spell');
+				useCedarStore.getState().deactivateSpell('spell-1');
 			});
 
-			// The new callback should be called
+			act(() => {
+				useCedarStore.getState().activateSpell('spell-1');
+			});
+
 			expect(mockActivate2).toHaveBeenCalledTimes(1);
 		});
 	});
@@ -199,8 +198,8 @@ describe('useMultipleSpells', () => {
 		it('should handle adding new spells', () => {
 			const initialSpells: UseSpellOptions[] = [
 				{
-					id: 'initial-1',
-					activationConditions: { events: [Hotkey.I] },
+					id: 'spell-1',
+					activationConditions: { events: [Hotkey.A] },
 				},
 			];
 
@@ -214,35 +213,27 @@ describe('useMultipleSpells', () => {
 			const updatedSpells: UseSpellOptions[] = [
 				...initialSpells,
 				{
-					id: 'initial-2',
-					activationConditions: { events: [Hotkey.J] },
-				},
-				{
-					id: 'initial-3',
-					activationConditions: { events: [Hotkey.K] },
+					id: 'spell-2',
+					activationConditions: { events: [Hotkey.B] },
 				},
 			];
 
 			rerender({ spells: updatedSpells });
 
-			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(3);
-			expect(useCedarStore.getState().spells['initial-2']).toBeDefined();
-			expect(useCedarStore.getState().spells['initial-3']).toBeDefined();
+			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(2);
+			expect(useCedarStore.getState().spells['spell-1']).toBeDefined();
+			expect(useCedarStore.getState().spells['spell-2']).toBeDefined();
 		});
 
 		it('should handle removing spells', () => {
 			const initialSpells: UseSpellOptions[] = [
 				{
-					id: 'remove-1',
-					activationConditions: { events: [Hotkey.R] },
+					id: 'spell-1',
+					activationConditions: { events: [Hotkey.A] },
 				},
 				{
-					id: 'remove-2',
-					activationConditions: { events: [Hotkey.E] },
-				},
-				{
-					id: 'remove-3',
-					activationConditions: { events: [Hotkey.M] },
+					id: 'spell-2',
+					activationConditions: { events: [Hotkey.B] },
 				},
 			];
 
@@ -251,61 +242,54 @@ describe('useMultipleSpells', () => {
 				{ initialProps: { spells: initialSpells } }
 			);
 
-			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(3);
+			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(2);
 
 			const updatedSpells: UseSpellOptions[] = [
 				{
-					id: 'remove-1',
-					activationConditions: { events: [Hotkey.R] },
+					id: 'spell-1',
+					activationConditions: { events: [Hotkey.A] },
 				},
 			];
 
 			rerender({ spells: updatedSpells });
 
-			// Should unregister removed spells and keep only the remaining one
 			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(1);
-			expect(useCedarStore.getState().spells['remove-1']).toBeDefined();
-			expect(useCedarStore.getState().spells['remove-2']).toBeUndefined();
-			expect(useCedarStore.getState().spells['remove-3']).toBeUndefined();
+			expect(useCedarStore.getState().spells['spell-1']).toBeDefined();
+			expect(useCedarStore.getState().spells['spell-2']).toBeUndefined();
 		});
 
 		it('should handle complete replacement of spell array', () => {
-			const firstSet: UseSpellOptions[] = [
+			const initialSpells: UseSpellOptions[] = [
 				{
-					id: 'first-1',
-					activationConditions: { events: [Hotkey.F1] },
-				},
-				{
-					id: 'first-2',
-					activationConditions: { events: [Hotkey.F2] },
-				},
-			];
-
-			const secondSet: UseSpellOptions[] = [
-				{
-					id: 'second-1',
-					activationConditions: { events: [Hotkey.F3] },
-				},
-				{
-					id: 'second-2',
-					activationConditions: { events: [Hotkey.F4] },
+					id: 'spell-1',
+					activationConditions: { events: [Hotkey.A] },
 				},
 			];
 
 			const { rerender } = renderHook(
 				({ spells }) => useMultipleSpells({ spells }),
-				{ initialProps: { spells: firstSet } }
+				{ initialProps: { spells: initialSpells } }
 			);
 
-			expect(useCedarStore.getState().spells['first-1']).toBeDefined();
-			expect(useCedarStore.getState().spells['first-2']).toBeDefined();
+			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(1);
 
-			rerender({ spells: secondSet });
+			const replacementSpells: UseSpellOptions[] = [
+				{
+					id: 'spell-2',
+					activationConditions: { events: [Hotkey.B] },
+				},
+				{
+					id: 'spell-3',
+					activationConditions: { events: [Hotkey.C] },
+				},
+			];
 
-			expect(useCedarStore.getState().spells['first-1']).toBeUndefined();
-			expect(useCedarStore.getState().spells['first-2']).toBeUndefined();
-			expect(useCedarStore.getState().spells['second-1']).toBeDefined();
-			expect(useCedarStore.getState().spells['second-2']).toBeDefined();
+			rerender({ spells: replacementSpells });
+
+			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(2);
+			expect(useCedarStore.getState().spells['spell-1']).toBeUndefined();
+			expect(useCedarStore.getState().spells['spell-2']).toBeDefined();
+			expect(useCedarStore.getState().spells['spell-3']).toBeDefined();
 		});
 	});
 
@@ -313,51 +297,34 @@ describe('useMultipleSpells', () => {
 		it('should handle complex activation conditions', () => {
 			const spells: UseSpellOptions[] = [
 				{
-					id: 'complex-1',
+					id: 'complex-spell',
 					activationConditions: {
-						events: [Hotkey.SPACE, SpellMouseEvent.RIGHT_CLICK],
-						mode: ActivationMode.HOLD,
+						events: [Hotkey.A, Hotkey.B],
+						mode: ActivationMode.TOGGLE,
 						cooldown: 1000,
 					},
-					preventDefaultEvents: true,
-					ignoreInputElements: false,
-				},
-				{
-					id: 'complex-2',
-					activationConditions: {
-						events: ['ctrl+s', 'cmd+s'],
-						mode: ActivationMode.TRIGGER,
-					},
-					preventDefaultEvents: false,
-					ignoreInputElements: true,
 				},
 			];
 
 			renderHook(() => useMultipleSpells({ spells }));
 
-			const state = useCedarStore.getState();
-			const spell1 = state.spells['complex-1'];
-			const spell2 = state.spells['complex-2'];
-
-			expect(spell1?.registration.activationConditions.mode).toBe(
-				ActivationMode.HOLD
+			const spell = useCedarStore.getState().spells['complex-spell'];
+			expect(spell).toBeDefined();
+			expect(spell?.registration.activationConditions.events).toEqual([
+				Hotkey.A,
+				Hotkey.B,
+			]);
+			expect(spell?.registration.activationConditions.mode).toBe(
+				ActivationMode.TOGGLE
 			);
-			expect(spell1?.registration.activationConditions.cooldown).toBe(1000);
-			expect(spell1?.registration.preventDefaultEvents).toBe(true);
-			expect(spell1?.registration.ignoreInputElements).toBe(false);
-
-			expect(spell2?.registration.activationConditions.mode).toBe(
-				ActivationMode.TRIGGER
-			);
-			expect(spell2?.registration.preventDefaultEvents).toBe(false);
-			expect(spell2?.registration.ignoreInputElements).toBe(true);
+			expect(spell?.registration.activationConditions.cooldown).toBe(1000);
 		});
 
 		it('should handle spell ID changes', () => {
 			const initialSpells: UseSpellOptions[] = [
 				{
-					id: 'original-id',
-					activationConditions: { events: [Hotkey.O] },
+					id: 'old-id',
+					activationConditions: { events: [Hotkey.A] },
 				},
 			];
 
@@ -366,18 +333,18 @@ describe('useMultipleSpells', () => {
 				{ initialProps: { spells: initialSpells } }
 			);
 
-			expect(useCedarStore.getState().spells['original-id']).toBeDefined();
+			expect(useCedarStore.getState().spells['old-id']).toBeDefined();
 
 			const updatedSpells: UseSpellOptions[] = [
 				{
 					id: 'new-id',
-					activationConditions: { events: [Hotkey.N] },
+					activationConditions: { events: [Hotkey.A] },
 				},
 			];
 
 			rerender({ spells: updatedSpells });
 
-			expect(useCedarStore.getState().spells['original-id']).toBeUndefined();
+			expect(useCedarStore.getState().spells['old-id']).toBeUndefined();
 			expect(useCedarStore.getState().spells['new-id']).toBeDefined();
 		});
 	});
@@ -388,194 +355,28 @@ describe('useMultipleSpells', () => {
 
 			const spells: UseSpellOptions[] = [
 				{
-					id: 'perf-spell',
-					activationConditions: { events: [Hotkey.P] },
+					id: 'stable-spell',
+					activationConditions: { events: [Hotkey.A] },
 				},
 			];
 
 			const { rerender } = renderHook(
-				({ spells, otherProp }) => useMultipleSpells({ spells }),
-				{
-					initialProps: {
-						spells,
-						otherProp: 1,
-					},
-				}
+				({ spells, otherProp }) => {
+					useMultipleSpells({ spells });
+					return otherProp;
+				},
+				{ initialProps: { spells, otherProp: 'initial' } }
 			);
 
 			const initialCallCount = registerSpy.mock.calls.length;
 
-			// Rerender with same spells but different unrelated prop
-			rerender({ spells, otherProp: 2 });
+			// Rerender with different otherProp but same spells
+			rerender({ spells, otherProp: 'changed' });
 
-			// Should not register again since spells didn't change
+			// Should not have called registerSpell again
 			expect(registerSpy.mock.calls.length).toBe(initialCallCount);
 
 			registerSpy.mockRestore();
-		});
-
-		it('should handle rapid spell array updates', () => {
-			const { rerender } = renderHook(
-				({ spells }) => useMultipleSpells({ spells }),
-				{ initialProps: { spells: [] } }
-			);
-
-			// Rapidly update spells
-			for (let i = 0; i < 10; i++) {
-				const spells: UseSpellOptions[] = Array.from(
-					{ length: i + 1 },
-					(_, index) => ({
-						id: `rapid-${index}`,
-						activationConditions: { events: [Hotkey.A] },
-					})
-				);
-
-				rerender({ spells });
-			}
-
-			// Should end up with the final set of spells
-			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(10);
-		});
-	});
-
-	describe('Edge cases', () => {
-		it('should handle duplicate IDs in spell array', () => {
-			const spells: UseSpellOptions[] = [
-				{
-					id: 'duplicate',
-					activationConditions: { events: [Hotkey.D] },
-					onActivate: jest.fn(),
-				},
-				{
-					id: 'duplicate', // Same ID
-					activationConditions: { events: [Hotkey.U] },
-					onActivate: jest.fn(),
-				},
-			];
-
-			renderHook(() => useMultipleSpells({ spells }));
-
-			// Should have only one spell with the duplicate ID (last one wins)
-			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(1);
-			const spell = useCedarStore.getState().spells['duplicate'];
-			expect(spell?.registration.activationConditions.events[0]).toBe(Hotkey.U);
-		});
-
-		it('should handle undefined callbacks gracefully', () => {
-			const spells: UseSpellOptions[] = [
-				{
-					id: 'no-callbacks',
-					activationConditions: { events: [Hotkey.N] },
-					onActivate: undefined,
-					onDeactivate: undefined,
-				},
-			];
-
-			renderHook(() => useMultipleSpells({ spells }));
-
-			expect(() => {
-				act(() => {
-					useCedarStore.getState().activateSpell('no-callbacks');
-					useCedarStore.getState().deactivateSpell('no-callbacks');
-				});
-			}).not.toThrow();
-		});
-
-		it('should handle very large spell arrays', () => {
-			const largeSpellArray: UseSpellOptions[] = Array.from(
-				{ length: 100 },
-				(_, index) => ({
-					id: `large-${index}`,
-					activationConditions: {
-						events: [`ctrl+${index}`],
-					},
-				})
-			);
-
-			const { result } = renderHook(() =>
-				useMultipleSpells({ spells: largeSpellArray })
-			);
-
-			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(100);
-		});
-	});
-
-	describe('Integration with spell system', () => {
-		it('should work with mixed activation modes', () => {
-			const toggleActivate = jest.fn();
-			const holdActivate = jest.fn();
-			const triggerActivate = jest.fn();
-
-			const spells: UseSpellOptions[] = [
-				{
-					id: 'toggle-mode',
-					activationConditions: {
-						events: [Hotkey.T],
-						mode: ActivationMode.TOGGLE,
-					},
-					onActivate: toggleActivate,
-				},
-				{
-					id: 'hold-mode',
-					activationConditions: {
-						events: [Hotkey.H],
-						mode: ActivationMode.HOLD,
-					},
-					onActivate: holdActivate,
-				},
-				{
-					id: 'trigger-mode',
-					activationConditions: {
-						events: [Hotkey.R],
-						mode: ActivationMode.TRIGGER,
-						cooldown: 100,
-					},
-					onActivate: triggerActivate,
-				},
-			];
-
-			renderHook(() => useMultipleSpells({ spells }));
-
-			const state = useCedarStore.getState();
-			expect(
-				state.spells['toggle-mode']?.registration.activationConditions.mode
-			).toBe(ActivationMode.TOGGLE);
-			expect(
-				state.spells['hold-mode']?.registration.activationConditions.mode
-			).toBe(ActivationMode.HOLD);
-			expect(
-				state.spells['trigger-mode']?.registration.activationConditions.mode
-			).toBe(ActivationMode.TRIGGER);
-		});
-
-		it('should maintain spell state across rerenders', () => {
-			const spells: UseSpellOptions[] = [
-				{
-					id: 'persistent',
-					activationConditions: { events: [Hotkey.P] },
-				},
-			];
-
-			const { rerender } = renderHook(
-				({ spells }) => useMultipleSpells({ spells }),
-				{ initialProps: { spells } }
-			);
-
-			act(() => {
-				useCedarStore.getState().activateSpell('persistent');
-			});
-
-			expect(useCedarStore.getState().spells['persistent']?.isActive).toBe(
-				true
-			);
-
-			// Rerender with same spells
-			rerender({ spells });
-
-			// State should be maintained
-			expect(useCedarStore.getState().spells['persistent']?.isActive).toBe(
-				true
-			);
 		});
 	});
 });

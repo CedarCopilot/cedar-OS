@@ -71,7 +71,7 @@ export interface SpellSlice {
 }
 
 // Get the singleton SpellActivationManager instance
-const manager = SpellActivationManager.getInstance();
+// Remove the static manager variable - access it dynamically instead
 
 // Initial spells (empty) --------------------------------------------
 const initialSpells: SpellMap = {};
@@ -89,12 +89,14 @@ export const createSpellSlice: StateCreator<CedarStore, [], [], SpellSlice> = (
 		// -----------------------------------------------------------------
 		// Actions
 		// -----------------------------------------------------------------
+
 		registerSpell: (registration) => {
+			const manager = SpellActivationManager.getInstance();
 			const { id, activationConditions, onActivate, onDeactivate, ...options } =
 				registration;
 
 			// Add spell to state with its configuration
-			set((state: CedarStore) => ({
+			set((state) => ({
 				spells: {
 					...state.spells,
 					[id]: {
@@ -108,7 +110,7 @@ export const createSpellSlice: StateCreator<CedarStore, [], [], SpellSlice> = (
 			manager.register(id, activationConditions, {
 				onActivate: (state) => {
 					// Update store state
-					set((store: CedarStore) => ({
+					set((store) => ({
 						spells: {
 							...store.spells,
 							[id]: {
@@ -122,7 +124,7 @@ export const createSpellSlice: StateCreator<CedarStore, [], [], SpellSlice> = (
 				},
 				onDeactivate: () => {
 					// Update store state
-					set((store: CedarStore) => ({
+					set((store) => ({
 						spells: {
 							...store.spells,
 							[id]: {
@@ -140,11 +142,12 @@ export const createSpellSlice: StateCreator<CedarStore, [], [], SpellSlice> = (
 		},
 
 		unregisterSpell: (spellId) => {
+			const manager = SpellActivationManager.getInstance();
 			// Unregister from manager
 			manager.unregister(spellId);
 
-			// Remove from state
-			set((state: CedarStore) => {
+			// Update state
+			set((state) => {
 				const newSpells = { ...state.spells };
 				delete newSpells[spellId];
 				return { spells: newSpells };
@@ -156,7 +159,7 @@ export const createSpellSlice: StateCreator<CedarStore, [], [], SpellSlice> = (
 			if (!spell) return;
 
 			// Update state
-			set((state: CedarStore) => ({
+			set((state) => ({
 				spells: {
 					...state.spells,
 					[spellId]: {
@@ -178,7 +181,7 @@ export const createSpellSlice: StateCreator<CedarStore, [], [], SpellSlice> = (
 			if (!spell) return;
 
 			// Update state
-			set((state: CedarStore) => ({
+			set((state) => ({
 				spells: {
 					...state.spells,
 					[spellId]: {
@@ -205,11 +208,9 @@ export const createSpellSlice: StateCreator<CedarStore, [], [], SpellSlice> = (
 		},
 
 		clearSpells: () => {
-			const state = get();
-			// Unregister all spells from manager
-			for (const spellId of Object.keys(state.spells)) {
-				manager.unregister(spellId);
-			}
+			const manager = SpellActivationManager.getInstance();
+			// Reset the manager completely (clears all registrations and state)
+			manager.reset();
 
 			// Clear state
 			set({ spells: {} });

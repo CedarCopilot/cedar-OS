@@ -63,6 +63,17 @@ class SpellActivationManager {
 	}
 
 	/**
+	 * Destroy the singleton instance (primarily for testing)
+	 * This allows complete reset of the manager between tests
+	 */
+	static destroyInstance(): void {
+		if (SpellActivationManager.instance) {
+			SpellActivationManager.instance.reset();
+			SpellActivationManager.instance = null;
+		}
+	}
+
+	/**
 	 * Register a spell with its activation conditions
 	 */
 	register(
@@ -91,6 +102,44 @@ class SpellActivationManager {
 
 		this.registrations.set(spellId, registration);
 		this.startListening();
+	}
+
+	/**
+	 * Reset the manager (primarily for testing)
+	 * Clears all registrations and stops listening
+	 */
+	reset(): void {
+		// Deactivate all active spells first
+		for (const registration of this.registrations.values()) {
+			if (registration.isActive) {
+				this.deactivateSpell(registration);
+			}
+		}
+
+		// Clear all registrations
+		this.registrations.clear();
+
+		// Stop listening
+		this.stopListening();
+
+		// Reset the listening flag
+		this.isListening = false;
+
+		// Reset mouse position
+		this.lastMousePosition = { x: 0, y: 0 };
+
+		// Clear any pending timeouts
+		if (this.selectionTimeout) {
+			clearTimeout(this.selectionTimeout);
+			this.selectionTimeout = null;
+		}
+	}
+
+	/**
+	 * Get registrations (primarily for testing)
+	 */
+	getRegistrations(): Map<string, SpellRegistration> {
+		return this.registrations;
 	}
 
 	/**

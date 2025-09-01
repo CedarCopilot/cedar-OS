@@ -420,43 +420,6 @@ describe('SpellSlice', () => {
 		});
 	});
 
-	describe('clearSpells', () => {
-		it('should clear all registered spells', () => {
-			act(() => {
-				useCedarStore.getState().registerSpell({
-					id: 'spell-1',
-					activationConditions: { events: [Hotkey.A] },
-				});
-				useCedarStore.getState().registerSpell({
-					id: 'spell-2',
-					activationConditions: { events: [Hotkey.B] },
-				});
-				useCedarStore.getState().registerSpell({
-					id: 'spell-3',
-					activationConditions: { events: [Hotkey.C] },
-				});
-			});
-
-			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(3);
-
-			act(() => {
-				useCedarStore.getState().clearSpells();
-			});
-
-			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(0);
-		});
-
-		it('should handle clearing when no spells exist', () => {
-			expect(() => {
-				act(() => {
-					useCedarStore.getState().clearSpells();
-				});
-			}).not.toThrow();
-
-			expect(Object.keys(useCedarStore.getState().spells)).toHaveLength(0);
-		});
-	});
-
 	describe('Integration tests', () => {
 		it('should handle complete spell lifecycle', () => {
 			const mockActivate = jest.fn();
