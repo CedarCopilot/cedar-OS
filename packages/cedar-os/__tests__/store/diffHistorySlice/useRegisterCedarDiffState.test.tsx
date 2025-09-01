@@ -127,26 +127,183 @@ describe('useRegisterDiffState', () => {
 				})
 			);
 
+			// Verify initial state
+			let diffHistoryState = useCedarStore
+				.getState()
+				.getDiffHistoryState<typeof initialValue>('counter');
+			expect(diffHistoryState?.diffState.newState).toEqual({ count: 0 });
+
 			// Make a change
 			act(() => {
 				useCedarStore.getState().newDiffState('counter', { count: 1 }, true);
 			});
+
+			// Verify first change
+			diffHistoryState = useCedarStore
+				.getState()
+				.getDiffHistoryState<typeof initialValue>('counter');
+			expect(diffHistoryState?.diffState.newState).toEqual({ count: 1 });
 
 			// Make another change
 			act(() => {
 				useCedarStore.getState().newDiffState('counter', { count: 2 }, true);
 			});
 
-			// Undo
+			// Verify second change
+			diffHistoryState = useCedarStore
+				.getState()
+				.getDiffHistoryState<typeof initialValue>('counter');
+			expect(diffHistoryState?.diffState.newState).toEqual({ count: 2 });
+
+			// Undo - should go back to count: 1
 			act(() => {
 				const success = useCedarStore.getState().undo('counter');
 				expect(success).toBe(true);
 			});
 
-			// Redo
+			// Verify undo reverted to previous state
+			diffHistoryState = useCedarStore
+				.getState()
+				.getDiffHistoryState<typeof initialValue>('counter');
+			expect(diffHistoryState?.diffState.newState).toEqual({ count: 1 });
+
+			// Redo - should go back to count: 2
 			act(() => {
 				const success = useCedarStore.getState().redo('counter');
 				expect(success).toBe(true);
+			});
+
+			// Verify redo restored the state
+			diffHistoryState = useCedarStore
+				.getState()
+				.getDiffHistoryState<typeof initialValue>('counter');
+			expect(diffHistoryState?.diffState.newState).toEqual({ count: 2 });
+		});
+
+		it('should handle multiple undo/redo cycles correctly', () => {
+			const initialValue = { value: 'initial' };
+			let currentValue = initialValue;
+			const setValue = (value: typeof initialValue) => {
+				currentValue = value;
+			};
+
+			renderHook(() =>
+				useRegisterDiffState({
+					key: 'multiCounter',
+					value: currentValue,
+					setValue,
+					description: 'Multi-step counter state',
+				})
+			);
+
+			// Create a series of changes
+			const changes = [
+				{ value: 'step1' },
+				{ value: 'step2' },
+				{ value: 'step3' },
+				{ value: 'step4' },
+			];
+
+			// Apply all changes
+			changes.forEach((change) => {
+				act(() => {
+					useCedarStore.getState().newDiffState('multiCounter', change, true);
+				});
+
+				// Verify each change was applied
+				const diffHistoryState = useCedarStore
+					.getState()
+					.getDiffHistoryState<typeof initialValue>('multiCounter');
+				expect(diffHistoryState?.diffState.newState).toEqual(change);
+			});
+
+			// Undo all changes step by step
+			for (let i = changes.length - 2; i >= 0; i--) {
+				act(() => {
+					const success = useCedarStore.getState().undo('multiCounter');
+					expect(success).toBe(true);
+				});
+
+				const diffHistoryState = useCedarStore
+					.getState()
+					.getDiffHistoryState<typeof initialValue>('multiCounter');
+				expect(diffHistoryState?.diffState.newState).toEqual(changes[i]);
+			}
+
+			// Undo one more time to get back to initial state
+			act(() => {
+				const success = useCedarStore.getState().undo('multiCounter');
+				expect(success).toBe(true);
+			});
+
+			let diffHistoryState = useCedarStore
+				.getState()
+				.getDiffHistoryState<typeof initialValue>('multiCounter');
+			expect(diffHistoryState?.diffState.newState).toEqual(initialValue);
+
+			// Redo all changes step by step
+			changes.forEach((expectedChange) => {
+				act(() => {
+					const success = useCedarStore.getState().redo('multiCounter');
+					expect(success).toBe(true);
+				});
+
+				diffHistoryState = useCedarStore
+					.getState()
+					.getDiffHistoryState<typeof initialValue>('multiCounter');
+				expect(diffHistoryState?.diffState.newState).toEqual(expectedChange);
+			});
+		});
+
+		it('should return false when trying to undo/redo beyond limits', () => {
+			const initialValue = { count: 0 };
+			renderHook(() =>
+				useRegisterDiffState({
+					key: 'limitTest',
+					value: initialValue,
+					description: 'Limit test state',
+				})
+			);
+
+			// Try to undo when there's no history
+			act(() => {
+				const success = useCedarStore.getState().undo('limitTest');
+				expect(success).toBe(false);
+			});
+
+			// Try to redo when there's no redo stack
+			act(() => {
+				const success = useCedarStore.getState().redo('limitTest');
+				expect(success).toBe(false);
+			});
+
+			// Make a change
+			act(() => {
+				useCedarStore.getState().newDiffState('limitTest', { count: 1 }, true);
+			});
+
+			// Undo the change
+			act(() => {
+				const success = useCedarStore.getState().undo('limitTest');
+				expect(success).toBe(true);
+			});
+
+			// Try to undo again when there's no more history
+			act(() => {
+				const success = useCedarStore.getState().undo('limitTest');
+				expect(success).toBe(false);
+			});
+
+			// Redo the change
+			act(() => {
+				const success = useCedarStore.getState().redo('limitTest');
+				expect(success).toBe(true);
+			});
+
+			// Try to redo again when there's no more redo stack
+			act(() => {
+				const success = useCedarStore.getState().redo('limitTest');
+				expect(success).toBe(false);
 			});
 		});
 	});

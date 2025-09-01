@@ -1578,8 +1578,6 @@ describe('applyPatchesToDiffState', () => {
 			.getState()
 			.getDiffHistoryState<TestData>('emptyPatchKey');
 
-		console.log(result);
-
 		// State should remain unchanged when no patches are applied
 		expect(result?.diffState.newState).toEqual({ value: 'new' });
 		expect(result?.diffState.oldState).toEqual({ value: 'new' });

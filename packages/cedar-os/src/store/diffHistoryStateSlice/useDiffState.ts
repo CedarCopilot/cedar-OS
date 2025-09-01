@@ -87,15 +87,10 @@ export function useDiffState<T extends BasicStateValue>(
 
 	// Get the computed state from the store
 	const computedState = getComputedState<T>(key) ?? initialValue;
-	console.log(`[useDiffState] computedState for key ${key}:`, computedState);
 
 	// Create a stable setter function that uses setDiffState
 	const setState = useCallback(
 		(newValue: T) => {
-			console.log(
-				`[useDiffState] setState called for key: ${key}, newValue:`,
-				newValue
-			);
 			// Use newDiffState directly for user updates
 			// This will handle all the diff tracking internally
 			newDiffState(key, newValue);

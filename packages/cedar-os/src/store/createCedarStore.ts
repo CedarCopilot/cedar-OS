@@ -13,17 +13,18 @@ import { create, StateCreator } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 // Type helper to extract state from StateCreator
-type ExtractState<S> = S extends StateCreator<infer T, [], [], []> ? T : never;
+type ExtractState<S> = S extends StateCreator<infer T, any, any, any>
+	? T
+	: never;
 
 // Type helper to merge multiple slices
-type MergeSlices<
-	T extends readonly StateCreator<CedarStore, [], [], unknown>[]
-> = T extends readonly [
-	...infer Rest extends StateCreator<CedarStore, [], [], unknown>[],
-	infer Last extends StateCreator<CedarStore, [], [], unknown>
-]
-	? ExtractState<Last> & MergeSlices<Rest>
-	: unknown;
+type MergeSlices<T extends readonly StateCreator<any, any, any, any>[]> =
+	T extends readonly [
+		...infer Rest extends StateCreator<any, any, any, any>[],
+		infer Last extends StateCreator<any, any, any, any>
+	]
+		? ExtractState<Last> & MergeSlices<Rest>
+		: {};
 
 // Default slices that are always included
 const createDefaultSlices: StateCreator<CedarStore, [], [], CedarStore> = (
@@ -54,7 +55,7 @@ export interface CreateCedarStoreOptions<
 
 // Create Cedar store with optional extensions
 export function createCedarStore<
-	TSlices extends readonly StateCreator<CedarStore, [], [], unknown>[] = []
+	TSlices extends readonly StateCreator<any, any, any, any>[] = []
 >(options?: CreateCedarStoreOptions<TSlices>) {
 	const { extend = [], persistOptions = {} } = options || {};
 

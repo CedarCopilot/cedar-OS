@@ -145,6 +145,7 @@ export function useRegisterState<T extends BasicStateValue>(config: {
 		config.description,
 		config.schema,
 		config.stateSetters,
+		config.customSetters,
 		registerState,
 		unregisterState,
 	]);

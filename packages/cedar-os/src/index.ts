@@ -38,9 +38,6 @@ export {
 	useDiffState,
 	useDiffStateOperations,
 	useDiffStateHelpers,
-	type RegisterDiffStateConfig,
-	type DiffStateReturn,
-	type ComputeStateFunction,
 } from '@/store/diffHistoryStateSlice';
 
 // Export state slice types
@@ -317,6 +314,9 @@ export type {
 	DiffHistoryState,
 	DiffHistorySlice,
 	Operation,
+	RegisterDiffStateConfig,
+	DiffStateReturn,
+	ComputeStateFunction,
 } from '@/store/diffHistoryStateSlice';
 // Export tools slice types and utilities
 export { createToolsSlice } from '@/store/toolsSlice/toolsSlice';

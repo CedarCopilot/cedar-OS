@@ -205,18 +205,7 @@ function FlowCanvas() {
 					id: z.string().describe('The ID of the node to remove'),
 				}),
 				execute: async (currentNodes, setValue, args) => {
-					// args is typed as { id: string }
-					// Instead of removing, mark as removed with diff
-					setValue(
-						currentNodes.map((node) =>
-							node.id === args.id
-								? {
-										...node,
-										data: { ...node.data },
-								  }
-								: node
-						)
-					);
+					setValue(currentNodes.filter((node) => node.id !== args.id));
 				},
 			},
 			changeNode: (() => {
