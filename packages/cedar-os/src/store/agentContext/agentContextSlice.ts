@@ -616,3 +616,5 @@ export function useRenderAdditionalContext(
 		return elements;
 	}, [additionalContext, renderers]);
 }
+
+export { useSubscribeStateToAgentContext as useSubscribeStateToInputContext };
