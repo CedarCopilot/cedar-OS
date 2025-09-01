@@ -2,7 +2,7 @@ import { useCedarStore, useChatInput } from '@/store/CedarStore';
 import type { CedarStore } from '@/store/CedarOSTypes';
 import Document from '@tiptap/extension-document';
 import Placeholder from '@tiptap/extension-placeholder';
-import { useEditor } from '@tiptap/react';
+import { useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import { ReactNodeViewRenderer } from '@tiptap/react';
@@ -16,7 +16,7 @@ import { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice'
 
 interface UseCedarEditorOptions {
 	placeholder?: string;
-	onSubmit?: (text: string) => void;
+	onSubmit?: (text: string, editor?: Editor, clearEditor?: () => void) => void;
 	onFocus?: () => void;
 	onBlur?: () => void;
 	stream?: boolean;
@@ -191,18 +191,40 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 					return false;
 				}
 
+				if (
+					(event.key === 'a' && (event.metaKey || event.ctrlKey)) || // cmd/ctrl + A
+					event.key === 'Delete' // Delete key
+				) {
+					event.stopPropagation(); // Stop other listeners but allow default editor behavior
+					return false; // Let the editor handle the default behavior
+				}
+
 				if (event.key === 'Enter' && !event.shiftKey) {
 					const { state } = view;
+
+					// Check for active mention suggestions more thoroughly
 					const hasActiveSuggestion = state.plugins.some((plugin) => {
 						const pluginState = plugin.getState?.(state);
-						return pluginState?.active || pluginState?.open;
+						// Check multiple possible state properties that indicate active suggestions
+						return (
+							pluginState?.active ||
+							pluginState?.open ||
+							pluginState?.query !== undefined ||
+							pluginState?.decorationSet?.find ||
+							(pluginState?.range &&
+								pluginState.range.from !== pluginState.range.to)
+						);
 					});
 
 					if (!hasActiveSuggestion) {
 						event.preventDefault();
+						event.stopPropagation(); // Stop propagation to prevent other handlers
 						handleSubmit();
 						return true;
 					}
+
+					// If there are active suggestions, let them handle it completely
+					return false;
 				}
 
 				return false;
@@ -245,19 +267,29 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 
 		if (textContent.trim()) {
 			if (onSubmit) {
-				onSubmit(textContent);
+				onSubmit(textContent, editor, () => {
+					editor.commands.clearContent();
+					setIsEditorEmpty(true);
+					setOverrideInputContent('');
+
+					setChatInputContent({
+						type: 'doc',
+						content: [{ type: 'paragraph', content: [] }],
+					});
+				});
 			} else {
 				sendMessage({ stream, ...sendMessageParams });
+
+				// Only auto-clear when using default sendMessage
+				editor.commands.clearContent();
+				setIsEditorEmpty(true);
+				setOverrideInputContent('');
+
+				setChatInputContent({
+					type: 'doc',
+					content: [{ type: 'paragraph', content: [] }],
+				});
 			}
-
-			editor.commands.clearContent();
-			setIsEditorEmpty(true);
-			setOverrideInputContent('');
-
-			setChatInputContent({
-				type: 'doc',
-				content: [{ type: 'paragraph', content: [] }],
-			});
 
 			editor.commands.focus();
 			onFocus?.();
