@@ -191,7 +191,6 @@ function FlowCanvas() {
 								status: args.node.data.status || 'planned',
 								upvotes: args.node.data.upvotes || 0,
 								comments: args.node.data.comments || [],
-								diff: 'added' as const,
 							},
 						};
 						setValue([...currentNodes, newNode]);
@@ -213,7 +212,7 @@ function FlowCanvas() {
 							node.id === args.id
 								? {
 										...node,
-										data: { ...node.data, diff: 'removed' as const },
+										data: { ...node.data },
 								  }
 								: node
 						)
@@ -265,7 +264,7 @@ function FlowCanvas() {
 											...args.newNode,
 											type: 'featureNode',
 											position: node.position, // Keep existing position
-											data: { ...args.newNode.data, diff: 'changed' as const },
+											data: { ...args.newNode.data },
 									  }
 									: node
 							)
@@ -309,9 +308,7 @@ function FlowCanvas() {
 							// Remove diff property for added/changed nodes
 							setNodes(
 								currentNodes.map((n) =>
-									n.id === args.nodeId
-										? { ...n, data: { ...n.data, diff: undefined } }
-										: n
+									n.id === args.nodeId ? { ...n, data: { ...n.data } } : n
 								)
 							);
 						}
@@ -346,9 +343,7 @@ function FlowCanvas() {
 							// Just remove diff property for removed/changed nodes
 							setValue(
 								currentNodes.map((n) =>
-									n.id === args.nodeId
-										? { ...n, data: { ...n.data, diff: undefined } }
-										: n
+									n.id === args.nodeId ? { ...n, data: { ...n.data } } : n
 								)
 							);
 						}
@@ -720,7 +715,7 @@ function SelectedNodesPanel() {
 export default function ProductMapPage() {
 	const [chatMode, setChatMode] = React.useState<
 		'floating' | 'sidepanel' | 'caption' | 'command'
-	>('command');
+	>('caption');
 
 	const renderContent = () => (
 		<ReactFlowProvider>
