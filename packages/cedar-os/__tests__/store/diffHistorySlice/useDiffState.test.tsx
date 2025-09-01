@@ -31,7 +31,7 @@ describe('useDiffState', () => {
 	});
 
 	it('should support custom setters', () => {
-		const customSetters = {
+		const stateSetters = {
 			append: {
 				name: 'append',
 				description: 'Append text',
@@ -49,7 +49,10 @@ describe('useDiffState', () => {
 		};
 
 		const { result } = renderHook(
-			() => useDiffState('testStateCustom', 'hello', { customSetters }),
+			() =>
+				useDiffState('testStateCustom', 'hello', {
+					stateSetters,
+				}),
 			{ wrapper }
 		);
 

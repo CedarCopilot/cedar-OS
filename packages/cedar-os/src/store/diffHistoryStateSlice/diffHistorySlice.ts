@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { compare, Operation, applyPatch } from 'fast-json-patch';
-import { isEqual } from 'lodash';
+import { isEqual, cloneDeep } from 'lodash';
 import type { CedarStore } from '@/store/CedarOSTypes';
 import type {
 	BasicStateValue,
@@ -176,21 +176,21 @@ function setValueAtPathForDiff<T>(obj: T, path: string, value: unknown): T {
 		? path.slice(1).split('/')
 		: path.split('/');
 
-	const result = JSON.parse(JSON.stringify(obj));
-	let current = result;
+	const result = cloneDeep(obj) as Record<string, unknown>;
+	let current: Record<string, unknown> = result;
 
 	for (let i = 0; i < pathParts.length - 1; i++) {
 		const part = pathParts[i];
 		if (!(part in current)) {
 			current[part] = {};
 		}
-		current = current[part];
+		current = current[part] as Record<string, unknown>;
 	}
 
 	const lastPart = pathParts[pathParts.length - 1];
 	current[lastPart] = value;
 
-	return result;
+	return result as T;
 }
 
 /**
@@ -781,7 +781,15 @@ export const createDiffHistorySlice: StateCreator<
 		}));
 
 		// Register or update the state in stateSlice with the clean state
-		const newState = diffHistoryState.diffState.computedState;
+		const newState = diffHistoryState.diffState?.computedState
+			? diffHistoryState.diffState?.computedState
+			: diffHistoryState.computeState
+			? diffHistoryState.computeState(
+					diffHistoryState.diffState?.oldState,
+					diffHistoryState.diffState?.newState,
+					diffHistoryState.diffState?.patches || []
+			  )
+			: diffHistoryState.diffState?.newState;
 		if (newState !== undefined) {
 			// Get the registered state to check if it exists
 			const registeredState = get().registeredStates?.[key];
@@ -844,7 +852,7 @@ export const createDiffHistorySlice: StateCreator<
 		let oldStateForDiff: T;
 		if (!effectiveIsDiffChange) {
 			// Not in diff mode, use current newState
-			oldStateForDiff = newState;
+			oldStateForDiff = originalDiffState.newState;
 		} else {
 			oldStateForDiff = originalDiffState.isDiffMode
 				? originalDiffState.oldState
@@ -1033,9 +1041,7 @@ export const createDiffHistorySlice: StateCreator<
 
 		// Step 2: Apply patches to the current newState to get the updated state
 		// Create a deep copy of the current newState to avoid mutations
-		const currentNewState = JSON.parse(
-			JSON.stringify(originalDiffState.newState)
-		);
+		const currentNewState = cloneDeep(originalDiffState.newState);
 
 		// Apply the patches to get the new state
 		const patchResult = applyPatch(
@@ -1047,12 +1053,13 @@ export const createDiffHistorySlice: StateCreator<
 
 		// Step 3: Create the new diffState based on isDiffChange flag
 		// Determine oldState based on new logic:
-		// - If isDiffMode is false (not a diff change), use current newState
-		// - If isDiffMode is true (is a diff change), check previous history state
+		// - If isDiffChange is false (not a diff change), keep the original oldState unchanged
+		// - If isDiffChange is true (is a diff change), check previous history state
 		let oldStateForDiff: T;
+
 		if (!isDiffChange) {
-			// Not in diff mode, use current newState
-			oldStateForDiff = patchResult;
+			// Let's keep the oldState just to keep track of diffs
+			oldStateForDiff = originalDiffState.newState;
 		} else {
 			oldStateForDiff = originalDiffState.isDiffMode
 				? originalDiffState.oldState

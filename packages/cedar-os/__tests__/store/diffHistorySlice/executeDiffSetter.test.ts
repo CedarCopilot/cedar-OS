@@ -8,13 +8,13 @@ import type { CedarStore } from '../../../src/store/CedarOSTypes';
 import type { Setter } from '../../../src/store/stateSlice/stateSlice';
 
 describe('executeDiffSetter', () => {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let store: any;
 
 	beforeEach(() => {
-		// Create a test store with both slices
 		store = create<Partial<CedarStore>>()((...a) => ({
-			...createStateSlice(...(a as any)),
-			...createDiffHistorySlice(...(a as any)),
+			...createStateSlice(...a),
+			...createDiffHistorySlice(...a),
 		}));
 	});
 
@@ -143,7 +143,7 @@ describe('executeDiffSetter', () => {
 		});
 
 		// Set state through setCedarState
-		store.getState().setCedarState?.(testKey, newValue);
+		store.getState().setCedarState?.(testKey, newValue, true);
 
 		// Check that setDiffState was called
 		const diffState = store.getState().getDiffHistoryState?.(testKey);

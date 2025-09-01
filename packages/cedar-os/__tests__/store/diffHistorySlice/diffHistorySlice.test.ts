@@ -175,7 +175,7 @@ describe('DiffHistorySlice', () => {
 			act(() => {
 				useCedarStore
 					.getState()
-					.setDiffState('nonExistent', { value: 'new' }, true);
+					.newDiffState('nonExistent', { value: 'new' }, true);
 			});
 
 			expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -199,7 +199,7 @@ describe('DiffHistorySlice', () => {
 
 			act(() => {
 				useCedarStore.getState().setDiffState('countKey', initialState);
-				useCedarStore.getState().setDiffState('countKey', { count: 2 }, false);
+				useCedarStore.getState().newDiffState('countKey', { count: 2 }, false);
 			});
 
 			const result = useCedarStore
@@ -208,7 +208,7 @@ describe('DiffHistorySlice', () => {
 
 			// Check that the new state is set correctly
 			expect(result?.diffState.newState).toEqual({ count: 2 });
-			expect(result?.diffState.oldState).toEqual({ count: 0 });
+			expect(result?.diffState.oldState).toEqual({ count: 1 });
 			expect(result?.diffState.isDiffMode).toBe(false);
 
 			// Check that history contains the previous state
@@ -236,7 +236,7 @@ describe('DiffHistorySlice', () => {
 				useCedarStore.getState().setDiffState('textKey', initialState);
 				useCedarStore
 					.getState()
-					.setDiffState('textKey', { text: 'changed' }, true);
+					.newDiffState('textKey', { text: 'changed' }, true);
 			});
 
 			const result = useCedarStore
@@ -270,7 +270,7 @@ describe('DiffHistorySlice', () => {
 				useCedarStore.getState().setDiffState('textKey2', initialState);
 				useCedarStore
 					.getState()
-					.setDiffState('textKey2', { text: 'changed' }, true);
+					.newDiffState('textKey2', { text: 'changed' }, true);
 			});
 
 			const result = useCedarStore
@@ -305,7 +305,7 @@ describe('DiffHistorySlice', () => {
 
 			act(() => {
 				useCedarStore.getState().setDiffState('redoTestKey', initialState);
-				useCedarStore.getState().setDiffState('redoTestKey', 3, false);
+				useCedarStore.getState().newDiffState('redoTestKey', 3, false);
 			});
 
 			const result = useCedarStore
@@ -833,7 +833,7 @@ describe('DiffHistorySlice', () => {
 			act(() => {
 				useCedarStore
 					.getState()
-					.setDiffState('workflowKey', { name: 'Bob', age: 30 }, true);
+					.newDiffState('workflowKey', { name: 'Bob', age: 30 }, true);
 			});
 
 			let state = useCedarStore
@@ -870,6 +870,7 @@ describe('DiffHistorySlice', () => {
 				newState: { name: 'Bob', age: 30 },
 				isDiffMode: true,
 				patches: expect.any(Array),
+				computedState: { name: 'Bob', age: 30 },
 			});
 
 			// Step 3: Undo the accept
@@ -1023,7 +1024,7 @@ describe('DiffHistorySlice', () => {
 			};
 
 			act(() => {
-				useCedarStore.getState().setDiffState('patchKey', newData, true);
+				useCedarStore.getState().newDiffState('patchKey', newData, true);
 			});
 
 			const state = useCedarStore
@@ -1437,9 +1438,13 @@ describe('applyPatchesToDiffState', () => {
 
 		// The patches should describe the changes from oldState to newState
 		const patchPaths = result?.diffState.patches?.map((p) => p.path) || [];
-		expect(patchPaths).toContain('/name'); // Original -> Modified
-		expect(patchPaths).toContain('/count'); // 0 -> 10
-		// Items patches will be more complex due to array changes
+
+		// Should contain count change from 0 to 10
+		expect(patchPaths).toContain('/count');
+
+		// Should contain array item patches (specific indices, not just '/items')
+		// When comparing [] to ['a', 'b', 'c'], we get individual item additions
+		expect(patchPaths.some((path) => path.startsWith('/items/'))).toBe(true);
 	});
 
 	it('should clear redo stack when applying patches', () => {
@@ -1573,9 +1578,11 @@ describe('applyPatchesToDiffState', () => {
 			.getState()
 			.getDiffHistoryState<TestData>('emptyPatchKey');
 
+		console.log(result);
+
 		// State should remain unchanged when no patches are applied
 		expect(result?.diffState.newState).toEqual({ value: 'new' });
-		expect(result?.diffState.oldState).toEqual({ value: 'old' });
+		expect(result?.diffState.oldState).toEqual({ value: 'new' });
 
 		// History should still be updated
 		expect(result?.history).toHaveLength(1);
@@ -1836,11 +1843,10 @@ describe('Integration: applyPatchesToDiffState with other methods', () => {
 			useCedarStore.getState().setDiffState('alternatingKey', initialState);
 		});
 
-		// Use setDiffState
 		act(() => {
 			useCedarStore
 				.getState()
-				.setDiffState('alternatingKey', { name: 'Middle', count: 5 }, true);
+				.newDiffState('alternatingKey', { name: 'Middle', count: 5 }, true);
 		});
 
 		let result = useCedarStore

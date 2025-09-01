@@ -90,7 +90,7 @@ describe('useRegisterDiffState', () => {
 			act(() => {
 				const updatedNodes = [...currentNodes, newNode];
 				// This would be called by a custom setter
-				useCedarStore.getState().setDiffState('testNodes', updatedNodes, true);
+				useCedarStore.getState().newDiffState('testNodes', updatedNodes, true);
 			});
 
 			// The computed state should have diff markers
@@ -129,12 +129,12 @@ describe('useRegisterDiffState', () => {
 
 			// Make a change
 			act(() => {
-				useCedarStore.getState().setDiffState('counter', { count: 1 }, true);
+				useCedarStore.getState().newDiffState('counter', { count: 1 }, true);
 			});
 
 			// Make another change
 			act(() => {
-				useCedarStore.getState().setDiffState('counter', { count: 2 }, true);
+				useCedarStore.getState().newDiffState('counter', { count: 2 }, true);
 			});
 
 			// Undo
@@ -166,7 +166,7 @@ describe('useRegisterDiffState', () => {
 			act(() => {
 				useCedarStore
 					.getState()
-					.setDiffState('status', { status: 'completed' }, true);
+					.newDiffState('status', { status: 'completed' }, true);
 			});
 
 			// Accept all diffs
@@ -196,7 +196,7 @@ describe('useRegisterDiffState', () => {
 			act(() => {
 				useCedarStore
 					.getState()
-					.setDiffState('status', { status: 'completed' }, true);
+					.newDiffState('status', { status: 'completed' }, true);
 			});
 
 			// Reject all diffs

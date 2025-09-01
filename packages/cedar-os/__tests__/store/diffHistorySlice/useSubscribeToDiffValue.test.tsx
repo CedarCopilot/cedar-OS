@@ -233,9 +233,7 @@ describe('useSubscribeToDiffValue', () => {
 			};
 
 			act(() => {
-				useCedarStore
-					.getState()
-					.setDiffState('defaultAcceptKey', testState);
+				useCedarStore.getState().setDiffState('defaultAcceptKey', testState);
 			});
 
 			const { result } = renderHook(() =>
@@ -263,9 +261,7 @@ describe('useSubscribeToDiffValue', () => {
 			};
 
 			act(() => {
-				useCedarStore
-					.getState()
-					.setDiffState('holdAcceptKey', testState);
+				useCedarStore.getState().setDiffState('holdAcceptKey', testState);
 			});
 
 			const { result } = renderHook(() =>
@@ -295,9 +291,7 @@ describe('useSubscribeToDiffValue', () => {
 			};
 
 			act(() => {
-				useCedarStore
-					.getState()
-					.setDiffState('reactiveKey', initialState);
+				useCedarStore.getState().setDiffState('reactiveKey', initialState);
 			});
 
 			const { result } = renderHook(() =>
@@ -311,7 +305,7 @@ describe('useSubscribeToDiffValue', () => {
 			act(() => {
 				useCedarStore
 					.getState()
-					.setDiffState('reactiveKey', { counter: 5 }, true);
+					.newDiffState('reactiveKey', { counter: 5 }, true);
 			});
 
 			// Hook should reflect the changes

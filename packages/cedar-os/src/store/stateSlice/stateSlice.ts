@@ -5,8 +5,6 @@ import { isEqual } from 'lodash';
 import type { ZodSchema } from 'zod';
 import { z } from 'zod';
 import { StateCreator } from 'zustand';
-import { useEffect } from 'react';
-import { useCedarStore } from '@/store/CedarStore';
 
 // Define types that our state values can be
 export type BasicStateValue =
@@ -399,29 +397,14 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 			const setValueFunc = (newValue: BasicStateValue) => {
 				get().setCedarState(key, newValue);
 			};
-			setter.execute(existingState.value, setValueFunc, args);
 
-			// Validate args against schema if available
+			// Validate args against schema if available BEFORE executing
 			const schema = setter.argsSchema || setter.schema; // Support both new and deprecated property
 			if (schema) {
 				try {
 					// Validate args against the schema
 					const validatedArgs = schema.parse(args);
-
-					// Handle args - always pass as single parameter or no parameter
-					// Type assertion is necessary here because we support flexible args at runtime
-					const executeFunction = setter.execute as (
-						state: BasicStateValue,
-						args?: unknown
-					) => void;
-
-					if (validatedArgs !== undefined) {
-						// Any type (array, object, string, number, etc.): pass as single parameter
-						executeFunction(existingState.value, validatedArgs);
-					} else {
-						// No args (void)
-						executeFunction(existingState.value);
-					}
+					setter.execute(existingState.value, setValueFunc, validatedArgs);
 				} catch (error) {
 					// Schema validation failed - log all error information in a single message
 					let validationErrors: unknown[] = [];
@@ -466,19 +449,18 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 					return; // Don't execute the setter with invalid args
 				}
 			} else {
-				// Handle args - always pass as single parameter or no parameter
-				// Type assertion is necessary here because we support flexible args at runtime
-				const executeFunction = setter.execute as (
-					state: BasicStateValue,
-					args?: unknown
-				) => void;
-
+				// Execute without validation
 				if (args !== undefined) {
 					// Any type (array, object, string, number, etc.): pass as single parameter
-					executeFunction(existingState.value, args);
+					setter.execute(existingState.value, setValueFunc, args);
 				} else {
-					// No args (void)
-					executeFunction(existingState.value);
+					// No args (void) - call with just state and setValue
+					(
+						setter.execute as (
+							state: BasicStateValue,
+							setValue: (newValue: BasicStateValue) => void
+						) => void
+					)(existingState.value, setValueFunc);
 				}
 			}
 		},
@@ -527,53 +509,4 @@ export function isRegisteredState<T>(
 		('stateSetters' in value || 'customSetters' in value) &&
 		'schema' in value
 	);
-}
-
-/**
- * Hook that registers a state in the Cedar store.
- * This is a hook version of registerState that handles the useEffect internally,
- * allowing you to call it directly in the component body without worrying about
- * state updates during render.
- *
- * @param config Configuration object for the state registration
- * @param config.key Unique key for the state in the store
- * @param config.value Current value for the state
- * @param config.setValue Optional React setState function for external state syncing
- * @param config.description Optional human-readable description for AI metadata
- * @param config.stateSetters Optional state setter functions for this state
- * @param config.customSetters Optional custom setter functions for this state (deprecated)
- * @param config.schema Optional Zod schema for validating the state
- */
-export function useRegisterState<T extends BasicStateValue>(config: {
-	key: string;
-	value: T;
-	setValue?: BaseSetter<T>;
-	description?: string;
-	schema?: ZodSchema<T>;
-	stateSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
-	/** @deprecated Use stateSetters instead */
-	customSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
-}): void {
-	const registerState = useCedarStore((s: CedarStore) => s.registerState);
-	const unregisterState = useCedarStore((s: CedarStore) => s.unregisterState);
-
-	useEffect(() => {
-		registerState(config);
-
-		// Cleanup on unmount
-		return () => {
-			unregisterState(config.key);
-		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [
-		config.key,
-		config.value,
-		config.setValue,
-		config.description,
-		config.schema,
-		config.stateSetters,
-		config.customSetters,
-		registerState,
-		unregisterState,
-	]);
 }
