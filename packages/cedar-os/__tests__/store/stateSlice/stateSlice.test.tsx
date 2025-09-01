@@ -81,8 +81,12 @@ describe('StateSlice – state re-registration', () => {
 				args: ['arg'],
 			});
 		});
-		// The state setter receives the current value and args as a single parameter
-		expect(mockStateSetter2).toHaveBeenCalledWith('newValue', ['arg']);
+		// The state setter receives the current value, setValue function, and args
+		expect(mockStateSetter2).toHaveBeenCalledWith(
+			'newValue',
+			expect.any(Function),
+			['arg']
+		);
 		expect(mockStateSetter1).not.toHaveBeenCalled(); // Old function should NOT be called
 	});
 
@@ -131,7 +135,11 @@ describe('StateSlice – state re-registration', () => {
 		expect(consoleWarnSpy).toHaveBeenCalledWith(
 			`⚠️ 'executeCustomSetter' is deprecated. Use 'executeStateSetter' instead.`
 		);
-		expect(mockCustomSetter).toHaveBeenCalledWith('test', 'test-arg');
+		expect(mockCustomSetter).toHaveBeenCalledWith(
+			'test',
+			expect.any(Function),
+			'test-arg'
+		);
 
 		consoleWarnSpy.mockRestore();
 	});
@@ -181,7 +189,11 @@ describe('StateSlice – state re-registration', () => {
 			});
 		});
 
-		expect(mockStateSetter).toHaveBeenCalledWith('test', 'test-arg');
+		expect(mockStateSetter).toHaveBeenCalledWith(
+			'test',
+			expect.any(Function),
+			'test-arg'
+		);
 		expect(mockCustomSetter).not.toHaveBeenCalled();
 
 		consoleWarnSpy.mockRestore();
@@ -235,7 +247,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith([], testArgs);
+			expect(mockSetter).toHaveBeenCalledWith(
+				[],
+				expect.any(Function),
+				testArgs
+			);
 		});
 
 		it('should handle nested object args', () => {
@@ -290,7 +306,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith(null, testArgs);
+			expect(mockSetter).toHaveBeenCalledWith(
+				null,
+				expect.any(Function),
+				testArgs
+			);
 		});
 	});
 
@@ -324,7 +344,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith([], testArgs);
+			expect(mockSetter).toHaveBeenCalledWith(
+				[],
+				expect.any(Function),
+				testArgs
+			);
 		});
 
 		it('should handle tuple args as single parameter', () => {
@@ -356,7 +380,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith(null, testArgs);
+			expect(mockSetter).toHaveBeenCalledWith(
+				null,
+				expect.any(Function),
+				testArgs
+			);
 		});
 	});
 
@@ -390,7 +418,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith('', testArg);
+			expect(mockSetter).toHaveBeenCalledWith(
+				'',
+				expect.any(Function),
+				testArg
+			);
 		});
 
 		it('should handle number args', () => {
@@ -422,7 +454,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith(0, testArg);
+			expect(mockSetter).toHaveBeenCalledWith(0, expect.any(Function), testArg);
 		});
 
 		it('should handle boolean args', () => {
@@ -454,7 +486,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith(false, testArg);
+			expect(mockSetter).toHaveBeenCalledWith(
+				false,
+				expect.any(Function),
+				testArg
+			);
 		});
 	});
 
@@ -486,7 +522,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith(['item1', 'item2']);
+			expect(mockSetter).toHaveBeenCalledWith(
+				['item1', 'item2'],
+				expect.any(Function),
+				undefined
+			);
 		});
 
 		it('should handle undefined args as void', () => {
@@ -514,7 +554,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith(42);
+			expect(mockSetter).toHaveBeenCalledWith(42, expect.any(Function));
 		});
 	});
 
@@ -546,7 +586,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 					args: 'hello',
 				});
 			});
-			expect(mockSetter).toHaveBeenCalledWith(null, 'hello');
+			expect(mockSetter).toHaveBeenCalledWith(
+				null,
+				expect.any(Function),
+				'hello'
+			);
 
 			// Test with number
 			mockSetter.mockClear();
@@ -557,7 +601,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 					args: 42,
 				});
 			});
-			expect(mockSetter).toHaveBeenCalledWith(null, 42);
+			expect(mockSetter).toHaveBeenCalledWith(null, expect.any(Function), 42);
 
 			// Test with boolean
 			mockSetter.mockClear();
@@ -568,7 +612,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 					args: true,
 				});
 			});
-			expect(mockSetter).toHaveBeenCalledWith(null, true);
+			expect(mockSetter).toHaveBeenCalledWith(null, expect.any(Function), true);
 		});
 
 		it('should handle enum args', () => {
@@ -600,7 +644,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith('medium', testArg);
+			expect(mockSetter).toHaveBeenCalledWith(
+				'medium',
+				expect.any(Function),
+				testArg
+			);
 		});
 
 		it('should handle optional args', () => {
@@ -638,7 +686,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith(null, testArgs);
+			expect(mockSetter).toHaveBeenCalledWith(
+				null,
+				expect.any(Function),
+				testArgs
+			);
 		});
 	});
 
@@ -673,7 +725,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith('', testArg);
+			expect(mockSetter).toHaveBeenCalledWith(
+				'',
+				expect.any(Function),
+				testArg
+			);
 		});
 	});
 
@@ -721,7 +777,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				});
 			});
 
-			expect(mockSetter).toHaveBeenCalledWith([], validArgs);
+			expect(mockSetter).toHaveBeenCalledWith(
+				[],
+				expect.any(Function),
+				validArgs
+			);
 			// No validation errors should be logged for valid args
 			expect(consoleSpy).not.toHaveBeenCalledWith(
 				expect.stringContaining('Args validation failed')
@@ -766,8 +826,12 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			expect(mockSetter).not.toHaveBeenCalled();
 
 			// Error should be logged in a single consolidated message
-			expect(consoleSpy).toHaveBeenCalledTimes(1);
-			const errorMessage = consoleSpy.mock.calls[0][0];
+			// Filter out React deprecation warnings to focus on our validation error
+			const validationErrorCalls = consoleSpy.mock.calls.filter(
+				(call) => !call[0].includes('ReactDOMTestUtils.act` is deprecated')
+			);
+			expect(validationErrorCalls).toHaveLength(1);
+			const errorMessage = validationErrorCalls[0][0];
 
 			// Check that the consolidated error message contains all expected parts
 			expect(errorMessage).toContain(
@@ -814,7 +878,11 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			});
 
 			// Setter should still be called
-			expect(mockSetter).toHaveBeenCalledWith([], testArgs);
+			expect(mockSetter).toHaveBeenCalledWith(
+				[],
+				expect.any(Function),
+				testArgs
+			);
 
 			// No warning should be logged (performance optimization)
 			expect(warnSpy).not.toHaveBeenCalledWith(

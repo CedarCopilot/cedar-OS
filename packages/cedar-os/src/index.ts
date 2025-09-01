@@ -29,8 +29,16 @@ export { createStateSlice } from '@/store/stateSlice/stateSlice';
 export { createStylingSlice } from '@/store/stylingSlice';
 
 // Export state management
-export { useRegisterState } from '@/store/stateSlice/stateSlice';
+export { useRegisterState } from '@/store/stateSlice/useCedarState';
 export { useCedarState } from '@/store/stateSlice/useCedarState';
+export {
+	useCedarDiffState,
+	useRegisterDiffState,
+	addDiffToArrayObjs,
+	useDiffState,
+	useDiffStateOperations,
+	useDiffStateHelpers,
+} from '@/store/diffHistoryStateSlice';
 
 // Export state slice types
 export type {
@@ -199,6 +207,7 @@ export {
 	useCedarStore,
 	useChatInput,
 	useDebugger,
+	useDiffHistory,
 	useMessages,
 	useMultipleSpells,
 	useSpell,
@@ -298,6 +307,17 @@ export type {
 	UseSpellReturn,
 } from '@/store/spellSlice/useSpell';
 
+// Export diff state types
+export type {
+	DiffMode,
+	DiffState,
+	DiffHistoryState,
+	DiffHistorySlice,
+	Operation,
+	RegisterDiffStateConfig,
+	DiffStateReturn,
+	ComputeStateFunction,
+} from '@/store/diffHistoryStateSlice';
 // Export tools slice types and utilities
 export { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
 

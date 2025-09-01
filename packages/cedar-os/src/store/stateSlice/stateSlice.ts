@@ -1,11 +1,10 @@
 // @stateSlice: central registry for React component states with AI-readable metadata.
 // Supports manual registration via registerState (with optional external setter) and automatic registration via useCedarState hook.
-import { StateCreator } from 'zustand';
 import { CedarStore } from '@/store/CedarOSTypes';
+import { isEqual } from 'lodash';
 import type { ZodSchema } from 'zod';
 import { z } from 'zod';
-import { useEffect } from 'react';
-import { useCedarStore } from '@/store/CedarStore';
+import { StateCreator } from 'zustand';
 
 // Define types that our state values can be
 export type BasicStateValue =
@@ -15,6 +14,7 @@ export type BasicStateValue =
 	| object
 	| unknown[]
 	| undefined
+	| null
 	| void;
 
 // Setter types
@@ -58,7 +58,7 @@ export type SetterFunction<
 	TArgs = SetterArgs
 > = TArgs extends void
 	? (state: T) => void // No args
-	: (state: T, args: TArgs) => void; // Any type (array, object, string, etc.) passed as single parameter
+	: (state: T, setValue: (newValue: T) => void, args: TArgs) => void; // Any type (array, object, string, etc.) passed as single parameter
 
 // Enhanced Setter interface with generic schema
 export interface Setter<T = BasicStateValue, TArgsSchema = z.ZodTypeAny> {
@@ -209,13 +209,11 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 
 			// Initial registration of a new state
 			set((state) => {
-				// Create the state object
 				const registeredState: registeredState<T> = {
 					key: config.key,
 					value: config.value,
 					description: config.description,
 					schema: config.schema,
-					// Primary updater separate from namedSetters
 					setValue: config.setValue,
 					stateSetters: mergedSetters,
 					customSetters: config.customSetters, // Keep for backward compatibility
@@ -244,12 +242,33 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		 * @param key The state key.
 		 * @param value The new value to set.
 		 */
-		setCedarState: <T extends BasicStateValue>(key: string, value: T) => {
+		setCedarState: <T extends BasicStateValue>(
+			key: string,
+			value: T,
+			isDiffChange: boolean = false
+		) => {
+			// Check if this state is tracked in diffHistory
+			const diffHistoryState = get().getDiffHistoryState?.(key);
+			if (diffHistoryState) {
+				// Use setDiffState for diff-tracked states
+				// Default to isDiffChange = true when setting through setCedarState
+				get().newDiffState(key, value, isDiffChange);
+				return;
+			}
+
+			// Original implementation for non-diff-tracked states
 			const existingState = get().registeredStates[key];
 			if (!existingState) {
 				console.warn(`State with key "${key}" not found.`);
 				return;
 			}
+
+			// Check if value has actually changed before updating
+			if (isEqual(existingState.value, value)) {
+				// No need to update if values are the same
+				return;
+			}
+
 			// Update stored value
 			set(
 				(state) =>
@@ -263,6 +282,7 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 						},
 					} as Partial<CedarStore>)
 			);
+
 			// Call external setter if provided
 			if (existingState.setValue) {
 				try {
@@ -346,8 +366,18 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 		 * Execute a named state setter for a registered state.
 		 */
 		executeStateSetter: (params: ExecuteStateSetterParams) => {
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { key, setterKey, options = {}, args } = params;
+
+			// Check if this state is tracked in diffHistory
+			const diffHistoryState = get().getDiffHistoryState?.(key);
+			if (diffHistoryState) {
+				// Use executeDiffSetter for diff-tracked states
+				const isDiff = options.isDiff ?? false;
+				get().executeDiffSetter(key, setterKey, { isDiff }, args);
+				return;
+			}
+
+			// Original implementation for non-diff-tracked states
 			// Note: options will be used for features like diff tracking
 			const existingState = get().registeredStates[key];
 			if (!existingState) {
@@ -364,27 +394,17 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 			}
 			const setter = setters[setterKey];
 
-			// Validate args against schema if available
+			const setValueFunc = (newValue: BasicStateValue) => {
+				get().setCedarState(key, newValue);
+			};
+
+			// Validate args against schema if available BEFORE executing
 			const schema = setter.argsSchema || setter.schema; // Support both new and deprecated property
 			if (schema) {
 				try {
 					// Validate args against the schema
 					const validatedArgs = schema.parse(args);
-
-					// Handle args - always pass as single parameter or no parameter
-					// Type assertion is necessary here because we support flexible args at runtime
-					const executeFunction = setter.execute as (
-						state: BasicStateValue,
-						args?: unknown
-					) => void;
-
-					if (validatedArgs !== undefined) {
-						// Any type (array, object, string, number, etc.): pass as single parameter
-						executeFunction(existingState.value, validatedArgs);
-					} else {
-						// No args (void)
-						executeFunction(existingState.value);
-					}
+					setter.execute(existingState.value, setValueFunc, validatedArgs);
 				} catch (error) {
 					// Schema validation failed - log all error information in a single message
 					let validationErrors: unknown[] = [];
@@ -429,19 +449,18 @@ export const createStateSlice: StateCreator<CedarStore, [], [], StateSlice> = (
 					return; // Don't execute the setter with invalid args
 				}
 			} else {
-				// Handle args - always pass as single parameter or no parameter
-				// Type assertion is necessary here because we support flexible args at runtime
-				const executeFunction = setter.execute as (
-					state: BasicStateValue,
-					args?: unknown
-				) => void;
-
+				// Execute without validation
 				if (args !== undefined) {
 					// Any type (array, object, string, number, etc.): pass as single parameter
-					executeFunction(existingState.value, args);
+					setter.execute(existingState.value, setValueFunc, args);
 				} else {
-					// No args (void)
-					executeFunction(existingState.value);
+					// No args (void) - call with just state and setValue
+					(
+						setter.execute as (
+							state: BasicStateValue,
+							setValue: (newValue: BasicStateValue) => void
+						) => void
+					)(existingState.value, setValueFunc);
 				}
 			}
 		},
@@ -490,53 +509,4 @@ export function isRegisteredState<T>(
 		('stateSetters' in value || 'customSetters' in value) &&
 		'schema' in value
 	);
-}
-
-/**
- * Hook that registers a state in the Cedar store.
- * This is a hook version of registerState that handles the useEffect internally,
- * allowing you to call it directly in the component body without worrying about
- * state updates during render.
- *
- * @param config Configuration object for the state registration
- * @param config.key Unique key for the state in the store
- * @param config.value Current value for the state
- * @param config.setValue Optional React setState function for external state syncing
- * @param config.description Optional human-readable description for AI metadata
- * @param config.stateSetters Optional state setter functions for this state
- * @param config.customSetters Optional custom setter functions for this state (deprecated)
- * @param config.schema Optional Zod schema for validating the state
- */
-export function useRegisterState<T extends BasicStateValue>(config: {
-	key: string;
-	value: T;
-	setValue?: BaseSetter<T>;
-	description?: string;
-	schema?: ZodSchema<T>;
-	stateSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
-	/** @deprecated Use stateSetters instead */
-	customSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
-}): void {
-	const registerState = useCedarStore((s: CedarStore) => s.registerState);
-	const unregisterState = useCedarStore((s: CedarStore) => s.unregisterState);
-
-	useEffect(() => {
-		registerState(config);
-
-		// Cleanup on unmount
-		return () => {
-			unregisterState(config.key);
-		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [
-		config.key,
-		config.value,
-		config.setValue,
-		config.description,
-		config.schema,
-		config.stateSetters,
-		config.customSetters,
-		registerState,
-		unregisterState,
-	]);
 }

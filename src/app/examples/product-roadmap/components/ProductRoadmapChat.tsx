@@ -1,9 +1,13 @@
+'use client';
+
 import React, { useCallback } from 'react';
-import { FloatingContainer } from '@/structural/FloatingContainer';
-import { ChatInput } from '@/chatInput/ChatInput';
-import Container3D from '@/containers/Container3D';
-import CaptionMessages from '@/chatMessages/CaptionMessages';
-import { KeyboardShortcut } from '@/ui/KeyboardShortcut';
+import { useCedarStore, useDiffStateHelpers } from 'cedar-os';
+import { FloatingContainer } from 'cedar-os-components/structural/FloatingContainer';
+import { ChatInput } from 'cedar-os-components/chatInput/ChatInput';
+import Container3D from 'cedar-os-components/containers/Container3D';
+import Container3DButton from 'cedar-os-components/containers/Container3DButton';
+import CaptionMessages from 'cedar-os-components/chatMessages/CaptionMessages';
+import { KeyboardShortcut } from 'cedar-os-components/ui/KeyboardShortcut';
 import {
 	Bug,
 	CheckCircle,
@@ -14,9 +18,9 @@ import {
 	Undo,
 	Redo,
 } from 'lucide-react';
-import Container3DButton from '@/containers/Container3DButton';
+import { v4 as uuidv4 } from 'uuid';
 
-interface CedarCaptionChatProps {
+interface ProductRoadmapChatProps {
 	dimensions?: {
 		width?: number;
 		maxWidth?: number;
@@ -26,39 +30,91 @@ interface CedarCaptionChatProps {
 	stream?: boolean; // Whether to use streaming for responses
 }
 
-export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
+export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 	dimensions,
 	className = '',
 	showThinking = true,
 	stream = true,
 }) => {
-	// Always false since buttons do nothing
-	const hasDiffs = false;
+	// Use diff state helpers for nodes state
+	const { undo, redo } = useDiffStateHelpers<unknown[]>('nodes');
 
-	// Empty handlers that do nothing
+	// Check if there are any nodes with diffs
+	const nodesState = useCedarStore((state) => state.registeredStates.nodes);
+	const hasDiffs = React.useMemo(() => {
+		if (!nodesState?.value || !Array.isArray(nodesState.value)) return false;
+		return nodesState.value.some(
+			(node: { data?: { diff?: string } }) => node.data?.diff
+		);
+	}, [nodesState]);
+
 	const handleAddFeature = useCallback(() => {
-		// Empty - does nothing
+		const executeStateSetter = useCedarStore.getState().executeStateSetter;
+		const newFeature = {
+			id: uuidv4(),
+			type: 'featureNode',
+			position: { x: Math.random() * 400, y: Math.random() * 400 },
+			data: {
+				title: 'New Feature',
+				description: 'Describe your new feature here',
+				upvotes: 0,
+				comments: [],
+				status: 'planned' as const,
+				nodeType: 'feature' as const,
+			},
+		};
+		executeStateSetter({
+			key: 'nodes',
+			setterKey: 'addNode',
+			args: { node: newFeature },
+			options: {
+				isDiff: true,
+			},
+		});
 	}, []);
 
 	const handleAddIssue = useCallback(() => {
-		// Empty - does nothing
+		const executeStateSetter = useCedarStore.getState().executeStateSetter;
+		const newIssue = {
+			id: uuidv4(),
+			type: 'featureNode',
+			position: { x: Math.random() * 400, y: Math.random() * 400 },
+			data: {
+				title: 'New Bug',
+				description: 'Describe the bug here',
+				upvotes: 0,
+				comments: [],
+				status: 'backlog' as const,
+				nodeType: 'bug' as const,
+			},
+		};
+		executeStateSetter({
+			key: 'nodes',
+			setterKey: 'addNode',
+			args: { node: newIssue },
+			options: {
+				isDiff: true,
+			},
+		});
 	}, []);
 
 	const handleAcceptAllDiffs = useCallback(() => {
-		// Empty - does nothing
+		const acceptAllDiffs = useCedarStore.getState().acceptAllDiffs;
+		acceptAllDiffs('nodes');
 	}, []);
 
 	const handleRejectAllDiffs = useCallback(() => {
-		// Empty - does nothing
+		const rejectAllDiffs = useCedarStore.getState().rejectAllDiffs;
+		rejectAllDiffs('nodes');
 	}, []);
 
 	const handleUndo = useCallback(() => {
-		// Empty - does nothing
-	}, []);
+		undo();
+	}, [undo]);
 
 	const handleRedo = useCallback(() => {
-		// Empty - does nothing
-	}, []);
+		redo();
+	}, [redo]);
 
 	return (
 		<FloatingContainer
@@ -77,7 +133,7 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 							onClick={handleAddFeature}>
 							<span className='flex items-center gap-1'>
 								<Package className='w-4 h-4' />
-								Add X
+								Add Feature
 							</span>
 						</Container3DButton>
 						<Container3DButton
@@ -86,7 +142,7 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 							onClick={handleAddIssue}>
 							<span className='flex items-center gap-1'>
 								<Bug className='w-4 h-4' />
-								Add Y
+								Add Bug
 							</span>
 						</Container3DButton>
 						{hasDiffs && (
@@ -155,7 +211,10 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
 						<CaptionMessages showThinking={showThinking} />
 					</div>
 
-					<ChatInput className='bg-transparent p-0' stream={stream} />
+					<ChatInput
+						className='bg-transparent dark:bg-transparent p-0'
+						stream={stream}
+					/>
 				</Container3D>
 			</div>
 		</FloatingContainer>

@@ -89,8 +89,15 @@
 				"icon": "database",
 				"pages": [
 					"state-access/agentic-state-access",
-					"state-access/agentic-actions",
-					"state-access/diff-history-manager"
+					"state-access/agentic-actions"
+				]
+			},
+			{
+				"group": "State Diff Management (Beta)",
+				"icon": "code-compare",
+				"pages": [
+					"state-diff/using-state-diff",
+					"state-diff/state-diff-internals"
 				]
 			},
 			{

@@ -25,6 +25,7 @@ import {
 	FeatureNodeData,
 } from '@/app/examples/product-roadmap/components/FeatureNode';
 import { FloatingMenu } from '@/app/examples/product-roadmap/components/FloatingMenu';
+import { ProductRoadmapChat } from '@/app/examples/product-roadmap/components/ProductRoadmapChat';
 import {
 	getEdges,
 	saveEdges,
@@ -34,13 +35,17 @@ import {
 	getNodes,
 	saveNodes,
 } from '@/app/examples/product-roadmap/supabase/nodes';
-import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
+import { TooltipMenu } from '@/inputs/TooltipMenu';
+import RadialMenuSpell from '@/spells/RadialMenuSpell';
 import { CommandBarChat } from '@/app/examples/product-roadmap/components/CommandBarChat';
 import {
 	ActivationMode,
+	addDiffToArrayObjs,
 	Hotkey,
+	useDiffStateHelpers,
+	useRegisterDiffState,
 	useCedarState,
 	HumanInTheLoopState,
 	useRegisterState,
@@ -63,8 +68,6 @@ import {
 	Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { TooltipMenu } from '@/inputs/TooltipMenu';
-import RadialMenuSpell from '@/spells/RadialMenuSpell';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)
@@ -88,12 +91,56 @@ function FlowCanvas() {
 	const initialMount = React.useRef(true);
 	const saveTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	// Register states using the hook version that handles useEffect internally
-	useRegisterState({
+	// Get diff state operations and computed nodes
+	const {
+		computedValue: computedNodes,
+		undo,
+		redo,
+	} = useDiffStateHelpers<Node<FeatureNodeData>[]>('nodes');
+
+	// Add keyboard listeners for undo/redo
+	React.useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			// Undo: Ctrl+Z (or Cmd+Z on Mac)
+			if (
+				(event.ctrlKey || event.metaKey) &&
+				event.key === 'z' &&
+				!event.shiftKey
+			) {
+				event.preventDefault();
+				if (undo()) {
+					console.log('Undo performed on nodes');
+				}
+			}
+			// Redo: Ctrl+Y or Ctrl+Shift+Z (or Cmd+Y or Cmd+Shift+Z on Mac)
+			else if (
+				((event.ctrlKey || event.metaKey) && event.key === 'y') ||
+				((event.ctrlKey || event.metaKey) &&
+					event.shiftKey &&
+					event.key === 'z')
+			) {
+				event.preventDefault();
+				if (redo()) {
+					console.log('Redo performed on nodes');
+				}
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, [undo, redo]);
+
+	// Register states using the diff-aware hook
+	useRegisterDiffState({
 		value: nodes,
 		setValue: setNodes,
 		key: 'nodes',
 		description: 'Product roadmap nodes',
+		computeState: (oldState, newState) =>
+			addDiffToArrayObjs(oldState, newState, 'id', '/data', {
+				type: 'listen',
+				fields: ['/data', '/position'],
+			}),
 		stateSetters: {
 			addNode: (() => {
 				const addNodeArgsSchema = z.object({
@@ -131,7 +178,7 @@ function FlowCanvas() {
 					name: 'addNode',
 					description: 'Add a new node to the roadmap',
 					argsSchema: addNodeArgsSchema,
-					execute: (currentNodes, args) => {
+					execute: (currentNodes, setValue, args) => {
 						// args is fully typed as { node: { id?: string, data: { ... } } }
 						const newNode: Node<FeatureNodeData> = {
 							...args.node,
@@ -144,43 +191,23 @@ function FlowCanvas() {
 								status: args.node.data.status || 'planned',
 								upvotes: args.node.data.upvotes || 0,
 								comments: args.node.data.comments || [],
-								diff: 'added' as const,
 							},
 						};
-						setNodes([...currentNodes, newNode]);
+						setValue([...currentNodes, newNode]);
 					},
 				};
 				return setter;
 			})(),
-			removeNode: (() => {
-				const removeNodeArgsSchema = z.object({
+			removeNode: {
+				name: 'removeNode',
+				description: 'Remove a node from the roadmap',
+				argsSchema: z.object({
 					id: z.string().describe('The ID of the node to remove'),
-				});
-
-				const setter: Setter<
-					Node<FeatureNodeData>[],
-					typeof removeNodeArgsSchema
-				> = {
-					name: 'removeNode',
-					description: 'Remove a node from the roadmap',
-					argsSchema: removeNodeArgsSchema,
-					execute: async (currentNodes, args) => {
-						// args is typed as { id: string }
-						// Instead of removing, mark as removed with diff
-						setNodes(
-							currentNodes.map((node) =>
-								node.id === args.id
-									? {
-											...node,
-											data: { ...node.data, diff: 'removed' as const },
-									  }
-									: node
-							)
-						);
-					},
-				};
-				return setter;
-			})(),
+				}),
+				execute: async (currentNodes, setValue, args) => {
+					setValue(currentNodes.filter((node) => node.id !== args.id));
+				},
+			},
 			changeNode: (() => {
 				const changeNodeArgsSchema = z.object({
 					newNode: z.object({
@@ -217,16 +244,16 @@ function FlowCanvas() {
 					name: 'changeNode',
 					description: 'Update an existing node in the roadmap',
 					argsSchema: changeNodeArgsSchema,
-					execute: (currentNodes, args) => {
+					execute: (currentNodes, setValue, args) => {
 						// args is typed as { newNode: { id: string, data: { ... } } }
-						setNodes(
+						setValue(
 							currentNodes.map((node) =>
 								node.id === args.newNode.id
 									? {
 											...args.newNode,
 											type: 'featureNode',
 											position: node.position, // Keep existing position
-											data: { ...args.newNode.data, diff: 'changed' as const },
+											data: { ...args.newNode.data },
 									  }
 									: node
 							)
@@ -249,7 +276,7 @@ function FlowCanvas() {
 					name: 'acceptDiff',
 					description: 'Accept a diff for a node',
 					argsSchema: acceptDiffArgsSchema,
-					execute: async (currentNodes, args) => {
+					execute: async (currentNodes, setValue, args) => {
 						// args is typed as { nodeId: string }
 						const node = currentNodes.find((n) => n.id === args.nodeId);
 
@@ -258,7 +285,7 @@ function FlowCanvas() {
 						if (node.data.diff === 'removed') {
 							// Actually remove the node
 							await deleteNode(args.nodeId);
-							setNodes(currentNodes.filter((n) => n.id !== args.nodeId));
+							setValue(currentNodes.filter((n) => n.id !== args.nodeId));
 							// Also remove any edges connected to this node
 							setEdges((edges) =>
 								edges.filter(
@@ -270,9 +297,7 @@ function FlowCanvas() {
 							// Remove diff property for added/changed nodes
 							setNodes(
 								currentNodes.map((n) =>
-									n.id === args.nodeId
-										? { ...n, data: { ...n.data, diff: undefined } }
-										: n
+									n.id === args.nodeId ? { ...n, data: { ...n.data } } : n
 								)
 							);
 						}
@@ -294,7 +319,7 @@ function FlowCanvas() {
 					name: 'rejectDiff',
 					description: 'Reject a diff for a node',
 					argsSchema: rejectDiffArgsSchema,
-					execute: (currentNodes, args) => {
+					execute: (currentNodes, setValue, args) => {
 						// args is typed as { nodeId: string }
 						const node = currentNodes.find((n) => n.id === args.nodeId);
 
@@ -302,93 +327,15 @@ function FlowCanvas() {
 
 						if (node.data.diff === 'added') {
 							// Remove newly added nodes
-							setNodes(currentNodes.filter((n) => n.id !== args.nodeId));
+							setValue(currentNodes.filter((n) => n.id !== args.nodeId));
 						} else {
 							// Just remove diff property for removed/changed nodes
-							setNodes(
+							setValue(
 								currentNodes.map((n) =>
-									n.id === args.nodeId
-										? { ...n, data: { ...n.data, diff: undefined } }
-										: n
+									n.id === args.nodeId ? { ...n, data: { ...n.data } } : n
 								)
 							);
 						}
-					},
-				};
-				return setter;
-			})(),
-			acceptAllDiffs: (() => {
-				// For void args, we use z.void() or an empty object
-				const acceptAllDiffsArgsSchema = z.void();
-
-				const setter: Setter<
-					Node<FeatureNodeData>[],
-					typeof acceptAllDiffsArgsSchema
-				> = {
-					name: 'acceptAllDiffs',
-					description: 'Accept all pending diffs',
-					argsSchema: acceptAllDiffsArgsSchema,
-					execute: async (currentNodes) => {
-						// No args for this function
-						const nodesWithDiffs = currentNodes.filter((n) => n.data.diff);
-
-						// Process removals first
-						const removedNodeIds = nodesWithDiffs
-							.filter((n) => n.data.diff === 'removed')
-							.map((n) => n.id);
-
-						for (const nodeId of removedNodeIds) {
-							await deleteNode(nodeId);
-						}
-
-						// Update nodes
-						const remainingNodes = currentNodes.filter(
-							(n) => !removedNodeIds.includes(n.id)
-						);
-						setNodes(
-							remainingNodes.map((n) => ({
-								...n,
-								data: { ...n.data, diff: undefined },
-							}))
-						);
-
-						// Remove edges for deleted nodes
-						if (removedNodeIds.length > 0) {
-							setEdges((edges) =>
-								edges.filter(
-									(edge) =>
-										!removedNodeIds.includes(edge.source) &&
-										!removedNodeIds.includes(edge.target)
-								)
-							);
-						}
-					},
-				};
-				return setter;
-			})(),
-			rejectAllDiffs: (() => {
-				// For void args, we use z.void()
-				const rejectAllDiffsArgsSchema = z.void();
-
-				const setter: Setter<
-					Node<FeatureNodeData>[],
-					typeof rejectAllDiffsArgsSchema
-				> = {
-					name: 'rejectAllDiffs',
-					description: 'Reject all pending diffs',
-					argsSchema: rejectAllDiffsArgsSchema,
-					execute: (currentNodes) => {
-						// No args for this function
-						// Remove added nodes and clear diffs from others
-						const filteredNodes = currentNodes.filter(
-							(n) => n.data.diff !== 'added'
-						);
-						setNodes(
-							filteredNodes.map((n) => ({
-								...n,
-								data: { ...n.data, diff: undefined },
-							}))
-						);
 					},
 				};
 				return setter;
@@ -461,11 +408,11 @@ function FlowCanvas() {
 		order: 20, // Edges appear last
 	});
 
-	// Fetch initial data
+	// Fetch initial data (only on mount)
 	React.useEffect(() => {
 		getNodes().then(setNodes);
 		getEdges().then(setEdges);
-	}, [setNodes, setEdges]);
+	}, []); // Empty dependency array - only run on mount
 
 	// Custom handler for node changes that intercepts deletions
 	const handleNodesChange = React.useCallback(
@@ -613,7 +560,7 @@ function FlowCanvas() {
 	return (
 		<div className='h-full w-full relative'>
 			<ReactFlow
-				nodes={nodes}
+				nodes={computedNodes}
 				edges={edges}
 				nodeTypes={nodeTypes}
 				onNodesChange={handleNodesChange}
@@ -757,7 +704,7 @@ function SelectedNodesPanel() {
 export default function ProductMapPage() {
 	const [chatMode, setChatMode] = React.useState<
 		'floating' | 'sidepanel' | 'caption' | 'command'
-	>('command');
+	>('caption');
 
 	const renderContent = () => (
 		<ReactFlowProvider>
@@ -769,7 +716,7 @@ export default function ProductMapPage() {
 					currentChatMode={chatMode}
 				/>
 				{chatMode === 'command' && <CommandBarChat open={true} />}
-				{chatMode === 'caption' && <CedarCaptionChat />}
+				{chatMode === 'caption' && <ProductRoadmapChat stream={false} />}
 				{chatMode === 'floating' && (
 					<FloatingCedarChat
 						stream={false}

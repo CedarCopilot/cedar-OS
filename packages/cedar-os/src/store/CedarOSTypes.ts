@@ -6,6 +6,7 @@ import { AgentConnectionSlice } from '@/store/agentConnection/agentConnectionSli
 import { VoiceSlice } from '@/store/voice/voiceSlice';
 import { DebuggerSlice } from '@/store/debugger/debuggerSlice';
 import { SpellSlice } from '@/store/spellSlice/spellSlice';
+import { DiffHistorySlice } from '@/store/diffHistoryStateSlice';
 import { ToolsSlice } from '@/store/toolsSlice/ToolsTypes';
 
 /**
@@ -20,6 +21,7 @@ export interface CedarStore
 		VoiceSlice,
 		DebuggerSlice,
 		SpellSlice,
+		DiffHistorySlice,
 		ToolsSlice {}
 
 // Re-export StylingConfig for convenience

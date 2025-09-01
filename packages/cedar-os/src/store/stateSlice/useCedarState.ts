@@ -2,7 +2,12 @@ import { useEffect, useCallback } from 'react';
 import type { ZodSchema } from 'zod';
 import { z } from 'zod';
 import { useCedarStore } from '@/store/CedarStore';
-import type { BasicStateValue, Setter } from '@/store/stateSlice/stateSlice';
+import type {
+	BasicStateValue,
+	Setter,
+	BaseSetter,
+} from '@/store/stateSlice/stateSlice';
+import type { CedarStore } from '@/store/CedarOSTypes';
 
 /**
  * Hook that registers and returns a piece of state from the Cedar store,
@@ -96,4 +101,52 @@ export function useCedarState<T extends BasicStateValue>(config: {
 	);
 
 	return [value, stableSetState];
+}
+
+/**
+ * Hook that registers a state in the Cedar store.
+ * This is a hook version of registerState that handles the useEffect internally,
+ * allowing you to call it directly in the component body without worrying about
+ * state updates during render.
+ *
+ * @param config Configuration object for the state registration
+ * @param config.key Unique key for the state in the store
+ * @param config.value Current value for the state
+ * @param config.setValue Optional React setState function for external state syncing
+ * @param config.description Optional human-readable description for AI metadata
+ * @param config.customSetters Optional custom setter functions for this state (deprecated)
+ * @param config.schema Optional Zod schema for validating the state
+ */
+export function useRegisterState<T extends BasicStateValue>(config: {
+	key: string;
+	value: T;
+	setValue?: BaseSetter<T>;
+	description?: string;
+	schema?: ZodSchema<T>;
+	stateSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
+	/** @deprecated Use stateSetters instead */
+	customSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
+}): void {
+	const registerState = useCedarStore((s: CedarStore) => s.registerState);
+	const unregisterState = useCedarStore((s: CedarStore) => s.unregisterState);
+
+	useEffect(() => {
+		registerState(config);
+
+		// Cleanup on unmount
+		return () => {
+			unregisterState(config.key);
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [
+		config.key,
+		config.value,
+		config.setValue,
+		config.description,
+		config.schema,
+		config.stateSetters,
+		config.customSetters,
+		registerState,
+		unregisterState,
+	]);
 }
