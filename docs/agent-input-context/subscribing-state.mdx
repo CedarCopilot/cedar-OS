@@ -3,18 +3,18 @@ title: 'Subscribing State to Input'
 description: 'Automatically add state to the agent input context'
 ---
 
-Cedar's `useSubscribeStateToInputContext` function allows you to automatically make any Cedar-registered state available to AI agents as context. This enables agents to understand your app's current state and provide more relevant, contextual responses.
+Cedar's `useSubscribeStateToAgentContext` function allows you to automatically make any Cedar-registered state available to AI agents as context. This enables agents to understand your app's current state and provide more relevant, contextual responses.
 
 > **Prerequisite** – The state you want to subscribe **must first be registered** in Cedar using either [`useCedarState`](/state-access/agentic-state-access#useCedarState) _or_ [`useRegisterState`](/state-access/agentic-state-access#useRegisterState-Hook).
 
-## useSubscribeStateToInputContext Overview
+## useSubscribeStateToAgentContext Overview
 
-The `useSubscribeStateToInputContext` function subscribes to local state changes and automatically updates the agent's input context whenever the state changes. This means your AI agent always has access to the most up-to-date information from your application, including any Zod schemas defined for the state.
+The `useSubscribeStateToAgentContext` function subscribes to local state changes and automatically updates the agent's input context whenever the state changes. This means your AI agent always has access to the most up-to-date information from your application, including any Zod schemas defined for the state.
 
 ### Function Signature
 
 ```typescript
-function useSubscribeStateToInputContext<T>(
+function useSubscribeStateToAgentContext<T>(
 	stateKey: string,
 	mapFn: (state: T) => Record<string, any>,
 	options?: {
@@ -43,7 +43,7 @@ function useSubscribeStateToInputContext<T>(
 Here's a simple example with a todo list:
 
 ```tsx
-import { useCedarState, useSubscribeStateToInputContext } from 'cedar-os';
+import { useCedarState, useSubscribeStateToAgentContext } from 'cedar-os';
 import { CheckCircle } from 'lucide-react';
 
 function TodoApp() {
@@ -58,7 +58,7 @@ function TodoApp() {
 	);
 
 	// 2) Subscribe that state to input context
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		'todos',
 		(todoList) => ({
 			todos: todoList, // Key 'todos' will be available to the agent
@@ -84,7 +84,7 @@ function TodoApp() {
 Here's a more advanced example from the Product Roadmap demo:
 
 ```tsx
-import { useRegisterState, useSubscribeStateToInputContext } from 'cedar-os';
+import { useRegisterState, useSubscribeStateToAgentContext } from 'cedar-os';
 import { Box } from 'lucide-react';
 import { Node } from 'reactflow';
 
@@ -106,7 +106,7 @@ function SelectedNodesPanel() {
 	});
 
 	// Subscribe selected nodes to input context
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		'selectedNodes',
 		(nodes: Node<FeatureNodeData>[]) => ({
 			selectedNodes: nodes.map((node) => ({
@@ -154,7 +154,7 @@ const [users, setUsers] = useState([
 	{ userId: 'u2', fullName: 'Jane Smith', email: 'jane@example.com' },
 ]);
 
-useSubscribeStateToInputContext(
+useSubscribeStateToAgentContext(
 	users,
 	(userList) => ({ activeUsers: userList }),
 	{
@@ -175,7 +175,7 @@ const [products, setProducts] = useState([
 	{ sku: 'P002', name: 'Mouse', price: 29, inStock: false },
 ]);
 
-useSubscribeStateToInputContext(
+useSubscribeStateToAgentContext(
 	products,
 	(productList) => ({ inventory: productList }),
 	{
@@ -197,13 +197,13 @@ const [isEnabled, setIsEnabled] = useState(true);
 const [userName, setUserName] = useState('Alice');
 
 // Subscribe a number
-useSubscribeStateToInputContext(count, (value) => ({ itemCount: value }), {
+useSubscribeStateToAgentContext(count, (value) => ({ itemCount: value }), {
 	icon: <Hash />,
 	color: '#F59E0B',
 });
 
 // Subscribe a boolean
-useSubscribeStateToInputContext(
+useSubscribeStateToAgentContext(
 	isEnabled,
 	(value) => ({ featureEnabled: value }),
 	{
@@ -213,7 +213,7 @@ useSubscribeStateToInputContext(
 );
 
 // Subscribe a string with custom label
-useSubscribeStateToInputContext(userName, (value) => ({ currentUser: value }), {
+useSubscribeStateToAgentContext(userName, (value) => ({ currentUser: value }), {
 	labelField: (name) => `User: ${name}`,
 	icon: <User />,
 	color: '#8B5CF6',
@@ -239,7 +239,7 @@ function PrioritizedContext() {
 	const [archivedItems, setArchivedItems] = useState([]);
 
 	// Critical alerts appear first (order: 1)
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		criticalAlerts,
 		(alerts) => ({ criticalAlerts: alerts }),
 		{
@@ -250,7 +250,7 @@ function PrioritizedContext() {
 	);
 
 	// Normal tasks appear second (order: 10)
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		normalTasks,
 		(tasks) => ({ activeTasks: tasks }),
 		{
@@ -261,7 +261,7 @@ function PrioritizedContext() {
 	);
 
 	// Archived items appear last (order: 100)
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		archivedItems,
 		(items) => ({ archivedItems: items }),
 		{
@@ -287,7 +287,7 @@ function OrganizedWorkspace() {
 	const [user, setUser] = useState(null);
 
 	// User context appears first (order: 1)
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		user,
 		(userData) => ({ currentUser: userData }),
 		{
@@ -299,7 +299,7 @@ function OrganizedWorkspace() {
 	);
 
 	// Selected items appear second (order: 5)
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		selectedNodes,
 		(nodes) => ({ selectedNodes: nodes }),
 		{
@@ -351,11 +351,11 @@ function OrganizedWorkspace() {
 // 50-99: Historical or computed data
 // 100+: Low priority or debug information
 
-useSubscribeStateToInputContext('sessionData', mapper, { order: 1 }); // Critical
-useSubscribeStateToInputContext('selectedItems', mapper, { order: 10 }); // Active
-useSubscribeStateToInputContext('appState', mapper, { order: 20 }); // General
-useSubscribeStateToInputContext('history', mapper, { order: 50 }); // Historical
-useSubscribeStateToInputContext('debugInfo', mapper, { order: 100 }); // Debug
+useSubscribeStateToAgentContext('sessionData', mapper, { order: 1 }); // Critical
+useSubscribeStateToAgentContext('selectedItems', mapper, { order: 10 }); // Active
+useSubscribeStateToAgentContext('appState', mapper, { order: 20 }); // General
+useSubscribeStateToAgentContext('history', mapper, { order: 50 }); // Historical
+useSubscribeStateToAgentContext('debugInfo', mapper, { order: 100 }); // Debug
 ```
 
 ### Default Label Extraction
@@ -374,7 +374,7 @@ When using `useSubscribeInputContext`, entries are automatically marked with `so
 
 ### What Gets Sent to the Agent
 
-When the agent receives context from `useSubscribeStateToInputContext`, it gets a simplified structure containing only the essential data:
+When the agent receives context from `useSubscribeStateToAgentContext`, it gets a simplified structure containing only the essential data:
 
 ```json
 {
@@ -395,7 +395,7 @@ When the agent receives context from `useSubscribeStateToInputContext`, it gets 
 
 ### Array Behavior
 
-The output structure depends on how you pass data to `useSubscribeStateToInputContext`:
+The output structure depends on how you pass data to `useSubscribeStateToAgentContext`:
 
 <Tabs>
 <Tab title="Single Value → Single Entry">
@@ -403,7 +403,7 @@ When your `mapFn` returns a single non-array value, it's stored as a single cont
 
 ```tsx
 // Input: Single object
-useSubscribeStateToInputContext('user', (userData) => ({
+useSubscribeStateToAgentContext('user', (userData) => ({
   currentUser: userData, // Single object
 }));
 
@@ -423,7 +423,7 @@ When your `mapFn` returns an array, it's preserved as an array of context entrie
 
 ```tsx
 // Input: Array
-useSubscribeStateToInputContext('todos', (todoList) => ({
+useSubscribeStateToAgentContext('todos', (todoList) => ({
   todos: todoList, // Array of todos
 }));
 
@@ -443,7 +443,7 @@ Even single-item arrays are preserved as arrays:
 
 ```tsx
 // Input: Array with one item
-useSubscribeStateToInputContext('selected', (selection) => ({
+useSubscribeStateToAgentContext('selected', (selection) => ({
   selectedItems: [selection[0]], // Single-item array
 }));
 
@@ -467,7 +467,7 @@ Here are real-world examples showing the input and output:
 // Example 1: User profile (single value)
 const [user] = useState({ id: '123', name: 'Alice', role: 'admin' });
 
-useSubscribeStateToInputContext('user', (userData) => ({
+useSubscribeStateToAgentContext('user', (userData) => ({
 currentUser: userData, // Single object
 }), { labelField: 'name' });
 
@@ -496,7 +496,7 @@ const [cart] = useState([
   { id: 'p2', name: 'Mouse', price: 29 }
 ]);
 
-useSubscribeStateToInputContext('cart', (items) => ({
+useSubscribeStateToAgentContext('cart', (items) => ({
 cartItems: items, // Array
 }), { labelField: 'name' });
 
@@ -526,7 +526,7 @@ const [selected] = useState([
   { id: 'node1', title: 'Important Feature', status: 'planned' }
 ]);
 
-useSubscribeStateToInputContext('selection', (nodes) => ({
+useSubscribeStateToAgentContext('selection', (nodes) => ({
 selectedNodes: nodes, // Single-item array
 }), { labelField: 'title' });
 
@@ -561,7 +561,7 @@ selectedNodes: nodes, // Single-item array
 When you return multiple keys from your `mapFn`, each follows the same behavior rules:
 
 ```tsx
-useSubscribeStateToInputContext('appState', (state) => ({
+useSubscribeStateToAgentContext('appState', (state) => ({
 	currentUser: state.user, // Single object → single entry
 	activeTasks: state.tasks, // Array → array of entries
 	selectedItems: [state.selected], // Single-item array → array
@@ -582,7 +582,7 @@ function MyApp() {
 	const [currentPage, setCurrentPage] = useState('/dashboard');
 
 	// Subscribe user data
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		user,
 		(userData) => ({
 			currentUser: userData
@@ -600,7 +600,7 @@ function MyApp() {
 	);
 
 	// Subscribe preferences
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		preferences,
 		(prefs) => ({
 			userPreferences: prefs,
@@ -612,7 +612,7 @@ function MyApp() {
 	);
 
 	// Subscribe navigation state
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		currentPage,
 		(page) => ({
 			currentPage: {
@@ -637,7 +637,7 @@ function MyApp() {
 Don't expose sensitive information to the agent:
 
 ```tsx
-useSubscribeStateToInputContext('userProfile', (profile) => ({
+useSubscribeStateToAgentContext('userProfile', (profile) => ({
 	user: {
 		name: profile.name,
 		tier: profile.subscriptionTier,
@@ -652,7 +652,7 @@ useSubscribeStateToInputContext('userProfile', (profile) => ({
 Choose descriptive keys for your context:
 
 ```tsx
-useSubscribeStateToInputContext('shoppingCart', (cart) => ({
+useSubscribeStateToAgentContext('shoppingCart', (cart) => ({
 	shoppingCart: cart.items, // Clear and descriptive
 	cartTotal: cart.total,
 	cartItemCount: cart.items.length,
@@ -664,7 +664,7 @@ useSubscribeStateToInputContext('shoppingCart', (cart) => ({
 For large data sets, consider filtering or summarizing:
 
 ```tsx
-useSubscribeStateToInputContext(allTransactions, (transactions) => ({
+useSubscribeStateToAgentContext(allTransactions, (transactions) => ({
 	recentTransactions: transactions
 		.slice(0, 10) // Only last 10 transactions
 		.map((t) => ({
@@ -688,7 +688,7 @@ The `options` parameter allows you to customize how the context appears in the U
 import { Star, AlertCircle, CheckCircle } from 'lucide-react';
 
 // Different colors and icons for different priorities
-useSubscribeStateToInputContext(
+useSubscribeStateToAgentContext(
 	highPriorityTasks,
 	(tasks) => ({ highPriorityTasks: tasks }),
 	{
@@ -697,7 +697,7 @@ useSubscribeStateToInputContext(
 	}
 );
 
-useSubscribeStateToInputContext(
+useSubscribeStateToAgentContext(
 	completedTasks,
 	(tasks) => ({ completedTasks: tasks }),
 	{
@@ -706,7 +706,7 @@ useSubscribeStateToInputContext(
 	}
 );
 
-useSubscribeStateToInputContext(
+useSubscribeStateToAgentContext(
 	starredItems,
 	(items) => ({ starredItems: items }),
 	{

@@ -158,11 +158,11 @@ interface CedarCaptionChatProps {
 
 ## Understanding & Customising Chat
 
-Chat works through 2 main modules working together: **AgentInputContext** and **MessagesSlice**.
+Chat works through 2 main modules working together: **AgentContext** and **MessagesSlice**.
 
-### AgentInputContext
+### AgentContext
 
-[**AgentInputContext**](/agent-input-context/agent-input-context) manages everything that we pass into the agent. This includes not only the user message, but also:
+[**AgentContext**](/agent-input-context/agent-input-context) manages everything that we pass into the agent. This includes not only the user message, but also:
 
 - **State** that the agent is subscribed to ([learn more about state access](/chat/subscribing-state))
 - **User @mentions** of specific items in your application ([learn more about mentions](/chat/mentions))

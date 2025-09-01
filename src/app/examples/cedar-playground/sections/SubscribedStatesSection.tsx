@@ -1,7 +1,7 @@
 'use client';
 
 import GlassyPaneContainer from '@/containers/GlassyPaneContainer';
-import { useCedarState, useSubscribeStateToInputContext } from 'cedar-os';
+import { useCedarState, useSubscribeStateToAgentContext } from 'cedar-os';
 import { SlidersHorizontal, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { z } from 'zod';
@@ -39,7 +39,7 @@ export function SubscribedStatesSection() {
 	const [newParamValue, setNewParamValue] = useState('');
 
 	// Subscribe state to input context
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		'parameters',
 		(parametersState: Parameters) => ({
 			parameters: parametersState,
@@ -214,7 +214,7 @@ export function SubscribedStatesSection() {
 								<li>
 									State is subscribed to input context using{' '}
 									<code className='bg-gray-200 dark:bg-gray-700 px-1 rounded'>
-										useSubscribeStateToInputContext
+										useSubscribeStateToAgentContext
 									</code>
 								</li>
 								<li>

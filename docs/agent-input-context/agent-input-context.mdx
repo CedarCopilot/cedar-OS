@@ -13,7 +13,7 @@ The underlying source of truth for this information is [Cedar state](/state-acce
 
 When a user sends a message, Cedar automatically gathers context from various sources:
 
-1. **Subscribed States**: Application state you've made available to the agent via `useCedarState` and subscribed to via `useSubscribeStateToInputContext`
+1. **Subscribed States**: Application state you've made available to the agent via `useCedarState` and subscribed to via `useSubscribeStateToAgentContext`
 2. **Mentions**: Specific data the user has referenced with @ mentions (registered using `useStateBasedMentionProvider`)
 3. **Additional Context**: Context entries you've manually added (via `addContextEntry`)
 4. **Chat Input Content**: The current editor content with mentions
@@ -58,10 +58,10 @@ For detailed information about mentions, including custom providers, multiple tr
 
 ## State Subscription
 
-Keep a Cedar state continuously in sync with the agent input context via `useSubscribeStateToInputContext`:
+Keep a Cedar state continuously in sync with the agent input context via `useSubscribeStateToAgentContext`:
 
 ```tsx
-import { useCedarState, useSubscribeStateToInputContext } from 'cedar-os';
+import { useCedarState, useSubscribeStateToAgentContext } from 'cedar-os';
 import { Settings } from 'lucide-react';
 
 function AutoSyncChat() {
@@ -76,7 +76,7 @@ function AutoSyncChat() {
 	);
 
 	// 2) Subscribe that state to the agent context
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		'appState',
 		(state) => ({
 			'app-state': [

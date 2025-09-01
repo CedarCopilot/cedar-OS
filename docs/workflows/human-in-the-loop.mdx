@@ -300,7 +300,7 @@ If you want the user to be able to resume a workflow by just typing a response, 
 const { subscribeState } = useCedarInputContext();
 
 // Subscribe workflow state to agent context
-useSubscribeStateToInputContext('humanInTheLoop', (humanInTheLoopState) => ({
+useSubscribeStateToAgentContext('humanInTheLoop', (humanInTheLoopState) => ({
 	allSuspendedWorkflows: Object.values(humanInTheLoopState),
 }));
 

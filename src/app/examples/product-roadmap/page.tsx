@@ -50,7 +50,7 @@ import {
 	HumanInTheLoopState,
 	useRegisterState,
 	useStateBasedMentionProvider,
-	useSubscribeStateToInputContext,
+	useSubscribeStateToAgentContext,
 	useRegisterFrontendTool,
 	type CedarStore,
 	type Setter,
@@ -343,7 +343,7 @@ function FlowCanvas() {
 		},
 	});
 
-	useSubscribeStateToInputContext(
+	useSubscribeStateToAgentContext(
 		'nodes',
 		(nodes) => ({
 			nodes,
@@ -628,7 +628,7 @@ function SelectedNodesPanel() {
 	});
 
 	// Enhanced subscription with dynamic icons and filtering - no manual memoization needed!
-	useSubscribeStateToInputContext<Node<FeatureNodeData>[]>(
+	useSubscribeStateToAgentContext<Node<FeatureNodeData>[]>(
 		'selectedNodes',
 		(selectedNodes: Node<FeatureNodeData>[]) => ({
 			selectedNodes,
@@ -666,7 +666,7 @@ function SelectedNodesPanel() {
 			setSelected(nodes),
 	});
 
-	useSubscribeStateToInputContext<HumanInTheLoopState>(
+	useSubscribeStateToAgentContext<HumanInTheLoopState>(
 		'humanInTheLoop',
 		(state) => ({
 			humanInTheLoop: state,

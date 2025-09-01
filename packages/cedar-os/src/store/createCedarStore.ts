@@ -1,5 +1,5 @@
 import { createAgentConnectionSlice } from '@/store/agentConnection/agentConnectionSlice';
-import { createAgentInputContextSlice } from '@/store/agentInputContext/agentInputContextSlice';
+import { createAgentContextSlice } from '@/store/agentContext/agentContextSlice';
 import type { CedarStore } from '@/store/CedarOSTypes';
 import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
 import { createDiffHistorySlice } from '@/store/diffHistoryStateSlice/diffHistorySlice';
@@ -31,7 +31,7 @@ const createDefaultSlices: StateCreator<CedarStore, [], [], CedarStore> = (
 	...a
 ) => ({
 	...createStylingSlice(...a),
-	...createAgentInputContextSlice(...a),
+	...createAgentContextSlice(...a),
 	...createStateSlice(...a),
 	...createAgentConnectionSlice(...a),
 	...createMessagesSlice(...a),
@@ -93,4 +93,4 @@ export function createCedarStore<
 }
 
 // Default export for basic usage - creates a store with default slices
-export const createDefaultCedarStore = createCedarStore();
+export const createDefaultCedarStore = () => createCedarStore();

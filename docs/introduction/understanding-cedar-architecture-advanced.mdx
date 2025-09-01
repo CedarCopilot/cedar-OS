@@ -19,7 +19,7 @@ interface CedarStore =
   // core modules
   & AgentConnectionSlice      // LLM communication & response processing
   & StateSlice               // Allows the agent to read & write to the state
-  & AgentInputContextSlice    // Allows us to control the context we send to the agent, including state ^
+  & AgentContextSlice    // Allows us to control the context we send to the agent, including state ^
   & MessagesSlice            // Chat message storage & rendering
   & ToolsSlice               // Frontend tool registration & execution
   // additional modules
@@ -33,7 +33,7 @@ interface CedarStore =
 
 **`StateSlice`** - Allows agents to read and write to local react states
 
-**`AgentInputContextSlice`** - Gathers and formats context (such as state) for AI consumption
+**`AgentContextSlice`** - Gathers and formats context (such as state) for AI consumption
 
 **`MessagesSlice`** - Stores and renders chat messages
 
@@ -70,9 +70,9 @@ But now, how does the agent know what it's supposed to write a response to? Our 
 
 To do this, we have `stateSlice` which provides functions like `registerState`. This lets us register a state into a central place no matter where and how the local states are distributed.
 
-**4. agentInputContext**
+**4. agentContext**
 
-agentInputContext handles the context that we pass into the agent. It compiles the context & editor through `stringifyInputContext` and `compileAdditionalContext` and helps generally manage the context we're giving the agent.
+agentContext handles the context that we pass into the agent. It compiles the context & editor through `stringifyInputContext` and `compileAdditionalContext` and helps generally manage the context we're giving the agent.
 
 For example, it allows users to use @notation to mention a specific email or user through `useStateBasedMentionProvider()`.
 
