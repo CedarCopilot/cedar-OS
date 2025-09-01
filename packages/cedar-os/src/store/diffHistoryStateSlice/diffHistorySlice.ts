@@ -852,7 +852,7 @@ export const createDiffHistorySlice: StateCreator<
 		let oldStateForDiff: T;
 		if (!effectiveIsDiffChange) {
 			// Not in diff mode, use current newState
-			oldStateForDiff = originalDiffState.newState;
+			oldStateForDiff = newState;
 		} else {
 			oldStateForDiff = originalDiffState.isDiffMode
 				? originalDiffState.oldState
@@ -1059,7 +1059,7 @@ export const createDiffHistorySlice: StateCreator<
 
 		if (!isDiffChange) {
 			// Let's keep the oldState just to keep track of diffs
-			oldStateForDiff = originalDiffState.newState;
+			oldStateForDiff = currentNewState;
 		} else {
 			oldStateForDiff = originalDiffState.isDiffMode
 				? originalDiffState.oldState

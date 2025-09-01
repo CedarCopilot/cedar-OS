@@ -93,6 +93,9 @@ describe('useRegisterDiffState Integration', () => {
 					id: '3',
 					data: { title: 'Node 3' },
 				},
+				options: {
+					isDiff: true,
+				},
 			});
 		});
 
@@ -113,6 +116,9 @@ describe('useRegisterDiffState Integration', () => {
 				args: {
 					id: '2',
 					data: { title: 'Updated Node 2' },
+				},
+				options: {
+					isDiff: true,
 				},
 			});
 		});

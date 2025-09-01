@@ -208,7 +208,7 @@ describe('DiffHistorySlice', () => {
 
 			// Check that the new state is set correctly
 			expect(result?.diffState.newState).toEqual({ count: 2 });
-			expect(result?.diffState.oldState).toEqual({ count: 1 });
+			expect(result?.diffState.oldState).toEqual({ count: 2 });
 			expect(result?.diffState.isDiffMode).toBe(false);
 
 			// Check that history contains the previous state
