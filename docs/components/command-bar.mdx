@@ -1,0 +1,405 @@
+---
+title: 'CommandBar Component'
+description: 'A powerful command palette component with keyboard navigation, hotkeys, and customizable styling'
+---
+
+# CommandBar Component
+
+The `CommandBar` component provides a powerful command palette interface with keyboard navigation, hotkey support, and customizable styling. It features intelligent search filtering, priority-based sorting, and support for both regular and fixed bottom groups.
+
+## Features
+
+- **Keyboard Navigation**: Full arrow key navigation and Enter to select
+- **Hotkey Support**: Register activation events for individual commands
+- **Intelligent Search**: Custom search functions with priority scoring
+- **Color Variants**: Multiple color schemes for visual categorization
+- **Fixed Bottom Group**: Persistent commands that stay visible during scrolling
+- **Cedar Editor Integration**: Uses Cedar's rich text editor for input
+- **Context Badges**: Shows selected context with the integrated ContextBadgeRow
+- **Spell System**: Automatic hotkey registration using Cedar's spell system
+
+## Import
+
+```tsx
+import { CommandBar } from 'cedar-os-components/CommandBar/CommandBar';
+import type {
+	CommandBarItem,
+	CommandBarGroup,
+	CommandBarContents,
+} from 'cedar-os-components/CommandBar/CommandBar';
+```
+
+## Basic Usage
+
+```tsx
+import { CommandBar } from 'cedar-os-components/CommandBar/CommandBar';
+import { ActivationMode } from 'cedar-os';
+
+const [isOpen, setIsOpen] = useState(false);
+
+const contents: CommandBarContents = {
+	groups: [
+		{
+			id: 'actions',
+			heading: 'Actions',
+			items: [
+				{
+					id: 'save',
+					label: 'Save Document',
+					description: 'Save the current document',
+					icon: '💾',
+					onSelect: () => console.log('Save clicked'),
+					activationEvent: 'cmd+s',
+					activationMode: ActivationMode.TRIGGER,
+				},
+				{
+					id: 'copy',
+					label: 'Copy Text',
+					description: 'Copy selected text to clipboard',
+					icon: '📋',
+					onSelect: () => console.log('Copy clicked'),
+					activationEvent: 'cmd+c',
+				},
+			],
+		},
+	],
+};
+
+<CommandBar
+	open={isOpen}
+	contents={contents}
+	onClose={() => setIsOpen(false)}
+	placeholder='Type a command or search...'
+/>;
+```
+
+## Advanced Usage
+
+### With Color Variants and Priority Scoring
+
+```tsx
+const advancedContents: CommandBarContents = {
+	groups: [
+		{
+			id: 'file',
+			heading: 'File Operations',
+			items: [
+				{
+					id: 'new-file',
+					label: 'New File',
+					description: 'Create a new document',
+					icon: '📄',
+					color: 'blue',
+					onSelect: () => createNewFile(),
+					activationEvent: 'cmd+n',
+					// Custom search function
+					searchFunction: (searchText, item) => {
+						return (
+							item.label.toLowerCase().includes(searchText) ||
+							'create document'.includes(searchText)
+						);
+					},
+					// Higher priority for exact matches
+					priorityFunction: (searchText, item) => {
+						if (item.label.toLowerCase().startsWith(searchText)) return 10;
+						if (item.label.toLowerCase().includes(searchText)) return 5;
+						return 0;
+					},
+				},
+				{
+					id: 'delete-file',
+					label: 'Delete File',
+					description: 'Permanently delete the current file',
+					icon: '🗑️',
+					color: 'red',
+					onSelect: () => deleteFile(),
+					activationEvent: 'cmd+shift+d',
+				},
+			],
+		},
+	],
+	fixedBottomGroup: {
+		id: 'quick-actions',
+		heading: 'Quick Actions',
+		items: [
+			{
+				id: 'help',
+				label: 'Help',
+				icon: '❓',
+				color: 'purple',
+				onSelect: () => showHelp(),
+				activationEvent: 'F1',
+			},
+			{
+				id: 'settings',
+				label: 'Settings',
+				icon: '⚙️',
+				color: 'gray',
+				onSelect: () => openSettings(),
+				activationEvent: 'cmd+comma',
+			},
+		],
+	},
+};
+```
+
+### With Controlled Collapse State
+
+```tsx
+const [collapsed, setCollapsed] = useState(false);
+
+<CommandBar
+	open={isOpen}
+	contents={contents}
+	collapsed={collapsed}
+	onClose={() => setIsOpen(false)}
+	onSearchChange={(searchText) => {
+		console.log('Search changed:', searchText);
+		// Auto-expand when typing
+		if (searchText && collapsed) {
+			setCollapsed(false);
+		}
+	}}
+/>;
+```
+
+## Props
+
+### CommandBarProps
+
+<ParamField path='open' type='boolean' required>
+	Whether the command bar is visible
+</ParamField>
+
+<ParamField path='contents' type='CommandBarContents' required>
+	Command bar contents organized into groups
+</ParamField>
+
+<ParamField
+	path='placeholder'
+	type='string'
+	default='Type a command or search...'>
+	Placeholder text for the search input
+</ParamField>
+
+<ParamField path='className' type='string'>
+	Additional CSS classes for the container
+</ParamField>
+
+<ParamField path='onClose' type='() => void'>
+	Callback when the command bar should close
+</ParamField>
+
+<ParamField path='collapsed' type='boolean'>
+	Whether the command bar is in collapsed state (only shows search bar)
+</ParamField>
+
+<ParamField path='onSearchChange' type='(searchText: string) => void'>
+	Callback when search text changes
+</ParamField>
+
+### CommandBarItem
+
+<ParamField path='id' type='string' required>
+	Unique identifier for the item
+</ParamField>
+
+<ParamField path='label' type='string' required>
+	Display text for the item
+</ParamField>
+
+<ParamField path='onSelect' type='() => void' required>
+	Callback when item is selected
+</ParamField>
+
+<ParamField path='description' type='string'>
+	Optional description text shown below the label
+</ParamField>
+
+<ParamField path='icon' type='React.ReactNode'>
+	Optional icon (emoji string or React component)
+</ParamField>
+
+<ParamField path='activationEvent' type='ActivationEvent'>
+	Optional hotkey for triggering this command
+</ParamField>
+
+<ParamField path='activationMode' type='ActivationMode' default='TRIGGER'>
+	How the hotkey should behave (TRIGGER, HOLD, TOGGLE)
+</ParamField>
+
+<ParamField path='disabled' type='boolean' default='false'>
+	Whether the item is disabled
+</ParamField>
+
+<ParamField path='color' type='string'>
+	Color variant for styling ('blue', 'green', 'purple', 'orange', 'pink',
+	'amber', 'red', 'indigo', 'white')
+</ParamField>
+
+<ParamField
+	path='searchFunction'
+	type='(searchText: string, item: CommandBarItem) => boolean'>
+	Custom function to determine if item matches search text
+</ParamField>
+
+<ParamField
+	path='priorityFunction'
+	type='(searchText: string, item: CommandBarItem) => number'>
+	Function to score items for better ordering (higher scores appear first)
+</ParamField>
+
+<ParamField path='ignoreInputElements' type='boolean'>
+	Whether to ignore hotkey when typing in input elements (auto-determined by
+	default)
+</ParamField>
+
+### CommandBarGroup
+
+<ParamField path='id' type='string' required>
+	Unique identifier for the group
+</ParamField>
+
+<ParamField path='items' type='CommandBarItem[]' required>
+	Items in this group
+</ParamField>
+
+<ParamField path='heading' type='string'>
+	Optional heading text for the group
+</ParamField>
+
+### CommandBarContents
+
+<ParamField path='groups' type='CommandBarGroup[]' required>
+	Array of command groups
+</ParamField>
+
+<ParamField path='fixedBottomGroup' type='CommandBarGroup'>
+	Optional group that stays at the bottom outside scroll area
+</ParamField>
+
+## Color Variants
+
+The CommandBar supports the following color variants for visual categorization:
+
+- `blue` - Blue theme with hover states
+- `green` - Green theme for success/create actions
+- `purple` - Purple theme for special features
+- `orange` - Orange theme for warnings
+- `pink` - Pink theme for favorites/highlights
+- `amber` - Amber theme for pending states
+- `red` - Red theme for destructive actions
+- `indigo` - Indigo theme for navigation
+- `white` - Clean white theme
+
+## Keyboard Shortcuts
+
+- **⌘K** - Toggle focus between input and command list
+- **Escape** - Unfocus input or close command bar
+- **Arrow Keys** - Navigate through commands
+- **Enter** - Execute selected command
+- **Tab** - Focus the search input
+
+## Integration with Cedar
+
+The CommandBar automatically integrates with Cedar's spell system to register hotkeys and uses the Cedar editor for rich text input with context support.
+
+### Spell Registration
+
+Each `CommandBarItem` with an `activationEvent` automatically registers a spell that:
+
+- Respects the `activationMode` setting
+- Only triggers when the command bar is open
+- Automatically closes the command bar after execution
+- Handles input element detection based on modifier keys
+
+### Context Integration
+
+The integrated `ContextBadgeRow` shows selected context from Cedar's agent input context system, allowing users to see and manage their current context selection.
+
+## Examples
+
+### File Manager Command Bar
+
+```tsx
+const fileManagerCommands: CommandBarContents = {
+	groups: [
+		{
+			id: 'file-ops',
+			heading: 'File Operations',
+			items: [
+				{
+					id: 'new-folder',
+					label: 'New Folder',
+					icon: '📁',
+					color: 'blue',
+					onSelect: () => createFolder(),
+					activationEvent: 'cmd+shift+n',
+				},
+				{
+					id: 'upload',
+					label: 'Upload Files',
+					icon: '⬆️',
+					color: 'green',
+					onSelect: () => uploadFiles(),
+					activationEvent: 'cmd+u',
+				},
+			],
+		},
+		{
+			id: 'view',
+			heading: 'View Options',
+			items: [
+				{
+					id: 'grid-view',
+					label: 'Grid View',
+					icon: '⊞',
+					onSelect: () => setViewMode('grid'),
+					activationEvent: 'cmd+1',
+				},
+				{
+					id: 'list-view',
+					label: 'List View',
+					icon: '☰',
+					onSelect: () => setViewMode('list'),
+					activationEvent: 'cmd+2',
+				},
+			],
+		},
+	],
+};
+```
+
+### Search-Focused Command Bar
+
+```tsx
+const searchCommands: CommandBarContents = {
+	groups: [
+		{
+			id: 'search-results',
+			items: results.map((result) => ({
+				id: result.id,
+				label: result.title,
+				description: result.description,
+				icon: result.icon,
+				onSelect: () => openResult(result),
+				// Boost exact matches
+				priorityFunction: (searchText, item) => {
+					const text = searchText.toLowerCase();
+					const title = item.label.toLowerCase();
+					if (title === text) return 100;
+					if (title.startsWith(text)) return 50;
+					if (title.includes(text)) return 25;
+					return 0;
+				},
+			})),
+		},
+	],
+};
+```
+
+## Styling
+
+The CommandBar uses Tailwind CSS classes and supports dark mode. Color variants are implemented using opacity-based backgrounds that work well in both light and dark themes.
+
+Custom styling can be applied through the `className` prop or by overriding the default Tailwind classes.

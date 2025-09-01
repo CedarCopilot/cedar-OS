@@ -106,7 +106,7 @@ function FlowCanvas() {
 								.enum(['done', 'planned', 'backlog', 'in progress'])
 								.describe('Current development status'),
 							nodeType: z
-								.literal('feature')
+								.enum(['feature', 'bug', 'improvement'])
 								.default('feature')
 								.describe('Type of node'),
 							upvotes: z.number().default(0).describe('Number of upvotes'),
@@ -396,9 +396,13 @@ function FlowCanvas() {
 		},
 	});
 
-	useSubscribeStateToInputContext('nodes', (nodes) => ({
-		nodes,
-	}));
+	useSubscribeStateToInputContext(
+		'nodes',
+		(nodes) => ({
+			nodes,
+		}),
+		{ showInChat: false }
+	);
 
 	useRegisterState({
 		key: 'edges',
@@ -429,10 +433,10 @@ function FlowCanvas() {
 	});
 
 	// Register mention provider for nodes
-	useStateBasedMentionProvider({
+	useStateBasedMentionProvider<Node<FeatureNodeData>>({
 		stateKey: 'nodes',
 		trigger: '@',
-		labelField: (node: Node<FeatureNodeData>) => node.data.title,
+		labelField: (node) => node.data.title,
 		searchFields: ['data.description'],
 		description: 'Product roadmap features',
 		icon: <Box />,
@@ -441,10 +445,10 @@ function FlowCanvas() {
 	});
 
 	// Register mention provider for edges
-	useStateBasedMentionProvider({
+	useStateBasedMentionProvider<Edge>({
 		stateKey: 'edges',
 		trigger: '@',
-		labelField: (edge: Edge) => {
+		labelField: (edge) => {
 			const sourceNode = nodes.find((n) => n.id === edge.source);
 			const targetNode = nodes.find((n) => n.id === edge.target);
 			const sourceTitle = sourceNode?.data.title || edge.source;
@@ -524,14 +528,6 @@ function FlowCanvas() {
 			);
 		},
 		[setEdges]
-	);
-
-	// Prevent node drag/pan selection interfering (optional)
-	const onNodeClick = React.useCallback(
-		(_event: React.MouseEvent, node: Node) => {
-			console.log('📌 Node clicked', node);
-		},
-		[]
 	);
 
 	// Edge context menu state
@@ -623,7 +619,6 @@ function FlowCanvas() {
 				onNodesChange={handleNodesChange}
 				onEdgesChange={onEdgesChange}
 				onConnect={onConnect}
-				onNodeClick={onNodeClick}
 				onEdgeClick={onEdgeClick}
 				onEdgeDoubleClick={onEdgeDoubleClick}
 				connectionLineType={ConnectionLineType.SmoothStep}
@@ -685,17 +680,37 @@ function SelectedNodesPanel() {
 		description: 'Selected nodes',
 	});
 
-	// First subscription - for numSelectedNodes (order: 1)
+	// Enhanced subscription with dynamic icons and filtering - no manual memoization needed!
 	useSubscribeStateToInputContext<Node<FeatureNodeData>[]>(
 		'selectedNodes',
-		(nodes) => ({
-			selectedNodes: nodes,
+		(selectedNodes: Node<FeatureNodeData>[]) => ({
+			selectedNodes,
 		}),
 		{
-			icon: <Box />,
+			// Dynamic icons based on node status
+			icon: (item: Node<FeatureNodeData>) => {
+				const status = item?.data?.status;
+				switch (status) {
+					case 'done':
+						return '✅';
+					case 'in progress':
+						return '🔄';
+					case 'planned':
+						return '📋';
+					case 'backlog':
+						return '📝';
+					default:
+						return <Box />;
+				}
+			},
 			color: '#8B5CF6', // Purple color for selected nodes
-			labelField: (item) => item?.data?.title,
-			order: 2, // This will appear first
+			labelField: (item: Node<FeatureNodeData>) => item?.data?.title,
+			// Only show nodes that are not in backlog status in chat context
+			showInChat: (entry: { data: unknown }) => {
+				const node = entry.data as Node<FeatureNodeData>;
+				return node?.data?.status !== 'backlog';
+			},
+			order: 2,
 		}
 	);
 

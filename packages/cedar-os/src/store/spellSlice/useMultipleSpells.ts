@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSpells } from '@/store/CedarStore';
 import type { UseSpellOptions } from './useSpell';
 
@@ -30,71 +30,45 @@ export interface UseMultipleSpellsOptions {
 export function useMultipleSpells({ spells }: UseMultipleSpellsOptions): void {
 	const { registerSpell, unregisterSpell } = useSpells();
 
-	// Use refs to store callbacks and avoid unnecessary re-registrations
-	const callbackRefs = useRef<
-		Map<
-			string,
-			{
-				onActivate?: UseSpellOptions['onActivate'];
-				onDeactivate?: UseSpellOptions['onDeactivate'];
+	// Track currently registered spells
+	const currentSpellIds = useRef<Set<string>>(new Set());
+
+	// Register/unregister spells when the spells array changes
+	useEffect(() => {
+		const newSpellIds = new Set(spells.map((spell) => spell.id));
+		const previousSpellIds = currentSpellIds.current;
+
+		// Unregister spells that are no longer needed
+		for (const spellId of previousSpellIds) {
+			if (!newSpellIds.has(spellId)) {
+				unregisterSpell(spellId);
 			}
-		>
-	>(new Map());
+		}
 
-	// Update callback refs when spells change
-	useEffect(() => {
-		const newCallbackRefs = new Map();
+		// Register/re-register all current spells
 		spells.forEach((spell) => {
-			newCallbackRefs.set(spell.id, {
-				onActivate: spell.onActivate,
-				onDeactivate: spell.onDeactivate,
-			});
-		});
-		callbackRefs.current = newCallbackRefs;
-	}, [spells]);
-
-	// Create a stable configuration key that only changes when spell structure changes
-	// We create a single string key instead of an array of objects to ensure stability
-	const spellConfigKey = useMemo(() => {
-		// Create a deterministic string key from spell configurations
-		return spells
-			.map((spell) => {
-				const conditionsStr = JSON.stringify(spell.activationConditions);
-				return `${spell.id}|${conditionsStr}|${
-					spell.preventDefaultEvents ?? false
-				}|${spell.ignoreInputElements ?? false}`;
-			})
-			.join('::');
-	}, [spells]);
-
-	// Register/unregister spells when the configuration key changes
-	useEffect(() => {
-		const currentSpellIds = new Set(spells.map((spell) => spell.id));
-
-		// Register all spells
-		spells.forEach((spell) => {
-			const callbacks = callbackRefs.current.get(spell.id);
-
 			registerSpell({
 				id: spell.id,
 				activationConditions: spell.activationConditions,
-				onActivate: (state) => callbacks?.onActivate?.(state),
-				onDeactivate: () => callbacks?.onDeactivate?.(),
+				onActivate: spell.onActivate,
+				onDeactivate: spell.onDeactivate,
 				preventDefaultEvents: spell.preventDefaultEvents,
 				ignoreInputElements: spell.ignoreInputElements,
 			});
 		});
 
-		// Cleanup function to unregister all spells
+		// Update tracking
+		currentSpellIds.current = newSpellIds;
+	}, [spells, registerSpell, unregisterSpell]);
+
+	// Cleanup on unmount only
+	useEffect(() => {
 		return () => {
-			currentSpellIds.forEach((spellId) => {
+			// Unregister all spells on unmount
+			for (const spellId of currentSpellIds.current) {
 				unregisterSpell(spellId);
-			});
+			}
+			currentSpellIds.current.clear();
 		};
-	}, [
-		// Use the stable string key which changes only when spell structure changes
-		spellConfigKey,
-		registerSpell,
-		unregisterSpell,
-	]);
+	}, [unregisterSpell]);
 }

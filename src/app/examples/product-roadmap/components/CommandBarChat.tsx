@@ -1,5 +1,5 @@
 import { CommandBar, CommandBarContents } from '@/CommandBar/CommandBar';
-import { useCedarStore } from 'cedar-os';
+import { useCedarStore, type CedarStore } from 'cedar-os';
 import { Bot, Plus, PlusCircle, Wand2 } from 'lucide-react';
 import React from 'react';
 import type { Node } from 'reactflow';
@@ -14,6 +14,10 @@ interface CommandBarChatProps {
 	className?: string;
 }
 
+// Stable selector function to prevent getServerSnapshot infinite loop
+const selectNodes = (state: CedarStore): Node<FeatureNodeData>[] =>
+	(state.getCedarState?.('nodes') as Node<FeatureNodeData>[]) || [];
+
 export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 	open,
 	onClose,
@@ -21,10 +25,8 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 	const sendMessage = useCedarStore((state) => state.sendMessage);
 	const [searchText, setSearchText] = React.useState('');
 
-	// Get nodes from Cedar store
-	const nodes = useCedarStore(
-		(state) => (state.getCedarState?.('nodes') as Node<FeatureNodeData>[]) || []
-	);
+	// Get nodes from Cedar store with stable selector
+	const nodes = useCedarStore(selectNodes);
 
 	// Get the setCedarState function to update selectedNodes
 	const setCedarState = useCedarStore((state) => state.setCedarState);
@@ -103,7 +105,6 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 		groups: [nodeSearchGroup],
 		fixedBottomGroup: {
 			id: 'quick-actions-bottom',
-			heading: 'Quick Actions',
 			items: [
 				{
 					id: 'ask-ai',
