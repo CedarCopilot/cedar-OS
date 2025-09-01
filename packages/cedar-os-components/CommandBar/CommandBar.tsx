@@ -146,8 +146,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		placeholder,
 		onFocus: () => setIsFocused(true),
 		onBlur: () => setIsFocused(false),
-		onSubmit: (text) => {
+		onSubmit: (text, editor, clearEditor) => {
 			console.log('onSubmit', text);
+			// Note: CommandBar handles its own clearing when items are selected via handleItemSelect
+			clearEditor?.();
 		},
 	});
 
@@ -344,8 +346,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				allItemsForNavigation[selectedIndex]
 			) {
 				e.preventDefault();
+				e.stopPropagation(); // Prevent the event from reaching the editor
 				const selectedItem = allItemsForNavigation[selectedIndex];
 				handleItemSelect(selectedItem);
+				editor?.commands.clearContent();
 			}
 		};
 
