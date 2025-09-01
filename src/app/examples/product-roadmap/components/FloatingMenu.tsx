@@ -103,7 +103,7 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
 			executeStateSetter({
 				key: 'nodes',
 				setterKey: 'addNode',
-				args: [newNode],
+				args: { node: newNode },
 			});
 			setShowAddMenu(false);
 		},

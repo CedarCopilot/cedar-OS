@@ -42,8 +42,8 @@ export const ChatBubbles: React.FC<ChatBubblesProps> = ({
 
 	// Determine container classes based on maxHeight with proper className merging
 	const containerClasses = maxHeight
-		? cn('overflow-x-hidden overflow-y-auto px-4', className)
-		: cn('flex-1 overflow-x-hidden overflow-y-auto min-h-0 px-4', className);
+		? cn('overflow-x-hidden overflow-y-auto px-3', className)
+		: cn('flex-1 overflow-x-hidden overflow-y-auto min-h-0 px-3', className);
 
 	const containerStyle = maxHeight
 		? { height: maxHeight, contain: 'paint layout' }

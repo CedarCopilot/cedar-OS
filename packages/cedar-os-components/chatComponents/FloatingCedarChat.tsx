@@ -61,7 +61,7 @@ export const FloatingCedarChat: React.FC<FloatingCedarChatProps> = ({
 				className='cedar-floating-chat'>
 				<Container3D className='flex flex-col h-full text-sm'>
 					{/* Header */}
-					<div className='flex-shrink-0 z-20 flex flex-row items-center justify-between px-5 pt-3 min-w-0 border-b border-gray-200 dark:border-gray-700'>
+					<div className='flex-shrink-0 z-20 flex flex-row items-center justify-between px-3 py-2 min-w-0 border-b border-gray-200 dark:border-gray-700'>
 						<div className='flex items-center min-w-0 flex-1'>
 							{companyLogo && (
 								<div className='flex-shrink-0 w-6 h-6 mr-2'>{companyLogo}</div>

@@ -1,0 +1,445 @@
+---
+title: 'ChatBubbles Component'
+description: 'Animated chat message display component with auto-scrolling, consecutive message grouping, and typing indicators'
+---
+
+# ChatBubbles Component
+
+The `ChatBubbles` component provides a polished chat message display with smooth animations, intelligent message grouping, auto-scrolling behavior, and integrated typing indicators. It automatically renders messages using Cedar's message rendering system and adapts to different container sizes.
+
+## Features
+
+- **Smooth Animations**: Framer Motion powered message entrance animations
+- **Auto-Scrolling**: Automatic scroll to bottom on new messages
+- **Message Grouping**: Consecutive messages from same sender are visually grouped
+- **Typing Indicator**: Animated typing indicator during message processing
+- **Flexible Sizing**: Support for both fixed height and flexible containers
+- **Performance Optimized**: Efficient scrolling with paint containment
+- **Dark Mode**: Full dark mode support with theme integration
+- **Custom Scrollbar**: Styled scrollbars for better visual integration
+
+## Import
+
+```tsx
+import { ChatBubbles } from 'cedar-os-components/chatMessages/ChatBubbles';
+```
+
+## Basic Usage
+
+```tsx
+import { ChatBubbles } from 'cedar-os-components/chatMessages/ChatBubbles';
+
+// Flexible height container (recommended for full-screen chats)
+<ChatBubbles />
+
+// Fixed height container
+<ChatBubbles maxHeight="400px" />
+```
+
+## Advanced Usage
+
+### With Custom Container Styling
+
+```tsx
+<ChatBubbles
+	maxHeight='60vh'
+	className='border rounded-lg bg-gray-50 dark:bg-gray-900'
+/>
+```
+
+### In a Chat Interface Layout
+
+```tsx
+const ChatInterface = () => {
+	return (
+		<div className='flex flex-col h-screen'>
+			{/* Header */}
+			<div className='border-b p-4'>
+				<h1>Chat</h1>
+			</div>
+
+			{/* Messages - flexible height */}
+			<div className='flex-1 min-h-0'>
+				<ChatBubbles />
+			</div>
+
+			{/* Input */}
+			<div className='border-t p-4'>
+				<ChatInput />
+			</div>
+		</div>
+	);
+};
+```
+
+### With Constrained Height
+
+```tsx
+const SidebarChat = () => {
+	return (
+		<div className='w-80 h-full flex flex-col'>
+			<div className='p-4'>
+				<h2>Quick Chat</h2>
+			</div>
+
+			{/* Fixed height messages */}
+			<ChatBubbles maxHeight='300px' className='border-y' />
+
+			<div className='p-4'>
+				<ChatInput />
+			</div>
+		</div>
+	);
+};
+```
+
+## Props
+
+<ParamField path='maxHeight' type='string'>
+	Maximum height for the message container. When provided, creates a
+	fixed-height scrollable container. When omitted, uses flex-1 for flexible
+	height. Examples: "300px", "60vh", "20rem"
+</ParamField>
+
+<ParamField path='className' type='string' default=''>
+	Additional CSS classes for the container. Applied to the outer container
+	element.
+</ParamField>
+
+## Behavior
+
+### Message Grouping
+
+The component automatically groups consecutive messages from the same sender:
+
+- **First message** in a group: Full spacing (mt-2)
+- **Consecutive messages**: Reduced spacing (mt-1)
+- **Different senders**: Full spacing between groups
+
+```tsx
+// Visual grouping example:
+// [User] Hello there        ← mt-2 (first message)
+// [User] How are you?       ← mt-1 (consecutive)
+// [Assistant] I'm doing well ← mt-2 (different sender)
+// [Assistant] Thanks for asking ← mt-1 (consecutive)
+```
+
+### Auto-Scrolling
+
+- **Initial render**: Immediate scroll to bottom (useLayoutEffect)
+- **New messages**: Smooth scroll to bottom when messages change
+- **Performance**: Uses `scrollTo` with smooth behavior for fluid UX
+
+### Typing Indicator
+
+When `isProcessing` is true in the Cedar store:
+
+- Shows animated typing dots
+- Positioned as assistant message
+- Smooth entrance/exit animations
+- Themed to match current styling
+
+## Message Rendering
+
+The component integrates with Cedar's message rendering system:
+
+- Uses `ChatRenderer` for individual message display
+- Supports all Cedar message types (text, tool calls, human-in-the-loop, etc.)
+- Automatic message type detection and appropriate rendering
+- Custom message renderers are supported through Cedar's renderer system
+
+## Styling and Theming
+
+### Container Styling
+
+```tsx
+// Default flexible container
+<ChatBubbles className="bg-white dark:bg-gray-800" />
+
+// Fixed height with custom styling
+<ChatBubbles
+  maxHeight="400px"
+  className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm"
+/>
+```
+
+### Scrollbar Customization
+
+The component includes custom scrollbar styling:
+
+```css
+/* Firefox scrollbar styling */
+scrollbar-color: rgba(156, 163, 175, 0.8) transparent;
+
+/* Webkit scrollbar styling (applied via Tailwind) */
+/* Customize through global CSS if needed */
+```
+
+### Message Animations
+
+Messages use Framer Motion with these default animations:
+
+```tsx
+// Entrance animation
+initial={{
+  opacity: 0,
+  y: 20,
+  filter: 'blur(4px)',
+}}
+animate={{
+  opacity: 1,
+  y: 0,
+  filter: 'blur(0px)',
+}}
+transition={{
+  duration: 0.15,
+  ease: 'easeOut',
+}}
+```
+
+## Integration Examples
+
+### Complete Chat Application
+
+```tsx
+import { ChatBubbles, ChatInput } from 'cedar-os-components';
+import { useCedarStore } from 'cedar-os';
+
+const ChatApp = () => {
+	const messages = useCedarStore((state) => state.messages);
+	const isProcessing = useCedarStore((state) => state.isProcessing);
+
+	return (
+		<div className='h-screen flex flex-col bg-gray-50 dark:bg-gray-900'>
+			{/* Header */}
+			<header className='border-b border-gray-200 dark:border-gray-700 p-4'>
+				<div className='flex items-center justify-between'>
+					<h1 className='text-xl font-semibold'>Cedar Chat</h1>
+					<div className='text-sm text-gray-500'>
+						{messages.length} messages
+					</div>
+				</div>
+			</header>
+
+			{/* Messages */}
+			<main className='flex-1 min-h-0'>
+				<ChatBubbles />
+			</main>
+
+			{/* Input */}
+			<footer className='border-t border-gray-200 dark:border-gray-700 p-4'>
+				<ChatInput />
+			</footer>
+		</div>
+	);
+};
+```
+
+### Embedded Chat Widget
+
+```tsx
+const ChatWidget = ({ isOpen, onClose }) => {
+	if (!isOpen) return null;
+
+	return (
+		<div className='fixed bottom-4 right-4 w-96 h-[500px] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col'>
+			{/* Widget header */}
+			<div className='flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700'>
+				<span className='font-medium'>Chat Support</span>
+				<button onClick={onClose} className='text-gray-400 hover:text-gray-600'>
+					<X size={20} />
+				</button>
+			</div>
+
+			{/* Messages with fixed height */}
+			<div className='flex-1 min-h-0'>
+				<ChatBubbles />
+			</div>
+
+			{/* Input */}
+			<div className='p-3 border-t border-gray-200 dark:border-gray-700'>
+				<ChatInput className='bg-gray-50 dark:bg-gray-700/50' />
+			</div>
+		</div>
+	);
+};
+```
+
+### Multi-Column Layout
+
+```tsx
+const MultiColumnChat = () => {
+	return (
+		<div className='h-screen flex'>
+			{/* Sidebar */}
+			<div className='w-64 border-r border-gray-200 dark:border-gray-700 p-4'>
+				<h2>Conversations</h2>
+				{/* Conversation list */}
+			</div>
+
+			{/* Main chat */}
+			<div className='flex-1 flex flex-col'>
+				<div className='border-b border-gray-200 dark:border-gray-700 p-4'>
+					<h1>Current Chat</h1>
+				</div>
+
+				{/* Messages take remaining space */}
+				<div className='flex-1 min-h-0'>
+					<ChatBubbles />
+				</div>
+
+				<div className='border-t border-gray-200 dark:border-gray-700 p-4'>
+					<ChatInput />
+				</div>
+			</div>
+
+			{/* Right panel */}
+			<div className='w-80 border-l border-gray-200 dark:border-gray-700 p-4'>
+				<h2>Context</h2>
+				{/* Context information */}
+			</div>
+		</div>
+	);
+};
+```
+
+## Performance Considerations
+
+### Container Optimization
+
+```tsx
+// The component uses paint containment for better performance
+style={{
+  contain: 'paint layout'
+}}
+```
+
+### Scroll Performance
+
+- Uses `scrollTo` instead of `scrollIntoView` for better control
+- Immediate scroll on initial render prevents flash
+- Smooth scrolling for subsequent updates
+
+### Animation Performance
+
+- Uses `will-change: transform` for smooth animations
+- Blur effects are hardware accelerated
+- Short animation duration (0.15s) for responsiveness
+
+## Accessibility
+
+### Screen Reader Support
+
+- Messages are announced as they appear
+- Proper semantic structure with message roles
+- Typing indicator is announced appropriately
+
+### Keyboard Navigation
+
+- Scrollable content is keyboard accessible
+- Focus management integrates with ChatInput
+- Proper tab order maintained
+
+### Visual Accessibility
+
+- High contrast support in both light and dark modes
+- Respects user's motion preferences
+- Clear visual hierarchy with proper spacing
+
+## Best Practices
+
+### Layout Design
+
+```tsx
+// ✅ Good: Use flex-1 for main chat interfaces
+<div className="flex flex-col h-screen">
+  <Header />
+  <div className="flex-1 min-h-0">
+    <ChatBubbles />
+  </div>
+  <ChatInput />
+</div>
+
+// ✅ Good: Use maxHeight for constrained spaces
+<ChatBubbles maxHeight="300px" />
+
+// ❌ Avoid: Fixed height without maxHeight prop
+<div style={{ height: '300px' }}>
+  <ChatBubbles /> {/* Will not scroll properly */}
+</div>
+```
+
+### Performance
+
+```tsx
+// ✅ Good: Let the component handle scrolling
+<ChatBubbles />
+
+// ❌ Avoid: Manual scroll management
+<div onScroll={handleScroll}>
+  <ChatBubbles />
+</div>
+```
+
+### Styling
+
+```tsx
+// ✅ Good: Use className for container styling
+<ChatBubbles
+	maxHeight='60vh'
+	className='border rounded-lg bg-white dark:bg-gray-800'
+/>
+
+// ✅ Good: Respect theme system
+// Component automatically adapts to Cedar's theme
+```
+
+## Troubleshooting
+
+### Scrolling Issues
+
+**Problem**: Messages don't scroll to bottom
+**Solution**: Ensure parent container has proper height constraints
+
+```tsx
+// ✅ Correct
+<div className="h-screen flex flex-col">
+  <div className="flex-1 min-h-0">
+    <ChatBubbles />
+  </div>
+</div>
+
+// ❌ Incorrect
+<div className="flex flex-col">
+  <ChatBubbles /> {/* No height constraint */}
+</div>
+```
+
+### Animation Performance
+
+**Problem**: Choppy animations on mobile
+**Solution**: Reduce motion for better performance
+
+```tsx
+// Add to your global CSS for motion-sensitive users
+@media (prefers-reduced-motion: reduce) {
+  .chat-message {
+    animation: none;
+    transition: none;
+  }
+}
+```
+
+### Message Grouping
+
+**Problem**: Messages not grouping correctly
+**Solution**: Ensure message roles are consistent
+
+```tsx
+// Messages need consistent role values
+const messages = [
+	{ id: '1', role: 'user', content: 'Hello' },
+	{ id: '2', role: 'user', content: 'How are you?' }, // Same role = grouped
+	{ id: '3', role: 'assistant', content: 'I am well' }, // Different role = new group
+];
+```

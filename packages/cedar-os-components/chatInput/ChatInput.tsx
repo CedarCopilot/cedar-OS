@@ -191,7 +191,7 @@ export const ChatInput: React.FC<{
 					<div className='flex items-center gap-2'>
 						{!isFocused && (
 							<KeyboardShortcut
-								shortcut='tab'
+								shortcut='⇥'
 								className='text-muted-foreground border-muted-foreground/30 flex-shrink-0'
 							/>
 						)}
