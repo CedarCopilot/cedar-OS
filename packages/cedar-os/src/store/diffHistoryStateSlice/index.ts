@@ -29,3 +29,8 @@ export {
 } from './useRegisterDiffState';
 export { useDiffState, useDiffStateOperations } from './useDiffState';
 export { useDiffStateHelpers } from './useDiffStateHelpers';
+export {
+	useControlledDiffState,
+	type UseControlledDiffStateOptions,
+	type ControlledDiffStateReturn,
+} from './useControlledDiffState';
