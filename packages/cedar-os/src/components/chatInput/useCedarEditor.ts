@@ -205,15 +205,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 					// Check for active mention suggestions more thoroughly
 					const hasActiveSuggestion = state.plugins.some((plugin) => {
 						const pluginState = plugin.getState?.(state);
-						// Check multiple possible state properties that indicate active suggestions
-						return (
-							pluginState?.active ||
-							pluginState?.open ||
-							pluginState?.query !== undefined ||
-							pluginState?.decorationSet?.find ||
-							(pluginState?.range &&
-								pluginState.range.from !== pluginState.range.to)
-						);
+						return pluginState?.active || pluginState?.open;
 					});
 
 					if (!hasActiveSuggestion) {
