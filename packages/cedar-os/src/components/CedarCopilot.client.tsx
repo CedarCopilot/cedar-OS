@@ -115,15 +115,5 @@ export function CedarCopilotClient({
 		};
 	}, [messageRenderers]);
 
-	console.log('CedarCopilot', {
-		userId,
-		threadId,
-		llmProvider,
-		voiceSettings,
-		messageStorage,
-		responseProcessors,
-		messageRenderers,
-	});
-
 	return <>{children}</>;
 }
