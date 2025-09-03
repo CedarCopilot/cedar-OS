@@ -112,7 +112,7 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 					icon: <Bot className='w-4 h-4' />,
 					activationEvent: 'cmd+enter',
 					onSelect: () => {
-						sendMessage();
+						sendMessage({ stream: true });
 					},
 					searchFunction: () => true,
 					priorityFunction: (searchText, item) => {
@@ -243,6 +243,7 @@ export const CommandBarChat: React.FC<CommandBarChatProps> = ({
 			onClose={onClose}
 			placeholder='Search nodes or ask a question...'
 			onSearchChange={setSearchText}
+			showLatestMessage={true}
 		/>
 	);
 };

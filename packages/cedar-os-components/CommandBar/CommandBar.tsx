@@ -1,4 +1,6 @@
 import { ContextBadgeRow } from '@/chatInput/ContextBadgeRow';
+import { ChatRenderer } from '@/chatMessages/ChatRenderer';
+import { ShimmerText } from '@/text/ShimmerText';
 import {
 	Command,
 	CommandGroup,
@@ -8,10 +10,16 @@ import {
 } from '@/ui/command';
 import { KeyboardShortcut } from '@/ui/KeyboardShortcut';
 import { EditorContent } from '@tiptap/react';
-import { cn, useCedarEditor, useMultipleSpells } from 'cedar-os';
 import type { ActivationEvent, ActivationMode } from 'cedar-os';
-import { ActivationMode as ActivationModeEnum } from 'cedar-os';
-import { motion } from 'motion/react';
+import {
+	ActivationMode as ActivationModeEnum,
+	cn,
+	useCedarEditor,
+	useMessages,
+	useMultipleSpells,
+} from 'cedar-os';
+import { ChevronUp } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import React from 'react';
 import { getShortcutDisplay } from './getShortcutDisplay';
 
@@ -126,6 +134,10 @@ interface CommandBarProps {
 	collapsed?: boolean;
 	/** Callback when search text changes */
 	onSearchChange?: (searchText: string) => void;
+	/** Whether to show the latest message under the fixedBottomGroup */
+	showLatestMessage?: boolean;
+	/** Whether to use streaming for responses */
+	stream?: boolean;
 }
 
 export const CommandBar: React.FC<CommandBarProps> = ({
@@ -136,10 +148,81 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 	onClose,
 	collapsed: controlledCollapsed,
 	onSearchChange,
+	showLatestMessage = false,
+	stream = true,
 }) => {
 	const [isFocused, setIsFocused] = React.useState(false);
 	const [selectedIndex, setSelectedIndex] = React.useState(0);
 	const commandListRef = React.useRef<HTMLDivElement>(null);
+	const [baselineMessageIndex, setBaselineMessageIndex] = React.useState(-1);
+	const messageHideTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+	const [forceShowLatestMessage, setForceShowLatestMessage] =
+		React.useState(false);
+
+	// Get messages for latest message display
+	const { messages, isProcessing } = useMessages();
+
+	// Get the latest non-user message for display
+	const latestMessage = React.useMemo(() => {
+		if (!showLatestMessage) return null;
+		// Find the last non-user message of type text
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const message = messages[i];
+			if (message.role !== 'user' && message.type === 'text') {
+				return message;
+			}
+		}
+		return null;
+	}, [messages, showLatestMessage]);
+
+	// Check if the latest message is hidden by the baseline
+	const isLatestMessageHidden = React.useMemo(() => {
+		if (!latestMessage) return false;
+		const messageIndex = messages.findIndex((m) => m.id === latestMessage.id);
+		return messageIndex <= baselineMessageIndex;
+	}, [latestMessage, messages, baselineMessageIndex]);
+
+	// Determine which message to show based on baseline and force display
+	const messageToShow = React.useMemo(() => {
+		if (!latestMessage) return null;
+		// Show the message if it's not hidden by baseline OR if we're forcing display
+		if (!isLatestMessageHidden || forceShowLatestMessage) {
+			return latestMessage;
+		}
+		return null;
+	}, [latestMessage, isLatestMessageHidden, forceShowLatestMessage]);
+
+	// Auto-hide message after 10 seconds
+	React.useEffect(() => {
+		// Clear existing timer
+		if (messageHideTimerRef.current) {
+			clearTimeout(messageHideTimerRef.current);
+			messageHideTimerRef.current = null;
+		}
+
+		// If there's a message to show, start a new timer
+		if (latestMessage) {
+			const timer = setTimeout(() => {
+				// Hide the message by setting baseline to current message index
+				const messageIndex = messages.findIndex(
+					(m) => m.id === latestMessage.id
+				);
+				if (messageIndex !== -1) {
+					setBaselineMessageIndex(messageIndex);
+				}
+			}, 5000); // 5 seconds
+
+			messageHideTimerRef.current = timer;
+		}
+
+		// Cleanup on unmount
+		return () => {
+			if (messageHideTimerRef.current) {
+				clearTimeout(messageHideTimerRef.current);
+				messageHideTimerRef.current = null;
+			}
+		};
+	}, [latestMessage, messages]);
 
 	// Use Cedar editor for the input
 	const { editor, getEditorText } = useCedarEditor({
@@ -148,9 +231,38 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		onBlur: () => setIsFocused(false),
 		onSubmit: (text, editor, clearEditor) => {
 			console.log('onSubmit', text);
+			// Set baseline to hide any existing messages immediately when user sends a message
+			// Since the condition is `i > baselineMessageIndex`, we set it high enough to hide all current messages
+			// Even after the user's message is added, this will ensure only new assistant responses are shown
+			setBaselineMessageIndex(messages.length + 2);
+			// Also clear any forced display of hidden messages
+			setForceShowLatestMessage(false);
 			// Note: CommandBar handles its own clearing when items are selected via handleItemSelect
 			clearEditor?.();
 		},
+		onEnterOverride: (event) => {
+			// Override Enter key handling if we have a selected item and conditions are met
+			if (
+				event.key === 'Enter' &&
+				!event.metaKey && // Don't intercept cmd+enter (let spells handle it)
+				!event.ctrlKey && // Don't intercept ctrl+enter (let spells handle it)
+				!event.altKey && // Don't intercept alt+enter (let spells handle it)
+				!event.shiftKey && // Don't intercept shift+enter (let spells handle it)
+				isFocused &&
+				selectedIndex >= 0 &&
+				allItemsForNavigation[selectedIndex]
+			) {
+				// Prevent editor's default Enter handling
+				event.preventDefault();
+				event.stopPropagation();
+				const selectedItem = allItemsForNavigation[selectedIndex];
+				handleItemSelect(selectedItem);
+				editor?.commands.clearContent();
+				return true; // Indicate that we handled the event
+			}
+			return false; // Let editor handle the event normally
+		},
+		stream,
 	});
 
 	// Use a ref to always get the current editor instance in callbacks
@@ -339,17 +451,6 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				setSelectedIndex((prev) =>
 					prev > 0 ? prev - 1 : allItemsForNavigation.length - 1
 				);
-			} else if (
-				e.key === 'Enter' &&
-				isFocused &&
-				selectedIndex >= 0 &&
-				allItemsForNavigation[selectedIndex]
-			) {
-				e.preventDefault();
-				e.stopPropagation(); // Prevent the event from reaching the editor
-				const selectedItem = allItemsForNavigation[selectedIndex];
-				handleItemSelect(selectedItem);
-				editor?.commands.clearContent();
 			}
 		};
 
@@ -401,7 +502,30 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 						}
 					}}>
 					<div className='flex w-full flex-col gap-2 px-3 py-2'>
-						<ContextBadgeRow editor={editor} />
+						<div className='flex w-full items-center justify-between'>
+							<ContextBadgeRow editor={editor} />
+							{/* Caret button to show/hide latest message */}
+							{latestMessage && (
+								<motion.button
+									onClick={() =>
+										setForceShowLatestMessage(!forceShowLatestMessage)
+									}
+									className='flex-shrink-0 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
+									whileHover={{ scale: 1.05 }}
+									whileTap={{ scale: 0.95 }}
+									aria-label={
+										forceShowLatestMessage
+											? 'Hide latest message'
+											: 'Show latest message'
+									}>
+									<motion.div
+										animate={{ rotate: forceShowLatestMessage ? 180 : 0 }}
+										transition={{ duration: 0.2, ease: 'easeInOut' }}>
+										<ChevronUp className='w-4 h-4 text-muted-foreground' />
+									</motion.div>
+								</motion.button>
+							)}
+						</div>
 						<div className='flex w-full items-center gap-2'>
 							{!isFocused && (
 								<motion.div
@@ -573,6 +697,38 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 							</div>
 						</div>
 					)}
+
+					{/* Latest message display - with animation */}
+					<AnimatePresence>
+						{showLatestMessage &&
+							(messageToShow || (isProcessing && !messageToShow)) && (
+								<motion.div
+									initial={{ height: 0, opacity: 0 }}
+									animate={{ height: 'auto', opacity: 1 }}
+									exit={{ height: 0, opacity: 0 }}
+									transition={{
+										type: 'spring',
+										stiffness: 300,
+										damping: 30,
+										mass: 0.8,
+									}}
+									style={{ overflow: 'hidden' }}
+									className='border-t border-border'>
+									<div className='px-3'>
+										<div className='text-sm'>
+											{messageToShow && (
+												<ChatRenderer message={messageToShow} />
+											)}
+											{isProcessing && !messageToShow && (
+												<div className='py-2'>
+													<ShimmerText text='Thinking...' state='thinking' />
+												</div>
+											)}
+										</div>
+									</div>
+								</motion.div>
+							)}
+					</AnimatePresence>
 				</Command>
 			</motion.div>
 		</div>
