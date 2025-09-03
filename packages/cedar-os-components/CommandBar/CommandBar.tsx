@@ -18,7 +18,7 @@ import {
 	useMessages,
 	useMultipleSpells,
 } from 'cedar-os';
-import { ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import React from 'react';
 import { getShortcutDisplay } from './getShortcutDisplay';
@@ -192,6 +192,19 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		return null;
 	}, [latestMessage, isLatestMessageHidden, forceShowLatestMessage]);
 
+	// Determine what should be displayed in the message area
+	const shouldShowProcessing = React.useMemo(() => {
+		// Show processing if we're processing AND there's no message to show naturally (without forcing)
+		return isProcessing && (!latestMessage || isLatestMessageHidden);
+	}, [isProcessing, latestMessage, isLatestMessageHidden]);
+
+	const shouldShowMessage = React.useMemo(() => {
+		// Don't show message if we should show processing instead
+		if (shouldShowProcessing) return false;
+		// Show message if there's one to show (either naturally or forced)
+		return !!messageToShow;
+	}, [shouldShowProcessing, messageToShow]);
+
 	// Auto-hide message after 10 seconds
 	React.useEffect(() => {
 		// Clear existing timer
@@ -234,7 +247,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 			// Set baseline to hide any existing messages immediately when user sends a message
 			// Since the condition is `i > baselineMessageIndex`, we set it high enough to hide all current messages
 			// Even after the user's message is added, this will ensure only new assistant responses are shown
-			setBaselineMessageIndex(messages.length + 2);
+			setBaselineMessageIndex(messages.length - 1);
 			// Also clear any forced display of hidden messages
 			setForceShowLatestMessage(false);
 			// Note: CommandBar handles its own clearing when items are selected via handleItemSelect
@@ -255,6 +268,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				// Prevent editor's default Enter handling
 				event.preventDefault();
 				event.stopPropagation();
+				setBaselineMessageIndex(messages.length - 1);
 				const selectedItem = allItemsForNavigation[selectedIndex];
 				handleItemSelect(selectedItem);
 				editor?.commands.clearContent();
@@ -521,7 +535,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 									<motion.div
 										animate={{ rotate: forceShowLatestMessage ? 180 : 0 }}
 										transition={{ duration: 0.2, ease: 'easeInOut' }}>
-										<ChevronUp className='w-4 h-4 text-muted-foreground' />
+										<ChevronDown className='w-4 h-4 text-muted-foreground' />
 									</motion.div>
 								</motion.button>
 							)}
@@ -701,7 +715,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					{/* Latest message display - with animation */}
 					<AnimatePresence>
 						{showLatestMessage &&
-							(messageToShow || (isProcessing && !messageToShow)) && (
+							(shouldShowMessage || shouldShowProcessing) && (
 								<motion.div
 									initial={{ height: 0, opacity: 0 }}
 									animate={{ height: 'auto', opacity: 1 }}
@@ -716,10 +730,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 									className='border-t border-border'>
 									<div className='px-3'>
 										<div className='text-sm'>
-											{messageToShow && (
+											{shouldShowMessage && messageToShow && (
 												<ChatRenderer message={messageToShow} />
 											)}
-											{isProcessing && !messageToShow && (
+											{shouldShowProcessing && (
 												<div className='py-2'>
 													<ShimmerText text='Thinking...' state='thinking' />
 												</div>
