@@ -31,7 +31,7 @@ describe('useDiffState', () => {
 	});
 
 	it('should support custom setters', () => {
-		const customSetters = {
+		const stateSetters = {
 			append: {
 				name: 'append',
 				description: 'Append text',
@@ -49,7 +49,10 @@ describe('useDiffState', () => {
 		};
 
 		const { result } = renderHook(
-			() => useDiffState('testStateCustom', 'hello', { customSetters }),
+			() =>
+				useDiffState('testStateCustom', 'hello', {
+					stateSetters,
+				}),
 			{ wrapper }
 		);
 
@@ -94,7 +97,6 @@ describe('useDiffState', () => {
 		expect(result.current[0][2]).toEqual({
 			id: '3',
 			name: 'Node 3',
-			diff: 'added',
 		});
 	});
 
@@ -117,7 +119,8 @@ describe('useDiffState', () => {
 
 		// With holdAccept mode, the computed state should still be 'initial'
 		// until diffs are accepted
-		expect(result.current[0]).toBe('initial');
+		// This is supposed to be updated because they are updating the SOURCE state without diffMode
+		expect(result.current[0]).toBe('updated');
 	});
 });
 

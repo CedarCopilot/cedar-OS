@@ -112,10 +112,10 @@ export interface MentionProvider {
 /**
  * Configuration for state-based mention providers
  */
-export interface StateBasedMentionProviderConfig {
+export interface StateBasedMentionProviderConfig<T> {
 	stateKey: string;
 	trigger?: string;
-	labelField?: string | ((item: unknown) => string);
+	labelField?: string | ((item: T) => string);
 	searchFields?: string[];
 	description?: string;
 	icon?: ReactNode;

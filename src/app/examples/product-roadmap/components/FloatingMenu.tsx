@@ -97,13 +97,12 @@ export const FloatingMenu: React.FC<FloatingMenuProps> = ({
 						| 'backlog'
 						| 'planned',
 					nodeType: nodeType as 'feature' | 'bug' | 'improvement',
-					diff: 'added' as const,
 				},
 			};
 			executeStateSetter({
 				key: 'nodes',
 				setterKey: 'addNode',
-				args: [newNode],
+				args: { node: newNode },
 			});
 			setShowAddMenu(false);
 		},

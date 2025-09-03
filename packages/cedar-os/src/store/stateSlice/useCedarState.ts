@@ -104,11 +104,8 @@ export function useCedarState<T extends BasicStateValue>(config: {
 }
 
 /**
- * Hook to register a state with Cedar Store.
- * This hook automatically handles the registration and cleanup of state in the Cedar Store.
- * Unlike useCedarState, this hook does not create its own state but registers external state.
- *
- * This hook is designed to be safe to call during render. It uses useEffect internally,
+ * Hook that registers a state in the Cedar store.
+ * This is a hook version of registerState that handles the useEffect internally,
  * allowing you to call it directly in the component body without worrying about
  * state updates during render.
  *
@@ -117,7 +114,7 @@ export function useCedarState<T extends BasicStateValue>(config: {
  * @param config.value Current value for the state
  * @param config.setValue Optional React setState function for external state syncing
  * @param config.description Optional human-readable description for AI metadata
- * @param config.customSetters Optional custom setter functions for this state
+ * @param config.customSetters Optional custom setter functions for this state (deprecated)
  * @param config.schema Optional Zod schema for validating the state
  */
 export function useRegisterState<T extends BasicStateValue>(config: {
@@ -126,19 +123,30 @@ export function useRegisterState<T extends BasicStateValue>(config: {
 	setValue?: BaseSetter<T>;
 	description?: string;
 	schema?: ZodSchema<T>;
-	customSetters?: Record<string, Setter<T>>;
+	stateSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
+	/** @deprecated Use stateSetters instead */
+	customSetters?: Record<string, Setter<T, z.ZodTypeAny>>;
 }): void {
 	const registerState = useCedarStore((s: CedarStore) => s.registerState);
+	const unregisterState = useCedarStore((s: CedarStore) => s.unregisterState);
 
 	useEffect(() => {
 		registerState(config);
+
+		// Cleanup on unmount
+		return () => {
+			unregisterState(config.key);
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
 		config.key,
 		config.value,
 		config.setValue,
 		config.description,
 		config.schema,
+		config.stateSetters,
 		config.customSetters,
 		registerState,
+		unregisterState,
 	]);
 }

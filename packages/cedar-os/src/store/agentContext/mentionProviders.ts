@@ -6,7 +6,7 @@ import type {
 	MentionItem,
 	MentionProvider,
 	StateBasedMentionProviderConfig,
-} from '@/store/agentInputContext/AgentInputContextTypes';
+} from '@/store/agentContext/AgentContextTypes';
 
 /**
  * Helper to extract label from an item
@@ -27,10 +27,10 @@ function getLabel(
 /**
  * Helper to search an item
  */
-function searchItem(
-	item: any,
+function searchItem<T>(
+	item: T,
 	query: string,
-	config: StateBasedMentionProviderConfig
+	config: StateBasedMentionProviderConfig<T>
 ): boolean {
 	const lowerQuery = query.toLowerCase();
 
@@ -41,7 +41,7 @@ function searchItem(
 
 	// Search in specified fields
 	for (const field of config.searchFields || []) {
-		const value = item[field];
+		const value = item[field as keyof T];
 		if (value && String(value).toLowerCase().includes(lowerQuery)) {
 			return true;
 		}
@@ -54,8 +54,8 @@ function searchItem(
  * Hook to create and register a state-based mention provider
  * This is an all-in-one hook that handles provider creation and registration
  */
-export function useStateBasedMentionProvider(
-	config: StateBasedMentionProviderConfig
+export function useStateBasedMentionProvider<T>(
+	config: StateBasedMentionProviderConfig<T>
 ): void {
 	const registerMentionProvider = useCedarStore(
 		(s) => s.registerMentionProvider

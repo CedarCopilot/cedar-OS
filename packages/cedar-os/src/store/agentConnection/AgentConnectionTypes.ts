@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { CedarStore } from '@/store/CedarOSTypes';
-import type { AdditionalContextParam } from '@/store/agentInputContext/AgentInputContextTypes';
-import { AdditionalContextParamSchema } from '@/store/agentInputContext/AgentInputContextTypes';
+import type { AdditionalContextParam } from '@/store/agentContext/AgentContextTypes';
+import { AdditionalContextParamSchema } from '@/store/agentContext/AgentContextTypes';
 
 // Base types for LLM responses and events
 export interface LLMResponse {
@@ -199,7 +199,6 @@ export interface ProviderImplementation<
 	) => StreamResponse;
 	voiceLLM: (params: VoiceParams, config: TConfig) => Promise<VoiceLLMResponse>;
 	handleResponse: (response: Response) => Promise<LLMResponse>;
-	handleStreamResponse: (chunk: string) => StreamEvent;
 }
 
 // Response processor types

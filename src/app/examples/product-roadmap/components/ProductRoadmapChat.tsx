@@ -86,7 +86,6 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 				comments: [],
 				status: 'backlog' as const,
 				nodeType: 'bug' as const,
-				diff: 'added' as const,
 			},
 		};
 		executeStateSetter({

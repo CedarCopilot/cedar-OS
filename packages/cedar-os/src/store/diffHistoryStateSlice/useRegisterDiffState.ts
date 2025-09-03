@@ -3,6 +3,7 @@ import type { BasicStateValue } from '@/store/stateSlice/stateSlice';
 import { compare, Operation } from 'fast-json-patch';
 import type { DiffChecker } from './diffHistorySlice';
 import { useEffect } from 'react';
+import { cloneDeep } from 'lodash';
 import type { RegisterDiffStateConfig } from './diffHistorySlice';
 
 // Re-export the config type from diffHistorySlice
@@ -130,25 +131,28 @@ function setValueAtPath<T>(obj: T, path: string, value: unknown): T {
 		: path.split('/');
 
 	// Create a deep copy of the object
-	const result = JSON.parse(JSON.stringify(obj));
+	const result = cloneDeep(obj) as Record<string, unknown>;
 
 	// Navigate to the target location
-	let current = result;
+	let current = result as Record<string, unknown>;
 	for (let i = 0; i < pathParts.length - 1; i++) {
 		const part = pathParts[i];
 		if (!(part in current)) {
 			current[part] = {};
 		}
-		current = current[part];
+		current = current[part] as Record<string, unknown>;
 	}
 
 	// Set the value at the final path
 	const lastPart = pathParts[pathParts.length - 1];
 	if (typeof current === 'object' && current !== null) {
-		current[lastPart] = { ...current[lastPart], diff: value };
+		const currentValue = current[lastPart] as
+			| Record<string, unknown>
+			| undefined;
+		current[lastPart] = { ...(currentValue || {}), diff: value };
 	}
 
-	return result;
+	return result as T;
 }
 
 /**

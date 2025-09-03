@@ -1,17 +1,16 @@
-import { CedarStore } from '@/store/CedarOSTypes';
-import type { JSONContent } from '@tiptap/core';
-import type { StateCreator } from 'zustand';
 import type {
 	AdditionalContext,
 	AdditionalContextParam,
 	ContextEntry,
 	MentionProvider,
-} from '@/store/agentInputContext/AgentInputContextTypes';
-import { ReactNode, useMemo } from 'react';
-import { useEffect } from 'react';
+} from '@/store/agentContext/AgentContextTypes';
+import { CedarStore } from '@/store/CedarOSTypes';
 import { useCedarStore } from '@/store/CedarStore';
 import { sanitizeJson } from '@/utils/sanitizeJson';
+import type { JSONContent } from '@tiptap/core';
+import { ReactNode, useEffect, useMemo } from 'react';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import type { StateCreator } from 'zustand';
 export type ChatInput = JSONContent;
 
 /**
@@ -62,24 +61,27 @@ function formatContextEntries<T>(
 	key: string,
 	value: unknown,
 	options?: {
-		icon?: ReactNode;
+		icon?: ReactNode | ((item: T) => ReactNode);
 		color?: string;
 		labelField?: string | ((item: T) => string);
 		order?: number;
-		showInChat?: boolean;
+		showInChat?: boolean | ((entry: ContextEntry) => boolean);
 		source?: ContextEntry['source'];
 	}
-): ContextEntry[] {
+): ContextEntry | ContextEntry[] {
 	// Handle null/undefined values
 	if (value === null || value === undefined) {
 		return [];
 	}
 
+	// Check if input is an array to determine return type
+	const isInputArray = Array.isArray(value);
+
 	// Ensure value is an array for consistent processing
-	const items = Array.isArray(value) ? value : [value];
+	const items = isInputArray ? value : [value];
 
 	// Transform each item into a proper context entry
-	return items.map((item, index) => {
+	const entries = items.map((item, index) => {
 		// Generate a unique ID for this entry
 		const id =
 			typeof item === 'object' && item !== null && 'id' in item
@@ -89,25 +91,44 @@ function formatContextEntries<T>(
 		// Extract the label using the configured method
 		const label = extractLabel<T>(item, options?.labelField);
 
+		// Resolve icon - either static ReactNode or function result
+		const resolvedIcon = options?.icon
+			? typeof options.icon === 'function'
+				? options.icon(item as T)
+				: options.icon
+			: undefined;
+
 		// Create the context entry with clean separation of concerns
-		return {
+		const entry: ContextEntry = {
 			id,
 			source: options?.source || ('subscription' as const),
 			data: item, // The original data, unchanged
 			metadata: {
 				label,
-				...(options?.icon && { icon: options.icon }),
+				...(resolvedIcon && { icon: resolvedIcon }),
 				...(options?.color && { color: options.color }),
 				...(options?.order !== undefined && { order: options.order }),
-				showInChat:
-					options?.showInChat !== undefined ? options.showInChat : true,
+				showInChat: true, // Default to true, will be resolved later if function
 			},
 		};
+
+		// Resolve showInChat - either boolean or function result
+		if (options?.showInChat !== undefined) {
+			entry.metadata!.showInChat =
+				typeof options.showInChat === 'function'
+					? options.showInChat(entry)
+					: options.showInChat;
+		}
+
+		return entry;
 	});
+
+	// Return single entry if input was not an array, otherwise return array
+	return isInputArray ? entries : entries[0];
 }
 
-// Define the agent input context slice
-export interface AgentInputContextSlice {
+// Define the agent context slice
+export interface AgentContextSlice {
 	// The up-to-date editor JSON content
 	chatInputContent: ChatInput | null;
 	// Actions to update content
@@ -160,12 +181,12 @@ export interface AgentInputContextSlice {
 	compileStateSetters: () => Record<string, unknown>;
 }
 
-// Create the agent input context slice
-export const createAgentInputContextSlice: StateCreator<
+// Create the agent context slice
+export const createAgentContextSlice: StateCreator<
 	CedarStore,
 	[],
 	[],
-	AgentInputContextSlice
+	AgentContextSlice
 > = (set, get) => ({
 	chatInputContent: null,
 	overrideInputContent: { input: null },
@@ -304,13 +325,8 @@ export const createAgentInputContextSlice: StateCreator<
 				source: 'function',
 			});
 
-			// If input was an array, keep as array (even if single item)
-			// If input was not an array, unwrap to single value
-			newContext[key] = Array.isArray(value)
-				? formattedEntries
-				: formattedEntries.length === 1
-				? formattedEntries[0]
-				: formattedEntries;
+			// formatContextEntries now returns the correct type based on input
+			newContext[key] = formattedEntries;
 			return { additionalContext: newContext };
 		});
 	},
@@ -431,6 +447,7 @@ export const createAgentInputContextSlice: StateCreator<
 		const simplifiedContext: Record<string, unknown> = {};
 		Object.entries(context).forEach(([key, value]) => {
 			const entries = normalizeToArray(value);
+			const wasArray = Array.isArray(value);
 
 			// Extract just the data and source from each entry
 			const simplified = entries.map((entry) => ({
@@ -439,7 +456,7 @@ export const createAgentInputContextSlice: StateCreator<
 			}));
 
 			// If single entry, extract it; otherwise keep as array
-			simplifiedContext[key] = simplified;
+			simplifiedContext[key] = wasArray ? simplified : simplified[0];
 		});
 
 		// Get compiled state setters and schemas
@@ -506,16 +523,16 @@ type ElementType<T> = T extends readonly (infer E)[] ? E : T;
  * @param mapFn - A function that maps the state to a record of context entries
  * @param options - Optional configuration for the context entries
  */
-export function useSubscribeStateToInputContext<T>(
+export function useSubscribeStateToAgentContext<T>(
 	stateKey: string,
 	mapFn: (state: T) => Record<string, unknown>,
 	options?: {
-		icon?: ReactNode;
+		icon?: ReactNode | ((item: ElementType<T>) => ReactNode);
 		color?: string;
 		labelField?: string | ((item: ElementType<T>) => string);
 		order?: number;
-		/** If false, the generated context entries will not be rendered as badges in the chat UI */
-		showInChat?: boolean;
+		/** If false, the generated context entries will not be rendered as badges in the chat UI. Can also be a function to filter specific entries. */
+		showInChat?: boolean | ((entry: ContextEntry) => boolean);
 	}
 ): void {
 	const updateAdditionalContext = useCedarStore(
@@ -524,47 +541,58 @@ export function useSubscribeStateToInputContext<T>(
 
 	// Subscribe to the cedar state value and check if state exists
 	const stateExists = useCedarStore((s) => stateKey in s.registeredStates);
+
 	const stateValue = useCedarStore(
 		(s) => s.registeredStates[stateKey]?.value as T | undefined
 	);
 
-	useEffect(() => {
-		// Check if state key exists
+	// Memoize options to prevent unnecessary re-renders when options object is redeclared
+	const memoizedOptions = useMemo(
+		() => options,
+		[
+			options?.icon,
+			options?.color,
+			options?.labelField,
+			options?.order,
+			options?.showInChat,
+		]
+	);
+
+	// Memoize the mapped result to avoid recalculating when stateValue hasn't changed
+	const mappedData = useMemo(() => {
 		if (!stateExists) {
 			console.warn(
 				`State with key "${stateKey}" was not found in Cedar store. Did you forget to register it with useCedarState()?`
 			);
-			return;
+			return {};
 		}
+		return mapFn(stateValue as T);
+	}, [stateExists, stateValue, mapFn]);
 
-		// Apply the mapping function to get the context data
-		const mapped = mapFn(stateValue as T);
+	// Memoize the formatted context to avoid reformatting when mapped data hasn't changed
+	const formattedContext = useMemo(() => {
+		const context: Record<string, unknown> = {};
 
-		// Transform mapped data into properly formatted context entries
-		const formattedContext: Record<string, unknown> = {};
-
-		for (const [key, value] of Object.entries(mapped)) {
+		for (const [key, value] of Object.entries(mappedData)) {
 			// Use the common formatting helper
-			const entries = formatContextEntries<ElementType<T>>(key, value, options);
-			// If mapped value was an array, keep as array (even if single item)
-			// If mapped value was not an array, unwrap to single value
-			formattedContext[key] = Array.isArray(value)
-				? entries
-				: entries.length === 1
-				? entries[0]
-				: entries;
+			const entries = formatContextEntries<ElementType<T>>(
+				key,
+				value,
+				memoizedOptions
+			);
+			// formatContextEntries now returns the correct type based on input
+			context[key] = entries;
 		}
 
-		// Update the additional context
-		updateAdditionalContext(formattedContext);
-	}, [
-		stateExists,
-		stateValue,
-		mapFn,
-		updateAdditionalContext,
-		options,
-		stateKey,
-	]);
+		return context;
+	}, [mappedData, memoizedOptions]);
+
+	useEffect(() => {
+		// Only update if we have actual context data
+		if (Object.keys(formattedContext).length > 0) {
+			updateAdditionalContext(formattedContext);
+		}
+	}, [formattedContext, updateAdditionalContext]);
 }
 
 // Enhanced hook to render additionalContext entries
@@ -588,3 +616,5 @@ export function useRenderAdditionalContext(
 		return elements;
 	}, [additionalContext, renderers]);
 }
+
+export { useSubscribeStateToAgentContext as useSubscribeStateToInputContext };

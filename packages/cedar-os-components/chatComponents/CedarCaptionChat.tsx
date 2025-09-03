@@ -14,7 +14,7 @@ import {
 	Undo,
 	Redo,
 } from 'lucide-react';
-import Container3DButton from 'cedar-os-components/containers/Container3DButton';
+import Container3DButton from '@/containers/Container3DButton';
 
 interface CedarCaptionChatProps {
 	dimensions?: {

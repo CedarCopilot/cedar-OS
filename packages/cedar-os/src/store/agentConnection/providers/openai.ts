@@ -113,17 +113,6 @@ export const openAIProvider: ProviderImplementation<
 		};
 	},
 
-	// This can be safely removed
-	handleStreamResponse: (chunk) => {
-		try {
-			const data = JSON.parse(chunk);
-			const content = data.choices?.[0]?.delta?.content || '';
-			return { type: 'chunk', content };
-		} catch (error) {
-			return { type: 'error', error: error as Error };
-		}
-	},
-
 	callLLMStructured: async (params, config) => {
 		const {
 			prompt,

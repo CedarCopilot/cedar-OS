@@ -1,0 +1,392 @@
+---
+title: 'ChatInput Components'
+description: 'Rich text input components for chat interfaces with context management, voice support, and floating variants'
+---
+
+# ChatInput Components
+
+The ChatInput components provide a comprehensive chat interface with rich text editing, context management, voice integration, and multiple display variants. Built on Cedar's editor system with full integration into the Cedar ecosystem.
+
+## Components Overview
+
+- **ChatInput** - Main chat input component with voice and context support
+- **ContextBadgeRow** - Displays and manages selected context entries
+- **FloatingChatInput** - Floating variant for overlay interfaces
+- **HumanInTheLoopIndicator** - Shows workflow suspension states
+
+## Import
+
+```tsx
+import {
+	ChatInput,
+	ContextBadgeRow,
+	FloatingChatInput,
+	type ChatContainerPosition,
+} from 'cedar-os-components/chatInput';
+import { HumanInTheLoopIndicator } from 'cedar-os-components/chatInput/HumanInTheLoopIndicator';
+```
+
+## ChatInput
+
+The main chat input component with integrated voice support, context management, and rich text editing.
+
+### Basic Usage
+
+```tsx
+import { ChatInput } from 'cedar-os-components/chatInput';
+
+<ChatInput
+	handleFocus={() => console.log('Input focused')}
+	handleBlur={() => console.log('Input blurred')}
+	stream={true}
+/>;
+```
+
+### Advanced Usage with Controlled State
+
+```tsx
+const [isInputFocused, setIsInputFocused] = useState(false);
+
+<ChatInput
+	handleFocus={() => setIsInputFocused(true)}
+	handleBlur={() => setIsInputFocused(false)}
+	isInputFocused={isInputFocused}
+	className='custom-chat-input'
+	stream={true}
+/>;
+```
+
+### Props
+
+<ParamField path='handleFocus' type='() => void'>
+	Callback when the input gains focus
+</ParamField>
+
+<ParamField path='handleBlur' type='() => void'>
+	Callback when the input loses focus
+</ParamField>
+
+<ParamField path='isInputFocused' type='boolean'>
+	Controlled focus state for the input
+</ParamField>
+
+<ParamField path='className' type='string' default=''>
+	Additional CSS classes for the container
+</ParamField>
+
+<ParamField path='stream' type='boolean' default='true'>
+	Whether to use streaming for responses
+</ParamField>
+
+### Features
+
+- **Voice Integration**: Built-in microphone button with voice permission handling
+- **Context Management**: Integrated ContextBadgeRow for managing selected context
+- **Rich Text Editing**: Uses Cedar's editor with mention support
+- **Human-in-the-Loop**: Automatic detection and display of workflow suspension states
+- **Keyboard Shortcuts**:
+  - `Tab` - Focus the input
+  - `Escape` - Unfocus the input
+  - `M` - Toggle microphone (when not typing)
+- **Tool Buttons**: Microphone, image upload, and code insertion tools
+
+## ContextBadgeRow
+
+Displays and manages context entries selected through mentions or other context providers.
+
+### Basic Usage
+
+```tsx
+import { ContextBadgeRow } from 'cedar-os-components/chatInput';
+
+<ContextBadgeRow editor={editor} />;
+```
+
+### Props
+
+<ParamField path='editor' type='CedarEditor | null'>
+	The Cedar editor instance for mention management
+</ParamField>
+
+### Features
+
+- **Dynamic Context Display**: Shows context entries from all registered providers
+- **Custom Rendering**: Supports provider-specific badge rendering
+- **Interactive Removal**: Click to remove context entries (for mentions)
+- **Ordered Display**: Respects context entry order metadata
+- **Icon Support**: Displays icons with hover states for removal
+- **Color Coding**: Supports custom colors with 20% opacity backgrounds
+
+### Context Entry Structure
+
+```tsx
+interface ContextEntry {
+	id: string;
+	content: string;
+	source: 'mention' | 'subscription' | 'manual';
+	metadata?: {
+		label?: string;
+		icon?: React.ReactNode;
+		color?: string;
+		order?: number;
+		showInChat?: boolean;
+	};
+}
+```
+
+## FloatingChatInput
+
+A floating variant of the chat input for overlay interfaces and popup scenarios.
+
+### Basic Usage
+
+```tsx
+import { FloatingChatInput } from 'cedar-os-components/chatInput';
+
+const [position, setPosition] = useState({ x: 0, y: 0 });
+const [isOpen, setIsOpen] = useState(false);
+
+{
+	isOpen && (
+		<FloatingChatInput
+			position={position}
+			onClose={() => setIsOpen(false)}
+			stream={true}
+			autoFocus={true}
+		/>
+	);
+}
+```
+
+### Advanced Usage
+
+```tsx
+<FloatingChatInput
+	position={{ x: mouseX, y: mouseY }}
+	onClose={handleClose}
+	stream={true}
+	width={500}
+	className='custom-floating-input'
+	autoFocus={false}
+/>
+```
+
+### Props
+
+<ParamField path='position' type='{ x: number; y: number }' required>
+	Screen coordinates where the floating input should appear
+</ParamField>
+
+<ParamField path='onClose' type='() => void' required>
+	Callback when the input should close
+</ParamField>
+
+<ParamField path='stream' type='boolean' default='true'>
+	Whether to use streaming for responses
+</ParamField>
+
+<ParamField path='width' type='number' default='400'>
+	Width of the floating input in pixels
+</ParamField>
+
+<ParamField path='className' type='string'>
+	Additional CSS classes for styling
+</ParamField>
+
+<ParamField path='autoFocus' type='boolean' default='true'>
+	Whether to auto-focus the input on mount
+</ParamField>
+
+### Features
+
+- **Smart Positioning**: Automatically adjusts position to stay within viewport
+- **Click Outside**: Closes when clicking outside the component
+- **Escape Key**: Closes when pressing Escape
+- **Header with Close Button**: Clean header with close action
+- **Full ChatInput Integration**: All ChatInput features in a floating container
+
+## HumanInTheLoopIndicator
+
+Shows the current state of human-in-the-loop workflows.
+
+### Basic Usage
+
+```tsx
+import { HumanInTheLoopIndicator } from 'cedar-os-components/chatInput/HumanInTheLoopIndicator';
+
+<HumanInTheLoopIndicator state='suspended' />;
+```
+
+### Props
+
+<ParamField
+	path='state'
+	type="'suspended' | 'resumed' | 'cancelled' | 'timeout'"
+	required>
+	The current workflow state to display
+</ParamField>
+
+### State Indicators
+
+- **suspended** - Orange pause icon with "Workflow suspended..." message
+- **resumed** - Green play icon with "Workflow resumed" message
+- **cancelled** - Red X icon with "Workflow cancelled" message
+- **timeout** - Gray clock icon with "Workflow timed out" message
+
+## Integration Examples
+
+### Complete Chat Interface
+
+```tsx
+import { ChatInput, ChatBubbles } from 'cedar-os-components';
+import { useState } from 'react';
+
+const ChatInterface = () => {
+	const [isFocused, setIsFocused] = useState(false);
+
+	return (
+		<div className='flex flex-col h-full'>
+			<div className='flex-1'>
+				<ChatBubbles maxHeight='60vh' />
+			</div>
+			<div className='border-t p-4'>
+				<ChatInput
+					handleFocus={() => setIsFocused(true)}
+					handleBlur={() => setIsFocused(false)}
+					isInputFocused={isFocused}
+					stream={true}
+				/>
+			</div>
+		</div>
+	);
+};
+```
+
+### Context-Aware Input
+
+```tsx
+import { useCedarStore } from 'cedar-os';
+
+const ContextAwareInput = () => {
+	const additionalContext = useCedarStore((s) => s.additionalContext);
+
+	return (
+		<div className='space-y-2'>
+			{Object.keys(additionalContext).length > 0 && (
+				<div className='text-sm text-gray-500'>
+					Active context: {Object.keys(additionalContext).length} items
+				</div>
+			)}
+			<ChatInput stream={true} />
+		</div>
+	);
+};
+```
+
+### Floating Quick Chat
+
+```tsx
+const QuickChatTrigger = () => {
+	const [showFloating, setShowFloating] = useState(false);
+	const [position, setPosition] = useState({ x: 0, y: 0 });
+
+	const handleRightClick = (e: React.MouseEvent) => {
+		e.preventDefault();
+		setPosition({ x: e.clientX, y: e.clientY });
+		setShowFloating(true);
+	};
+
+	return (
+		<>
+			<div
+				onContextMenu={handleRightClick}
+				className='p-4 border rounded cursor-pointer'>
+				Right-click for quick chat
+			</div>
+
+			{showFloating && (
+				<FloatingChatInput
+					position={position}
+					onClose={() => setShowFloating(false)}
+					width={350}
+					autoFocus={true}
+				/>
+			)}
+		</>
+	);
+};
+```
+
+## Voice Integration
+
+The ChatInput components include comprehensive voice support:
+
+### Voice States
+
+- **Idle** - Default state, microphone available
+- **Listening** - Actively recording audio (red, pulsing)
+- **Speaking** - AI is speaking response (green)
+- **Denied** - Microphone permission denied (grayed out)
+- **Not Supported** - Voice not supported in browser
+
+### Voice Permissions
+
+The component automatically handles microphone permissions:
+
+```tsx
+// Voice permission flow is handled automatically
+// - Prompts for permission on first use
+// - Shows appropriate UI states
+// - Handles permission denied gracefully
+```
+
+## Styling and Customization
+
+### CSS Classes
+
+The components use Tailwind CSS with dark mode support:
+
+```css
+/* Custom input styling */
+.custom-chat-input {
+	@apply bg-blue-50 dark:bg-blue-900/20;
+}
+
+/* Context badge customization */
+.context-badge {
+	@apply px-3 py-2 rounded-md;
+}
+```
+
+### Theme Integration
+
+Components automatically adapt to Cedar's theme system and respect the global styling configuration.
+
+## Accessibility
+
+- **Keyboard Navigation**: Full keyboard support for all interactions
+- **Screen Readers**: Proper ARIA labels and descriptions
+- **Focus Management**: Logical focus flow and indicators
+- **High Contrast**: Supports high contrast mode and custom themes
+
+## Best Practices
+
+### Performance
+
+- Use controlled focus state only when necessary
+- Implement proper cleanup for event listeners
+- Consider virtualization for large context lists
+
+### UX Guidelines
+
+- Provide clear feedback for voice states
+- Show context visually before sending messages
+- Handle permission requests gracefully
+- Use floating inputs sparingly to avoid UI clutter
+
+### Integration
+
+- Always pair with ChatBubbles for complete chat UI
+- Register context providers before using mentions
+- Configure voice endpoints in Cedar store
+- Test voice functionality across different browsers

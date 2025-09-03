@@ -191,7 +191,7 @@ export const ChatInput: React.FC<{
 					<div className='flex items-center gap-2'>
 						{!isFocused && (
 							<KeyboardShortcut
-								shortcut='tab'
+								shortcut='⇥'
 								className='text-muted-foreground border-muted-foreground/30 flex-shrink-0'
 							/>
 						)}
@@ -201,7 +201,7 @@ export const ChatInput: React.FC<{
 							aria-label='Message input'>
 							<EditorContent
 								editor={editor}
-								className='prose prose-sm max-w-none focus:outline-none outline-none focus:ring-0 ring-0 [&_*]:focus:outline-none [&_*]:outline-none [&_*]:focus:ring-0 [&_*]:ring-0 placeholder-gray-500 dark:placeholder-gray-400 [&_.ProseMirror]:p-0 [&_.ProseMirror]:outline-none'
+								className='prose prose-sm max-w-none focus:outline-none outline-none focus:ring-0 ring-0 [&_*]:focus:outline-none [&_*]:outline-none [&_*]:focus:ring-0 [&_*]:ring-0 placeholder-gray-500 dark:placeholder-gray-400 [&_.ProseMirror]:p-0 [&_.ProseMirror]:outline-none [&_.ProseMirror]:break-words [&_.ProseMirror]:overflow-wrap-anywhere [&_.ProseMirror]:word-break-break-word'
 							/>
 						</motion.div>
 					</div>

@@ -51,7 +51,7 @@ export function useDiffState<T extends BasicStateValue>(
 	initialValue: T,
 	options?: {
 		description?: string;
-		customSetters?: Record<string, Setter<T>>;
+		stateSetters?: Record<string, Setter<T>>;
 		schema?: ZodSchema<T>;
 		diffMode?: DiffMode;
 		computeState?: ComputeStateFunction<T>;
@@ -78,7 +78,7 @@ export function useDiffState<T extends BasicStateValue>(
 				// setValue is intentionally omitted to avoid circular dependencies
 				description: options?.description,
 				schema: effectiveSchema,
-				customSetters: options?.customSetters,
+				stateSetters: options?.stateSetters,
 				diffMode: options?.diffMode,
 				computeState: options?.computeState,
 			});
@@ -91,9 +91,9 @@ export function useDiffState<T extends BasicStateValue>(
 	// Create a stable setter function that uses setDiffState
 	const setState = useCallback(
 		(newValue: T) => {
-			// Use newDiffState directly for non-diff changes (regular user updates)
+			// Use newDiffState directly for user updates
 			// This will handle all the diff tracking internally
-			newDiffState(key, newValue, false);
+			newDiffState(key, newValue);
 		},
 		[key, newDiffState]
 	);

@@ -2,22 +2,22 @@ import React from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { useCedarStore } from '../../../src/store/CedarStore';
 import {
-	useSubscribeStateToInputContext,
+	useSubscribeStateToAgentContext,
 	useRenderAdditionalContext,
-} from '../../../src/store/agentInputContext/agentInputContextSlice';
+} from '../../../src/store/agentContext/agentContextSlice';
 import type {
 	ContextEntry,
 	MentionProvider,
-} from '../../../src/store/agentInputContext/AgentInputContextTypes';
+} from '../../../src/store/agentContext/AgentContextTypes';
 import type { JSONContent } from '@tiptap/core';
 import { z } from 'zod';
 
 /**
- * Tests for the AgentInputContextSlice to verify all functionality
+ * Tests for the AgentContextSlice to verify all functionality
  * including context management, mention providers, and state subscription
  */
 
-describe('AgentInputContextSlice', () => {
+describe('AgentContextSlice', () => {
 	beforeEach(() => {
 		// Reset the store before each test
 		useCedarStore.setState((state) => ({
@@ -593,7 +593,7 @@ describe('AgentInputContextSlice', () => {
 			expect(stringified).toBe('');
 		});
 
-		it('should stringify additional context', () => {
+		it('should compile additional context', () => {
 			const contextData = {
 				testItems: [{ id: 'item1', title: 'Item 1' }],
 			};
@@ -602,9 +602,9 @@ describe('AgentInputContextSlice', () => {
 				useCedarStore.getState().updateAdditionalContext(contextData);
 			});
 
-			const stringified = useCedarStore.getState().compileAdditionalContext();
-			expect(stringified).toContain('testItems');
-			expect(JSON.parse(stringified)).toHaveProperty('testItems');
+			const compiled = useCedarStore.getState().compileAdditionalContext();
+			expect(compiled).toHaveProperty('testItems');
+			expect(compiled.testItems).toBeDefined();
 		});
 
 		it('should stringify input context', () => {
@@ -640,29 +640,28 @@ describe('AgentInputContextSlice', () => {
 					});
 			});
 
-			const stringified = useCedarStore.getState().compileAdditionalContext();
-			const parsed = JSON.parse(stringified);
+			const compiled = useCedarStore.getState().compileAdditionalContext();
 
 			// Should be an array since there are multiple items
-			expect(Array.isArray(parsed.multipleItems)).toBe(true);
-			expect(parsed.multipleItems).toHaveLength(2);
+			expect(Array.isArray(compiled.multipleItems)).toBe(true);
+			expect(compiled.multipleItems).toHaveLength(2);
 
 			// Each item should have simplified structure with just data and source
-			expect(parsed.multipleItems[0]).toEqual({
+			expect(compiled.multipleItems[0]).toEqual({
 				data: { id: '1', name: 'Item 1', value: 100 },
 				source: 'function',
 			});
-			expect(parsed.multipleItems[1]).toEqual({
+			expect(compiled.multipleItems[1]).toEqual({
 				data: { id: '2', name: 'Item 2', value: 200 },
 				source: 'function',
 			});
 
 			// Should not have id or metadata fields
-			expect(parsed.multipleItems[0]).not.toHaveProperty('id');
-			expect(parsed.multipleItems[0]).not.toHaveProperty('metadata');
+			expect(compiled.multipleItems[0]).not.toHaveProperty('id');
+			expect(compiled.multipleItems[0]).not.toHaveProperty('metadata');
 		});
 
-		it('should extract single-item arrays in compileAdditionalContext', () => {
+		it('should extract single objects in compileAdditionalContext', () => {
 			const singleItem = { id: '1', name: 'Single Item', value: 42 };
 
 			act(() => {
@@ -673,19 +672,41 @@ describe('AgentInputContextSlice', () => {
 					});
 			});
 
-			const stringified = useCedarStore.getState().compileAdditionalContext();
-			const parsed = JSON.parse(stringified);
+			const compiled = useCedarStore.getState().compileAdditionalContext();
 
 			// Should be a single object, not an array
-			expect(Array.isArray(parsed.singleItem)).toBe(false);
-			expect(parsed.singleItem).toEqual({
+			expect(compiled.singleItem).toEqual({
 				data: { id: '1', name: 'Single Item', value: 42 },
 				source: 'function',
 			});
+			expect(Array.isArray(compiled.singleItem)).toBe(false);
 
 			// Should not have id or metadata fields
-			expect(parsed.singleItem).not.toHaveProperty('id');
-			expect(parsed.singleItem).not.toHaveProperty('metadata');
+			expect(compiled.singleItem).not.toHaveProperty('id');
+			expect(compiled.singleItem).not.toHaveProperty('metadata');
+		});
+
+		it('should preserve single-item arrays in compileAdditionalContext', () => {
+			const singleItemArray = [{ id: '1', name: 'Array Item', value: 42 }];
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.putAdditionalContext('arrayItem', singleItemArray, {
+						labelField: 'name',
+					});
+			});
+
+			const compiled = useCedarStore.getState().compileAdditionalContext();
+
+			// Should preserve array structure since input was [item]
+			// expect(Array.isArray(compiled.arrayItem)).toBe(true);
+			expect(compiled.arrayItem).toEqual([
+				{
+					data: { id: '1', name: 'Array Item', value: 42 },
+					source: 'function',
+				},
+			]);
 		});
 
 		it('should handle mixed sources in compileAdditionalContext', () => {
@@ -709,24 +730,24 @@ describe('AgentInputContextSlice', () => {
 				});
 			});
 
-			const stringified = useCedarStore.getState().compileAdditionalContext();
-			const parsed = JSON.parse(stringified);
+			const compiled = useCedarStore.getState().compileAdditionalContext();
 
 			// Function source should be simplified and extracted (single item)
-			expect(parsed.functionItems).toEqual({
+			expect(compiled.functionItems).toEqual({
 				data: { id: '1', name: 'Function Item' },
 				source: 'function',
 			});
 
-			// Subscription source (legacy format) should be simplified and extracted (single item)
-			// Note: updateAdditionalContext creates entries in legacy format without data wrapper
-			expect(parsed.subscriptionItems).toEqual({
-				data: {
-					id: 'sub1',
-					title: 'Subscription Item',
+			// Subscription source - should preserve array structure since input was an array
+			expect(compiled.subscriptionItems).toEqual([
+				{
+					data: {
+						id: 'sub1',
+						title: 'Subscription Item',
+					},
+					source: 'subscription',
 				},
-				source: 'subscription',
-			});
+			]);
 		});
 	});
 
@@ -835,7 +856,7 @@ describe('AgentInputContextSlice', () => {
 		});
 	});
 
-	describe('useSubscribeStateToInputContext hook', () => {
+	describe('useSubscribeStateToAgentContext hook', () => {
 		it('should subscribe to state and update context', () => {
 			// Register a state first
 			act(() => {
@@ -853,7 +874,7 @@ describe('AgentInputContextSlice', () => {
 				items: state,
 			}));
 
-			renderHook(() => useSubscribeStateToInputContext('testState', mapFn));
+			renderHook(() => useSubscribeStateToAgentContext('testState', mapFn));
 
 			expect(mapFn).toHaveBeenCalled();
 
@@ -879,7 +900,7 @@ describe('AgentInputContextSlice', () => {
 			}));
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('singleItemState', mapFn)
+				useSubscribeStateToAgentContext('singleItemState', mapFn)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -917,7 +938,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('parametersState', mapFn, options)
+				useSubscribeStateToAgentContext('parametersState', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -970,7 +991,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('functionalLabelState', mapFn, options)
+				useSubscribeStateToAgentContext('functionalLabelState', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -1026,7 +1047,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('nestedState', mapFn, options)
+				useSubscribeStateToAgentContext('nestedState', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -1052,7 +1073,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('singleValueState', mapFn, options)
+				useSubscribeStateToAgentContext('singleValueState', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -1092,7 +1113,7 @@ describe('AgentInputContextSlice', () => {
 			}));
 
 			// No labelField specified - should use fallback logic
-			renderHook(() => useSubscribeStateToInputContext('fallbackState', mapFn));
+			renderHook(() => useSubscribeStateToAgentContext('fallbackState', mapFn));
 
 			const context = useCedarStore.getState().additionalContext;
 
@@ -1132,7 +1153,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('complexState', mapFn, options)
+				useSubscribeStateToAgentContext('complexState', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -1171,7 +1192,7 @@ describe('AgentInputContextSlice', () => {
 				emptyItems: state,
 			}));
 
-			renderHook(() => useSubscribeStateToInputContext('emptyState', mapFn));
+			renderHook(() => useSubscribeStateToAgentContext('emptyState', mapFn));
 
 			expect(mapFn).toHaveBeenCalledWith([]);
 
@@ -1200,7 +1221,7 @@ describe('AgentInputContextSlice', () => {
 				validSingle: { id: '2', title: 'Single Item' },
 			}));
 
-			renderHook(() => useSubscribeStateToInputContext('testState', mapFn));
+			renderHook(() => useSubscribeStateToAgentContext('testState', mapFn));
 
 			expect(mapFn).toHaveBeenCalledWith({ someData: 'test' });
 
@@ -1251,7 +1272,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('stateWithOptions', mapFn, options)
+				useSubscribeStateToAgentContext('stateWithOptions', mapFn, options)
 			);
 
 			const context = useCedarStore.getState().additionalContext;
@@ -1294,7 +1315,7 @@ describe('AgentInputContextSlice', () => {
 			};
 
 			const { rerender } = renderHook(() =>
-				useSubscribeStateToInputContext('updatingState', mapFn, options)
+				useSubscribeStateToAgentContext('updatingState', mapFn, options)
 			);
 
 			// Check initial context
@@ -1343,7 +1364,7 @@ describe('AgentInputContextSlice', () => {
 				selectedNodes: state,
 			}));
 
-			renderHook(() => useSubscribeStateToInputContext('nullState', mapFn));
+			renderHook(() => useSubscribeStateToAgentContext('nullState', mapFn));
 
 			expect(mapFn).toHaveBeenCalledWith(null);
 
@@ -1369,7 +1390,7 @@ describe('AgentInputContextSlice', () => {
 			}));
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('undefinedState', mapFn)
+				useSubscribeStateToAgentContext('undefinedState', mapFn)
 			);
 
 			expect(mapFn).toHaveBeenCalledWith(undefined);
@@ -1387,7 +1408,7 @@ describe('AgentInputContextSlice', () => {
 			const mapFn = jest.fn();
 
 			renderHook(() =>
-				useSubscribeStateToInputContext('nonExistentState', mapFn)
+				useSubscribeStateToAgentContext('nonExistentState', mapFn)
 			);
 
 			expect(consoleSpy).toHaveBeenCalledWith(
@@ -1491,7 +1512,7 @@ describe('AgentInputContextSlice', () => {
 			).toBeDefined();
 		});
 
-		it('should include frontend tools in stringifyAdditionalContext when tools are registered', () => {
+		it('should include frontend tools in compileAdditionalContext when tools are registered', () => {
 			const { result } = renderHook(() => useCedarStore());
 
 			// Register multiple tools
@@ -1520,8 +1541,7 @@ describe('AgentInputContextSlice', () => {
 				});
 			});
 
-			const contextString = result.current.stringifyAdditionalContext();
-			const context = JSON.parse(contextString);
+			const context = result.current.compileAdditionalContext();
 
 			expect(context.frontendTools).toBeDefined();
 			expect(Object.keys(context.frontendTools)).toHaveLength(2);
@@ -1558,10 +1578,251 @@ describe('AgentInputContextSlice', () => {
 		it('should not include frontendTools field when no tools are registered', () => {
 			const { result } = renderHook(() => useCedarStore());
 
-			const contextString = result.current.stringifyAdditionalContext();
-			const context = JSON.parse(contextString);
+			const context = result.current.compileAdditionalContext();
 
 			expect(context.frontendTools).toBeUndefined();
+		});
+	});
+
+	describe('useSubscribeStateToAgentContext memoization', () => {
+		it('should memoize mapping function to prevent unnecessary re-renders', () => {
+			// Register a test state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'memoTestState',
+					value: [{ id: '1', title: 'Item 1' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			let renderCount = 0;
+			const mapFn = jest.fn((state: unknown[]) => {
+				renderCount++;
+				return { items: state };
+			});
+
+			// First render
+			const { rerender } = renderHook(() =>
+				useSubscribeStateToAgentContext('memoTestState', mapFn)
+			);
+
+			expect(mapFn).toHaveBeenCalledTimes(1);
+			expect(renderCount).toBe(1);
+
+			// Re-render with the same function reference - should not call mapFn again
+			rerender();
+			expect(mapFn).toHaveBeenCalledTimes(1); // Still 1 because memoized
+			expect(renderCount).toBe(1);
+
+			// Create a new function with same logic - should call mapFn again
+			const newMapFn = jest.fn((state: unknown[]) => {
+				renderCount++;
+				return { items: state };
+			});
+
+			renderHook(() =>
+				useSubscribeStateToAgentContext('memoTestState', newMapFn)
+			);
+
+			expect(newMapFn).toHaveBeenCalledTimes(1);
+			expect(renderCount).toBe(2); // New function was called
+		});
+
+		it('should memoize options to prevent unnecessary useEffect re-runs', () => {
+			// Register a test state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'optionsMemoTestState',
+					value: [{ id: '1', title: 'Item 1' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			let effectRunCount = 0;
+			const mapFn = jest.fn((state: unknown[]) => {
+				effectRunCount++;
+				return { items: state };
+			});
+
+			const color = '#FF0000';
+			const order = 1;
+			const labelField = 'title' as const;
+
+			// First render with individual option values
+			const { rerender } = renderHook(() =>
+				useSubscribeStateToAgentContext('optionsMemoTestState', mapFn, {
+					color,
+					order,
+					labelField,
+				})
+			);
+
+			expect(effectRunCount).toBe(1);
+
+			// Re-render with same individual values in a new object - memoization should prevent useEffect re-run
+			rerender(() =>
+				useSubscribeStateToAgentContext('optionsMemoTestState', mapFn, {
+					color, // Same value
+					order, // Same value
+					labelField, // Same value
+				})
+			);
+
+			// Should still be 1 because memoization recognizes same option values
+			expect(effectRunCount).toBe(1);
+		});
+
+		it('should re-render when options content actually changes', () => {
+			// Register a test state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'optionsChangeTestState',
+					value: [{ id: '1', title: 'Item 1' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			let renderCount = 0;
+			const mapFn = jest.fn((state: unknown[]) => {
+				renderCount++;
+				return { items: state };
+			});
+
+			const initialOptions = {
+				color: '#FF0000',
+				order: 1,
+			};
+
+			// First render
+			renderHook(() =>
+				useSubscribeStateToAgentContext(
+					'optionsChangeTestState',
+					mapFn,
+					initialOptions
+				)
+			);
+
+			expect(renderCount).toBe(1);
+
+			// Change options content - should trigger re-render
+			const changedOptions = {
+				color: '#00FF00', // Different color
+				order: 1,
+			};
+
+			renderHook(() =>
+				useSubscribeStateToAgentContext(
+					'optionsChangeTestState',
+					mapFn,
+					changedOptions
+				)
+			);
+
+			expect(renderCount).toBe(2); // Should have re-rendered due to color change
+		});
+
+		it('should handle function options in memoization correctly', () => {
+			// Register a test state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'functionOptionsTestState',
+					value: [{ id: '1', title: 'Item 1' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			let renderCount = 0;
+			const mapFn = jest.fn((state: unknown[]) => {
+				renderCount++;
+				return { items: state };
+			});
+
+			const iconFunction = jest.fn(() => '🎯');
+			const labelFunction = jest.fn(
+				(item: unknown) => (item as { title: string }).title
+			);
+
+			const options = {
+				icon: iconFunction,
+				labelField: labelFunction,
+				color: '#FF0000',
+			};
+
+			// First render
+			const { rerender } = renderHook(() =>
+				useSubscribeStateToAgentContext(
+					'functionOptionsTestState',
+					mapFn,
+					options
+				)
+			);
+
+			expect(renderCount).toBe(1);
+
+			// Re-render with same function references - should not re-render
+			rerender();
+			expect(renderCount).toBe(1);
+
+			// Create new functions with same logic - should trigger re-render
+			const newIconFunction = jest.fn(() => '🎯');
+			const newLabelFunction = jest.fn(
+				(item: unknown) => (item as { title: string }).title
+			);
+
+			const newOptions = {
+				icon: newIconFunction,
+				labelField: newLabelFunction,
+				color: '#FF0000',
+			};
+
+			renderHook(() =>
+				useSubscribeStateToAgentContext(
+					'functionOptionsTestState',
+					mapFn,
+					newOptions
+				)
+			);
+
+			expect(renderCount).toBe(2); // Should re-render due to function changes
+		});
+
+		it('should handle undefined options correctly in memoization', () => {
+			// Register a test state
+			act(() => {
+				useCedarStore.getState().registerState({
+					key: 'undefinedOptionsTestState',
+					value: [{ id: '1', title: 'Item 1' }],
+					setValue: jest.fn(),
+				});
+			});
+
+			let renderCount = 0;
+			const mapFn = jest.fn((state: unknown[]) => {
+				renderCount++;
+				return { items: state };
+			});
+
+			// First render with undefined options
+			const { rerender } = renderHook(() =>
+				useSubscribeStateToAgentContext(
+					'undefinedOptionsTestState',
+					mapFn,
+					undefined
+				)
+			);
+
+			expect(renderCount).toBe(1);
+
+			// Re-render with undefined options - should not re-render
+			rerender();
+			expect(renderCount).toBe(1);
+
+			// Change to empty object - should trigger re-render
+			renderHook(() =>
+				useSubscribeStateToAgentContext('undefinedOptionsTestState', mapFn, {})
+			);
+
+			expect(renderCount).toBe(2);
 		});
 	});
 
@@ -1621,7 +1882,7 @@ describe('AgentInputContextSlice', () => {
 			expect(compiled.schemas.testState.schema).toBeDefined();
 		});
 
-		it('should be used by stringifyAdditionalContext', () => {
+		it('should be used by compileAdditionalContext', () => {
 			const { result } = renderHook(() => useCedarStore());
 
 			// Register a state with setters
@@ -1643,8 +1904,7 @@ describe('AgentInputContextSlice', () => {
 				});
 			});
 
-			const contextString = result.current.stringifyAdditionalContext();
-			const context = JSON.parse(contextString);
+			const context = result.current.compileAdditionalContext();
 
 			// Verify that the compiled state setters are included
 			expect(context.stateSetters).toBeDefined();

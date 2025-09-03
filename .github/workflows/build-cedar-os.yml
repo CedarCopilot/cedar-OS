@@ -35,4 +35,4 @@ jobs:
 
       - name: Build cedar-os package (pnpm)
         working-directory: packages/cedar-os
-        run: pnpm run build
+        run: NODE_OPTIONS='--max-old-space-size=8192' pnpm run build

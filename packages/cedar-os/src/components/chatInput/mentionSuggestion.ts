@@ -10,7 +10,7 @@ import {
 	type Placement,
 } from '@floating-ui/dom';
 import MentionList from '@/components/chatInput/MentionList';
-import type { MentionItem } from '@/store/agentInputContext/AgentInputContextTypes';
+import type { MentionItem } from '@/store/agentContext/AgentContextTypes';
 import { useCedarStore } from '@/store/CedarStore';
 import { MentionNodeAttrs } from '@tiptap/extension-mention';
 
@@ -154,7 +154,16 @@ const mentionSuggestion = {
 
 				if (mentionListRef?.onKeyDown) {
 					// Pass the native KeyboardEvent directly
-					return mentionListRef.onKeyDown({ event: props.event });
+					const handled = mentionListRef.onKeyDown({ event: props.event });
+
+					// If the mention list handled the event (especially Enter),
+					// prevent default and stop propagation to ensure absolute precedence
+					if (handled) {
+						props.event.preventDefault();
+						props.event.stopPropagation();
+					}
+
+					return handled;
 				}
 
 				return false;

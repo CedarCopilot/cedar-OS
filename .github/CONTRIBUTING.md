@@ -276,7 +276,7 @@ Store slices manage application state using Zustand. They provide centralized st
 
    export interface CedarStore
      extends StylingSlice,
-       AgentInputContextSlice,
+       AgentContextSlice,
        StateSlice,
        MessagesSlice,
        AgentConnectionSlice,
@@ -294,7 +294,7 @@ Store slices manage application state using Zustand. They provide centralized st
 
    export const useCedarStore = create<CedarStore>()((...a) => ({
      ...createStylingSlice(...a),
-     ...createAgentInputContextSlice(...a),
+     ...createAgentContextSlice(...a),
      ...createStateSlice(...a),
      ...createMessagesSlice(...a),
      ...createAgentConnectionSlice(...a),
@@ -335,7 +335,7 @@ Store slices manage application state using Zustand. They provide centralized st
 
    const createDefaultSlices = (set: any, get: any, api: any) => ({
      ...createStylingSlice(set, get, api),
-     ...createAgentInputContextSlice(set, get, api),
+     ...createAgentContextSlice(set, get, api),
      ...createStateSlice(set, get, api),
      ...createAgentConnectionSlice(set, get, api),
      ...createMessagesSlice(set, get, api),

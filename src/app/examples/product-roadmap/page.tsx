@@ -50,7 +50,7 @@ import {
 	HumanInTheLoopState,
 	useRegisterState,
 	useStateBasedMentionProvider,
-	useSubscribeStateToInputContext,
+	useSubscribeStateToAgentContext,
 	useRegisterFrontendTool,
 	type CedarStore,
 	type Setter,
@@ -153,7 +153,7 @@ function FlowCanvas() {
 								.enum(['done', 'planned', 'backlog', 'in progress'])
 								.describe('Current development status'),
 							nodeType: z
-								.literal('feature')
+								.enum(['feature', 'bug', 'improvement'])
 								.default('feature')
 								.describe('Type of node'),
 							upvotes: z.number().default(0).describe('Number of upvotes'),
@@ -191,7 +191,6 @@ function FlowCanvas() {
 								status: args.node.data.status || 'planned',
 								upvotes: args.node.data.upvotes || 0,
 								comments: args.node.data.comments || [],
-								diff: 'added' as const,
 							},
 						};
 						setValue([...currentNodes, newNode]);
@@ -206,18 +205,7 @@ function FlowCanvas() {
 					id: z.string().describe('The ID of the node to remove'),
 				}),
 				execute: async (currentNodes, setValue, args) => {
-					// args is typed as { id: string }
-					// Instead of removing, mark as removed with diff
-					setValue(
-						currentNodes.map((node) =>
-							node.id === args.id
-								? {
-										...node,
-										data: { ...node.data, diff: 'removed' as const },
-								  }
-								: node
-						)
-					);
+					setValue(currentNodes.filter((node) => node.id !== args.id));
 				},
 			},
 			changeNode: (() => {
@@ -265,7 +253,7 @@ function FlowCanvas() {
 											...args.newNode,
 											type: 'featureNode',
 											position: node.position, // Keep existing position
-											data: { ...args.newNode.data, diff: 'changed' as const },
+											data: { ...args.newNode.data },
 									  }
 									: node
 							)
@@ -309,9 +297,7 @@ function FlowCanvas() {
 							// Remove diff property for added/changed nodes
 							setNodes(
 								currentNodes.map((n) =>
-									n.id === args.nodeId
-										? { ...n, data: { ...n.data, diff: undefined } }
-										: n
+									n.id === args.nodeId ? { ...n, data: { ...n.data } } : n
 								)
 							);
 						}
@@ -346,9 +332,7 @@ function FlowCanvas() {
 							// Just remove diff property for removed/changed nodes
 							setValue(
 								currentNodes.map((n) =>
-									n.id === args.nodeId
-										? { ...n, data: { ...n.data, diff: undefined } }
-										: n
+									n.id === args.nodeId ? { ...n, data: { ...n.data } } : n
 								)
 							);
 						}
@@ -359,9 +343,13 @@ function FlowCanvas() {
 		},
 	});
 
-	useSubscribeStateToInputContext('nodes', (nodes) => ({
-		nodes,
-	}));
+	useSubscribeStateToAgentContext(
+		'nodes',
+		(nodes) => ({
+			nodes,
+		}),
+		{ showInChat: false }
+	);
 
 	useRegisterState({
 		key: 'edges',
@@ -392,10 +380,10 @@ function FlowCanvas() {
 	});
 
 	// Register mention provider for nodes
-	useStateBasedMentionProvider({
+	useStateBasedMentionProvider<Node<FeatureNodeData>>({
 		stateKey: 'nodes',
 		trigger: '@',
-		labelField: (node: Node<FeatureNodeData>) => node.data.title,
+		labelField: (node) => node.data.title,
 		searchFields: ['data.description'],
 		description: 'Product roadmap features',
 		icon: <Box />,
@@ -404,10 +392,10 @@ function FlowCanvas() {
 	});
 
 	// Register mention provider for edges
-	useStateBasedMentionProvider({
+	useStateBasedMentionProvider<Edge>({
 		stateKey: 'edges',
 		trigger: '@',
-		labelField: (edge: Edge) => {
+		labelField: (edge) => {
 			const sourceNode = nodes.find((n) => n.id === edge.source);
 			const targetNode = nodes.find((n) => n.id === edge.target);
 			const sourceTitle = sourceNode?.data.title || edge.source;
@@ -487,14 +475,6 @@ function FlowCanvas() {
 			);
 		},
 		[setEdges]
-	);
-
-	// Prevent node drag/pan selection interfering (optional)
-	const onNodeClick = React.useCallback(
-		(_event: React.MouseEvent, node: Node) => {
-			console.log('📌 Node clicked', node);
-		},
-		[]
 	);
 
 	// Edge context menu state
@@ -586,7 +566,6 @@ function FlowCanvas() {
 				onNodesChange={handleNodesChange}
 				onEdgesChange={onEdgesChange}
 				onConnect={onConnect}
-				onNodeClick={onNodeClick}
 				onEdgeClick={onEdgeClick}
 				onEdgeDoubleClick={onEdgeDoubleClick}
 				connectionLineType={ConnectionLineType.SmoothStep}
@@ -648,17 +627,37 @@ function SelectedNodesPanel() {
 		description: 'Selected nodes',
 	});
 
-	// First subscription - for numSelectedNodes (order: 1)
-	useSubscribeStateToInputContext<Node<FeatureNodeData>[]>(
+	// Enhanced subscription with dynamic icons and filtering - no manual memoization needed!
+	useSubscribeStateToAgentContext<Node<FeatureNodeData>[]>(
 		'selectedNodes',
-		(nodes) => ({
-			selectedNodes: nodes,
+		(selectedNodes: Node<FeatureNodeData>[]) => ({
+			selectedNodes,
 		}),
 		{
-			icon: <Box />,
+			// Dynamic icons based on node status
+			icon: (item: Node<FeatureNodeData>) => {
+				const status = item?.data?.status;
+				switch (status) {
+					case 'done':
+						return '✅';
+					case 'in progress':
+						return '🔄';
+					case 'planned':
+						return '📋';
+					case 'backlog':
+						return '📝';
+					default:
+						return <Box />;
+				}
+			},
 			color: '#8B5CF6', // Purple color for selected nodes
-			labelField: (item) => item?.data?.title,
-			order: 2, // This will appear first
+			labelField: (item: Node<FeatureNodeData>) => item?.data?.title,
+			// Only show nodes that are not in backlog status in chat context
+			showInChat: (entry: { data: unknown }) => {
+				const node = entry.data as Node<FeatureNodeData>;
+				return node?.data?.status !== 'backlog';
+			},
+			order: 2,
 		}
 	);
 
@@ -667,7 +666,7 @@ function SelectedNodesPanel() {
 			setSelected(nodes),
 	});
 
-	useSubscribeStateToInputContext<HumanInTheLoopState>(
+	useSubscribeStateToAgentContext<HumanInTheLoopState>(
 		'humanInTheLoop',
 		(state) => ({
 			humanInTheLoop: state,
@@ -819,7 +818,7 @@ export default function ProductMapPage() {
 				title='Product Roadmap Assistant'
 				collapsedLabel='Need help with your roadmap?'
 				showCollapsedButton={true}
-				stream={false}>
+				stream={true}>
 				{renderContent()}
 			</SidePanelCedarChat>
 		);

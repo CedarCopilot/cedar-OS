@@ -1,25 +1,43 @@
 module.exports = {
-  testEnvironment: 'jsdom',
-  roots: ['<rootDir>/packages'],
-  testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
-  transform: {
-    '^.+\\.(ts|tsx)$': ['babel-jest', {
-      presets: [
-        ['@babel/preset-env', { targets: { node: 'current' } }],
-        '@babel/preset-typescript',
-        '@babel/preset-react'
+  projects: [
+    {
+      displayName: 'cedar-os',
+      testMatch: ['<rootDir>/packages/cedar-os/**/*.test.{ts,tsx}'],
+      testEnvironment: 'jsdom',
+      transform: {
+        '^.+\\.(ts|tsx)$': ['babel-jest', {
+          presets: [
+            ['@babel/preset-env', { targets: { node: 'current' } }],
+            '@babel/preset-typescript',
+            '@babel/preset-react'
+          ]
+        }]
+      },
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/packages/cedar-os/src/$1',
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
+      },
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      collectCoverageFrom: [
+        'packages/cedar-os/src/**/*.{ts,tsx}',
+        '!packages/cedar-os/src/**/*.d.ts',
+        '!packages/cedar-os/src/**/*.test.{ts,tsx}'
       ]
-    }]
-  },
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/packages/cedar-os/src/$1',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
-  },
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-  collectCoverageFrom: [
-    'packages/*/src/**/*.{ts,tsx}',
-    '!packages/*/src/**/*.d.ts',
-    '!packages/*/src/**/*.test.{ts,tsx}'
-  ]
+    },
+    {
+      displayName: 'cedar-os-backend',
+      testMatch: ['<rootDir>/packages/cedar-os-backend/**/*.test.ts'],
+      testEnvironment: 'node',
+      preset: 'ts-jest',
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/packages/cedar-os-backend/src/$1',
+      },
+      collectCoverageFrom: [
+        'packages/cedar-os-backend/src/**/*.ts',
+        '!packages/cedar-os-backend/src/**/*.d.ts',
+        '!packages/cedar-os-backend/src/**/*.test.ts'
+      ]
+    }
+  ],
+  testPathIgnorePatterns: ['/node_modules/', '/dist/']
 }; 
