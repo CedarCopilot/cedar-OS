@@ -21,6 +21,8 @@ interface UseCedarEditorOptions {
 	onBlur?: () => void;
 	stream?: boolean;
 	sendMessageParams?: Partial<SendMessageParams>;
+	/** Optional callback that can override Enter key behavior. Return true to prevent default editor Enter handling. */
+	onEnterOverride?: (event: KeyboardEvent) => boolean;
 }
 
 export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
@@ -31,6 +33,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 		onBlur,
 		stream = true,
 		sendMessageParams,
+		onEnterOverride,
 	} = options;
 
 	const sendMessage = useCedarStore((state: CedarStore) => state.sendMessage);
@@ -192,39 +195,33 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 				}
 
 				if (
-					(event.key === 'a' && (event.metaKey || event.ctrlKey)) || // cmd/ctrl + A
-					event.key === 'Delete' // Delete key
+					(event.key === 'a' && (event.metaKey || event.ctrlKey)) ||
+					event.key === 'Delete'
 				) {
-					event.stopPropagation(); // Stop other listeners but allow default editor behavior
-					return false; // Let the editor handle the default behavior
+					event.stopPropagation();
+					return false;
 				}
 
 				if (event.key === 'Enter' && !event.shiftKey) {
 					const { state } = view;
 
-					// Check for active mention suggestions more thoroughly
 					const hasActiveSuggestion = state.plugins.some((plugin) => {
 						const pluginState = plugin.getState?.(state);
-						// Check multiple possible state properties that indicate active suggestions
-						return (
-							pluginState?.active ||
-							pluginState?.open ||
-							pluginState?.query !== undefined ||
-							pluginState?.decorationSet?.find ||
-							(pluginState?.range &&
-								pluginState.range.from !== pluginState.range.to)
-						);
+						return pluginState?.active || pluginState?.open;
 					});
 
-					if (!hasActiveSuggestion) {
+					if (hasActiveSuggestion) {
 						event.preventDefault();
-						event.stopPropagation(); // Stop propagation to prevent other handlers
-						handleSubmit();
+						event.stopPropagation();
+						return false;
+					}
+
+					if (onEnterOverride && onEnterOverride(event)) {
 						return true;
 					}
 
-					// If there are active suggestions, let them handle it completely
-					return false;
+					handleSubmit();
+					return true;
 				}
 
 				return false;
@@ -279,8 +276,6 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 				});
 			} else {
 				sendMessage({ stream, ...sendMessageParams });
-
-				// Only auto-clear when using default sendMessage
 				editor.commands.clearContent();
 				setIsEditorEmpty(true);
 				setOverrideInputContent('');

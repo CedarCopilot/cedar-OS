@@ -704,7 +704,7 @@ function SelectedNodesPanel() {
 export default function ProductMapPage() {
 	const [chatMode, setChatMode] = React.useState<
 		'floating' | 'sidepanel' | 'caption' | 'command'
-	>('caption');
+	>('command');
 
 	const renderContent = () => (
 		<ReactFlowProvider>
@@ -818,7 +818,7 @@ export default function ProductMapPage() {
 				title='Product Roadmap Assistant'
 				collapsedLabel='Need help with your roadmap?'
 				showCollapsedButton={true}
-				stream={false}>
+				stream={true}>
 				{renderContent()}
 			</SidePanelCedarChat>
 		);

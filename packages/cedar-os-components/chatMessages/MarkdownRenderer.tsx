@@ -94,19 +94,19 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 							</code>
 						) : (
 							<div
-								className='relative group my-4 rounded-lg'
+								className='relative group my-4 rounded-lg w-full font-mono'
 								style={{
 									backgroundColor: '#1e1e1e',
 									border: '1px solid rgba(255, 255, 255, 0.1)',
 								}}>
 								{match && (
 									<div
-										className='flex items-center justify-between px-4 py-2 text-xs bg-[#2d2d2d]'
+										className='flex items-center justify-between w-full px-4 py-2 text-xs bg-[#2d2d2d] rounded-t-lg'
 										style={{
 											borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
 											color: '#888',
 										}}>
-										<span className='font-mono'>{match[1]}</span>
+										<span className=''>{match[1]}</span>
 										<div className='flex items-center gap-2'>
 											<button
 												onClick={() => handleCopyCode(codeString)}
@@ -129,9 +129,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 										</div>
 									</div>
 								)}
-								<pre className='p-4 overflow-x-auto max-w-full'>
+								<pre className='p-4 overflow-x-auto w-full'>
 									<code
-										className='text-sm font-mono whitespace-pre'
+										className='text-sm whitespace-pre'
 										style={{ color: '#d4d4d4' }}>
 										{codeString}
 									</code>
