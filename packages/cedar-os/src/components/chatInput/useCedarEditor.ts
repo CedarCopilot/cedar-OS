@@ -198,6 +198,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 					(event.key === 'a' && (event.metaKey || event.ctrlKey)) ||
 					event.key === 'Delete'
 				) {
+					event.preventDefault();
 					event.stopPropagation();
 					return false;
 				}

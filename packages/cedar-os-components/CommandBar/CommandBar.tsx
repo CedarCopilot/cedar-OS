@@ -448,7 +448,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					editor?.commands.focus();
 				}
 			} else if (
-				(e.key === 'ArrowRight' || e.key === 'ArrowDown') &&
+				e.key === 'ArrowDown' &&
 				isFocused &&
 				allItemsForNavigation.length > 0
 			) {
@@ -457,7 +457,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					prev < allItemsForNavigation.length - 1 ? prev + 1 : 0
 				);
 			} else if (
-				(e.key === 'ArrowLeft' || e.key === 'ArrowUp') &&
+				e.key === 'ArrowUp' &&
 				isFocused &&
 				allItemsForNavigation.length > 0
 			) {
@@ -513,6 +513,18 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 						);
 						if (index >= 0) {
 							setSelectedIndex(index);
+						}
+					}}
+					onKeyDown={(e) => {
+						// Prevent cmdk's built-in navigation when we have our custom navigation active
+						if (
+							isFocused &&
+							(e.key === 'ArrowDown' || e.key === 'ArrowUp') &&
+							allItemsForNavigation.length > 0
+						) {
+							// Let our custom navigation handle it
+							e.preventDefault();
+							e.stopPropagation();
 						}
 					}}>
 					<div className='flex w-full flex-col gap-2 px-3 py-2'>
