@@ -175,12 +175,33 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		return null;
 	}, [messages, showLatestMessage]);
 
+	// Check if there are any user messages between baseline and latest message
+	const hasUserMessagesSinceBaseline = React.useMemo(() => {
+		if (!latestMessage) return false;
+		const latestMessageIndex = messages.findIndex(
+			(m) => m.id === latestMessage.id
+		);
+
+		// Check if there are any user messages between baselineMessageIndex and latestMessageIndex
+		for (let i = baselineMessageIndex + 2; i < latestMessageIndex; i++) {
+			if (messages[i] && messages[i].role === 'user') {
+				return true;
+			}
+		}
+		return false;
+	}, [latestMessage, messages, baselineMessageIndex]);
+
 	// Check if the latest message is hidden by the baseline
 	const isLatestMessageHidden = React.useMemo(() => {
 		if (!latestMessage) return false;
 		const messageIndex = messages.findIndex((m) => m.id === latestMessage.id);
-		return messageIndex <= baselineMessageIndex;
-	}, [latestMessage, messages, baselineMessageIndex]);
+		return messageIndex <= baselineMessageIndex || hasUserMessagesSinceBaseline;
+	}, [
+		latestMessage,
+		messages,
+		baselineMessageIndex,
+		hasUserMessagesSinceBaseline,
+	]);
 
 	// Determine which message to show based on baseline and force display
 	const messageToShow = React.useMemo(() => {
@@ -516,15 +537,24 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 						}
 					}}
 					onKeyDown={(e) => {
-						// Prevent cmdk's built-in navigation when we have our custom navigation active
+						// Only prevent cmdk's navigation when we're in the fixed bottom group
 						if (
 							isFocused &&
 							(e.key === 'ArrowDown' || e.key === 'ArrowUp') &&
+							selectedIndex >= 0 &&
 							allItemsForNavigation.length > 0
 						) {
-							// Let our custom navigation handle it
-							e.preventDefault();
-							e.stopPropagation();
+							const selectedItem = allItemsForNavigation[selectedIndex];
+							const isInFixedBottomGroup =
+								filteredContents.fixedBottomGroup?.items.some(
+									(item) => item.id === selectedItem?.id
+								);
+
+							if (isInFixedBottomGroup) {
+								// Let our custom navigation handle it for fixed bottom group
+								e.preventDefault();
+								e.stopPropagation();
+							}
 						}
 					}}>
 					<div className='flex w-full flex-col gap-2 px-3 py-2'>
