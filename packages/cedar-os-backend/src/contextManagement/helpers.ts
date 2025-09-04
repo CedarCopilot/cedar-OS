@@ -118,7 +118,7 @@ export function createMastraToolForFrontendTool(
 		streamEventFn: (controller: any, event: string, data: any) => void;
 		errorSchema?: z.ZodTypeAny;
 	}
-) {
+): ReturnType<typeof createTool> {
 	const toolId = options.toolId || `${kebabCase(frontendToolName)}-tool`;
 
 	// Default error schema if not provided

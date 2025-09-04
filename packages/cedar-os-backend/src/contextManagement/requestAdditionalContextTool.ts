@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { createTool } from '@mastra/core/tools';
+import { createTool, type Tool } from '@mastra/core/tools';
 import { AdditionalContextParam } from '@/types';
 import { generateContextKeysFromAdditionalContext } from '@/contextManagement/helpers';
 
@@ -27,7 +27,7 @@ export const RequestAdditionalContextOutputSchema = z.object({
 		.describe('Recommended action if the request failed'),
 });
 
-export const requestAdditionalContextTool = createTool({
+export const requestAdditionalContextTool: ReturnType<typeof createTool> = createTool({
 	id: 'request-additional-context',
 	description:
 		'Request and format specific context data from Cedar-OS (library items, diagram state, selections, etc.)',
