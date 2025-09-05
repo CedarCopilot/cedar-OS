@@ -40,8 +40,8 @@ export function generateContextKeysFromAdditionalContext(
 			return;
 		}
 
-		// Only auto-generate if not manually defined
-		if (!contextKeys[key] && Array.isArray(additionalContext[key])) {
+		// Only auto-generate if not manually defined and the value exists
+		if (!contextKeys[key] && additionalContext[key] !== undefined) {
 			// Get description from schema if available, otherwise use key name
 			const schema = additionalContext.schemas?.[key];
 			const description =
