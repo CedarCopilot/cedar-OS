@@ -68,7 +68,6 @@ export function CedarCopilotClient({
 	// ─── threadId ──────────────────────────────────────────────
 	// Thread management through messagesSlice
 	const switchThread = useCedarStore((state) => state.switchThread);
-	const mainThreadId = useCedarStore((state) => state.mainThreadId);
 
 	// Initialize thread if provided
 	useEffect(() => {
@@ -89,10 +88,10 @@ export function CedarCopilotClient({
 			hasInitializedRef.current = true;
 			useCedarStore.getState().initializeChat?.({
 				userId: cedarUserId,
-				threadId: threadId || mainThreadId, // Use provided threadId or current thread
+				threadId: threadId,
 			});
 		}
-	}, [cedarUserId, threadId, mainThreadId]);
+	}, [cedarUserId, threadId]);
 
 	// Combined message storage initialization and updates
 	useEffect(() => {
