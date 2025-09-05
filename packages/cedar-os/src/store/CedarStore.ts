@@ -10,6 +10,8 @@ import { createDebuggerSlice } from '@/store/debugger/debuggerSlice';
 import { createSpellSlice } from '@/store/spellSlice/spellSlice';
 import { createDiffHistorySlice } from '@/store/diffHistoryStateSlice';
 import { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
+import type { Message, MessageInput } from '@/store/messages/MessageTypes';
+import { useMemo } from 'react';
 
 // Create the combined store (default for backwards compatibility)
 export const useCedarStore = create<CedarStore>()((...a) => ({
@@ -37,6 +39,50 @@ export const useMessages = () => ({
 
 	setShowChat: useCedarStore((state) => state.setShowChat),
 });
+
+// Thread-aware hook for components that need thread control
+export const useThreadMessages = (threadId?: string) => {
+	const mainThreadId = useCedarStore((state) => state.mainThreadId);
+	const targetThreadId = threadId || mainThreadId;
+
+	// Optimized selector that only re-renders when specific thread changes
+	const threadData = useCedarStore((state) => state.threadMap[targetThreadId]);
+
+	return {
+		messages: threadData?.messages || [],
+		threadId: targetThreadId,
+		lastLoaded: threadData?.lastLoaded,
+		isCurrentThread: targetThreadId === mainThreadId,
+
+		// Thread-specific actions
+		setMessages: (messages: Message[]) =>
+			useCedarStore.getState().setMessages(messages, targetThreadId),
+		addMessage: (message: MessageInput, isComplete?: boolean) =>
+			useCedarStore.getState().addMessage(message, isComplete, targetThreadId),
+		clearMessages: () => useCedarStore.getState().clearMessages(targetThreadId),
+		switchToThread: () => useCedarStore.getState().switchThread(targetThreadId),
+	};
+};
+
+// Hook for thread management
+export const useThreadController = () => {
+	const mainThreadId = useCedarStore((state) => state.mainThreadId);
+	// Get threadMap and memoize the thread IDs to prevent infinite re-renders
+	const threadMap = useCedarStore((state) => state.threadMap);
+	const threadIds = useMemo(() => Object.keys(threadMap), [threadMap]);
+
+	return {
+		currentThreadId: mainThreadId,
+		threadIds,
+
+		setMainThreadId: useCedarStore((state) => state.setMainThreadId),
+		createThread: useCedarStore((state) => state.createThread),
+		deleteThread: useCedarStore((state) => state.deleteThread),
+		switchThread: useCedarStore((state) => state.switchThread),
+		updateThreadName: useCedarStore((state) => state.updateThreadName),
+		getAllThreadIds: useCedarStore((state) => state.getAllThreadIds),
+	};
+};
 
 // Export the set function directly
 export const setCedarStore = useCedarStore.setState;

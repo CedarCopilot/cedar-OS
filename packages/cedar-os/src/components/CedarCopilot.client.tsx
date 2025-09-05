@@ -66,23 +66,33 @@ export function CedarCopilotClient({
 	}, [userId, setCedarUserId]);
 
 	// ─── threadId ──────────────────────────────────────────────
-	const [cedarThreadId, setCedarThreadId] = useCedarState<string>({
-		key: 'threadId',
-		initialValue: threadId ?? '',
-	});
+	// Thread management through messagesSlice
+	const switchThread = useCedarStore((state) => state.switchThread);
+	const mainThreadId = useCedarStore((state) => state.mainThreadId);
 
+	// Initialize thread if provided
 	useEffect(() => {
-		if (threadId !== null) {
-			setCedarThreadId(threadId);
+		if (threadId) {
+			// This will create the thread if it doesn't exist
+			switchThread(threadId);
 		}
-	}, [threadId, setCedarThreadId]);
+	}, [threadId, switchThread]);
+
+	// Initialize chat - only run when userId or explicit threadId changes
+	// Using a ref to track if we've initialized to prevent re-runs
+	const hasInitializedRef = React.useRef(false);
 
 	useEffect(() => {
-		useCedarStore.getState().initializeChat?.({
-			userId: cedarUserId,
-			threadId: cedarThreadId,
-		});
-	}, [cedarUserId, cedarThreadId]);
+		// Only initialize if we have a userId and haven't initialized yet
+		// or if the provided threadId changes
+		if (cedarUserId && (!hasInitializedRef.current || threadId)) {
+			hasInitializedRef.current = true;
+			useCedarStore.getState().initializeChat?.({
+				userId: cedarUserId,
+				threadId: threadId || mainThreadId, // Use provided threadId or current thread
+			});
+		}
+	}, [cedarUserId, threadId, mainThreadId]);
 
 	// Combined message storage initialization and updates
 	useEffect(() => {

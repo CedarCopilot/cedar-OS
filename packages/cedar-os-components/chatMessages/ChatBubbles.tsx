@@ -1,5 +1,5 @@
 import { ShimmerText } from '@/text/ShimmerText';
-import { cn, useCedarStore } from 'cedar-os';
+import { cn, useCedarStore, useThreadMessages } from 'cedar-os';
 import { AnimatePresence, motion } from 'motion/react';
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import ChatRenderer from './ChatRenderer';
@@ -15,7 +15,8 @@ export const ChatBubbles: React.FC<ChatBubblesProps> = ({
 }) => {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const isProcessing = useCedarStore((state) => state.isProcessing);
-	const messages = useCedarStore((state) => state.messages);
+	// Use useThreadMessages hook to get messages for current thread
+	const { messages } = useThreadMessages();
 
 	// Immediate scroll to bottom on initial render (before paint)
 	useLayoutEffect(() => {

@@ -720,6 +720,7 @@ export default function ProductMapPage() {
 				{/* {chatMode === 'floating' && ( */}
 				<FloatingCedarChat
 					stream={false}
+					showThreadController={true}
 					side='right'
 					title='Product Roadmap Assistant'
 					collapsedLabel='Need help with your roadmap?'

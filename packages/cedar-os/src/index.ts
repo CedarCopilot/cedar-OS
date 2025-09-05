@@ -113,7 +113,13 @@ export type {
 	TodoListItem,
 	TodoListMessage,
 	TypedMessage,
+	// Thread-related types
+	MessageThread,
+	MessageThreadMap,
 } from '@/store/messages/MessageTypes';
+
+// Export thread constants
+export { DEFAULT_THREAD_ID } from '@/store/messages/MessageTypes';
 
 // Export types
 export type { StylingSlice } from '@/store/stylingSlice';
@@ -216,6 +222,9 @@ export {
 	useVoice,
 	useTools,
 	useRegisterFrontendTool,
+	// Thread-related hooks
+	useThreadMessages,
+	useThreadController,
 } from '@/store/CedarStore';
 
 // Response processors

@@ -383,7 +383,7 @@ export const createAgentConnectionSlice: StateCreator<
 		let voiceParams: VoiceParams = params;
 		if (config.provider === 'mastra') {
 			const resourceId = getCedarState('userId') as string | undefined;
-			const threadId = getCedarState('threadId') as string | undefined;
+			const threadId = get().mainThreadId;
 			voiceParams = {
 				...params,
 				resourceId,
@@ -539,18 +539,49 @@ export const createAgentConnectionSlice: StateCreator<
 				...customFields,
 			} as AnyProviderParams<T, E>;
 
-			// Use extracted values with fallback to Cedar state
-			const resolvedThreadId =
-				threadId || (getCedarState('threadId') as string | null);
+			// Use extracted values with fallback to mainThreadId from messagesSlice
+			const resolvedThreadId = threadId || state.mainThreadId;
 			const resolvedUserId = userId || getCedarState('userId');
 
 			// Add provider-specific params
 			switch (config.provider) {
 				case 'openai':
 				case 'anthropic':
+					// For providers without server-side thread management,
+					// build a proper messages array with conversation history
+					const threadMessages = state.getThreadMessages(resolvedThreadId);
+					const messagesArray: Array<{
+						role: 'system' | 'user' | 'assistant';
+						content: string;
+					}> = [];
+
+					// Add system prompt if provided
+					if (systemPrompt) {
+						messagesArray.push({ role: 'system', content: systemPrompt });
+					}
+
+					// Add conversation history (excluding the current message we just added)
+					if (threadMessages.length > 1) {
+						const previousMessages = threadMessages.slice(0, -1);
+						previousMessages.forEach((msg) => {
+							if (msg.type === 'text' && msg.content) {
+								messagesArray.push({
+									role: msg.role === 'user' ? 'user' : 'assistant',
+									content: msg.content,
+								});
+							}
+						});
+					}
+
+					// Add the current message
+					messagesArray.push({ role: 'user', content: unifiedMessage });
+
 					llmParams = {
 						...llmParams,
 						model: model || 'gpt-4o-mini',
+						messages: messagesArray,
+						// Still include prompt for backward compatibility
+						prompt: unifiedMessage,
 					} as OpenAIParams;
 					break;
 				case 'mastra':
@@ -568,8 +599,33 @@ export const createAgentConnectionSlice: StateCreator<
 					} as MastraParams<T, E>;
 					break;
 				case 'ai-sdk':
+					// For AI SDK, also include thread messages as context
+					const aiSDKThreadMessages = state.getThreadMessages(resolvedThreadId);
+					let aiSDKContextPrompt = unifiedMessage;
+
+					// Add previous messages as context if there are any
+					if (aiSDKThreadMessages.length > 1) {
+						const previousMessages = aiSDKThreadMessages.slice(0, -1); // Exclude the current message
+						const contextMessages = previousMessages
+							.map((msg) => {
+								if (msg.type === 'text') {
+									return `${msg.role === 'user' ? 'User' : 'Assistant'}: ${
+										msg.content
+									}`;
+								}
+								return null;
+							})
+							.filter(Boolean)
+							.join('\n');
+
+						if (contextMessages) {
+							aiSDKContextPrompt = `Previous conversation:\n${contextMessages}\n\nCurrent message:\n${unifiedMessage}`;
+						}
+					}
+
 					llmParams = {
 						...llmParams,
+						prompt: aiSDKContextPrompt,
 						model: model || 'openai/gpt-4o-mini',
 					} as AISDKParams;
 					break;
@@ -696,7 +752,7 @@ export const createAgentConnectionSlice: StateCreator<
 		if (!provider || provider.provider !== 'mastra') return;
 
 		const baseURL = provider.baseURL;
-		const threadId = getCedarState('threadId') as string | undefined;
+		const threadId = get().mainThreadId;
 		if (!threadId) return;
 
 		const endpoint = `${baseURL}/chat/notifications`;

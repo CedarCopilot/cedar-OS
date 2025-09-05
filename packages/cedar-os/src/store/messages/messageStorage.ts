@@ -1,10 +1,6 @@
 import { CedarStore } from '@/store/CedarOSTypes';
 import type { Message } from '@/store/messages/MessageTypes';
-import {
-	getCedarState,
-	setCedarState,
-	useCedarStore,
-} from '@/store/CedarStore';
+import { getCedarState, useCedarStore } from '@/store/CedarStore';
 import { v4 } from 'uuid';
 
 // -------------------------------------------------
@@ -297,10 +293,10 @@ export function getMessageStorageState(
 			state.setMessageThreads(threads);
 
 			// Handle thread selection if no thread is currently selected
-			const currentThreadId = getCedarState('threadId') as string | null;
+			const currentThreadId = get().mainThreadId; // Use from messagesSlice
 			if (!currentThreadId && threads.length > 0) {
 				const threadToSelect = threads[0].id;
-				setCedarState('threadId', threadToSelect);
+				get().setMainThreadId(threadToSelect); // Use messagesSlice method
 				return threadToSelect;
 			}
 		} catch (error) {
@@ -321,7 +317,7 @@ export function getMessageStorageState(
 			if (!adapter?.persistMessage) return;
 
 			const uid = getCedarState('userId') as string | null;
-			const tid = (getCedarState('threadId') as string | null) || v4();
+			const tid = get().mainThreadId || v4();
 
 			// Only persist if we have user ID
 			if (!uid) return;
@@ -353,8 +349,7 @@ export function getMessageStorageState(
 		initializeChat: async (params) => {
 			// Use provided values or fall back to Cedar state
 			const uid = params?.userId || (getCedarState('userId') as string | null);
-			const tidFromParams =
-				params?.threadId || (getCedarState('threadId') as string | null);
+			const tidFromParams = params?.threadId || get().mainThreadId; // Get from messagesSlice
 
 			// Load threads first
 			const threadId = await loadAndSelectThreads(uid, true);
@@ -362,7 +357,7 @@ export function getMessageStorageState(
 			// Use the provided threadId or get the current one after thread selection
 			const tid = tidFromParams || threadId;
 			if (tid) {
-				setCedarState('threadId', tid);
+				get().setMainThreadId(tid); // Use messagesSlice method
 			}
 
 			// Clear existing messages first
