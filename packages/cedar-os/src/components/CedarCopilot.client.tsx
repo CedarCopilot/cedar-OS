@@ -78,18 +78,33 @@ export function CedarCopilotClient({
 	}, [threadId, switchThread]);
 
 	// Initialize chat - only run when userId or explicit threadId changes
-	// Using a ref to track if we've initialized to prevent re-runs
+	// Using refs to track initialization state and previous threadId
 	const hasInitializedRef = React.useRef(false);
+	const previousThreadIdRef = React.useRef<string | null>(threadId);
 
 	useEffect(() => {
-		// Only initialize if we have a userId and haven't initialized yet
-		// or if the provided threadId changes
-		if (cedarUserId && (!hasInitializedRef.current || threadId)) {
-			hasInitializedRef.current = true;
-			useCedarStore.getState().initializeChat?.({
-				userId: cedarUserId,
-				threadId: threadId,
-			});
+		const threadIdChanged = previousThreadIdRef.current !== threadId;
+
+		// Only initialize if we have a userId and either:
+		// 1. Haven't initialized yet, or
+		// 2. The threadId has actually changed
+		if (cedarUserId && (!hasInitializedRef.current || threadIdChanged)) {
+			// Call initializeChat and only mark as initialized after success
+			useCedarStore
+				.getState()
+				.initializeChat?.({
+					userId: cedarUserId,
+					threadId: threadId,
+				})
+				.then(() => {
+					// Only mark as initialized after successful completion
+					hasInitializedRef.current = true;
+					previousThreadIdRef.current = threadId;
+				})
+				.catch((error) => {
+					// Log error but don't mark as initialized so it can retry
+					console.error('Failed to initialize chat:', error);
+				});
 		}
 	}, [cedarUserId, threadId]);
 

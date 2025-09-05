@@ -36,7 +36,6 @@ export const useMessages = () => ({
 	addMessage: useCedarStore((state) => state.addMessage),
 	clearMessages: useCedarStore((state) => state.clearMessages),
 	setIsProcessing: useCedarStore((state) => state.setIsProcessing),
-
 	setShowChat: useCedarStore((state) => state.setShowChat),
 });
 

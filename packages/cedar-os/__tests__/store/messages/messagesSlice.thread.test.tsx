@@ -5,10 +5,7 @@ import {
 	useThreadController,
 } from '../../../src/store/CedarStore';
 import { DEFAULT_THREAD_ID } from '../../../src/store/messages/MessageTypes';
-import type {
-	Message,
-	MessageInput,
-} from '../../../src/store/messages/MessageTypes';
+import type { MessageInput } from '../../../src/store/messages/MessageTypes';
 
 /**
  * Comprehensive tests for the thread-based message system
@@ -53,86 +50,92 @@ describe('MessagesSlice - Thread System', () => {
 
 	describe('Thread Management', () => {
 		it('should create new threads', () => {
-			const store = useCedarStore.getState();
+			const newThreadId = useCedarStore.getState().createThread();
 
-			const newThreadId = store.createThread();
+			// Get fresh state after mutation
+			const state = useCedarStore.getState();
+
 			expect(newThreadId).toBeDefined();
-			expect(store.threadMap[newThreadId]).toBeDefined();
-			expect(store.threadMap[newThreadId].messages).toEqual([]);
-			expect(store.getAllThreadIds()).toContain(newThreadId);
+			expect(state.threadMap[newThreadId]).toBeDefined();
+			expect(state.threadMap[newThreadId].messages).toEqual([]);
+			expect(state.getAllThreadIds()).toContain(newThreadId);
 		});
 
 		it('should create threads with custom IDs', () => {
-			const store = useCedarStore.getState();
 			const customId = 'custom-thread-123';
 
-			const threadId = store.createThread(customId);
+			const threadId = useCedarStore.getState().createThread(customId);
+
+			// Get fresh state after mutation
+			const state = useCedarStore.getState();
+
 			expect(threadId).toBe(customId);
-			expect(store.threadMap[customId]).toBeDefined();
+			expect(state.threadMap[customId]).toBeDefined();
 		});
 
 		it('should switch between threads', () => {
-			const store = useCedarStore.getState();
-
 			// Create and switch to new thread
-			const newThreadId = store.createThread();
-			store.switchThread(newThreadId);
+			const newThreadId = useCedarStore.getState().createThread();
+			useCedarStore.getState().switchThread(newThreadId);
 
-			expect(store.mainThreadId).toBe(newThreadId);
+			// Get fresh state after mutations
+			const state = useCedarStore.getState();
+
+			expect(state.mainThreadId).toBe(newThreadId);
 		});
 
 		it('should delete threads (except default and current)', () => {
-			const store = useCedarStore.getState();
-
-			const thread1 = store.createThread();
-			const thread2 = store.createThread();
+			const thread1 = useCedarStore.getState().createThread();
+			const thread2 = useCedarStore.getState().createThread();
 
 			// Should be able to delete non-current threads
-			store.deleteThread(thread1);
-			expect(store.threadMap[thread1]).toBeUndefined();
-			expect(store.getAllThreadIds()).not.toContain(thread1);
+			useCedarStore.getState().deleteThread(thread1);
+			let state = useCedarStore.getState();
+			expect(state.threadMap[thread1]).toBeUndefined();
+			expect(state.getAllThreadIds()).not.toContain(thread1);
 
 			// Should not delete current thread
-			store.switchThread(thread2);
+			useCedarStore.getState().switchThread(thread2);
 			const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-			store.deleteThread(thread2);
+			useCedarStore.getState().deleteThread(thread2);
 			expect(consoleSpy).toHaveBeenCalledWith('Cannot delete current thread');
-			expect(store.threadMap[thread2]).toBeDefined();
+			state = useCedarStore.getState();
+			expect(state.threadMap[thread2]).toBeDefined();
 			consoleSpy.mockRestore();
 
 			// Should not delete default thread
 			const consoleSpy2 = jest.spyOn(console, 'warn').mockImplementation();
-			store.deleteThread(DEFAULT_THREAD_ID);
+			useCedarStore.getState().deleteThread(DEFAULT_THREAD_ID);
 			expect(consoleSpy2).toHaveBeenCalledWith('Cannot delete default thread');
-			expect(store.threadMap[DEFAULT_THREAD_ID]).toBeDefined();
+			state = useCedarStore.getState();
+			expect(state.threadMap[DEFAULT_THREAD_ID]).toBeDefined();
 			consoleSpy2.mockRestore();
 		});
 	});
 
 	describe('Message Operations', () => {
 		it('should add messages to current thread by default', () => {
-			const store = useCedarStore.getState();
-
 			const message: MessageInput = {
 				role: 'user',
 				type: 'text',
 				content: 'Hello from default thread',
 			};
 
-			const addedMessage = store.addMessage(message);
+			const addedMessage = useCedarStore.getState().addMessage(message);
+
+			// Get fresh state after mutation
+			const state = useCedarStore.getState();
 
 			expect(addedMessage.id).toBeDefined();
-			expect(store.threadMap[DEFAULT_THREAD_ID].messages).toHaveLength(1);
-			expect(store.threadMap[DEFAULT_THREAD_ID].messages[0]).toEqual(
+			expect(state.threadMap[DEFAULT_THREAD_ID].messages).toHaveLength(1);
+			expect(state.threadMap[DEFAULT_THREAD_ID].messages[0]).toEqual(
 				addedMessage
 			);
 		});
 
 		it('should add messages to specific threads', () => {
-			const store = useCedarStore.getState();
-
-			const thread1 = store.createThread();
-			const thread2 = store.createThread();
+			const thread1 = useCedarStore.getState().createThread();
+			const thread2 = useCedarStore.getState().createThread();
 
 			const message1: MessageInput = {
 				role: 'user',
@@ -146,24 +149,25 @@ describe('MessagesSlice - Thread System', () => {
 				content: 'Message for thread 2',
 			};
 
-			store.addMessage(message1, true, thread1);
-			store.addMessage(message2, true, thread2);
+			useCedarStore.getState().addMessage(message1, true, thread1);
+			useCedarStore.getState().addMessage(message2, true, thread2);
 
-			expect(store.threadMap[thread1].messages).toHaveLength(1);
-			expect(store.threadMap[thread2].messages).toHaveLength(1);
-			expect(store.threadMap[thread1].messages[0].content).toBe(
+			// Get fresh state after mutations
+			const state = useCedarStore.getState();
+
+			expect(state.threadMap[thread1].messages).toHaveLength(1);
+			expect(state.threadMap[thread2].messages).toHaveLength(1);
+			expect(state.threadMap[thread1].messages[0].content).toBe(
 				'Message for thread 1'
 			);
-			expect(store.threadMap[thread2].messages[0].content).toBe(
+			expect(state.threadMap[thread2].messages[0].content).toBe(
 				'Message for thread 2'
 			);
 		});
 
 		it('should update messages in specific threads', () => {
-			const store = useCedarStore.getState();
-
-			const thread1 = store.createThread();
-			const message = store.addMessage(
+			const thread1 = useCedarStore.getState().createThread();
+			const message = useCedarStore.getState().addMessage(
 				{
 					role: 'user',
 					type: 'text',
@@ -173,17 +177,19 @@ describe('MessagesSlice - Thread System', () => {
 				thread1
 			);
 
-			store.updateMessage(message.id, { content: 'Updated content' }, thread1);
+			useCedarStore
+				.getState()
+				.updateMessage(message.id, { content: 'Updated content' }, thread1);
 
-			const updatedMessage = store.threadMap[thread1].messages[0];
+			// Get fresh state after mutation
+			const state = useCedarStore.getState();
+			const updatedMessage = state.threadMap[thread1].messages[0];
 			expect(updatedMessage.content).toBe('Updated content');
 		});
 
 		it('should delete messages from specific threads', () => {
-			const store = useCedarStore.getState();
-
-			const thread1 = store.createThread();
-			const message = store.addMessage(
+			const thread1 = useCedarStore.getState().createThread();
+			const message = useCedarStore.getState().addMessage(
 				{
 					role: 'user',
 					type: 'text',
@@ -193,43 +199,53 @@ describe('MessagesSlice - Thread System', () => {
 				thread1
 			);
 
-			expect(store.threadMap[thread1].messages).toHaveLength(1);
+			// Check message was added
+			let state = useCedarStore.getState();
+			expect(state.threadMap[thread1].messages).toHaveLength(1);
 
-			store.deleteMessage(message.id, thread1);
-			expect(store.threadMap[thread1].messages).toHaveLength(0);
+			useCedarStore.getState().deleteMessage(message.id, thread1);
+
+			// Get fresh state after deletion
+			state = useCedarStore.getState();
+			expect(state.threadMap[thread1].messages).toHaveLength(0);
 		});
 
 		it('should clear messages in specific threads', () => {
-			const store = useCedarStore.getState();
-
-			const thread1 = store.createThread();
+			const thread1 = useCedarStore.getState().createThread();
 
 			// Add multiple messages
-			store.addMessage(
-				{ role: 'user', type: 'text', content: 'Message 1' },
-				true,
-				thread1
-			);
-			store.addMessage(
-				{ role: 'assistant', type: 'text', content: 'Message 2' },
-				true,
-				thread1
-			);
+			useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'user', type: 'text', content: 'Message 1' },
+					true,
+					thread1
+				);
+			useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'assistant', type: 'text', content: 'Message 2' },
+					true,
+					thread1
+				);
 
-			expect(store.threadMap[thread1].messages).toHaveLength(2);
+			// Check messages were added
+			let state = useCedarStore.getState();
+			expect(state.threadMap[thread1].messages).toHaveLength(2);
 
-			store.clearMessages(thread1);
-			expect(store.threadMap[thread1].messages).toHaveLength(0);
+			useCedarStore.getState().clearMessages(thread1);
+
+			// Get fresh state after clearing
+			state = useCedarStore.getState();
+			expect(state.threadMap[thread1].messages).toHaveLength(0);
 		});
 
 		it('should append to latest message in specific threads', () => {
-			const store = useCedarStore.getState();
-
-			const thread1 = store.createThread();
-			store.switchThread(thread1);
+			const thread1 = useCedarStore.getState().createThread();
+			useCedarStore.getState().switchThread(thread1);
 
 			// Add initial assistant message
-			store.addMessage(
+			useCedarStore.getState().addMessage(
 				{
 					role: 'assistant',
 					type: 'text',
@@ -240,25 +256,24 @@ describe('MessagesSlice - Thread System', () => {
 			);
 
 			// Append to latest message
-			const updatedMessage = store.appendToLatestMessage(
-				' - appended content',
-				true,
-				thread1
-			);
+			const updatedMessage = useCedarStore
+				.getState()
+				.appendToLatestMessage(' - appended content', true, thread1);
 
 			expect(updatedMessage.content).toBe(
 				'Initial response - appended content'
 			);
-			expect(store.threadMap[thread1].messages).toHaveLength(1);
+
+			// Get fresh state after mutation
+			const state = useCedarStore.getState();
+			expect(state.threadMap[thread1].messages).toHaveLength(1);
 		});
 
 		it('should create new message when appending to non-text or user message', () => {
-			const store = useCedarStore.getState();
-
-			const thread1 = store.createThread();
+			const thread1 = useCedarStore.getState().createThread();
 
 			// Add user message
-			store.addMessage(
+			useCedarStore.getState().addMessage(
 				{
 					role: 'user',
 					type: 'text',
@@ -269,11 +284,15 @@ describe('MessagesSlice - Thread System', () => {
 			);
 
 			// Append should create new message since latest is user message
-			store.appendToLatestMessage('New assistant message', true, thread1);
+			useCedarStore
+				.getState()
+				.appendToLatestMessage('New assistant message', true, thread1);
 
-			expect(store.threadMap[thread1].messages).toHaveLength(2);
-			expect(store.threadMap[thread1].messages[1].role).toBe('assistant');
-			expect(store.threadMap[thread1].messages[1].content).toBe(
+			// Get fresh state after mutation
+			const state = useCedarStore.getState();
+			expect(state.threadMap[thread1].messages).toHaveLength(2);
+			expect(state.threadMap[thread1].messages[1].role).toBe('assistant');
+			expect(state.threadMap[thread1].messages[1].content).toBe(
 				'New assistant message'
 			);
 		});
@@ -429,103 +448,124 @@ describe('MessagesSlice - Thread System', () => {
 		});
 
 		it('should work with existing message operations', () => {
-			const store = useCedarStore.getState();
-
 			// Test all existing operations work without threadId
-			const message = store.addMessage({
+			const message = useCedarStore.getState().addMessage({
 				role: 'user',
 				type: 'text',
 				content: 'Test message',
 			});
 
-			expect(store.messages).toHaveLength(1);
+			// Get fresh state after mutation
+			let state = useCedarStore.getState();
+			expect(state.messages).toHaveLength(1);
 
-			store.updateMessage(message.id, { content: 'Updated message' });
-			expect(store.messages[0].content).toBe('Updated message');
+			useCedarStore
+				.getState()
+				.updateMessage(message.id, { content: 'Updated message' });
 
-			store.clearMessages();
-			expect(store.messages).toHaveLength(0);
+			// Get fresh state after update
+			state = useCedarStore.getState();
+			expect(state.messages[0].content).toBe('Updated message');
+
+			useCedarStore.getState().clearMessages();
+
+			// Get fresh state after clear
+			state = useCedarStore.getState();
+			expect(state.messages).toHaveLength(0);
 		});
 	});
 
 	describe('Thread Isolation', () => {
 		it('should keep messages isolated between threads', () => {
-			const store = useCedarStore.getState();
-
-			const thread1 = store.createThread();
-			const thread2 = store.createThread();
+			const thread1 = useCedarStore.getState().createThread();
+			const thread2 = useCedarStore.getState().createThread();
 
 			// Add messages to different threads
-			store.addMessage(
-				{ role: 'user', type: 'text', content: 'Thread 1 message' },
-				true,
-				thread1
-			);
-			store.addMessage(
-				{ role: 'user', type: 'text', content: 'Thread 2 message' },
-				true,
-				thread2
-			);
-			store.addMessage({
+			useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'user', type: 'text', content: 'Thread 1 message' },
+					true,
+					thread1
+				);
+			useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'user', type: 'text', content: 'Thread 2 message' },
+					true,
+					thread2
+				);
+			useCedarStore.getState().addMessage({
 				role: 'user',
 				type: 'text',
 				content: 'Default thread message',
 			});
 
-			// Each thread should only have its own messages
-			expect(store.threadMap[thread1].messages).toHaveLength(1);
-			expect(store.threadMap[thread2].messages).toHaveLength(1);
-			expect(store.threadMap[DEFAULT_THREAD_ID].messages).toHaveLength(1);
+			// Get fresh state after all mutations
+			const state = useCedarStore.getState();
 
-			expect(store.threadMap[thread1].messages[0].content).toBe(
+			// Each thread should only have its own messages
+			expect(state.threadMap[thread1].messages).toHaveLength(1);
+			expect(state.threadMap[thread2].messages).toHaveLength(1);
+			expect(state.threadMap[DEFAULT_THREAD_ID].messages).toHaveLength(1);
+
+			expect(state.threadMap[thread1].messages[0].content).toBe(
 				'Thread 1 message'
 			);
-			expect(store.threadMap[thread2].messages[0].content).toBe(
+			expect(state.threadMap[thread2].messages[0].content).toBe(
 				'Thread 2 message'
 			);
-			expect(store.threadMap[DEFAULT_THREAD_ID].messages[0].content).toBe(
+			expect(state.threadMap[DEFAULT_THREAD_ID].messages[0].content).toBe(
 				'Default thread message'
 			);
 		});
 
 		it('should update operations only affect target thread', () => {
-			const store = useCedarStore.getState();
+			const thread1 = useCedarStore.getState().createThread();
+			const thread2 = useCedarStore.getState().createThread();
 
-			const thread1 = store.createThread();
-			const thread2 = store.createThread();
-
-			const msg1 = store.addMessage(
-				{ role: 'user', type: 'text', content: 'Message 1' },
-				true,
-				thread1
-			);
-			const msg2 = store.addMessage(
-				{ role: 'user', type: 'text', content: 'Message 2' },
-				true,
-				thread2
-			);
+			const msg1 = useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'user', type: 'text', content: 'Message 1' },
+					true,
+					thread1
+				);
+			useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'user', type: 'text', content: 'Message 2' },
+					true,
+					thread2
+				);
 
 			// Update message in thread1
-			store.updateMessage(msg1.id, { content: 'Updated Message 1' }, thread1);
+			useCedarStore
+				.getState()
+				.updateMessage(msg1.id, { content: 'Updated Message 1' }, thread1);
+
+			// Get fresh state after mutations
+			const state = useCedarStore.getState();
 
 			// Only thread1 should be affected
-			expect(store.threadMap[thread1].messages[0].content).toBe(
+			expect(state.threadMap[thread1].messages[0].content).toBe(
 				'Updated Message 1'
 			);
-			expect(store.threadMap[thread2].messages[0].content).toBe('Message 2');
+			expect(state.threadMap[thread2].messages[0].content).toBe('Message 2');
 		});
 	});
 
 	describe('useThreadMessages Hook', () => {
 		it('should return messages for specific thread', () => {
-			const store = useCedarStore.getState();
-			const thread1 = store.createThread();
+			const thread1 = useCedarStore.getState().createThread();
 
-			store.addMessage(
-				{ role: 'user', type: 'text', content: 'Thread 1 message' },
-				true,
-				thread1
-			);
+			useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'user', type: 'text', content: 'Thread 1 message' },
+					true,
+					thread1
+				);
 
 			const { result } = renderHook(() => useThreadMessages(thread1));
 
@@ -535,9 +575,7 @@ describe('MessagesSlice - Thread System', () => {
 		});
 
 		it('should return current thread messages when no threadId provided', () => {
-			const store = useCedarStore.getState();
-
-			store.addMessage({
+			useCedarStore.getState().addMessage({
 				role: 'user',
 				type: 'text',
 				content: 'Current thread message',
@@ -551,8 +589,7 @@ describe('MessagesSlice - Thread System', () => {
 		});
 
 		it('should provide thread-specific actions', () => {
-			const store = useCedarStore.getState();
-			const thread1 = store.createThread();
+			const thread1 = useCedarStore.getState().createThread();
 
 			const { result } = renderHook(() => useThreadMessages(thread1));
 
@@ -564,8 +601,10 @@ describe('MessagesSlice - Thread System', () => {
 				});
 			});
 
-			expect(store.threadMap[thread1].messages).toHaveLength(1);
-			expect(store.threadMap[thread1].messages[0].content).toBe(
+			// Get fresh state after mutation
+			const state = useCedarStore.getState();
+			expect(state.threadMap[thread1].messages).toHaveLength(1);
+			expect(state.threadMap[thread1].messages[0].content).toBe(
 				'Added via hook'
 			);
 		});
@@ -590,58 +629,61 @@ describe('MessagesSlice - Thread System', () => {
 
 	describe('Thread Switching and Messages Sync', () => {
 		it('should sync messages property when switching threads', () => {
-			const store = useCedarStore.getState();
-
 			// Add message to default thread
-			store.addMessage({
+			useCedarStore.getState().addMessage({
 				role: 'user',
 				type: 'text',
 				content: 'Default message',
 			});
 
 			// Create new thread and add message
-			const thread1 = store.createThread();
-			store.addMessage(
-				{ role: 'user', type: 'text', content: 'Thread 1 message' },
-				true,
-				thread1
-			);
+			const thread1 = useCedarStore.getState().createThread();
+			useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'user', type: 'text', content: 'Thread 1 message' },
+					true,
+					thread1
+				);
 
 			// Switch to thread1
-			store.switchThread(thread1);
+			useCedarStore.getState().switchThread(thread1);
+
+			// Get fresh state after mutations
+			const state = useCedarStore.getState();
 
 			// messages property should now show thread1 messages
 			// Note: This might not work perfectly due to the sync issue we saw in testing
-			expect(store.mainThreadId).toBe(thread1);
+			expect(state.mainThreadId).toBe(thread1);
 		});
 	});
 
 	describe('Error Handling', () => {
 		it('should handle operations on non-existent threads gracefully', () => {
-			const store = useCedarStore.getState();
-
 			// Operations on non-existent threads should auto-create them
-			store.addMessage(
-				{ role: 'user', type: 'text', content: 'Auto-created thread' },
-				true,
-				'non-existent'
-			);
+			useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'user', type: 'text', content: 'Auto-created thread' },
+					true,
+					'non-existent'
+				);
 
-			expect(store.threadMap['non-existent']).toBeDefined();
-			expect(store.threadMap['non-existent'].messages).toHaveLength(1);
+			// Get fresh state after mutation
+			const state = useCedarStore.getState();
+			expect(state.threadMap['non-existent']).toBeDefined();
+			expect(state.threadMap['non-existent'].messages).toHaveLength(1);
 		});
 
 		it('should handle getting messages from non-existent threads', () => {
-			const store = useCedarStore.getState();
-
-			const messages = store.getThreadMessages('non-existent');
+			const messages = useCedarStore
+				.getState()
+				.getThreadMessages('non-existent');
 			expect(messages).toEqual([]);
 		});
 
 		it('should handle getting thread that does not exist', () => {
-			const store = useCedarStore.getState();
-
-			const thread = store.getThread('non-existent');
+			const thread = useCedarStore.getState().getThread('non-existent');
 			expect(thread).toBeUndefined();
 		});
 	});
@@ -671,13 +713,11 @@ describe('MessagesSlice - Thread System', () => {
 
 	describe('Complex Scenarios', () => {
 		it('should handle multiple threads with different message types', () => {
-			const store = useCedarStore.getState();
-
-			const chatThread = store.createThread('chat-thread');
-			const todoThread = store.createThread('todo-thread');
+			const chatThread = useCedarStore.getState().createThread('chat-thread');
+			const todoThread = useCedarStore.getState().createThread('todo-thread');
 
 			// Add different message types to different threads
-			store.addMessage(
+			useCedarStore.getState().addMessage(
 				{
 					role: 'user',
 					type: 'text',
@@ -687,7 +727,7 @@ describe('MessagesSlice - Thread System', () => {
 				chatThread
 			);
 
-			store.addMessage(
+			useCedarStore.getState().addMessage(
 				{
 					role: 'assistant',
 					type: 'todolist',
@@ -701,44 +741,54 @@ describe('MessagesSlice - Thread System', () => {
 				todoThread
 			);
 
-			expect(store.threadMap[chatThread].messages[0].type).toBe('text');
-			expect(store.threadMap[todoThread].messages[0].type).toBe('todolist');
+			// Get fresh state after mutations
+			const state = useCedarStore.getState();
+			expect(state.threadMap[chatThread].messages[0].type).toBe('text');
+			expect(state.threadMap[todoThread].messages[0].type).toBe('todolist');
 		});
 
 		it('should handle concurrent operations on different threads', () => {
-			const store = useCedarStore.getState();
-
-			const thread1 = store.createThread();
-			const thread2 = store.createThread();
+			const thread1 = useCedarStore.getState().createThread();
+			const thread2 = useCedarStore.getState().createThread();
 
 			// Simulate concurrent operations
-			const message1 = store.addMessage(
-				{ role: 'user', type: 'text', content: 'Concurrent 1' },
-				true,
-				thread1
-			);
-			const message2 = store.addMessage(
-				{ role: 'user', type: 'text', content: 'Concurrent 2' },
-				true,
-				thread2
-			);
+			const message1 = useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'user', type: 'text', content: 'Concurrent 1' },
+					true,
+					thread1
+				);
+			const message2 = useCedarStore
+				.getState()
+				.addMessage(
+					{ role: 'user', type: 'text', content: 'Concurrent 2' },
+					true,
+					thread2
+				);
 
 			// Update both messages
-			store.updateMessage(
-				message1.id,
-				{ content: 'Updated Concurrent 1' },
-				thread1
-			);
-			store.updateMessage(
-				message2.id,
-				{ content: 'Updated Concurrent 2' },
-				thread2
-			);
+			useCedarStore
+				.getState()
+				.updateMessage(
+					message1.id,
+					{ content: 'Updated Concurrent 1' },
+					thread1
+				);
+			useCedarStore
+				.getState()
+				.updateMessage(
+					message2.id,
+					{ content: 'Updated Concurrent 2' },
+					thread2
+				);
 
-			expect(store.threadMap[thread1].messages[0].content).toBe(
+			// Get fresh state after mutations
+			const state = useCedarStore.getState();
+			expect(state.threadMap[thread1].messages[0].content).toBe(
 				'Updated Concurrent 1'
 			);
-			expect(store.threadMap[thread2].messages[0].content).toBe(
+			expect(state.threadMap[thread2].messages[0].content).toBe(
 				'Updated Concurrent 2'
 			);
 		});
@@ -754,12 +804,12 @@ describe('MessagesSlice - Thread System', () => {
 			let thread1RenderCount = 0;
 			let thread2RenderCount = 0;
 
-			const { result: result1 } = renderHook(() => {
+			renderHook(() => {
 				thread1RenderCount++;
 				return useThreadMessages(thread1);
 			});
 
-			const { result: result2 } = renderHook(() => {
+			renderHook(() => {
 				thread2RenderCount++;
 				return useThreadMessages(thread2);
 			});

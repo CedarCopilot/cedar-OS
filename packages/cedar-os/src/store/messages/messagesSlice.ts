@@ -182,7 +182,7 @@ export const createMessagesSlice: StateCreator<
 						[tid]: {
 							...thread,
 							messages: updatedMessages,
-							lastLoaded: thread.lastLoaded,
+							lastLoaded: new Date().toISOString(),
 						},
 					},
 					// Update main messages if it's the current thread
@@ -211,7 +211,22 @@ export const createMessagesSlice: StateCreator<
 			const tid = threadId || state.mainThreadId;
 			ensureThread(tid);
 
-			const messages = state.threadMap[tid].messages;
+			// Safety check: if thread doesn't exist in current state, get fresh state
+			const thread = state.threadMap[tid] || get().threadMap[tid];
+			if (!thread) {
+				// This should never happen after ensureThread, but be defensive
+				return get().addMessage(
+					{
+						role: 'assistant',
+						type: 'text',
+						content: content,
+					},
+					isComplete,
+					tid
+				);
+			}
+
+			const messages = thread.messages;
 			const latestMessage = messages[messages.length - 1];
 
 			if (
@@ -223,10 +238,10 @@ export const createMessagesSlice: StateCreator<
 					...latestMessage,
 					content: latestMessage.content + content,
 				};
-				state.updateMessage(latestMessage.id, updatedLatestMessage, tid);
+				get().updateMessage(latestMessage.id, updatedLatestMessage, tid);
 				return updatedLatestMessage;
 			} else {
-				return state.addMessage(
+				return get().addMessage(
 					{
 						role: 'assistant',
 						type: 'text',
