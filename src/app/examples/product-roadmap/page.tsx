@@ -717,14 +717,14 @@ export default function ProductMapPage() {
 				/>
 				{chatMode === 'command' && <CommandBarChat open={true} />}
 				{chatMode === 'caption' && <ProductRoadmapChat stream={false} />}
-				{chatMode === 'floating' && (
-					<FloatingCedarChat
-						stream={false}
-						side='right'
-						title='Product Roadmap Assistant'
-						collapsedLabel='Need help with your roadmap?'
-					/>
-				)}
+				{/* {chatMode === 'floating' && ( */}
+				<FloatingCedarChat
+					stream={false}
+					side='right'
+					title='Product Roadmap Assistant'
+					collapsedLabel='Need help with your roadmap?'
+				/>
+				{/* )} */}
 
 				{/* Radial Menu Spell */}
 				<RadialMenuSpell
