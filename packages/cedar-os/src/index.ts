@@ -317,6 +317,8 @@ export type {
 	RegisterDiffStateConfig,
 	DiffStateReturn,
 	ComputeStateFunction,
+	UseControlledDiffStateOptions,
+	ControlledDiffStateReturn,
 } from '@/store/diffHistoryStateSlice';
 // Export tools slice types and utilities
 export { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
