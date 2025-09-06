@@ -1,6 +1,6 @@
 {
 	"name": "@cedar-os/backend",
-	"version": "0.0.9",
+	"version": "0.0.11",
 	"description": "Backend helper functions for Cedar OS",
 	"keywords": [
 		"cedar-os",
@@ -45,7 +45,7 @@
 		"dev:yalc": "nodemon --watch 'src/**/*' -e ts,tsx --exec 'NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build && yalc publish --push'"
 	},
 	"devDependencies": {
-		"@mastra/core": "^0.15.2",
+		"@mastra/core": "^0.16.0",
 		"@types/jest": "^29.5.0",
 		"@types/node": "^20.17.19",
 		"jest": "^29.5.0",
@@ -57,7 +57,7 @@
 		"zod": "^3.22.0"
 	},
 	"peerDependencies": {
-		"@mastra/core": ">=0.10.2-0 <0.16.0-0",
+		"@mastra/core": ">=0.10.2-0",
 		"zod": ">=3.22.0"
 	},
 	"publishConfig": {
