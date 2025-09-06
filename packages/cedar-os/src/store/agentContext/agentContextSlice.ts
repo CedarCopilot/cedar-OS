@@ -166,6 +166,11 @@ export interface AgentContextSlice {
 	unregisterMentionProvider: (providerId: string) => void;
 	getMentionProvidersByTrigger: (trigger: string) => MentionProvider[];
 
+	// Collapsing configuration storage
+	collapsingConfigs: Map<string, boolean | number>;
+	setCollapsingConfig: (key: string, config: boolean | number) => void;
+	removeCollapsingConfig: (key: string) => void;
+
 	// New stringify functions
 	stringifyEditor: () => string;
 	stringifyInputContext: () => string;
@@ -192,6 +197,7 @@ export const createAgentContextSlice: StateCreator<
 	overrideInputContent: { input: null },
 	additionalContext: {},
 	mentionProviders: new Map(),
+	collapsingConfigs: new Map(),
 
 	setChatInputContent: (content) => {
 		set({ chatInputContent: content });
@@ -352,6 +358,22 @@ export const createAgentContextSlice: StateCreator<
 		return Array.from(providers.values()).filter(
 			(provider) => provider.trigger === trigger
 		);
+	},
+
+	setCollapsingConfig: (key, config) => {
+		set((state) => {
+			const newConfigs = new Map(state.collapsingConfigs);
+			newConfigs.set(key, config);
+			return { collapsingConfigs: newConfigs };
+		});
+	},
+
+	removeCollapsingConfig: (key) => {
+		set((state) => {
+			const newConfigs = new Map(state.collapsingConfigs);
+			newConfigs.delete(key);
+			return { collapsingConfigs: newConfigs };
+		});
 	},
 
 	stringifyEditor: () => {
@@ -533,11 +555,15 @@ export function useSubscribeStateToAgentContext<T>(
 		order?: number;
 		/** If false, the generated context entries will not be rendered as badges in the chat UI. Can also be a function to filter specific entries. */
 		showInChat?: boolean | ((entry: ContextEntry) => boolean);
+		/** Collapse multiple entries into a single badge. Can be boolean (default threshold 5) or number (custom threshold) */
+		collapse?: boolean | number;
 	}
 ): void {
 	const updateAdditionalContext = useCedarStore(
 		(s) => s.updateAdditionalContext
 	);
+	const setCollapsingConfig = useCedarStore((s) => s.setCollapsingConfig);
+	const removeCollapsingConfig = useCedarStore((s) => s.removeCollapsingConfig);
 
 	// Subscribe to the cedar state value and check if state exists
 	const stateExists = useCedarStore((s) => stateKey in s.registeredStates);
@@ -555,6 +581,7 @@ export function useSubscribeStateToAgentContext<T>(
 			options?.labelField,
 			options?.order,
 			options?.showInChat,
+			options?.collapse,
 		]
 	);
 
@@ -593,6 +620,33 @@ export function useSubscribeStateToAgentContext<T>(
 			updateAdditionalContext(formattedContext);
 		}
 	}, [formattedContext, updateAdditionalContext]);
+
+	// Manage collapsing configuration for each context key
+	useEffect(() => {
+		if (options?.collapse && Object.keys(mappedData).length > 0) {
+			// Store collapsing config for each context key from mapFn result
+			Object.keys(mappedData).forEach((contextKey) => {
+				setCollapsingConfig(contextKey, options.collapse!);
+			});
+		} else if (!options?.collapse) {
+			// Remove collapsing config for all context keys if not provided
+			Object.keys(mappedData).forEach((contextKey) => {
+				removeCollapsingConfig(contextKey);
+			});
+		}
+
+		// Cleanup on unmount
+		return () => {
+			Object.keys(mappedData).forEach((contextKey) => {
+				removeCollapsingConfig(contextKey);
+			});
+		};
+	}, [
+		mappedData,
+		options?.collapse,
+		setCollapsingConfig,
+		removeCollapsingConfig,
+	]);
 }
 
 // Enhanced hook to render additionalContext entries
