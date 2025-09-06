@@ -1,0 +1,509 @@
+---
+title: 'Thread Management'
+description: 'Manage multiple conversation threads in Cedar with full state isolation and persistence'
+---
+
+Cedar's thread management system allows you to organize conversations into separate threads, each with their own message history and state. This enables users to maintain multiple conversation contexts simultaneously.
+
+## Overview
+
+The thread system is built into the `messagesSlice` and provides:
+
+- **Thread isolation**: Each thread maintains its own message history
+- **Backward compatibility**: Existing code continues to work with the main thread
+- **Persistent storage**: Threads can be persisted using storage adapters
+- **UI components**: Ready-to-use thread management components
+
+## Core Concepts
+
+### Thread Structure
+
+Each thread contains:
+
+```typescript
+interface MessageThread {
+	id: string;
+	name?: string;
+	lastLoaded: string;
+	messages: Message[];
+}
+```
+
+### Default Thread
+
+Cedar automatically creates a default thread with ID `DEFAULT_THREAD_ID` that serves as the main conversation thread.
+
+## Using Thread Management
+
+### Basic Thread Operations
+
+<CodeGroup>
+```tsx React Hook
+import { useThreadController } from 'cedar-os';
+
+function MyComponent() {
+const {
+currentThreadId,
+threadIds,
+createThread,
+deleteThread,
+switchThread,
+updateThreadName
+} = useThreadController();
+
+const handleCreateThread = () => {
+const newThreadId = createThread(undefined, 'New Conversation');
+switchThread(newThreadId);
+};
+
+return (
+<div>
+<button onClick={handleCreateThread}>
+Create New Thread
+</button>
+<p>Current: {currentThreadId}</p>
+<p>Total threads: {threadIds.length}</p>
+</div>
+);
+}
+
+````
+
+```tsx Direct Store Access
+import { useCedarStore } from 'cedar-os';
+
+function MyComponent() {
+  const createThread = useCedarStore(state => state.createThread);
+  const switchThread = useCedarStore(state => state.switchThread);
+  const currentThreadId = useCedarStore(state => state.mainThreadId);
+
+  const handleNewThread = () => {
+    const threadId = createThread(undefined, 'My Thread');
+    switchThread(threadId);
+  };
+
+  return (
+    <button onClick={handleNewThread}>
+      New Thread (Current: {currentThreadId})
+    </button>
+  );
+}
+````
+
+</CodeGroup>
+
+### Thread-Aware Message Operations
+
+All message operations support an optional `threadId` parameter. If not provided, they operate on the current thread:
+
+```tsx
+import { useCedarStore } from 'cedar-os';
+
+function MessageOperations() {
+	const addMessage = useCedarStore((state) => state.addMessage);
+	const getThreadMessages = useCedarStore((state) => state.getThreadMessages);
+	const clearMessages = useCedarStore((state) => state.clearMessages);
+
+	// Add message to current thread
+	const addToCurrentThread = () => {
+		addMessage({
+			role: 'user',
+			content: 'Hello from current thread',
+		});
+	};
+
+	// Add message to specific thread
+	const addToSpecificThread = (threadId: string) => {
+		addMessage(
+			{
+				role: 'user',
+				content: 'Hello from specific thread',
+			},
+			true,
+			threadId
+		);
+	};
+
+	// Get messages from specific thread
+	const getMessages = (threadId: string) => {
+		return getThreadMessages(threadId);
+	};
+
+	// Clear specific thread
+	const clearThread = (threadId: string) => {
+		clearMessages(threadId);
+	};
+
+	return (
+		<div>
+			<button onClick={addToCurrentThread}>Add to Current</button>
+			<button onClick={() => addToSpecificThread('thread-123')}>
+				Add to Specific Thread
+			</button>
+		</div>
+	);
+}
+```
+
+## useThreadController Hook
+
+The `useThreadController` hook provides a convenient interface for thread management:
+
+### Return Values
+
+<ParamField path='currentThreadId' type='string'>
+	The ID of the currently active thread
+</ParamField>
+
+<ParamField path='threadIds' type='string[]'>
+	Array of all thread IDs (memoized to prevent re-renders)
+</ParamField>
+
+### Methods
+
+<ParamField
+	path='createThread'
+	type='(threadId?: string, name?: string) => string'>
+	Creates a new thread and returns its ID. If no threadId provided, generates a
+	unique one.
+</ParamField>
+
+<ParamField path='deleteThread' type='(threadId: string) => void'>
+	Deletes a thread. Cannot delete the default thread or current thread.
+</ParamField>
+
+<ParamField
+	path='switchThread'
+	type='(threadId: string, name?: string) => void'>
+	Switches to a thread, creating it if it doesn't exist.
+</ParamField>
+
+<ParamField
+	path='updateThreadName'
+	type='(threadId: string, name: string) => void'>
+	Updates the name of an existing thread.
+</ParamField>
+
+<ParamField path='setMainThreadId' type='(threadId: string) => void'>
+	Sets the main thread ID (ensures thread exists first).
+</ParamField>
+
+<ParamField path='getAllThreadIds' type='() => string[]'>
+	Returns all thread IDs.
+</ParamField>
+
+## ChatThreadController Component
+
+Cedar provides a ready-to-use UI component for thread management:
+
+```tsx
+import { ChatThreadController } from 'cedar-os-components';
+
+function MyChat() {
+	const handleThreadChange = (threadId: string) => {
+		console.log('Switched to thread:', threadId);
+	};
+
+	return (
+		<div>
+			<ChatThreadController
+				onThreadChange={handleThreadChange}
+				showCreateButton={true}
+				showThreadList={true}
+				className='my-thread-controls'
+			/>
+		</div>
+	);
+}
+```
+
+### Props
+
+<ParamField path='className' type='string'>
+	Optional CSS class name for styling
+</ParamField>
+
+<ParamField path='onThreadChange' type='(threadId: string) => void'>
+	Callback fired when thread changes
+</ParamField>
+
+<ParamField path='showCreateButton' type='boolean' default='true'>
+	Whether to show the create new thread button
+</ParamField>
+
+<ParamField path='showThreadList' type='boolean' default='true'>
+	Whether to show the thread history dropdown
+</ParamField>
+
+## MessagesSlice Thread API
+
+The `messagesSlice` provides the core thread management functionality:
+
+### State Structure
+
+```typescript
+interface MessagesSlice {
+	// Core thread state
+	threadMap: MessageThreadMap;
+	mainThreadId: string;
+
+	// Backward compatibility
+	messages: Message[]; // Current thread messages
+
+	// Thread management methods
+	createThread: (threadId?: string, name?: string) => string;
+	deleteThread: (threadId: string) => void;
+	switchThread: (threadId: string, name?: string) => void;
+	updateThreadName: (threadId: string, name: string) => void;
+	setMainThreadId: (threadId: string) => void;
+
+	// Thread getters
+	getThread: (threadId?: string) => MessageThread | undefined;
+	getThreadMessages: (threadId?: string) => Message[];
+	getAllThreadIds: () => string[];
+	getCurrentThreadId: () => string;
+
+	// Thread-aware message operations
+	setMessages: (messages: Message[], threadId?: string) => void;
+	addMessage: (
+		message: MessageInput,
+		isComplete?: boolean,
+		threadId?: string
+	) => Message;
+	updateMessage: (
+		id: string,
+		updates: Partial<Message>,
+		threadId?: string
+	) => void;
+	deleteMessage: (id: string, threadId?: string) => void;
+	clearMessages: (threadId?: string) => void;
+}
+```
+
+### Thread Safety
+
+<Warning>
+	Thread operations are designed to be safe: - Cannot delete the default thread
+	(`DEFAULT_THREAD_ID`) - Cannot delete the currently active thread - Switching
+	to non-existent threads creates them automatically - All operations ensure
+	thread existence before proceeding
+</Warning>
+
+## Storage Integration
+
+Threads integrate with Cedar's storage system for persistence:
+
+```typescript
+// Storage adapter interface supports threads
+interface MessageStorageAdapter {
+	createThread?: (
+		userId: string,
+		threadId: string,
+		meta: MessageThreadMeta
+	) => Promise<void>;
+	listThreads?: (userId: string) => Promise<MessageThreadMeta[]>;
+	// ... other methods
+}
+```
+
+### Auto-Thread Creation
+
+When using storage adapters, Cedar can automatically create threads:
+
+```typescript
+// In messageStorage.ts - automatically creates a thread if none exist
+const loadAndSelectThreads = async (
+	userId: string,
+	autoCreateThread: boolean = true
+) => {
+	if (threads.length === 0 && autoCreateThread) {
+		const newThreadId = `thread-${Date.now()}-${Math.random()
+			.toString(36)
+			.substring(2, 9)}`;
+		await adapter.createThread(userId, newThreadId, {
+			id: newThreadId,
+			title: 'New Chat',
+			updatedAt: new Date().toISOString(),
+		});
+	}
+};
+```
+
+## Best Practices
+
+### Thread Management
+
+<Tip>
+**Thread Naming**: Always provide meaningful names when creating threads to improve user experience:
+
+```tsx
+const threadId = createThread(undefined, 'Product Discussion');
+```
+
+</Tip>
+
+### Memory Management
+
+<Check>
+**Efficient Updates**: The thread system uses memoization to prevent unnecessary re-renders:
+
+```tsx
+// threadIds is memoized in useThreadController
+const threadIds = useMemo(() => Object.keys(threadMap), [threadMap]);
+```
+
+</Check>
+
+### Error Handling
+
+<Warning>
+**Safe Deletion**: Always check if a thread can be deleted before attempting:
+
+```tsx
+const handleDelete = (threadId: string) => {
+	if (threadId === DEFAULT_THREAD_ID || threadId === currentThreadId) {
+		console.warn('Cannot delete this thread');
+		return;
+	}
+	deleteThread(threadId);
+};
+```
+
+</Warning>
+
+## Migration from Single Thread
+
+Existing Cedar applications automatically work with the thread system:
+
+<Steps>
+<Step title="Backward Compatibility">
+  The `messages` property continues to work and reflects the current thread's messages.
+</Step>
+
+<Step title='Gradual Migration'>
+	You can gradually adopt thread-specific operations: ```tsx // Old way (still
+	works) const messages = useCedarStore(state => state.messages); // New way
+	(thread-aware) const messages = useCedarStore(state =>
+	state.getThreadMessages()); ```
+</Step>
+
+<Step title="Enhanced Features">
+  Add thread management UI when ready:
+  
+  ```tsx
+  import { ChatThreadController } from 'cedar-os-components';
+  
+  // Add to your chat interface
+  <ChatThreadController onThreadChange={handleThreadChange} />
+  ```
+</Step>
+</Steps>
+
+## Examples
+
+### Complete Thread Management
+
+```tsx
+import React from 'react';
+import { useThreadController, useCedarStore } from 'cedar-os';
+import { ChatThreadController } from 'cedar-os-components';
+
+function AdvancedChatInterface() {
+	const { currentThreadId, threadIds } = useThreadController();
+	const messages = useCedarStore((state) => state.messages);
+	const addMessage = useCedarStore((state) => state.addMessage);
+
+	const handleSendMessage = (content: string) => {
+		addMessage({
+			role: 'user',
+			content,
+		});
+	};
+
+	const handleThreadChange = (threadId: string) => {
+		console.log(`Switched to thread: ${threadId}`);
+	};
+
+	return (
+		<div className='chat-interface'>
+			<div className='chat-header'>
+				<ChatThreadController
+					onThreadChange={handleThreadChange}
+					className='thread-controls'
+				/>
+				<span>Thread: {currentThreadId}</span>
+			</div>
+
+			<div className='messages'>
+				{messages.map((msg) => (
+					<div key={msg.id} className={`message ${msg.role}`}>
+						{msg.content}
+					</div>
+				))}
+			</div>
+
+			<div className='thread-info'>Total threads: {threadIds.length}</div>
+		</div>
+	);
+}
+```
+
+### Custom Thread UI
+
+```tsx
+import React, { useState } from 'react';
+import { useThreadController } from 'cedar-os';
+
+function CustomThreadManager() {
+	const [newThreadName, setNewThreadName] = useState('');
+	const {
+		currentThreadId,
+		threadIds,
+		createThread,
+		switchThread,
+		deleteThread,
+		updateThreadName,
+	} = useThreadController();
+
+	const handleCreateThread = () => {
+		if (newThreadName.trim()) {
+			const threadId = createThread(undefined, newThreadName.trim());
+			switchThread(threadId);
+			setNewThreadName('');
+		}
+	};
+
+	return (
+		<div className='custom-thread-manager'>
+			<div className='create-thread'>
+				<input
+					type='text'
+					value={newThreadName}
+					onChange={(e) => setNewThreadName(e.target.value)}
+					placeholder='New thread name'
+				/>
+				<button onClick={handleCreateThread}>Create</button>
+			</div>
+
+			<div className='thread-list'>
+				{threadIds.map((threadId) => (
+					<div
+						key={threadId}
+						className={`thread-item ${
+							threadId === currentThreadId ? 'active' : ''
+						}`}>
+						<span onClick={() => switchThread(threadId)}>
+							Thread {threadId.slice(0, 8)}
+						</span>
+						{threadId !== 'DEFAULT_THREAD_ID' && (
+							<button onClick={() => deleteThread(threadId)}>×</button>
+						)}
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+```
+
+The thread management system provides a robust foundation for organizing conversations while maintaining backward compatibility with existing Cedar applications.

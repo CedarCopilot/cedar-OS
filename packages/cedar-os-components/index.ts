@@ -82,3 +82,6 @@ export type {
 	CommandBarGroup,
 	CommandBarContents,
 } from './CommandBar';
+
+// Threads
+export { ChatThreadController } from './threads/ChatThreadController';

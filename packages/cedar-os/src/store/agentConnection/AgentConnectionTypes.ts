@@ -79,10 +79,12 @@ export type BaseParams<
 // Standardized providers have fixed APIs (no custom context data)
 export interface OpenAIParams extends BaseParams {
 	model: string;
+	messages?: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
 }
 
 export interface AnthropicParams extends BaseParams {
 	model: string;
+	messages?: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
 }
 
 export interface AISDKParams extends BaseParams {

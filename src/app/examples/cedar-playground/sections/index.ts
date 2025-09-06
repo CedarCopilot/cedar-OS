@@ -7,3 +7,4 @@ export { DiffHistorySection } from './DiffHistorySection';
 export { TextLengthSection } from './TextLengthSection';
 export { SubscribedStatesSection } from './SubscribedStatesSection';
 export { FrontendToolsSection } from './FrontendToolsSection';
+export { ThreadTestingSection } from './ThreadTestingSection';
