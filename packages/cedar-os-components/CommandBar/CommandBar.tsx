@@ -278,7 +278,6 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 			// Override Enter key handling if we have a selected item and conditions are met
 			if (
 				event.key === 'Enter' &&
-				!event.metaKey && // Don't intercept cmd+enter (let spells handle it)
 				!event.ctrlKey && // Don't intercept ctrl+enter (let spells handle it)
 				!event.altKey && // Don't intercept alt+enter (let spells handle it)
 				!event.shiftKey && // Don't intercept shift+enter (let spells handle it)
@@ -287,8 +286,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				allItemsForNavigation[selectedIndex]
 			) {
 				// Prevent editor's default Enter handling
-				event.preventDefault();
-				event.stopPropagation();
+				if (!event.metaKey) {
+					event.preventDefault();
+					event.stopPropagation();
+				}
 				setBaselineMessageIndex(messages.length - 1);
 				const selectedItem = allItemsForNavigation[selectedIndex];
 				handleItemSelect(selectedItem);

@@ -635,7 +635,7 @@ function SelectedNodesPanel() {
 		}),
 		{
 			// Dynamic icons based on node status
-			icon: (item: Node<FeatureNodeData>) => {
+			icon: (item) => {
 				const status = item?.data?.status;
 				switch (status) {
 					case 'done':
@@ -653,11 +653,17 @@ function SelectedNodesPanel() {
 			color: '#8B5CF6', // Purple color for selected nodes
 			labelField: (item: Node<FeatureNodeData>) => item?.data?.title,
 			// Only show nodes that are not in backlog status in chat context
-			showInChat: (entry: { data: unknown }) => {
+			showInChat: (entry) => {
 				const node = entry.data as Node<FeatureNodeData>;
 				return node?.data?.status !== 'backlog';
 			},
 			order: 2,
+			// Collapse into a single badge when more than 5 nodes are selected
+			collapse: {
+				threshold: 5,
+				label: '{count} Selected Nodes',
+				icon: <Box />,
+			},
 		}
 	);
 
