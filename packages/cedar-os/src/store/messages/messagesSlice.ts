@@ -22,7 +22,7 @@ import {
 export type MessagesSlice = MessageStorageState & {
 	// === CORE STATE ===
 	// Everything is thread-based now
-	threadMap: MessageThreadMap; // Renamed from messageThreads to avoid conflict
+	threadMap: MessageThreadMap;
 	mainThreadId: string; // Always has a value, defaults to DEFAULT_THREAD_ID
 
 	// Processing and UI state
@@ -112,15 +112,9 @@ export const createMessagesSlice: StateCreator<
 		...getMessageStorageState(set, get),
 
 		// === CORE STATE ===
-		threadMap: {
-			[DEFAULT_THREAD_ID]: {
-				id: DEFAULT_THREAD_ID,
-				name: 'Main Chat',
-				lastLoaded: new Date().toISOString(),
-				messages: [],
-			},
-		},
-		mainThreadId: DEFAULT_THREAD_ID,
+		// Start with empty threadMap - threads will be created during initialization
+		threadMap: {},
+		mainThreadId: '',
 		isProcessing: false,
 		showChat: false,
 		messageRenderers: initializeMessageRendererRegistry(
@@ -156,6 +150,7 @@ export const createMessagesSlice: StateCreator<
 			threadId?: string
 		): Message => {
 			const tid = threadId || get().mainThreadId;
+			ensureThread(tid); // Ensure thread exists before adding message
 
 			const newMessage: Message = {
 				...messageData,
@@ -402,6 +397,10 @@ export const createMessagesSlice: StateCreator<
 					lastLoaded: new Date().toISOString(),
 					messages: [],
 				};
+
+				if (!threadExists || threadToUse.messages.length === 0) {
+					get().initializeChat({ threadId });
+				}
 
 				return {
 					...state,

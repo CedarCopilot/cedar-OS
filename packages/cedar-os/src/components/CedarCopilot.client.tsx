@@ -88,7 +88,16 @@ export function CedarCopilotClient({
 		// Only initialize if we have a userId and either:
 		// 1. Haven't initialized yet, or
 		// 2. The threadId has actually changed
-		if (cedarUserId && (!hasInitializedRef.current || threadIdChanged)) {
+		if (
+			cedarUserId &&
+			(!hasInitializedRef.current || threadIdChanged) &&
+			messageStorage
+		) {
+			if (!useCedarStore.getState().messageStorageAdapter) {
+				// Ensure message storage adapter is set before calling initializeChat
+				useCedarStore.getState().setMessageStorageAdapter(messageStorage);
+			}
+
 			// Call initializeChat and only mark as initialized after success
 			useCedarStore
 				.getState()
@@ -106,13 +115,7 @@ export function CedarCopilotClient({
 					console.error('Failed to initialize chat:', error);
 				});
 		}
-	}, [cedarUserId, threadId]);
-
-	// Combined message storage initialization and updates
-	useEffect(() => {
-		if (!messageStorage) return;
-		useCedarStore.getState().setMessageStorageAdapter(messageStorage);
-	}, [messageStorage]);
+	}, [cedarUserId, threadId, messageStorage]);
 
 	// Response processors
 	useEffect(() => {
