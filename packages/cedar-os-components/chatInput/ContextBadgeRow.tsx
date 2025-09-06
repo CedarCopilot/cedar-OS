@@ -144,9 +144,6 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 				keyCollapseConfig &&
 				visibleEntries.length > keyCollapseConfig.threshold
 			) {
-				console.log(
-					`[ContextBadgeRow] COLLAPSING ${key}: ${visibleEntries.length} entries > threshold ${keyCollapseConfig.threshold}`
-				);
 				const firstEntry = entries[0];
 				// Create collapsed badge
 				const collapsedLabel =
@@ -177,14 +174,6 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 					elements.push(renderContextBadge(key, entry));
 				});
 			} else {
-				// Render all entries individually
-				console.log(
-					`[ContextBadgeRow] NOT collapsing ${key}: visible=${
-						visibleEntries.length
-					}, hasConfig=${!!keyCollapseConfig}, threshold=${
-						keyCollapseConfig?.threshold
-					}`
-				);
 				entries.forEach((entry) => {
 					elements.push(renderContextBadge(key, entry));
 				});

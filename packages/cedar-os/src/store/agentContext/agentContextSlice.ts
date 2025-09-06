@@ -166,10 +166,21 @@ export interface AgentContextSlice {
 	unregisterMentionProvider: (providerId: string) => void;
 	getMentionProvidersByTrigger: (trigger: string) => MentionProvider[];
 
-	// Collapsing configuration storage
-	collapsingConfigs: Map<string, boolean | number>;
-	setCollapsingConfig: (key: string, config: boolean | number) => void;
-	removeCollapsingConfig: (key: string) => void;
+	// Collapsing configuration storage with reference counting
+	collapsingConfigs: Map<
+		string,
+		{ threshold: number; label?: string; icon?: ReactNode }
+	>;
+	collapsingConfigRefs: Map<string, Set<string>>; // Track which components are using each config
+	setCollapsingConfig: (
+		key: string,
+		config:
+			| boolean
+			| number
+			| { threshold: number; label?: string; icon?: ReactNode },
+		componentId: string
+	) => void;
+	removeCollapsingConfig: (key: string, componentId: string) => void;
 
 	// New stringify functions
 	stringifyEditor: () => string;
@@ -198,6 +209,7 @@ export const createAgentContextSlice: StateCreator<
 	additionalContext: {},
 	mentionProviders: new Map(),
 	collapsingConfigs: new Map(),
+	collapsingConfigRefs: new Map(),
 
 	setChatInputContent: (content) => {
 		set({ chatInputContent: content });
@@ -360,19 +372,62 @@ export const createAgentContextSlice: StateCreator<
 		);
 	},
 
-	setCollapsingConfig: (key, config) => {
+	setCollapsingConfig: (key, config, componentId) => {
 		set((state) => {
 			const newConfigs = new Map(state.collapsingConfigs);
-			newConfigs.set(key, config);
-			return { collapsingConfigs: newConfigs };
+
+			// Normalize the config to the expected object structure
+			let normalizedConfig: {
+				threshold: number;
+				label?: string;
+				icon?: ReactNode;
+			};
+			if (typeof config === 'boolean') {
+				normalizedConfig = { threshold: 5 }; // Default threshold for boolean true
+			} else if (typeof config === 'number') {
+				normalizedConfig = { threshold: config };
+			} else {
+				normalizedConfig = config;
+			}
+
+			newConfigs.set(key, normalizedConfig);
+			const newRefs = new Map(state.collapsingConfigRefs);
+			const refs = newRefs.get(key) || new Set();
+			refs.add(componentId);
+			newRefs.set(key, refs);
+			return {
+				collapsingConfigs: newConfigs,
+				collapsingConfigRefs: newRefs,
+			};
 		});
 	},
 
-	removeCollapsingConfig: (key) => {
+	removeCollapsingConfig: (key, componentId) => {
 		set((state) => {
-			const newConfigs = new Map(state.collapsingConfigs);
-			newConfigs.delete(key);
-			return { collapsingConfigs: newConfigs };
+			const newRefs = new Map(state.collapsingConfigRefs);
+			const refs = newRefs.get(key);
+			if (refs) {
+				refs.delete(componentId);
+				if (refs.size === 0) {
+					// Only remove the config when no components are using it
+					newRefs.delete(key);
+					const newConfigs = new Map(state.collapsingConfigs);
+					newConfigs.delete(key);
+					return {
+						collapsingConfigs: newConfigs,
+						collapsingConfigRefs: newRefs,
+					};
+				} else {
+					// Keep the config but update refs
+					newRefs.set(key, refs);
+					return {
+						collapsingConfigs: state.collapsingConfigs,
+						collapsingConfigRefs: newRefs,
+					};
+				}
+			}
+			// No refs found, return unchanged state
+			return state;
 		});
 	},
 
@@ -555,8 +610,15 @@ export function useSubscribeStateToAgentContext<T>(
 		order?: number;
 		/** If false, the generated context entries will not be rendered as badges in the chat UI. Can also be a function to filter specific entries. */
 		showInChat?: boolean | ((entry: ContextEntry) => boolean);
-		/** Collapse multiple entries into a single badge. Can be boolean (default threshold 5) or number (custom threshold) */
-		collapse?: boolean | number;
+		/** Collapse multiple entries into a single badge. Can be boolean (default threshold 5), number (custom threshold), or object with full configuration */
+		collapse?:
+			| boolean
+			| number
+			| {
+					threshold: number;
+					label?: string;
+					icon?: ReactNode;
+			  };
 	}
 ): void {
 	const updateAdditionalContext = useCedarStore(
@@ -564,6 +626,12 @@ export function useSubscribeStateToAgentContext<T>(
 	);
 	const setCollapsingConfig = useCedarStore((s) => s.setCollapsingConfig);
 	const removeCollapsingConfig = useCedarStore((s) => s.removeCollapsingConfig);
+
+	// Generate a unique component ID for this hook instance
+	const componentId = useMemo(
+		() => `${stateKey}-${Math.random().toString(36).substr(2, 9)}`,
+		[stateKey]
+	);
 
 	// Subscribe to the cedar state value and check if state exists
 	const stateExists = useCedarStore((s) => stateKey in s.registeredStates);
@@ -624,21 +692,39 @@ export function useSubscribeStateToAgentContext<T>(
 	// Manage collapsing configuration for each context key
 	useEffect(() => {
 		if (options?.collapse && Object.keys(mappedData).length > 0) {
-			// Store collapsing config for each context key from mapFn result
-			Object.keys(mappedData).forEach((contextKey) => {
-				setCollapsingConfig(contextKey, options.collapse!);
+			// Determine the collapse threshold based on config type
+			let threshold: number;
+			if (typeof options.collapse === 'boolean') {
+				threshold = 5; // Default threshold for boolean true
+			} else if (typeof options.collapse === 'number') {
+				threshold = options.collapse;
+			} else {
+				threshold = options.collapse.threshold;
+			}
+
+			// Store collapsing config only for context keys that exceed the threshold
+			Object.entries(mappedData).forEach(([contextKey, value]) => {
+				const entries = Array.isArray(value) ? value : [value];
+				const entryCount = entries.length;
+
+				if (entryCount > threshold) {
+					setCollapsingConfig(contextKey, options.collapse!, componentId);
+				} else {
+					// Remove config if it exists but threshold is no longer met
+					removeCollapsingConfig(contextKey, componentId);
+				}
 			});
 		} else if (!options?.collapse) {
 			// Remove collapsing config for all context keys if not provided
 			Object.keys(mappedData).forEach((contextKey) => {
-				removeCollapsingConfig(contextKey);
+				removeCollapsingConfig(contextKey, componentId);
 			});
 		}
 
 		// Cleanup on unmount
 		return () => {
 			Object.keys(mappedData).forEach((contextKey) => {
-				removeCollapsingConfig(contextKey);
+				removeCollapsingConfig(contextKey, componentId);
 			});
 		};
 	}, [
@@ -646,6 +732,7 @@ export function useSubscribeStateToAgentContext<T>(
 		options?.collapse,
 		setCollapsingConfig,
 		removeCollapsingConfig,
+		componentId,
 	]);
 }
 
