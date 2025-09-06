@@ -276,7 +276,7 @@ export function getMessageStorageState(
 					.substring(2, 9)}`;
 				const newMeta: MessageThreadMeta = {
 					id: newThreadId,
-					title: 'New Chat',
+					title: 'New Thread',
 					updatedAt: new Date().toISOString(),
 				};
 				try {
