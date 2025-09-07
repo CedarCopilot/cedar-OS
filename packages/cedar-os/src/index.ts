@@ -38,6 +38,7 @@ export {
 	useDiffState,
 	useDiffStateOperations,
 	useDiffStateHelpers,
+	useControlledDiffState,
 } from '@/store/diffHistoryStateSlice';
 
 // Export state slice types

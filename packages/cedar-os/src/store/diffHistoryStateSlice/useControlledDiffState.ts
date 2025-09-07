@@ -129,22 +129,21 @@ export function useControlledDiffState<T extends BasicStateValue>(
 	const effectiveSchema =
 		options?.schema ?? (z.any() as unknown as ZodSchema<T>);
 
-	// Get store functions
-	const store = useCedarStore();
-	const {
-		registerDiffState,
-		getComputedState,
-		getDiffHistoryState,
-		newDiffState: newDiffStateFn,
-		setDiffState,
-		undo: undoFn,
-		redo: redoFn,
-		acceptAllDiffs: acceptFn,
-		rejectAllDiffs: rejectFn,
-		acceptDiff: acceptDiffFn,
-		rejectDiff: rejectDiffFn,
-		executeDiffSetter: executeDiffSetterFn,
-	} = store;
+	// Get store functions individually to avoid subscribing to all store changes
+	const registerDiffState = useCedarStore((state) => state.registerDiffState);
+	const getComputedState = useCedarStore((state) => state.getComputedState);
+	const getDiffHistoryState = useCedarStore(
+		(state) => state.getDiffHistoryState
+	);
+	const newDiffStateFn = useCedarStore((state) => state.newDiffState);
+	const setDiffState = useCedarStore((state) => state.setDiffState);
+	const undoFn = useCedarStore((state) => state.undo);
+	const redoFn = useCedarStore((state) => state.redo);
+	const acceptFn = useCedarStore((state) => state.acceptAllDiffs);
+	const rejectFn = useCedarStore((state) => state.rejectAllDiffs);
+	const acceptDiffFn = useCedarStore((state) => state.acceptDiff);
+	const rejectDiffFn = useCedarStore((state) => state.rejectDiff);
+	const executeDiffSetterFn = useCedarStore((state) => state.executeDiffSetter);
 
 	// Use a ref to track if we've already registered
 	const hasRegistered = useRef(false);

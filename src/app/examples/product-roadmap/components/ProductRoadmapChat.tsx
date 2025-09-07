@@ -36,7 +36,7 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 	showThinking = true,
 	stream = true,
 }) => {
-	// Use diff state helpers for nodes state
+	// Use controlled diff state helpers for nodes state
 	const { undo, redo } = useDiffStateHelpers<unknown[]>('nodes');
 
 	// Check if there are any nodes with diffs

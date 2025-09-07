@@ -44,8 +44,7 @@ import {
 	ActivationMode,
 	addDiffToArrayObjs,
 	Hotkey,
-	useDiffStateHelpers,
-	useRegisterDiffState,
+	useControlledDiffState,
 	useCedarState,
 	HumanInTheLoopState,
 	useRegisterState,
@@ -91,50 +90,14 @@ function FlowCanvas() {
 	const initialMount = React.useRef(true);
 	const saveTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	// Get diff state operations and computed nodes
+	// Use controlled diff state for nodes
 	const {
-		computedValue: computedNodes,
+		state: computedNodes,
 		undo,
 		redo,
-	} = useDiffStateHelpers<Node<FeatureNodeData>[]>('nodes');
-
-	// Add keyboard listeners for undo/redo
-	React.useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			// Undo: Ctrl+Z (or Cmd+Z on Mac)
-			if (
-				(event.ctrlKey || event.metaKey) &&
-				event.key === 'z' &&
-				!event.shiftKey
-			) {
-				event.preventDefault();
-				if (undo()) {
-					console.log('Undo performed on nodes');
-				}
-			}
-			// Redo: Ctrl+Y or Ctrl+Shift+Z (or Cmd+Y or Cmd+Shift+Z on Mac)
-			else if (
-				((event.ctrlKey || event.metaKey) && event.key === 'y') ||
-				((event.ctrlKey || event.metaKey) &&
-					event.shiftKey &&
-					event.key === 'z')
-			) {
-				event.preventDefault();
-				if (redo()) {
-					console.log('Redo performed on nodes');
-				}
-			}
-		};
-
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [undo, redo]);
-
-	// Register states using the diff-aware hook
-	useRegisterDiffState({
-		value: nodes,
-		setValue: setNodes,
-		key: 'nodes',
+		setState: setNodesState,
+		newDiffState: setNodesDiff,
+	} = useControlledDiffState<Node<FeatureNodeData>[]>('nodes', [], {
 		description: 'Product roadmap nodes',
 		computeState: (oldState, newState) =>
 			addDiffToArrayObjs(oldState, newState, 'id', '/data', {
@@ -343,6 +306,38 @@ function FlowCanvas() {
 		},
 	});
 
+	// Add keyboard listeners for undo/redo
+	React.useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			// Undo: Ctrl+Z (or Cmd+Z on Mac)
+			if (
+				(event.ctrlKey || event.metaKey) &&
+				event.key === 'z' &&
+				!event.shiftKey
+			) {
+				event.preventDefault();
+				if (undo()) {
+					console.log('Undo performed on nodes');
+				}
+			}
+			// Redo: Ctrl+Y or Ctrl+Shift+Z (or Cmd+Y or Cmd+Shift+Z on Mac)
+			else if (
+				((event.ctrlKey || event.metaKey) && event.key === 'y') ||
+				((event.ctrlKey || event.metaKey) &&
+					event.shiftKey &&
+					event.key === 'z')
+			) {
+				event.preventDefault();
+				if (redo()) {
+					console.log('Redo performed on nodes');
+				}
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, [undo, redo]);
+
 	useSubscribeStateToAgentContext(
 		'nodes',
 		(nodes) => ({
@@ -410,11 +405,23 @@ function FlowCanvas() {
 
 	// Fetch initial data (only on mount)
 	React.useEffect(() => {
-		getNodes().then(setNodes);
+		getNodes().then((fetchedNodes) => {
+			setNodes(fetchedNodes);
+			setNodesState(fetchedNodes); // Initialize controlled diff state
+		});
 		getEdges().then(setEdges);
 	}, []); // Empty dependency array - only run on mount
 
-	// Custom handler for node changes that intercepts deletions
+	// Sync nodes from ReactFlow to controlled diff state (but only for non-position changes)
+	React.useEffect(() => {
+		if (nodes.length > 0) {
+			// Only update if the nodes have actually changed in a meaningful way
+			// This prevents infinite loops and only syncs non-position changes
+			setNodesState(nodes);
+		}
+	}, [nodes, setNodesState]);
+
+	// Custom handler for node changes that intercepts deletions and position changes
 	const handleNodesChange = React.useCallback(
 		async (changes: NodeChange[]) => {
 			// Check if any changes are deletions
@@ -437,10 +444,34 @@ function FlowCanvas() {
 				});
 			}
 
-			// Apply all changes (including deletions) to local state
+			// Filter out position changes - they will be handled by onNodeDragStop
+			const nonPositionChanges = changes.filter(
+				(change) => change.type !== 'position'
+			);
+
+			// Apply all changes to local ReactFlow state first
 			onNodesChange(changes);
+
+			// For non-position changes, also update the diff state
+			if (nonPositionChanges.length > 0) {
+				// We need to get the updated nodes after applying the changes
+				// This will be handled by the useEffect that syncs nodes to diff state
+			}
 		},
 		[onNodesChange, setEdges]
+	);
+
+	// Handle node drag stop - this is where we update positions in diff state
+	const handleNodeDragStop = React.useCallback(
+		(event: React.MouseEvent, node: Node<FeatureNodeData>) => {
+			// Update the position in the controlled diff state
+			setNodesDiff(
+				computedNodes.map((n) =>
+					n.id === node.id ? { ...n, position: node.position } : n
+				)
+			);
+		},
+		[computedNodes, setNodesDiff]
 	);
 
 	// Persist changes with loading/saved indicator (debounced)
@@ -568,6 +599,7 @@ function FlowCanvas() {
 				onConnect={onConnect}
 				onEdgeClick={onEdgeClick}
 				onEdgeDoubleClick={onEdgeDoubleClick}
+				onNodeDragStop={handleNodeDragStop}
 				connectionLineType={ConnectionLineType.SmoothStep}
 				defaultEdgeOptions={{
 					type: 'simplebezier',
