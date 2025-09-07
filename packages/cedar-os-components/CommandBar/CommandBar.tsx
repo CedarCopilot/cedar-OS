@@ -175,12 +175,33 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 		return null;
 	}, [messages, showLatestMessage]);
 
+	// Check if there are any user messages between baseline and latest message
+	const hasUserMessagesSinceBaseline = React.useMemo(() => {
+		if (!latestMessage) return false;
+		const latestMessageIndex = messages.findIndex(
+			(m) => m.id === latestMessage.id
+		);
+
+		// Check if there are any user messages between baselineMessageIndex and latestMessageIndex
+		for (let i = baselineMessageIndex + 2; i < latestMessageIndex; i++) {
+			if (messages[i] && messages[i].role === 'user') {
+				return true;
+			}
+		}
+		return false;
+	}, [latestMessage, messages, baselineMessageIndex]);
+
 	// Check if the latest message is hidden by the baseline
 	const isLatestMessageHidden = React.useMemo(() => {
 		if (!latestMessage) return false;
 		const messageIndex = messages.findIndex((m) => m.id === latestMessage.id);
-		return messageIndex <= baselineMessageIndex;
-	}, [latestMessage, messages, baselineMessageIndex]);
+		return messageIndex <= baselineMessageIndex || hasUserMessagesSinceBaseline;
+	}, [
+		latestMessage,
+		messages,
+		baselineMessageIndex,
+		hasUserMessagesSinceBaseline,
+	]);
 
 	// Determine which message to show based on baseline and force display
 	const messageToShow = React.useMemo(() => {
@@ -257,7 +278,6 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 			// Override Enter key handling if we have a selected item and conditions are met
 			if (
 				event.key === 'Enter' &&
-				!event.metaKey && // Don't intercept cmd+enter (let spells handle it)
 				!event.ctrlKey && // Don't intercept ctrl+enter (let spells handle it)
 				!event.altKey && // Don't intercept alt+enter (let spells handle it)
 				!event.shiftKey && // Don't intercept shift+enter (let spells handle it)
@@ -266,8 +286,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				allItemsForNavigation[selectedIndex]
 			) {
 				// Prevent editor's default Enter handling
-				event.preventDefault();
-				event.stopPropagation();
+				if (!event.metaKey) {
+					event.preventDefault();
+					event.stopPropagation();
+				}
 				setBaselineMessageIndex(messages.length - 1);
 				const selectedItem = allItemsForNavigation[selectedIndex];
 				handleItemSelect(selectedItem);
@@ -448,7 +470,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					editor?.commands.focus();
 				}
 			} else if (
-				(e.key === 'ArrowRight' || e.key === 'ArrowDown') &&
+				e.key === 'ArrowDown' &&
 				isFocused &&
 				allItemsForNavigation.length > 0
 			) {
@@ -457,7 +479,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 					prev < allItemsForNavigation.length - 1 ? prev + 1 : 0
 				);
 			} else if (
-				(e.key === 'ArrowLeft' || e.key === 'ArrowUp') &&
+				e.key === 'ArrowUp' &&
 				isFocused &&
 				allItemsForNavigation.length > 0
 			) {
@@ -513,6 +535,27 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 						);
 						if (index >= 0) {
 							setSelectedIndex(index);
+						}
+					}}
+					onKeyDown={(e) => {
+						// Only prevent cmdk's navigation when we're in the fixed bottom group
+						if (
+							isFocused &&
+							(e.key === 'ArrowDown' || e.key === 'ArrowUp') &&
+							selectedIndex >= 0 &&
+							allItemsForNavigation.length > 0
+						) {
+							const selectedItem = allItemsForNavigation[selectedIndex];
+							const isInFixedBottomGroup =
+								filteredContents.fixedBottomGroup?.items.some(
+									(item) => item.id === selectedItem?.id
+								);
+
+							if (isInFixedBottomGroup) {
+								// Let our custom navigation handle it for fixed bottom group
+								e.preventDefault();
+								e.stopPropagation();
+							}
 						}
 					}}>
 					<div className='flex w-full flex-col gap-2 px-3 py-2'>

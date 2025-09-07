@@ -53,7 +53,7 @@ export type AdditionalContextParam<
 export interface ContextEntry {
 	id: string;
 	source: 'mention' | 'subscription' | 'manual' | 'function';
-	data: unknown;
+	data: any;
 	metadata?: {
 		label?: string;
 		icon?: ReactNode;

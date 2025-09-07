@@ -190,18 +190,6 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 		},
 		editorProps: {
 			handleKeyDown: (view, event) => {
-				if (event.key === 'Enter' && event.shiftKey) {
-					return false;
-				}
-
-				if (
-					(event.key === 'a' && (event.metaKey || event.ctrlKey)) ||
-					event.key === 'Delete'
-				) {
-					event.stopPropagation();
-					return false;
-				}
-
 				if (event.key === 'Enter' && !event.shiftKey) {
 					const { state } = view;
 

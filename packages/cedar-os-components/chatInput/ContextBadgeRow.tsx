@@ -1,7 +1,6 @@
 import {
 	ContextEntry,
 	useCedarStore,
-	useRenderAdditionalContext,
 	withClassName,
 	type CedarEditor as Editor,
 } from 'cedar-os';
@@ -25,6 +24,7 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 	const removeContextEntry = useCedarStore((s) => s.removeContextEntry);
 	const mentionProviders = useCedarStore((s) => s.mentionProviders);
 	const additionalContext = useCedarStore((s) => s.additionalContext);
+	const collapsingConfigs = useCedarStore((s) => s.collapsingConfigs);
 
 	const renderContextBadge = (key: string, entry: ContextEntry) => {
 		// Try to find a provider that might have created this entry
@@ -104,11 +104,9 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 		);
 	};
 
-	// Build renderers dynamically from all registered mention providers
-	// and sort entries by order metadata
-	const contextRenderers = React.useMemo(() => {
-		const renderers: Record<string, (entry: ContextEntry) => React.ReactNode> =
-			{};
+	// Process and render context with collapsing logic
+	const contextElements = React.useMemo(() => {
+		const elements: React.ReactNode[] = [];
 
 		// Create a sorted list of context keys based on their entries' order metadata
 		const contextKeysWithOrder = Object.keys(additionalContext).map((key) => {
@@ -120,25 +118,75 @@ export const ContextBadgeRow: React.FC<ContextBadgeRowProps> = ({ editor }) => {
 				return order !== undefined ? Math.min(min, order) : min;
 			}, Number.MAX_SAFE_INTEGER);
 
-			return { key, order: minOrder };
+			return { key, order: minOrder, entries };
 		});
 
 		// Sort keys by their order
 		contextKeysWithOrder.sort((a, b) => a.order - b.order);
 
-		// Add a renderer for each key in sorted order
-		contextKeysWithOrder.forEach(({ key }) => {
-			const provider = mentionProviders.get(key);
-			if (provider || additionalContext[key]) {
-				renderers[key] = (entry: ContextEntry) =>
-					renderContextBadge(key, entry);
+		// Process each key with collapsing logic
+		contextKeysWithOrder.forEach(({ key, entries }) => {
+			if (!entries.length) return;
+
+			// Filter visible entries
+			const visibleEntries = entries.filter(
+				(entry) => entry.metadata?.showInChat !== false
+			);
+			const hiddenEntries = entries.filter(
+				(entry) => entry.metadata?.showInChat === false
+			);
+
+			// Check for collapsing configuration from store
+			const keyCollapseConfig = collapsingConfigs.get(key);
+
+			// Apply collapsing if configured and threshold exceeded
+			if (
+				keyCollapseConfig &&
+				visibleEntries.length > keyCollapseConfig.threshold
+			) {
+				const firstEntry = entries[0];
+				// Create collapsed badge
+				const collapsedLabel =
+					keyCollapseConfig.label?.replace(
+						'{count}',
+						visibleEntries.length.toString()
+					) || `${visibleEntries.length} Selected`;
+
+				const collapsedEntry: ContextEntry = {
+					id: `${key}-collapsed`,
+					source: 'subscription',
+					data: visibleEntries.map((e) => e.data),
+					metadata: {
+						label: collapsedLabel,
+						icon: keyCollapseConfig.icon || firstEntry?.metadata?.icon,
+						color: firstEntry?.metadata?.color,
+						showInChat: true,
+						isCollapsed: true,
+						originalCount: visibleEntries.length,
+					},
+				};
+
+				// Render the collapsed badge
+				elements.push(renderContextBadge(key, collapsedEntry));
+
+				// Render any hidden entries individually
+				hiddenEntries.forEach((entry) => {
+					elements.push(renderContextBadge(key, entry));
+				});
+			} else {
+				entries.forEach((entry) => {
+					elements.push(renderContextBadge(key, entry));
+				});
 			}
 		});
 
-		return renderers;
-	}, [mentionProviders, additionalContext, renderContextBadge]);
-
-	const contextElements = useRenderAdditionalContext(contextRenderers);
+		return elements;
+	}, [
+		additionalContext,
+		mentionProviders,
+		collapsingConfigs,
+		renderContextBadge,
+	]);
 
 	return (
 		<div id='input-context' className='flex items-center gap-2 flex-wrap'>

@@ -18,11 +18,19 @@ function useSubscribeStateToAgentContext<T>(
 	stateKey: string,
 	mapFn: (state: T) => Record<string, any>,
 	options?: {
-		icon?: ReactNode;
+		icon?: ReactNode | ((item: ElementType<T>) => ReactNode);
 		color?: string;
-		labelField?: string | ((item: unknown) => string);
+		labelField?: string | ((item: ElementType<T>) => string);
 		order?: number;
-		showInChat?: boolean;
+		showInChat?: boolean | ((entry: ContextEntry) => boolean);
+		collapse?:
+			| boolean
+			| number
+			| {
+					threshold: number;
+					label?: string;
+					icon?: ReactNode;
+			  };
 	}
 ): void;
 ```
@@ -32,11 +40,12 @@ function useSubscribeStateToAgentContext<T>(
 - **`stateKey: string`** - The registered state key that we want to subscribe to
 - **`mapFn: (state: T) => Record<string, any>`** - Function that maps your state to context entries
 - **`options`** (optional) - Configuration for visual representation and label extraction:
-  - `icon?: ReactNode` - Icon to display for this context
+  - `icon?: ReactNode | ((item: ElementType<T>) => ReactNode)` - Icon to display for this context. Can be a static React element or a function that returns an icon based on each item
   - `color?: string` - Hex color for visual styling
-  - `labelField?: string | ((item: unknown) => string)` - How to extract labels from your data
+  - `labelField?: string | ((item: ElementType<T>) => string)` - How to extract labels from your data. Can be a field name or a function
   - `order?: number` - Display order for context badges (lower numbers appear first)
-  - `showInChat?: boolean` - Whether to show or hide the state when subscribed to as a context badge in the chat (default = true)
+  - `showInChat?: boolean | ((entry: ContextEntry) => boolean)` - Whether to show context badges in chat. Can be a boolean or a function to filter specific entries (default = true)
+  - `collapse?: boolean | number | { threshold: number; label?: string; icon?: ReactNode }` - Collapse multiple entries into a single badge. Can be boolean (default threshold 5), number (custom threshold), or object with full configuration
 
 ## Basic Usage Example
 
@@ -118,9 +127,32 @@ function SelectedNodesPanel() {
 			})),
 		}),
 		{
-			icon: <Box />,
+			// Dynamic icons based on status
+			icon: (node) => {
+				switch (node.status) {
+					case 'completed':
+						return '✅';
+					case 'in-progress':
+						return '🔄';
+					case 'planned':
+						return '📋';
+					default:
+						return <Box />;
+				}
+			},
 			color: '#8B5CF6', // Purple color for selected nodes
 			labelField: 'title', // Use title field for labels
+			// Only show high priority items in chat
+			showInChat: (entry) => {
+				const node = entry.data;
+				return node.priority === 'high';
+			},
+			// Collapse when more than 3 nodes selected
+			collapse: {
+				threshold: 3,
+				label: '{count} Selected Features',
+				icon: <Box />,
+			},
 		}
 	);
 
@@ -185,6 +217,191 @@ useSubscribeStateToAgentContext(
 		color: '#10B981',
 	}
 );
+```
+
+## Dynamic Icons and Conditional Display
+
+Cedar supports dynamic behavior for both icons and chat display through function-based options. This allows you to customize the appearance and visibility of context entries based on their actual data.
+
+### Dynamic Icon Functions
+
+The `icon` option can accept a function that receives each item and returns an appropriate icon:
+
+```tsx
+import { CheckCircle, Clock, AlertCircle, Archive } from 'lucide-react';
+
+const [tasks, setTasks] = useState([
+	{ id: 1, title: 'Design Review', status: 'completed' },
+	{ id: 2, title: 'Code Implementation', status: 'in-progress' },
+	{ id: 3, title: 'Testing', status: 'pending' },
+	{ id: 4, title: 'Documentation', status: 'archived' },
+]);
+
+useSubscribeStateToAgentContext(
+	'tasks',
+	(taskList) => ({ activeTasks: taskList }),
+	{
+		labelField: 'title',
+		color: '#3B82F6',
+		// Dynamic icon based on task status
+		icon: (task) => {
+			switch (task.status) {
+				case 'completed':
+					return <CheckCircle className='text-green-500' />;
+				case 'in-progress':
+					return <Clock className='text-blue-500' />;
+				case 'pending':
+					return <AlertCircle className='text-yellow-500' />;
+				case 'archived':
+					return <Archive className='text-gray-500' />;
+				default:
+					return <Clock />;
+			}
+		},
+	}
+);
+```
+
+### Conditional Chat Display with showInChat
+
+The `showInChat` option can be a function that determines whether specific entries should appear as badges in the chat UI:
+
+```tsx
+const [products, setProducts] = useState([
+	{ id: 1, name: 'Laptop', category: 'electronics', inStock: true },
+	{ id: 2, name: 'Notebook', category: 'office', inStock: false },
+	{ id: 3, name: 'Phone', category: 'electronics', inStock: true },
+]);
+
+useSubscribeStateToAgentContext(
+	'products',
+	(productList) => ({ inventory: productList }),
+	{
+		labelField: 'name',
+		icon: <Package />,
+		color: '#10B981',
+		// Only show products that are in stock in the chat UI
+		showInChat: (entry) => {
+			const product = entry.data;
+			return product.inStock === true;
+		},
+	}
+);
+```
+
+### Advanced Dynamic Configuration Example
+
+Here's a comprehensive example combining dynamic icons, conditional display, and collapsing from the Product Roadmap demo:
+
+```tsx
+import { Box } from 'lucide-react';
+
+interface FeatureNodeData {
+	title: string;
+	status: 'done' | 'in progress' | 'planned' | 'backlog';
+	priority: 'high' | 'medium' | 'low';
+}
+
+const [selectedNodes, setSelectedNodes] = useState<Node<FeatureNodeData>[]>([]);
+
+useSubscribeStateToAgentContext(
+	'selectedNodes',
+	(nodes) => ({ selectedNodes: nodes }),
+	{
+		// Dynamic icons based on node status
+		icon: (node) => {
+			const status = node?.data?.status;
+			switch (status) {
+				case 'done':
+					return '✅';
+				case 'in progress':
+					return '🔄';
+				case 'planned':
+					return '📋';
+				case 'backlog':
+					return '📝';
+				default:
+					return <Box />;
+			}
+		},
+		color: '#8B5CF6',
+		labelField: (node) => node?.data?.title,
+		// Only show nodes that are not in backlog status in chat context
+		showInChat: (entry) => {
+			const node = entry.data;
+			return node?.data?.status !== 'backlog';
+		},
+		order: 2,
+		// Collapse into a single badge when more than 5 nodes are selected
+		collapse: {
+			threshold: 5,
+			label: '{count} Selected Nodes',
+			icon: <Box />,
+		},
+	}
+);
+```
+
+### Function Parameter Types
+
+When using function-based options, the parameters are strongly typed:
+
+<Tabs>
+<Tab title="Icon Function">
+```tsx
+icon: (item: ElementType<T>) => ReactNode
+```
+
+- **`item`** - Individual item from your data array (or the single item if not an array)
+- **Returns** - Any valid React node (JSX element, string, emoji, etc.)
+  </Tab>
+
+<Tab title="showInChat Function">
+```tsx
+showInChat: (entry: ContextEntry) => boolean
+```
+
+- **`entry`** - Complete context entry with `id`, `source`, `data`, and `metadata`
+- **`entry.data`** - Your original data item
+- **Returns** - `true` to show the badge, `false` to hide it
+  </Tab>
+
+<Tab title="labelField Function">
+```tsx
+labelField: (item: ElementType<T>) => string
+```
+
+- **`item`** - Individual item from your data array
+- **Returns** - String label to display for this item
+    </Tab>
+</Tabs>
+
+### Best Practices for Dynamic Options
+
+1. **Performance**: Dynamic functions are called for each item, so keep them lightweight
+2. **Consistency**: Use consistent logic patterns across your application
+3. **Fallbacks**: Always provide fallback values for unexpected data
+4. **Type Safety**: Leverage TypeScript for better development experience
+
+```tsx
+// ✅ Good: Lightweight with fallbacks
+icon: (task) => {
+	const status = task?.status || 'unknown';
+	const iconMap = {
+		completed: '✅',
+		pending: '⏳',
+		failed: '❌',
+		unknown: '❓',
+	};
+	return iconMap[status];
+},
+
+// ❌ Avoid: Heavy computations or API calls
+icon: (task) => {
+	// Don't do expensive operations here
+	const complexCalculation = performHeavyComputation(task);
+	return getIconFromAPI(complexCalculation); // Async operations won't work
+},
 ```
 
 ### Single Values Support
@@ -357,6 +574,205 @@ useSubscribeStateToAgentContext('appState', mapper, { order: 20 }); // General
 useSubscribeStateToAgentContext('history', mapper, { order: 50 }); // Historical
 useSubscribeStateToAgentContext('debugInfo', mapper, { order: 100 }); // Debug
 ```
+
+## Collapsing Multiple Entries
+
+The `collapse` option allows you to automatically collapse multiple context entries into a single badge when the number of entries exceeds a threshold. This is particularly useful for managing UI clutter when dealing with large datasets.
+
+### Collapse Configuration Types
+
+The `collapse` option supports three different configuration formats:
+
+<Tabs>
+<Tab title="Boolean (Default)">
+Set to `true` to enable collapsing with default settings:
+
+```tsx
+useSubscribeStateToAgentContext(
+	'selectedItems',
+	(items) => ({ selectedItems: items }),
+	{
+		collapse: true, // Uses default threshold of 5
+		icon: <Box />,
+		color: '#3B82F6',
+	}
+);
+```
+
+When `collapse: true`, items will collapse into a single badge when more than 5 entries are present.
+
+</Tab>
+
+<Tab title="Number (Custom Threshold)">
+Specify a custom threshold number:
+
+```tsx
+useSubscribeStateToAgentContext(
+	'notifications',
+	(notifications) => ({ notifications }),
+	{
+		collapse: 10, // Collapse when more than 10 notifications
+		icon: <Bell />,
+		color: '#F59E0B',
+	}
+);
+```
+
+This will collapse entries when the count exceeds the specified number.
+
+</Tab>
+
+<Tab title="Object (Full Configuration)">
+Provide complete control over the collapsed appearance:
+
+```tsx
+useSubscribeStateToAgentContext(
+	'selectedNodes',
+	(nodes) => ({ selectedNodes: nodes }),
+	{
+		collapse: {
+			threshold: 5,
+			label: '{count} Selected Nodes', // {count} will be replaced with actual count
+			icon: <Box />,
+		},
+		color: '#8B5CF6',
+	}
+);
+```
+
+The object format allows you to customize the collapsed badge's label and icon.
+
+</Tab>
+</Tabs>
+
+### Collapse Label Templates
+
+When using the object format, the `label` field supports template variables:
+
+- **`{count}`** - Replaced with the actual number of entries
+- **Static text** - Any other text is displayed as-is
+
+```tsx
+// Examples of label templates
+collapse: {
+	threshold: 3,
+	label: '{count} Items', // Displays "5 Items" when 5 entries
+}
+
+collapse: {
+	threshold: 8,
+	label: 'Multiple Selections ({count})', // Displays "Multiple Selections (12)"
+}
+
+collapse: {
+	threshold: 5,
+	label: 'Batch Selection', // Static label, no count shown
+}
+```
+
+### Real-World Collapse Examples
+
+<CodeGroup>
+```tsx Shopping Cart
+const [cartItems, setCartItems] = useState([
+	{ id: 1, name: 'Laptop', price: 999 },
+	{ id: 2, name: 'Mouse', price: 29 },
+	{ id: 3, name: 'Keyboard', price: 79 },
+	// ... more items
+]);
+
+useSubscribeStateToAgentContext(
+'cart',
+(items) => ({ cartItems: items }),
+{
+labelField: 'name',
+icon: <ShoppingCart />,
+color: '#10B981',
+// Collapse when cart has more than 3 items
+collapse: {
+threshold: 3,
+label: '{count} Items in Cart',
+icon: <ShoppingBag />,
+},
+}
+);
+
+````
+
+```tsx Task Management
+const [selectedTasks, setSelectedTasks] = useState([]);
+
+useSubscribeStateToAgentContext(
+	'selectedTasks',
+	(tasks) => ({ selectedTasks: tasks }),
+	{
+		labelField: 'title',
+		icon: <CheckSquare />,
+		color: '#6366F1',
+		// Simple numeric threshold
+		collapse: 7, // Collapse when more than 7 tasks selected
+	}
+);
+````
+
+```tsx File Selection
+const [selectedFiles, setSelectedFiles] = useState([]);
+
+useSubscribeStateToAgentContext(
+	'selectedFiles',
+	(files) => ({ selectedFiles: files }),
+	{
+		labelField: 'filename',
+		icon: <File />,
+		color: '#EF4444',
+		// Boolean with default behavior
+		collapse: true, // Uses default threshold of 5
+	}
+);
+```
+
+</CodeGroup>
+
+### Dynamic Collapse Behavior
+
+The collapse feature is dynamic and responsive to state changes:
+
+```tsx
+function DynamicCollapseExample() {
+	const [items, setItems] = useState([]);
+
+	useSubscribeStateToAgentContext(
+		'dynamicItems',
+		(itemList) => ({ dynamicItems: itemList }),
+		{
+			collapse: {
+				threshold: 4,
+				label: 'Multiple Items ({count})',
+				icon: <Package />,
+			},
+			icon: <Box />,
+			color: '#8B5CF6',
+		}
+	);
+
+	// When items.length <= 4: Shows individual badges
+	// When items.length > 4: Shows single collapsed badge
+	return (
+		<div>
+			<button onClick={() => setItems([...items, { id: Date.now() }])}>
+				Add Item
+			</button>
+			<ChatInput /> {/* Badges automatically collapse/expand */}
+		</div>
+	);
+}
+```
+
+<Tip>
+	**Performance Tip**: Collapsing is particularly useful for performance when
+	dealing with large datasets, as it reduces the number of DOM elements rendered
+	in the chat UI while still providing all the data to the agent.
+</Tip>
 
 ### Default Label Extraction
 
