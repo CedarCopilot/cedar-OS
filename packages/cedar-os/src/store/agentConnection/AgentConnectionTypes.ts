@@ -274,7 +274,7 @@ export const MastraParamsSchema = <
 ) =>
 	BaseParamsSchema(dataSchemas, extraFieldsSchema).and(
 		z.object({
-			route: z.string(),
+			route: z.string().optional(),
 			resourceId: z.string().optional(),
 			threadId: z.string().optional(),
 		})
