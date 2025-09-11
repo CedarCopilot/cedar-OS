@@ -3,6 +3,8 @@ import type { CedarStore } from '@/store/CedarOSTypes';
 import type {
 	LLMResponse,
 	BaseParams,
+	ResponseProcessor,
+	StructuredResponseType,
 } from '@/store/agentConnection/AgentConnectionTypes';
 
 export interface DebugLogEntry {
@@ -13,19 +15,53 @@ export interface DebugLogEntry {
 		| 'response'
 		| 'error'
 		| 'stream-start'
-		| 'stream-chunk'
-		| 'stream-object'
-		| 'stream-end';
+		| 'stream-complete' // Changed from stream-end to be clearer
+		| 'stream-error' // Added for stream errors
+		| 'handler'; // Added for response processor executions
 	provider?: string;
+	apiRoute?: string; // API route/endpoint (e.g., Mastra route)
+	processorName?: string; // Name of the response processor that handled this
 	data: {
 		params?: BaseParams;
 		response?: LLMResponse;
 		error?: Error;
-		chunk?: string;
-		object?: object;
+		// For consolidated stream data
+		streamContent?: string; // All text chunks concatenated
+		streamObjects?: object[]; // All objects collected
 		completedItems?: (string | object)[];
+		// For handler logs
+		handledObject?: StructuredResponseType;
+		// For tracking handlers within a request/stream
+		handlers?: Array<{
+			processorName: string;
+			handledObject: StructuredResponseType;
+		}>;
 	};
 	duration?: number; // milliseconds for request-response pairs
+}
+
+// Internal tracking for active streams
+interface StreamTracker {
+	streamId: string;
+	startTime: Date;
+	provider?: string;
+	params?: BaseParams;
+	chunks: string[];
+	objects: object[];
+	handlers: Array<{
+		processorName: string;
+		handledObject: StructuredResponseType;
+	}>;
+}
+
+// Internal tracking for active requests (non-streaming)
+interface RequestTracker {
+	requestId: string;
+	startTime: Date;
+	handlers: Array<{
+		processorName: string;
+		handledObject: StructuredResponseType;
+	}>;
 }
 
 export interface DebuggerSlice {
@@ -33,6 +69,9 @@ export interface DebuggerSlice {
 	agentConnectionLogs: DebugLogEntry[];
 	maxLogs: number;
 	isDebugEnabled: boolean;
+	// Internal state for tracking active streams (not exposed)
+	activeStreams: Map<string, StreamTracker>;
+	activeRequests: Map<string, RequestTracker>;
 
 	// Actions
 	logAgentRequest: (params: BaseParams, provider: string) => string; // returns request ID
@@ -44,6 +83,11 @@ export interface DebuggerSlice {
 	logStreamEnd: (
 		streamId: string,
 		completedItems?: (string | object)[]
+	) => void;
+	logResponseProcessorExecution: (
+		obj: StructuredResponseType,
+		processor: ResponseProcessor,
+		requestOrStreamId?: string
 	) => void;
 	clearDebugLogs: () => void;
 	setDebugEnabled: (enabled: boolean) => void;
@@ -60,6 +104,8 @@ export const createDebuggerSlice: StateCreator<
 	agentConnectionLogs: [],
 	maxLogs: 50,
 	isDebugEnabled: true,
+	activeStreams: new Map(),
+	activeRequests: new Map(),
 
 	// Actions
 	logAgentRequest: (params, provider) => {
@@ -68,20 +114,38 @@ export const createDebuggerSlice: StateCreator<
 
 		const requestId = `req_${Date.now()}_${Math.random()
 			.toString(36)
-			.substr(2, 9)}`;
+			.slice(2, 11)}`;
+
+		// Extract API route for supported providers
+		let apiRoute: string | undefined;
+		if (provider === 'mastra' && 'route' in params) {
+			apiRoute = params.route as string;
+		}
+
+		// Initialize request tracker for non-streaming requests
+		const requestTracker: RequestTracker = {
+			requestId,
+			startTime: new Date(),
+			handlers: [],
+		};
+		const newActiveRequests = new Map(state.activeRequests);
+		newActiveRequests.set(requestId, requestTracker);
+
 		const entry: DebugLogEntry = {
 			id: requestId,
 			timestamp: new Date(),
 			type: 'request',
 			provider,
+			apiRoute,
 			data: { params },
 		};
 
 		set((state) => ({
 			agentConnectionLogs: [
-				entry,
 				...state.agentConnectionLogs.slice(0, state.maxLogs - 1),
+				entry,
 			],
+			activeRequests: newActiveRequests,
 		}));
 
 		return requestId;
@@ -96,22 +160,35 @@ export const createDebuggerSlice: StateCreator<
 			(log) => log.id === requestId && log.type === 'request'
 		);
 
+		// Get any handlers that were tracked for this request
+		const requestTracker = state.activeRequests.get(requestId);
+		const handlers = requestTracker?.handlers || [];
+
 		const entry: DebugLogEntry = {
 			id: `res_${requestId}`,
 			timestamp: new Date(),
 			type: 'response',
 			provider: requestLog?.provider,
-			data: { response },
+			apiRoute: requestLog?.apiRoute,
+			data: {
+				response,
+				handlers: handlers.length > 0 ? handlers : undefined,
+			},
 			duration: requestLog
 				? new Date().getTime() - requestLog.timestamp.getTime()
 				: undefined,
 		};
 
+		// Clean up the request tracker
+		const newActiveRequests = new Map(state.activeRequests);
+		newActiveRequests.delete(requestId);
+
 		set((state) => ({
 			agentConnectionLogs: [
-				entry,
 				...state.agentConnectionLogs.slice(0, state.maxLogs - 1),
+				entry,
 			],
+			activeRequests: newActiveRequests,
 		}));
 	},
 
@@ -119,28 +196,74 @@ export const createDebuggerSlice: StateCreator<
 		const state = get();
 		if (!state.isDebugEnabled) return;
 
-		// Find the original request
-		const requestLog = state.agentConnectionLogs.find(
-			(log) => log.id === requestId && log.type === 'request'
-		);
+		// Check if this is a stream error
+		const isStreamError = state.activeStreams.has(requestId);
 
-		const entry: DebugLogEntry = {
-			id: `err_${requestId}`,
-			timestamp: new Date(),
-			type: 'error',
-			provider: requestLog?.provider,
-			data: { error },
-			duration: requestLog
-				? new Date().getTime() - requestLog.timestamp.getTime()
-				: undefined,
-		};
+		if (isStreamError) {
+			// Handle stream error
+			const tracker = state.activeStreams.get(requestId)!;
 
-		set((state) => ({
-			agentConnectionLogs: [
-				entry,
-				...state.agentConnectionLogs.slice(0, state.maxLogs - 1),
-			],
-		}));
+			// Extract API route from tracker params for stream errors
+			let apiRoute: string | undefined;
+			if (
+				tracker.provider === 'mastra' &&
+				tracker.params &&
+				'route' in tracker.params
+			) {
+				apiRoute = tracker.params.route as string;
+			}
+
+			const entry: DebugLogEntry = {
+				id: requestId,
+				timestamp: tracker.startTime,
+				type: 'stream-error',
+				provider: tracker.provider,
+				apiRoute,
+				data: {
+					params: tracker.params,
+					error,
+					streamContent: tracker.chunks.join(''),
+					streamObjects: tracker.objects,
+				},
+				duration: new Date().getTime() - tracker.startTime.getTime(),
+			};
+
+			// Remove from active streams
+			const newActiveStreams = new Map(state.activeStreams);
+			newActiveStreams.delete(requestId);
+
+			set((state) => ({
+				agentConnectionLogs: [
+					...state.agentConnectionLogs.slice(0, state.maxLogs - 1),
+					entry,
+				],
+				activeStreams: newActiveStreams,
+			}));
+		} else {
+			// Handle regular request error
+			const requestLog = state.agentConnectionLogs.find(
+				(log) => log.id === requestId && log.type === 'request'
+			);
+
+			const entry: DebugLogEntry = {
+				id: `err_${requestId}`,
+				timestamp: new Date(),
+				type: 'error',
+				provider: requestLog?.provider,
+				apiRoute: requestLog?.apiRoute,
+				data: { error },
+				duration: requestLog
+					? new Date().getTime() - requestLog.timestamp.getTime()
+					: undefined,
+			};
+
+			set((state) => ({
+				agentConnectionLogs: [
+					...state.agentConnectionLogs.slice(0, state.maxLogs - 1),
+					entry,
+				],
+			}));
+		}
 	},
 
 	logStreamStart: (params, provider) => {
@@ -149,22 +272,26 @@ export const createDebuggerSlice: StateCreator<
 
 		const streamId = `stream_${Date.now()}_${Math.random()
 			.toString(36)
-			.substr(2, 9)}`;
-		const entry: DebugLogEntry = {
-			id: streamId,
-			timestamp: new Date(),
-			type: 'stream-start',
+			.slice(2, 11)}`;
+
+		// Create tracker for this stream
+		const tracker: StreamTracker = {
+			streamId,
+			startTime: new Date(),
 			provider,
-			data: { params },
+			params,
+			chunks: [],
+			objects: [],
+			handlers: [],
 		};
 
-		set((state) => ({
-			agentConnectionLogs: [
-				entry,
-				...state.agentConnectionLogs.slice(0, state.maxLogs - 1),
-			],
-		}));
+		// Add to active streams
+		const newActiveStreams = new Map(state.activeStreams);
+		newActiveStreams.set(streamId, tracker);
 
+		set({ activeStreams: newActiveStreams });
+
+		// Don't log stream-start events anymore, we'll log the complete stream at the end
 		return streamId;
 	},
 
@@ -172,65 +299,161 @@ export const createDebuggerSlice: StateCreator<
 		const state = get();
 		if (!state.isDebugEnabled) return;
 
-		const entry: DebugLogEntry = {
-			id: `chunk_${streamId}_${Date.now()}`,
-			timestamp: new Date(),
-			type: 'stream-chunk',
-			data: { chunk },
-		};
+		const tracker = state.activeStreams.get(streamId);
+		if (!tracker) return;
 
-		set((state) => ({
-			agentConnectionLogs: [
-				entry,
-				...state.agentConnectionLogs.slice(0, state.maxLogs - 1),
-			],
-		}));
+		// Just accumulate the chunk, don't create a log entry
+		tracker.chunks.push(chunk);
 	},
+
 	logStreamObject: (streamId, object) => {
 		const state = get();
 		if (!state.isDebugEnabled) return;
 
-		const entry: DebugLogEntry = {
-			id: `object_${streamId}_${Date.now()}`,
-			timestamp: new Date(),
-			type: 'stream-object',
-			data: { object },
-		};
+		const tracker = state.activeStreams.get(streamId);
+		if (!tracker) return;
 
-		set((state) => ({
-			agentConnectionLogs: [
-				entry,
-				...state.agentConnectionLogs.slice(0, state.maxLogs - 1),
-			],
-		}));
+		// Just accumulate the object, don't create a log entry
+		tracker.objects.push(object);
 	},
 
 	logStreamEnd: (streamId, completedItems) => {
 		const state = get();
 		if (!state.isDebugEnabled) return;
 
-		// Find the original stream start
-		const streamStart = state.agentConnectionLogs.find(
-			(log) => log.id === streamId && log.type === 'stream-start'
-		);
+		const tracker = state.activeStreams.get(streamId);
+		if (!tracker) return;
 
+		// Extract API route from tracker params
+		let apiRoute: string | undefined;
+		if (
+			tracker.provider === 'mastra' &&
+			tracker.params &&
+			'route' in tracker.params
+		) {
+			apiRoute = tracker.params.route as string;
+		}
+
+		// Create a single consolidated log entry for the entire stream
 		const entry: DebugLogEntry = {
-			id: `end_${streamId}`,
-			timestamp: new Date(),
-			type: 'stream-end',
-			provider: streamStart?.provider,
-			data: { completedItems },
-			duration: streamStart
-				? new Date().getTime() - streamStart.timestamp.getTime()
-				: undefined,
+			id: streamId,
+			timestamp: tracker.startTime,
+			type: 'stream-complete',
+			provider: tracker.provider,
+			apiRoute,
+			data: {
+				params: tracker.params,
+				streamContent: tracker.chunks.join(''),
+				streamObjects: tracker.objects,
+				completedItems: completedItems || [
+					...(tracker.chunks.length > 0 ? [tracker.chunks.join('')] : []),
+					...tracker.objects,
+				],
+				handlers: tracker.handlers.length > 0 ? tracker.handlers : undefined,
+			},
+			duration: new Date().getTime() - tracker.startTime.getTime(),
 		};
+
+		// Remove from active streams
+		const newActiveStreams = new Map(state.activeStreams);
+		newActiveStreams.delete(streamId);
 
 		set((state) => ({
 			agentConnectionLogs: [
-				entry,
 				...state.agentConnectionLogs.slice(0, state.maxLogs - 1),
+				entry,
 			],
+			activeStreams: newActiveStreams,
 		}));
+	},
+
+	logResponseProcessorExecution: (obj, processor, requestOrStreamId) => {
+		const state = get();
+		if (!state.isDebugEnabled) return;
+
+		// Build a descriptive name for the processor
+		const processorName = processor.namespace
+			? `${processor.namespace}:${processor.type}`
+			: processor.type;
+
+		const handlerInfo = { processorName, handledObject: obj };
+
+		// Check if this is part of an active stream
+		const streamTracker = requestOrStreamId
+			? state.activeStreams.get(requestOrStreamId)
+			: null;
+
+		if (streamTracker) {
+			// Special handling for text handlers - merge consecutive ones
+			if (processorName === 'builtin:text') {
+				const lastHandler =
+					streamTracker.handlers[streamTracker.handlers.length - 1];
+
+				// If the last handler is also a text handler, merge them
+				if (lastHandler && lastHandler.processorName === 'builtin:text') {
+					// Combine the text content
+					const existingContent =
+						'content' in lastHandler.handledObject
+							? String(lastHandler.handledObject.content)
+							: '';
+					const newContent = 'content' in obj ? String(obj.content) : '';
+					lastHandler.handledObject = {
+						type: 'text',
+						content: existingContent + newContent,
+					} as StructuredResponseType;
+					return;
+				}
+			}
+
+			// Add to stream's handler list (for non-text or first text handler)
+			streamTracker.handlers.push(handlerInfo);
+			return;
+		}
+
+		// Check if this is part of an active request
+		const requestTracker = requestOrStreamId
+			? state.activeRequests.get(requestOrStreamId)
+			: null;
+
+		if (requestTracker) {
+			// Special handling for text handlers in non-streaming context (though less common)
+			if (processorName === 'builtin:text') {
+				const lastHandler =
+					requestTracker.handlers[requestTracker.handlers.length - 1];
+
+				// If the last handler is also a text handler, merge them
+				if (lastHandler && lastHandler.processorName === 'builtin:text') {
+					// Combine the text content
+					const existingContent =
+						'content' in lastHandler.handledObject
+							? String(lastHandler.handledObject.content)
+							: '';
+					const newContent = 'content' in obj ? String(obj.content) : '';
+					lastHandler.handledObject = {
+						type: 'text',
+						content: existingContent + newContent,
+					} as StructuredResponseType;
+					return;
+				}
+			}
+
+			// Add to request's handler list
+			requestTracker.handlers.push(handlerInfo);
+			return;
+		}
+
+		// If no active request/stream, create a new request tracker
+		// This happens for non-streaming requests
+		if (requestOrStreamId) {
+			const newTracker: RequestTracker = {
+				requestId: requestOrStreamId,
+				startTime: new Date(),
+				handlers: [handlerInfo],
+			};
+			const newActiveRequests = new Map(state.activeRequests);
+			newActiveRequests.set(requestOrStreamId, newTracker);
+			set({ activeRequests: newActiveRequests });
+		}
 	},
 
 	clearDebugLogs: () => set({ agentConnectionLogs: [] }),

@@ -68,6 +68,7 @@ import {
 	Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { DebuggerPanel } from '@/debugger/DebuggerPanel';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)
@@ -715,6 +716,7 @@ export default function ProductMapPage() {
 	const renderContent = () => (
 		<ReactFlowProvider>
 			<div className='relative h-screen w-full'>
+				<DebuggerPanel />
 				<FlowCanvas />
 				<SelectedNodesPanel />
 				<FloatingMenu
