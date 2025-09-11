@@ -620,8 +620,16 @@
 			"name": "debugger-panel",
 			"type": "debugger",
 			"dependencies": ["react", "motion", "lucide-react"],
-			"registryDependencies": ["cedar-os", "floating-container", "tabs"],
-			"files": ["DebuggerPanel.tsx"],
+			"registryDependencies": ["cedar-os", "container-3d", "tabs"],
+			"files": [
+				"DebuggerPanel.tsx",
+				"NetworkTab.tsx",
+				"MessagesTab.tsx",
+				"StatesTab.tsx",
+				"CollapsibleSection.tsx",
+				"types.ts",
+				"index.ts"
+			],
 			"meta": {
 				"importName": "DebuggerPanel",
 				"displayName": "Debugger Panel",

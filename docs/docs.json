@@ -31,7 +31,8 @@
 							"getting-started/getting-started",
 							"getting-started/cli",
 							"getting-started/organizing-a-cedar-project",
-							"mcp-integration/mcp-server"
+							"mcp-integration/mcp-server",
+							"components/debugger-panel"
 						]
 					}
 				]

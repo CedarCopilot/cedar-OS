@@ -21,7 +21,9 @@ export interface ComponentRegistryEntry {
 		| 'ui'
 		| 'diffs'
 		| 'spells'
-		| 'voice';
+		| 'voice'
+		| 'debugger'
+		| 'CommandBar';
 	dependencies?: string[];
 	registryDependencies?: string[]; // Other cedar components this component depends on
 	files: string[];
@@ -98,6 +100,8 @@ function getFilePath(
 		diffs: 'diffs',
 		spells: 'spells',
 		voice: 'voice',
+		debugger: 'debugger',
+		CommandBar: 'CommandBar',
 	};
 
 	return `${typeMap[type]}/${fileName}`;
@@ -173,6 +177,8 @@ export async function getCategories(): Promise<Record<string, string>> {
 		diffs: 'Diff Components',
 		spells: 'Spell Components',
 		voice: 'Voice Components',
+		debugger: 'Debugger Components',
+		CommandBar: 'Command Bar Components',
 	};
 }
 
