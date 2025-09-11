@@ -44,9 +44,9 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 					)}
 					<span className='font-medium text-sm'>{title}</span>
 					<div className='flex items-center gap-1 ml-2'>
-						{badges.map((badge, index) => (
+						{badges.map((badge) => (
 							<span
-								key={index}
+								key={badge.label}
 								className={cn(
 									'px-2 py-0.5 rounded text-xs',
 									getBadgeColor(badge.color)

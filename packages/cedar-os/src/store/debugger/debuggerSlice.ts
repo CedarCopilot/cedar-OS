@@ -114,7 +114,7 @@ export const createDebuggerSlice: StateCreator<
 
 		const requestId = `req_${Date.now()}_${Math.random()
 			.toString(36)
-			.substr(2, 9)}`;
+			.slice(2, 11)}`;
 
 		// Extract API route for supported providers
 		let apiRoute: string | undefined;
@@ -272,7 +272,7 @@ export const createDebuggerSlice: StateCreator<
 
 		const streamId = `stream_${Date.now()}_${Math.random()
 			.toString(36)
-			.substr(2, 9)}`;
+			.slice(2, 11)}`;
 
 		// Create tracker for this stream
 		const tracker: StreamTracker = {

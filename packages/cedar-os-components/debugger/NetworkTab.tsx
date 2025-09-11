@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Copy, ChevronDown, ChevronRight } from 'lucide-react';
-import { cn } from 'cedar-os';
+import { cn, sanitizeJson } from 'cedar-os';
 import { CollapsibleSection } from './CollapsibleSection';
 import type { NetworkTabProps, DebugLogEntry } from './types';
 
@@ -15,6 +15,25 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
 		new Set()
 	);
 	const scrollRef = useRef<HTMLDivElement>(null);
+
+	// Helper function to safely stringify JSON with fallback to sanitizeJson
+	const safeStringify = (obj: unknown, indent = 2): string => {
+		try {
+			return JSON.stringify(obj, null, indent);
+		} catch (error) {
+			// If JSON.stringify fails due to circular references or non-serializable objects,
+			// use sanitizeJson to create a safe representation
+			try {
+				const sanitized = sanitizeJson(obj as object);
+				return JSON.stringify(sanitized, null, indent);
+			} catch {
+				// If even sanitization fails, return a safe error message
+				return `[Error serializing object: ${
+					error instanceof Error ? error.message : 'Unknown error'
+				}]`;
+			}
+		}
+	};
 
 	// Reverse logs to show oldest at top, newest at bottom
 	// Filter out standalone handler logs since they're now part of response/stream logs
@@ -211,7 +230,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
 									<button
 										onClick={(e) => {
 											e.stopPropagation();
-											onCopy(JSON.stringify(log.data, null, 2), log.id);
+											onCopy(safeStringify(log.data), log.id);
 										}}
 										className={cn(
 											'p-0.5 rounded transition-colors',
@@ -265,7 +284,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
 													onToggle={() => toggleSection(`${log.id}-context`)}
 													badges={[]}>
 													<pre className='text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto'>
-														{JSON.stringify(log.data.params, null, 2)}
+														{safeStringify(log.data.params)}
 													</pre>
 												</CollapsibleSection>
 											)}
@@ -285,7 +304,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
 														{ label: 'Method: POST', color: 'blue' as const },
 														{
 															label: (() => {
-																const sizeBytes = JSON.stringify(
+																const sizeBytes = safeStringify(
 																	log.data.params
 																).length;
 																if (sizeBytes < 1024) {
@@ -300,7 +319,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
 														},
 													]}>
 													<pre className='text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto'>
-														{JSON.stringify(log.data.params, null, 2)}
+														{safeStringify(log.data.params)}
 													</pre>
 												</CollapsibleSection>
 											)}
@@ -362,11 +381,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
 																	{log.data.streamObjects.length}):
 																</div>
 																<pre className='text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto max-h-60 overflow-y-auto'>
-																	{JSON.stringify(
-																		log.data.streamObjects,
-																		null,
-																		2
-																	)}
+																	{safeStringify(log.data.streamObjects)}
 																</pre>
 															</div>
 														)}
@@ -376,7 +391,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
 																Response Data:
 															</div>
 															<pre className='text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto'>
-																{JSON.stringify(log.data.response, null, 2)}
+																{safeStringify(log.data.response)}
 															</pre>
 														</div>
 													)}
@@ -531,11 +546,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
 																		</span>
 																	</div>
 																	<pre className='text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto max-h-40 overflow-y-auto'>
-																		{JSON.stringify(
-																			handler.handledObject,
-																			null,
-																			2
-																		)}
+																		{safeStringify(handler.handledObject)}
 																	</pre>
 																</div>
 															);
@@ -552,7 +563,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
 													</div>
 													<pre className='text-xs bg-red-100 dark:bg-red-900/20 p-2 rounded overflow-x-auto text-red-700 dark:text-red-300'>
 														{log.data.error.message ||
-															JSON.stringify(log.data.error, null, 2)}
+															safeStringify(log.data.error)}
 													</pre>
 												</div>
 											)}

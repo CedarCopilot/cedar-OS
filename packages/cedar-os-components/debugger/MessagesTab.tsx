@@ -176,10 +176,20 @@ export const MessagesTab: React.FC<MessagesTabProps> = ({
 
 								{!isExpanded && msg.content && (
 									<div className='px-2 pb-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-2'>
-										{typeof msg.content === 'string'
-											? msg.content.substring(0, 100) +
-											  (msg.content.length > 100 ? '...' : '')
-											: JSON.stringify(msg.content).substring(0, 100) + '...'}
+										{(() => {
+											if (typeof msg.content === 'string') {
+												return (
+													msg.content.substring(0, 100) +
+													(msg.content.length > 100 ? '...' : '')
+												);
+											} else {
+												const stringified = JSON.stringify(msg.content);
+												return (
+													stringified.substring(0, 100) +
+													(stringified.length > 100 ? '...' : '')
+												);
+											}
+										})()}
 									</div>
 								)}
 

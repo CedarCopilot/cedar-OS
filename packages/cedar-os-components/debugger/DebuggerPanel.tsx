@@ -26,14 +26,14 @@ interface DebuggerPanelProps {
 }
 
 export const DebuggerPanel: React.FC<DebuggerPanelProps> = ({
-	initialPosition = { x: window.innerWidth - 80, y: 20 },
+	initialPosition,
 	className,
 }) => {
 	const store = useCedarStore();
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [activeTab, setActiveTab] = useState('network');
 	const [copiedId, setCopiedId] = useState<string | null>(null);
-	const [position] = useState(initialPosition);
+	const [position, setPosition] = useState({ x: 0, y: 0 });
 
 	// Panel dimensions state - hardcoded defaults
 	const [panelWidth, setPanelWidth] = useState(500);
@@ -46,6 +46,14 @@ export const DebuggerPanel: React.FC<DebuggerPanelProps> = ({
 		typeof window !== 'undefined' ? window.innerWidth * 0.8 : 1000;
 	const calculatedMaxHeight =
 		typeof window !== 'undefined' ? window.innerHeight * 0.8 : 800;
+
+	// Initialize position safely after component mounts
+	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			const defaultPosition = { x: window.innerWidth - 80, y: 20 };
+			setPosition(initialPosition || defaultPosition);
+		}
+	}, [initialPosition]);
 
 	// Resize state
 	const [isResizing, setIsResizing] = useState<
@@ -191,6 +199,10 @@ export const DebuggerPanel: React.FC<DebuggerPanelProps> = ({
 
 	// Calculate proper panel position when expanding to keep it on screen
 	const getExpandedPanelPosition = () => {
+		if (typeof window === 'undefined') {
+			return { x: 0, y: 0 };
+		}
+
 		const windowWidth = window.innerWidth;
 		const windowHeight = window.innerHeight;
 		const margin = 20;
