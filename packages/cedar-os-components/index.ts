@@ -57,6 +57,7 @@ export { PhantomText } from './text/PhantomText';
 export { KeyboardShortcut } from './ui/KeyboardShortcut';
 // export { default as Slider3D } from './ui/Slider3D'; // Temporarily disabled due to motion type conflicts
 export { Button } from './ui/button';
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 
 // Spells
 export { default as QuestioningSpell } from './spells/QuestioningSpell';
@@ -85,3 +86,5 @@ export type {
 
 // Threads
 export { ChatThreadController } from './threads/ChatThreadController';
+// Debugger
+export { DebuggerPanel } from './debugger/DebuggerPanel';

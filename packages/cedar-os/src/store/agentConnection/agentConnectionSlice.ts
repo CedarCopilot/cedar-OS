@@ -69,6 +69,7 @@ export interface AgentConnectionSlice {
 	providerConfig: ProviderConfig | null;
 	currentAbortController: AbortController | null;
 	responseProcessors: ResponseProcessorRegistry;
+	currentRequestId: string | null; // Track current request/stream ID
 
 	// Core methods - properly typed based on current provider config
 	callLLM: <
@@ -158,6 +159,7 @@ export const createAgentConnectionSlice: StateCreator<
 	providerConfig: null,
 	currentAbortController: null,
 	notificationInterval: undefined,
+	currentRequestId: null,
 	responseProcessors: initializeResponseProcessorRegistry(
 		defaultResponseProcessors as ResponseProcessor<StructuredResponseType>[]
 	),
@@ -202,6 +204,9 @@ export const createAgentConnectionSlice: StateCreator<
 			config.provider
 		);
 
+		// Set current request ID
+		set({ currentRequestId: requestId });
+
 		try {
 			const provider = getProviderImplementation(config);
 			// Type assertion is safe after runtime validation
@@ -214,10 +219,17 @@ export const createAgentConnectionSlice: StateCreator<
 			// Log the successful response
 			get().logAgentResponse(requestId, response);
 
+			// Clear current request ID
+			set({ currentRequestId: null });
+
 			return response;
 		} catch (error) {
 			// Log the error
 			get().logAgentError(requestId, error as Error);
+
+			// Clear current request ID
+			set({ currentRequestId: null });
+
 			throw error;
 		}
 	},
@@ -271,6 +283,9 @@ export const createAgentConnectionSlice: StateCreator<
 			config.provider
 		);
 
+		// Set current request ID
+		set({ currentRequestId: requestId });
+
 		try {
 			const provider = getProviderImplementation(config);
 			// Type assertion is safe after runtime validation
@@ -282,10 +297,17 @@ export const createAgentConnectionSlice: StateCreator<
 			// Log the successful response
 			get().logAgentResponse(requestId, response);
 
+			// Clear current request ID
+			set({ currentRequestId: null });
+
 			return response;
 		} catch (error) {
 			// Log the error
 			get().logAgentError(requestId, error as Error);
+
+			// Clear current request ID
+			set({ currentRequestId: null });
+
 			throw error;
 		}
 	},
@@ -330,6 +352,9 @@ export const createAgentConnectionSlice: StateCreator<
 			config.provider
 		);
 
+		// Set current request ID to the stream ID
+		set({ currentRequestId: streamId });
+
 		const provider = getProviderImplementation(config);
 		const abortController = new AbortController();
 
@@ -341,8 +366,12 @@ export const createAgentConnectionSlice: StateCreator<
 				get().logStreamChunk(streamId, event.content);
 			} else if (event.type === 'done') {
 				get().logStreamEnd(streamId, event.completedItems);
+				// Clear current request ID when stream ends
+				set({ currentRequestId: null });
 			} else if (event.type === 'error') {
 				get().logAgentError(streamId, event.error);
+				// Clear current request ID on error
+				set({ currentRequestId: null });
 			} else if (event.type === 'object') {
 				get().logStreamObject(streamId, event.object);
 			}
@@ -408,11 +437,19 @@ export const createAgentConnectionSlice: StateCreator<
 	// Handle LLM response
 	handleLLMResponse: async (itemsToProcess) => {
 		const state = get();
+		const requestId = state.currentRequestId;
 
 		for (const item of itemsToProcess) {
 			if (typeof item === 'string') {
 				// Handle text content - append to latest message
 				state.appendToLatestMessage(item, !state.isStreaming);
+
+				// Log that this was handled as text
+				state.logResponseProcessorExecution(
+					{ type: 'text', content: item },
+					{ type: 'text', namespace: 'builtin', execute: () => {} },
+					requestId || undefined
+				);
 			} else if (item && typeof item === 'object') {
 				const structuredResponse = item;
 
@@ -427,6 +464,13 @@ export const createAgentConnectionSlice: StateCreator<
 						role: 'bot',
 						...structuredResponse,
 					});
+
+					// Log that this was unhandled
+					state.logResponseProcessorExecution(
+						structuredResponse,
+						{ type: 'unhandled', namespace: 'fallback', execute: () => {} },
+						requestId || undefined
+					);
 				}
 			}
 		}
@@ -453,29 +497,70 @@ export const createAgentConnectionSlice: StateCreator<
 
 	processStructuredResponse: async (obj) => {
 		const state = get();
+		const requestId = state.currentRequestId;
 
 		if (!obj.type || typeof obj.type !== 'string') {
+			// Log untyped response
+			state.logResponseProcessorExecution(
+				obj,
+				{ type: 'untyped', namespace: 'fallback', execute: () => {} },
+				requestId || undefined
+			);
 			return false;
 		}
 
 		const processor = state.getResponseProcessors(obj.type);
 
 		if (!processor) {
+			// Log unknown type
+			state.logResponseProcessorExecution(
+				obj,
+				{ type: obj.type, namespace: 'unknown', execute: () => {} },
+				requestId || undefined
+			);
 			return false;
 		}
 
 		// Validate if needed
 		if (processor.validate && !processor.validate(obj)) {
+			// Log validation failure
+			state.logResponseProcessorExecution(
+				obj,
+				{
+					type: processor.type,
+					namespace: 'validation-failed',
+					execute: () => {},
+				},
+				requestId || undefined
+			);
 			return false;
 		}
 
 		try {
 			await processor.execute(obj as StructuredResponseType, state);
+
+			// Log which processor handled this response
+			state.logResponseProcessorExecution(
+				obj,
+				processor,
+				requestId || undefined
+			);
+
 			return true;
 		} catch (error) {
 			console.error(
 				`Error executing response processor for type ${obj.type}:`,
 				error
+			);
+			// Log execution error
+			state.logResponseProcessorExecution(
+				obj,
+				{
+					type: processor.type,
+					namespace: 'execution-error',
+					execute: () => {},
+				},
+				requestId || undefined
 			);
 			return false;
 		}

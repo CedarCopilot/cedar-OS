@@ -286,14 +286,15 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 				allItemsForNavigation[selectedIndex]
 			) {
 				// Prevent editor's default Enter handling
-				if (!event.metaKey) {
-					event.preventDefault();
-					event.stopPropagation();
-				}
+
+				event.preventDefault();
+				event.stopPropagation();
 				setBaselineMessageIndex(messages.length - 1);
 				const selectedItem = allItemsForNavigation[selectedIndex];
 				handleItemSelect(selectedItem);
-				editor?.commands.clearContent();
+				if (!event.metaKey) {
+					editor?.commands.clearContent();
+				}
 				return true; // Indicate that we handled the event
 			}
 			return false; // Let editor handle the event normally
