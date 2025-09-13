@@ -49,7 +49,7 @@ export const ChatThreadController: React.FC<ChatThreadControllerProps> = ({
 			id,
 			name: thread?.name,
 			messageCount: thread?.messages.length || 0,
-			lastMessage: thread?.messages?.[thread.messages.length - 1],
+			lastMessage: thread?.messages?.filter((message) => message.content).pop(), // last message with content
 			lastLoaded: thread?.lastLoaded,
 			isDefault: id === DEFAULT_THREAD_ID,
 		};
