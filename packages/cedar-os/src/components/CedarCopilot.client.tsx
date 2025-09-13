@@ -66,29 +66,56 @@ export function CedarCopilotClient({
 	}, [userId, setCedarUserId]);
 
 	// ─── threadId ──────────────────────────────────────────────
-	const [cedarThreadId, setCedarThreadId] = useCedarState<string>({
-		key: 'threadId',
-		initialValue: threadId ?? '',
-	});
+	// Thread management through messagesSlice
+	const switchThread = useCedarStore((state) => state.switchThread);
 
+	// Initialize thread if provided
 	useEffect(() => {
-		if (threadId !== null) {
-			setCedarThreadId(threadId);
+		if (threadId) {
+			// This will create the thread if it doesn't exist
+			switchThread(threadId);
 		}
-	}, [threadId, setCedarThreadId]);
+	}, [threadId, switchThread]);
+
+	// Initialize chat - only run when userId or explicit threadId changes
+	// Using refs to track initialization state and previous threadId
+	const hasInitializedRef = React.useRef(false);
+	const previousThreadIdRef = React.useRef<string | null>(threadId);
 
 	useEffect(() => {
-		useCedarStore.getState().initializeChat?.({
-			userId: cedarUserId,
-			threadId: cedarThreadId,
-		});
-	}, [cedarUserId, cedarThreadId]);
+		const threadIdChanged = previousThreadIdRef.current !== threadId;
 
-	// Combined message storage initialization and updates
-	useEffect(() => {
-		if (!messageStorage) return;
-		useCedarStore.getState().setMessageStorageAdapter(messageStorage);
-	}, [messageStorage]);
+		// Only initialize if we have a userId and either:
+		// 1. Haven't initialized yet, or
+		// 2. The threadId has actually changed
+		if (
+			cedarUserId &&
+			(!hasInitializedRef.current || threadIdChanged) &&
+			messageStorage
+		) {
+			if (!useCedarStore.getState().messageStorageAdapter) {
+				// Ensure message storage adapter is set before calling initializeChat
+				useCedarStore.getState().setMessageStorageAdapter(messageStorage);
+			}
+
+			// Call initializeChat and only mark as initialized after success
+			useCedarStore
+				.getState()
+				.initializeChat?.({
+					userId: cedarUserId,
+					threadId: threadId,
+				})
+				.then(() => {
+					// Only mark as initialized after successful completion
+					hasInitializedRef.current = true;
+					previousThreadIdRef.current = threadId;
+				})
+				.catch((error) => {
+					// Log error but don't mark as initialized so it can retry
+					console.error('Failed to initialize chat:', error);
+				});
+		}
+	}, [cedarUserId, threadId, messageStorage]);
 
 	// Response processors
 	useEffect(() => {

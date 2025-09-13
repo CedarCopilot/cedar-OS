@@ -4,6 +4,7 @@ import { CollapsedButton } from '@/chatMessages/structural/CollapsedChatButton';
 import Container3D from '@/containers/Container3D';
 import { FloatingContainer } from '@/structural/FloatingContainer';
 import { useCedarStore } from 'cedar-os';
+import { ChatThreadController } from 'cedar-os-components/threads/ChatThreadController';
 import { X } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import React from 'react';
@@ -21,6 +22,7 @@ interface FloatingCedarChatProps {
 		maxHeight?: number;
 	};
 	resizable?: boolean;
+	showThreadController?: boolean;
 	stream?: boolean; // Whether to use streaming for responses
 }
 
@@ -33,6 +35,7 @@ export const FloatingCedarChat: React.FC<FloatingCedarChatProps> = ({
 		minWidth: 350,
 		minHeight: 400,
 	},
+	showThreadController = false,
 	resizable = true,
 	stream = true,
 }) => {
@@ -61,20 +64,25 @@ export const FloatingCedarChat: React.FC<FloatingCedarChatProps> = ({
 				className='cedar-floating-chat'>
 				<Container3D className='flex flex-col h-full text-sm'>
 					{/* Header */}
-					<div className='flex-shrink-0 z-20 flex flex-row items-center justify-between px-3 py-2 min-w-0 border-b border-gray-200 dark:border-gray-700'>
-						<div className='flex items-center min-w-0 flex-1'>
-							{companyLogo && (
-								<div className='flex-shrink-0 w-6 h-6 mr-2'>{companyLogo}</div>
-							)}
-							<span className='font-bold text-lg truncate'>{title}</span>
-						</div>
-						<div className='flex items-center gap-2 flex-shrink-0'>
-							<button
-								className='p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors'
-								onClick={() => setShowChat(false)}
-								aria-label='Close chat'>
-								<X className='h-4 w-4' strokeWidth={2.5} />
-							</button>
+					<div>
+						<div className='flex-shrink-0 z-20 flex flex-row items-center justify-between px-3 py-2 min-w-0 border-b border-gray-200 dark:border-gray-700'>
+							<div className='flex items-center min-w-0 flex-1'>
+								{companyLogo && (
+									<div className='flex-shrink-0 w-6 h-6 mr-2'>
+										{companyLogo}
+									</div>
+								)}
+								<span className='font-bold text-lg truncate'>{title}</span>
+							</div>
+							<div className='flex items-center gap-1 flex-shrink-0'>
+								{showThreadController && <ChatThreadController />}
+								<button
+									className='p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors'
+									onClick={() => setShowChat(false)}
+									aria-label='Close chat'>
+									<X className='h-4 w-4' strokeWidth={2.5} />
+								</button>
+							</div>
 						</div>
 					</div>
 

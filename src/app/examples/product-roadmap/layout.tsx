@@ -254,6 +254,7 @@ export default function ProductRoadmapLayout({
 	return (
 		<CedarCopilot
 			llmProvider={llmProvider}
+			userId={'isabelle'}
 			voiceSettings={voiceSettings}
 			messageStorage={localStorageConfig}
 			responseProcessors={[responseProcessor]}

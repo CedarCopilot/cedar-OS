@@ -13,12 +13,20 @@ export const openAIProvider: ProviderImplementation<
 	OpenAIConfig
 > = {
 	callLLM: async (params, config) => {
-		const { prompt, model, systemPrompt, temperature, maxTokens, ...rest } =
-			params;
+		const {
+			prompt,
+			model,
+			systemPrompt,
+			temperature,
+			maxTokens,
+			messages: providedMessages,
+			...rest
+		} = params;
 
-		const messages = [
+		// Use provided messages array or construct from prompt
+		const messages = providedMessages || [
 			...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-			{ role: 'user', content: prompt },
+			{ role: 'user', content: prompt || '' },
 		];
 
 		const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -44,12 +52,20 @@ export const openAIProvider: ProviderImplementation<
 
 		const completion = (async () => {
 			try {
-				const { prompt, model, systemPrompt, temperature, maxTokens, ...rest } =
-					params;
+				const {
+					prompt,
+					model,
+					systemPrompt,
+					temperature,
+					maxTokens,
+					messages: providedMessages,
+					...rest
+				} = params;
 
-				const messages = [
+				// Use provided messages array or construct from prompt
+				const messages = providedMessages || [
 					...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-					{ role: 'user', content: prompt },
+					{ role: 'user', content: prompt || '' },
 				];
 
 				const response = await fetch(

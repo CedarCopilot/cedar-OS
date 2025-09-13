@@ -22,6 +22,7 @@ export interface ComponentRegistryEntry {
 		| 'diffs'
 		| 'spells'
 		| 'voice'
+		| 'threads'
 		| 'debugger'
 		| 'CommandBar';
 	dependencies?: string[];
@@ -100,6 +101,7 @@ function getFilePath(
 		diffs: 'diffs',
 		spells: 'spells',
 		voice: 'voice',
+		threads: 'threads',
 		debugger: 'debugger',
 		CommandBar: 'CommandBar',
 	};
@@ -177,6 +179,7 @@ export async function getCategories(): Promise<Record<string, string>> {
 		diffs: 'Diff Components',
 		spells: 'Spell Components',
 		voice: 'Voice Components',
+		threads: 'Thread Components',
 		debugger: 'Debugger Components',
 		CommandBar: 'Command Bar Components',
 	};

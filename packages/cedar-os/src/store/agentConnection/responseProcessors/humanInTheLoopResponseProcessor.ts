@@ -32,7 +32,7 @@ export const humanInTheLoopResponseProcessor: ResponseProcessor<HumanInTheLoopRe
 				suspendPayload,
 				suspendedAt: new Date().toISOString(),
 				state: 'suspended' as const,
-				threadId: store.getCedarState('threadId') as string,
+				threadId: store.mainThreadId,
 				messageId: '', // Will be set after message creation
 			};
 

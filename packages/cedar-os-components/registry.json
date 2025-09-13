@@ -28,7 +28,8 @@
 				"chat-bubbles",
 				"collapsed-chat-button",
 				"container-3d",
-				"floating-container"
+				"floating-container",
+				"chat-thread-controller"
 			],
 			"files": ["FloatingCedarChat.tsx"],
 			"meta": {
@@ -602,6 +603,18 @@
 				"importName": "HumanInTheLoopIndicator",
 				"displayName": "Human-in-the-Loop Indicator",
 				"description": "Visual indicator for human-in-the-loop workflow states (suspended, resumed, cancelled, timeout)"
+			}
+		},
+		{
+			"name": "chat-thread-controller",
+			"type": "threads",
+			"dependencies": ["react", "lucide-react"],
+			"registryDependencies": ["cedar-os", "dropdown-menu", "button"],
+			"files": ["ChatThreadController.tsx"],
+			"meta": {
+				"importName": "ChatThreadController",
+				"displayName": "Chat Thread Controller",
+				"description": "Thread management component with create, switch, edit, and delete functionality"
 			}
 		},
 		{
