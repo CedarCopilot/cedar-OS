@@ -119,7 +119,7 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 
 		const result = await generateText({
 			model: modelInstance,
-			prompt,
+			messages: [{ role: 'user', content: prompt || '' }],
 			system: systemPrompt,
 			temperature,
 			maxRetries: 3,
@@ -198,7 +198,7 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 		// Use generateObject with the Zod schema (no runtime validation needed, it's statically typed)
 		const result = await generateObject({
 			model: modelInstance,
-			prompt,
+			messages: [{ role: 'user', content: prompt || '' }],
 			system: systemPrompt,
 			temperature,
 			schema, // Already typed as z.ZodType<unknown>
@@ -281,7 +281,7 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 
 				const result = await streamText({
 					model: modelInstance,
-					prompt,
+					messages: [{ role: 'user', content: prompt || '' }],
 					system: systemPrompt,
 					temperature,
 					maxRetries: 3,
@@ -376,7 +376,7 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 
 		const result = await generateText({
 			model: modelInstance,
-			prompt: transcript.text,
+			messages: [{ role: 'user', content: transcript.text }],
 			system: systemPrompt,
 			temperature: 0.7,
 			maxRetries: 3,
