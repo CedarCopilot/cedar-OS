@@ -291,8 +291,6 @@ const callAgent = createStep({
 		}
 
 		return { content: finalText };
-
-		// return { content: finalText };
 	},
 });
 

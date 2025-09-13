@@ -36,7 +36,7 @@ The product roadmap is structured as a tree of features, where some features hav
 <feature_statuses>
 Available feature statuses:
 - planned: Features that are planned but not yet started
-- in-progress: Features currently being worked on
+- in progress: Features currently being worked on
 - completed: Features that have been finished
 - cancelled: Features that were planned but later cancelled
 </feature_statuses>

@@ -6,7 +6,7 @@ import {
 } from './workflows/chatWorkflow';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { createSSEStream } from '../utils/streamUtils';
+import { createSSEStream, streamJSONEvent } from '../utils/streamUtils';
 
 export const ChatThreadSchema = z.object({
 	id: z.string(),
@@ -82,6 +82,8 @@ export const apiRoutes = [
 						JSON.stringify(result.result, null, 2)
 					);
 					return c.json<ChatOutput>(result.result);
+				} else {
+					return c.json({ error: `Workflow failed: ${result.status}` }, 500);
 				}
 			} catch (error) {
 				console.error(error);
@@ -132,7 +134,12 @@ export const apiRoutes = [
 					});
 
 					if (result.status !== 'success') {
-						throw new Error(`Workflow failed: ${result.status}`);
+						streamJSONEvent(controller, 'error', {
+							type: 'error',
+							message: `Workflow failed: ${result.status}`,
+						});
+						controller.close();
+						return;
 					}
 				});
 			} catch (error) {
