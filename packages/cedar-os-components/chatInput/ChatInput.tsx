@@ -11,7 +11,7 @@ import { useCedarEditor } from 'cedar-os';
 import Container3DButton from '@/containers/Container3DButton';
 import { VoiceIndicator } from '@/voice/VoiceIndicator';
 import { KeyboardShortcut } from '@/ui/KeyboardShortcut';
-import { HumanInTheLoopIndicator } from 'cedar-os-components/chatInput/HumanInTheLoopIndicator';
+import { HumanInTheLoopIndicator } from '@/chatInput/HumanInTheLoopIndicator';
 
 // ChatContainer component with position options
 export type ChatContainerPosition = 'bottom-center' | 'embedded' | 'custom';

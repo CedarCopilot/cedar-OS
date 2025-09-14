@@ -12,7 +12,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
 import { Pencil, History, Trash } from 'lucide-react';
-import { Button } from 'cedar-os-components/ui/button';
+import { Button } from '@/ui/button';
 
 interface ChatThreadControllerProps {
 	className?: string;
