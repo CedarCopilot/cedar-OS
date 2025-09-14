@@ -4,7 +4,7 @@ import { CollapsedButton } from '@/chatMessages/structural/CollapsedChatButton';
 import Container3D from '@/containers/Container3D';
 import { FloatingContainer } from '@/structural/FloatingContainer';
 import { useCedarStore } from 'cedar-os';
-import { ChatThreadController } from 'cedar-os-components/threads/ChatThreadController';
+import { ChatThreadController } from '@/threads/ChatThreadController';
 import { X } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import React from 'react';
