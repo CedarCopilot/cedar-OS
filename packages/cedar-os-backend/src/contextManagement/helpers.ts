@@ -168,6 +168,74 @@ export function createMastraToolForFrontendTool(
 }
 
 /**
+ * Helper function to create a backend tool for a state setter
+ * Users can call this for each state setter they want to support
+ */
+export function createMastraToolForStateSetter(
+	stateKey: string,
+	setterKey: string,
+	inputSchema: z.ZodTypeAny,
+	options: {
+		description?: string;
+		toolId?: string;
+		streamEventFn: (controller: any, event: string, data: any) => void;
+		errorSchema?: z.ZodTypeAny;
+	}
+): ReturnType<typeof createTool> {
+	const toolId =
+		options.toolId || `${kebabCase(stateKey)}-${kebabCase(setterKey)}-tool`;
+
+	// Default error schema if not provided
+	const defaultErrorSchema = z.object({
+		error: z.string(),
+		recommendedAction: z.string().optional(),
+	});
+
+	const errorSchema = options.errorSchema || defaultErrorSchema;
+
+	return createTool({
+		id: toolId,
+		description:
+			options.description ||
+			`Execute ${setterKey} state setter for ${stateKey}`,
+
+		inputSchema,
+
+		outputSchema: z
+			.object({
+				success: z.boolean(),
+				message: z.string(),
+				stateKey: z.string(),
+				setterKey: z.string(),
+			})
+			.or(errorSchema),
+
+		execute: async ({ context, runtimeContext }) => {
+			const streamController = runtimeContext?.get('streamController') as
+				| ReadableStreamDefaultController<Uint8Array>
+				| undefined;
+
+			// Stream to frontend with setState schema format
+			if (streamController) {
+				options.streamEventFn(streamController, 'setState', {
+					type: 'setState',
+					stateKey: stateKey,
+					setterKey: setterKey,
+					args: context, // Pass through all arguments
+				});
+			}
+
+			return {
+				success: true,
+				message: `Successfully executed ${setterKey} for ${stateKey}`,
+				stateKey: stateKey,
+				setterKey: setterKey,
+			};
+		},
+	});
+}
+
+/**
  * Utility function to convert camelCase to kebab-case
  */
 export function kebabCase(str: string): string {

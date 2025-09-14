@@ -37,7 +37,6 @@ export default function ProductRoadmapLayout({
 	// Mastra starts a server on port 4111 by default with API endpoints
 	const llmProvider: ProviderConfig = {
 		provider: 'mastra',
-		apiKey: 'not-needed-for-local', // API key is not needed for local Mastra agent
 		baseURL: 'http://localhost:4111',
 		chatPath: '/chat',
 		voiceRoute: '/chat',
@@ -92,7 +91,7 @@ export default function ProductRoadmapLayout({
 	type AddNodeSetStateMessage = SetStateMessageFor<
 		'nodes',
 		'addNode',
-		[{ data: Partial<FeatureNodeData> }]
+		{ nodes: [{ data: Partial<FeatureNodeData> }] }
 	>;
 
 	const customSetStateMessageRenderer = createSetStateMessageRenderer({
@@ -104,7 +103,10 @@ export default function ProductRoadmapLayout({
 					return (
 						<div>
 							Add node action:{' '}
-							{JSON.stringify(typedMessage.args[0].data.description)}
+							{JSON.stringify(
+								typedMessage.args.nodes?.[0]?.data?.description ||
+									'No description'
+							)}
 						</div>
 					);
 				default:

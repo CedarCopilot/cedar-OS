@@ -19,7 +19,7 @@ export function createMessageRenderer<T extends Message>(
 export type SetStateMessagePayload = {
 	stateKey: string;
 	setterKey: string;
-	args?: unknown[];
+	args?: unknown;
 };
 
 export type SetStateMessage = CustomMessage<'setState', SetStateMessagePayload>;
@@ -28,7 +28,7 @@ export type SetStateMessage = CustomMessage<'setState', SetStateMessagePayload>;
 export type SetStateMessageFor<
 	StateKey extends string,
 	SetterKey extends string,
-	Args extends unknown[] = []
+	Args
 > = CustomMessage<
 	'setState',
 	{ stateKey: StateKey; setterKey: SetterKey; args: Args }
