@@ -676,6 +676,18 @@
 				"displayName": "Command",
 				"description": "Command palette component with search functionality and dialog support"
 			}
+		},
+		{
+			"name": "dialog",
+			"type": "ui",
+			"dependencies": ["react", "@radix-ui/react-dialog", "lucide-react"],
+			"registryDependencies": ["cedar-os"],
+			"files": ["dialog.tsx"],
+			"meta": {
+				"importName": "Dialog",
+				"displayName": "Dialog",
+				"description": "Modal dialog component built on Radix UI with customizable overlay and content"
+			}
 		}
 	]
 }
