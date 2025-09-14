@@ -648,6 +648,34 @@
 				"displayName": "Debugger Panel",
 				"description": "Comprehensive debugging panel with network, messages, and states tabs for Cedar OS development"
 			}
+		},
+		{
+			"name": "dropdown-menu",
+			"type": "ui",
+			"dependencies": [
+				"react",
+				"@radix-ui/react-dropdown-menu",
+				"lucide-react"
+			],
+			"registryDependencies": ["cedar-os"],
+			"files": ["dropdown-menu.tsx"],
+			"meta": {
+				"importName": "DropdownMenu",
+				"displayName": "Dropdown Menu",
+				"description": "Dropdown menu component built on Radix UI with customizable styling"
+			}
+		},
+		{
+			"name": "command",
+			"type": "ui",
+			"dependencies": ["react", "cmdk", "lucide-react"],
+			"registryDependencies": ["cedar-os", "dialog"],
+			"files": ["command.tsx"],
+			"meta": {
+				"importName": "Command",
+				"displayName": "Command",
+				"description": "Command palette component with search functionality and dialog support"
+			}
 		}
 	]
 }
