@@ -52,7 +52,6 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 		const executeStateSetter = useCedarStore.getState().executeStateSetter;
 		const newFeature = {
 			id: uuidv4(),
-			type: 'featureNode',
 			position: { x: Math.random() * 400, y: Math.random() * 400 },
 			data: {
 				title: 'New Feature',
@@ -66,7 +65,7 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 		executeStateSetter({
 			key: 'nodes',
 			setterKey: 'addNode',
-			args: { node: newFeature },
+			args: { nodes: [newFeature] },
 			options: {
 				isDiff: true,
 			},
@@ -77,7 +76,6 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 		const executeStateSetter = useCedarStore.getState().executeStateSetter;
 		const newIssue = {
 			id: uuidv4(),
-			type: 'featureNode',
 			position: { x: Math.random() * 400, y: Math.random() * 400 },
 			data: {
 				title: 'New Bug',
@@ -85,13 +83,13 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 				upvotes: 0,
 				comments: [],
 				status: 'backlog' as const,
-				nodeType: 'bug' as const,
+				nodeType: 'feature' as const,
 			},
 		};
 		executeStateSetter({
 			key: 'nodes',
 			setterKey: 'addNode',
-			args: { node: newIssue },
+			args: { nodes: [newIssue] },
 			options: {
 				isDiff: true,
 			},
