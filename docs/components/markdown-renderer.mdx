@@ -7,17 +7,17 @@ A markdown renderer powered by [Streamdown](https://github.com/vercel/streamdown
 ```tsx
 import { MarkdownRenderer } from 'cedar-os-components/chatMessages/MarkdownRenderer';
 
-<MarkdownRenderer content="# Hello World\n\nThis is **bold** text." />
+<MarkdownRenderer content='# Hello World\n\nThis is **bold** text.' />;
 ```
 
 ## Props
 
-| Prop            | Type      | Default | Description                                           |
-| --------------- | --------- | ------- | ----------------------------------------------------- |
-| `content`       | `string`  | -       | Markdown content to render (required)                 |
-| `processPrefix` | `boolean` | `false` | Enable @@PREFIX@@ processing for chat interfaces     |
-| `className`     | `string`  | `''`    | CSS class                                             |
-| `inline`        | `boolean` | `false` | Inline rendering mode                                 |
+| Prop            | Type      | Default | Description                                      |
+| --------------- | --------- | ------- | ------------------------------------------------ |
+| `content`       | `string`  | -       | Markdown content to render (required)            |
+| `processPrefix` | `boolean` | `false` | Enable @@PREFIX@@ processing for chat interfaces |
+| `className`     | `string`  | `''`    | CSS class                                        |
+| `inline`        | `boolean` | `false` | Inline rendering mode                            |
 
 ## Prefix Processing
 
@@ -32,16 +32,6 @@ For chat interfaces where you need special styling for prefixes:
 
 The prefix markers are styled with accent color and removed from final output.
 
-## Customization
-
-MarkdownRenderer uses Streamdown internally. For styling and advanced features, see the [Streamdown documentation](https://github.com/vercel/streamdown) including:
-
-- Custom components via `components` prop
-- Mermaid diagrams
-- Code syntax highlighting  
-- Math rendering
-- Streaming configuration
-
 ## Streaming AI Example
 
 ```tsx
@@ -50,10 +40,10 @@ import { useChat } from '@ai-sdk/react';
 
 export default function Chat() {
 	const { messages } = useChat();
-	
-	return messages.map(message => (
-		<MarkdownRenderer 
-			key={message.id} 
+
+	return messages.map((message) => (
+		<MarkdownRenderer
+			key={message.id}
 			content={message.content}
 			processPrefix={true}
 		/>
@@ -67,7 +57,7 @@ export default function Chat() {
 <p>
 	Welcome to our platform!
 	<MarkdownRenderer
-		content="Read our **documentation** and try the `API`"
+		content='Read our **documentation** and try the `API`'
 		inline={true}
 	/>
 	to get started.
