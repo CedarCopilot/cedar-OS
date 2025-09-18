@@ -1,8 +1,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence, useDragControls } from 'motion/react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/ui/tabs';
-import { useCedarStore, cn } from 'cedar-os';
-import Container3D from '@/containers/Container3D';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useCedarStore } from '@/store/CedarStore';
+import { cn } from '@/styles/stylingUtils';
+import Container3D from '@/components/containers/Container3D';
 import { NetworkTab } from './NetworkTab';
 import { MessagesTab } from './MessagesTab';
 import { StatesTab } from './StatesTab';

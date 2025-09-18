@@ -41,3 +41,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# mastra storage 
+examples-backend/mastra.db
+examples-backend/mastra.db-shm
+examples-backend/mastra.db-wal
+examples-backend/mastra.db-shm
+examples-backend/mastra.db-wal

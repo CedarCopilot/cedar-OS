@@ -1,6 +1,6 @@
 {
 	"name": "cedar-os",
-	"version": "0.1.18",
+	"version": "0.1.19",
 	"description": "",
 	"sideEffects": false,
 	"scripts": {
@@ -63,7 +63,9 @@
 		"prosemirror-model": "1.25.2",
 		"react-markdown": "^10.1.0",
 		"uuid": "^11.1.0",
-		"zustand": "^5.0.3"
+		"zustand": "^5.0.3",
+		"lodash": "^4.17.21",
+		"diff": "^7.0.0"
 	},
 	"devDependencies": {
 		"@babel/preset-env": "^7.28.0",
