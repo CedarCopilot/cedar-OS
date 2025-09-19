@@ -143,7 +143,7 @@ export function addDiffToMapObj<K, V extends Record<string, unknown>>(
 ): Map<K, V> {
 	const resultMap = new Map<K, V>();
 
-	// Check all items in the new state
+	// First, process all items in the new state (added or changed)
 	for (const [key, newItem] of newState.entries()) {
 		const oldItem = oldState.get(key);
 		let diffType: 'added' | 'changed' | null = null;
@@ -169,6 +169,15 @@ export function addDiffToMapObj<K, V extends Record<string, unknown>>(
 		} else {
 			// Add diff field at the specified path
 			const itemWithDiff = setValueAtPath(newItem, diffPath, diffType);
+			resultMap.set(key, itemWithDiff);
+		}
+	}
+
+	// Then, add removed items from oldState with 'removed' diff marker
+	for (const [key, oldItem] of oldState.entries()) {
+		if (!newState.has(key)) {
+			// Item was removed - add it with 'removed' diff marker
+			const itemWithDiff = setValueAtPath(oldItem, diffPath, 'removed');
 			resultMap.set(key, itemWithDiff);
 		}
 	}
