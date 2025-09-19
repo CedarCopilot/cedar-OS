@@ -14,6 +14,7 @@ import {
 	History,
 	Package,
 	Settings,
+	Trash,
 	XCircle,
 	Undo,
 	Redo,
@@ -98,6 +99,30 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 		});
 	}, []);
 
+	const handleDeleteFeature = useCallback(() => {
+		const executeStateSetter = useCedarStore.getState().executeStateSetter;
+		// Get the first node from the current state
+		const currentNodes = nodesState?.value;
+		if (
+			!currentNodes ||
+			!Array.isArray(currentNodes) ||
+			currentNodes.length === 0
+		) {
+			console.log('No nodes to delete');
+			return;
+		}
+
+		const firstNode = currentNodes[0];
+		executeStateSetter({
+			key: 'nodes',
+			setterKey: 'removeNode',
+			args: { id: firstNode.id },
+			options: {
+				isDiff: true,
+			},
+		});
+	}, [nodesState]);
+
 	const handleAcceptAllDiffs = useCallback(() => {
 		const acceptAllDiffs = useCedarStore.getState().acceptAllDiffs;
 		acceptAllDiffs('nodes');
@@ -143,6 +168,15 @@ export const ProductRoadmapChat: React.FC<ProductRoadmapChatProps> = ({
 							<span className='flex items-center gap-1'>
 								<Bug className='w-4 h-4' />
 								Add Bug
+							</span>
+						</Container3DButton>
+						<Container3DButton
+							id='delete-feature-btn'
+							childClassName='p-1.5'
+							onClick={handleDeleteFeature}>
+							<span className='flex items-center gap-1'>
+								<Trash className='w-4 h-4' />
+								Delete First
 							</span>
 						</Container3DButton>
 						{hasDiffs && (
