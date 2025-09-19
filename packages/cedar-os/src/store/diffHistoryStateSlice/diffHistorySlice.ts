@@ -83,6 +83,7 @@ export interface DiffHistorySlice {
 
 	// Core methods
 	getDiffHistoryState: <T>(key: string) => DiffHistoryState<T> | undefined;
+	getDiffState: <T>(key: string) => DiffState<T> | undefined;
 	setDiffState: <T>(key: string, diffHistoryState: DiffHistoryState<T>) => void;
 	getCleanState: <T>(key: string) => T | undefined;
 
@@ -733,6 +734,13 @@ export const createDiffHistorySlice: StateCreator<
 
 	getDiffHistoryState: <T>(key: string): DiffHistoryState<T> | undefined => {
 		return get().diffHistoryStates[key] as DiffHistoryState<T> | undefined;
+	},
+
+	getDiffState: <T>(key: string): DiffState<T> | undefined => {
+		const diffHistoryState = get().diffHistoryStates[key] as
+			| DiffHistoryState<T>
+			| undefined;
+		return diffHistoryState?.diffState;
 	},
 
 	registerDiffState: <T extends BasicStateValue>(

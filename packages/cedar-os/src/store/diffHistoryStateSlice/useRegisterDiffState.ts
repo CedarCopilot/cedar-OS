@@ -114,6 +114,55 @@ export function addDiffToArrayObjs<T extends Record<string, unknown>>(
 }
 
 /**
+ * Utility function to add diff markers to Map objects
+ * Compares Maps and adds 'diff' field to values based on changes
+ * @param oldState - The previous state Map
+ * @param newState - The new state Map
+ * @param diffPath - JSON path where to add the diff field (default: '' for root level, '/data' for nested)
+ * @param diffChecker - Optional configuration for selective diff checking
+ */
+export function addDiffToMapObj<K, V extends Record<string, unknown>>(
+	oldState: Map<K, V>,
+	newState: Map<K, V>,
+	diffPath: string = '',
+	diffChecker?: DiffChecker
+): Map<K, V> {
+	const resultMap = new Map<K, V>();
+
+	// Check all items in the new state
+	for (const [key, newItem] of newState.entries()) {
+		const oldItem = oldState.get(key);
+		let diffType: 'added' | 'changed' | null = null;
+
+		if (!oldItem) {
+			// Item was added
+			diffType = 'added';
+		} else {
+			// Check if item was changed
+			const patches = compare(oldItem, newItem);
+
+			// Apply diffChecker filtering if provided
+			const filteredPatches = filterPatchesByDiffChecker(patches, diffChecker);
+
+			if (filteredPatches.length > 0) {
+				diffType = 'changed';
+			}
+		}
+
+		// If no changes, add item as is
+		if (!diffType) {
+			resultMap.set(key, newItem);
+		} else {
+			// Add diff field at the specified path
+			const itemWithDiff = setValueAtPath(newItem, diffPath, diffType);
+			resultMap.set(key, itemWithDiff);
+		}
+	}
+
+	return resultMap;
+}
+
+/**
  * Helper function to set a value at a JSON path
  * @param obj - The object to modify
  * @param path - JSON path (e.g., '', '/data', '/nested/field')

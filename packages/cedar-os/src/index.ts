@@ -36,9 +36,12 @@ export {
 	useCedarDiffState,
 	useRegisterDiffState,
 	addDiffToArrayObjs,
+	addDiffToMapObj,
 	useDiffState,
 	useDiffStateOperations,
 	useDiffStateHelpers,
+	useSubscribeToDiffValue,
+	useSubscribeToDiffValues,
 } from '@/store/diffHistoryStateSlice';
 
 // Export state slice types
@@ -327,6 +330,8 @@ export type {
 	RegisterDiffStateConfig,
 	DiffStateReturn,
 	ComputeStateFunction,
+	DiffValue,
+	UseSubscribeToDiffValueOptions,
 } from '@/store/diffHistoryStateSlice';
 // Export tools slice types and utilities
 export { createToolsSlice } from '@/store/toolsSlice/toolsSlice';
