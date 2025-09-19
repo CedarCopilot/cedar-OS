@@ -84,5 +84,7 @@ export type {
 	CommandBarContents,
 } from './CommandBar';
 
+// Threads
+export { ChatThreadController } from './threads/ChatThreadController';
 // Debugger
 export { DebuggerPanel } from './debugger/DebuggerPanel';

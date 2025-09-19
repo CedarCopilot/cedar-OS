@@ -70,6 +70,7 @@
 						"group": "Chat (Advanced)",
 						"pages": [
 							"chat/streaming",
+							"chat/thread-management",
 							"chat/configuring-cedar-editor",
 							"chat/message-storage-configuration",
 							"chat/chat-components",

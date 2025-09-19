@@ -145,31 +145,43 @@ function FlowCanvas() {
 		stateSetters: {
 			addNode: (() => {
 				const addNodeArgsSchema = z.object({
-					node: z.object({
-						id: z.string().optional(),
-						data: z.object({
-							title: z.string().describe('Feature title'),
-							description: z.string().describe('Detailed feature description'),
-							status: z
-								.enum(['done', 'planned', 'backlog', 'in progress'])
-								.describe('Current development status'),
-							nodeType: z
-								.enum(['feature', 'bug', 'improvement'])
-								.default('feature')
-								.describe('Type of node'),
-							upvotes: z.number().default(0).describe('Number of upvotes'),
-							comments: z
-								.array(
-									z.object({
-										id: z.string(),
-										author: z.string(),
-										text: z.string(),
+					nodes: z
+						.array(
+							z.object({
+								id: z.string().optional(),
+								position: z
+									.object({
+										x: z.number(),
+										y: z.number(),
 									})
-								)
-								.default([])
-								.describe('Array of comments'),
-						}),
-					}),
+									.optional(),
+								data: z.object({
+									title: z.string().describe('Feature title'),
+									description: z
+										.string()
+										.describe('Detailed feature description'),
+									status: z
+										.enum(['done', 'planned', 'backlog', 'in progress'])
+										.describe('Current development status'),
+									nodeType: z
+										.literal('feature')
+										.default('feature')
+										.describe('Type of node'),
+									upvotes: z.number().default(0).describe('Number of upvotes'),
+									comments: z
+										.array(
+											z.object({
+												id: z.string(),
+												author: z.string(),
+												text: z.string(),
+											})
+										)
+										.default([])
+										.describe('Array of comments'),
+								}),
+							})
+						)
+						.describe('Array of nodes to add to the roadmap'),
 				});
 
 				const setter: Setter<
@@ -177,65 +189,92 @@ function FlowCanvas() {
 					typeof addNodeArgsSchema
 				> = {
 					name: 'addNode',
-					description: 'Add a new node to the roadmap',
+					description: 'Add new nodes to the roadmap',
 					argsSchema: addNodeArgsSchema,
 					execute: (currentNodes, setValue, args) => {
-						// args is fully typed as { node: { id?: string, data: { ... } } }
-						const newNode: Node<FeatureNodeData> = {
-							...args.node,
-							type: 'featureNode',
-							position: { x: Math.random() * 400, y: Math.random() * 400 },
-							id: args.node.id || uuidv4(),
-							data: {
-								...args.node.data,
-								nodeType: args.node.data.nodeType || 'feature',
-								status: args.node.data.status || 'planned',
-								upvotes: args.node.data.upvotes || 0,
-								comments: args.node.data.comments || [],
-							},
-						};
-						setValue([...currentNodes, newNode]);
+						// args is fully typed as { nodes: [{ id?: string, position?: {x,y}, data: { ... } }] }
+						const newNodes: Node<FeatureNodeData>[] = args.nodes.map(
+							(node) => ({
+								...node,
+								type: 'featureNode',
+								position: node.position || {
+									x: Math.random() * 400,
+									y: Math.random() * 400,
+								},
+								id: node.id || uuidv4(),
+								data: {
+									...node.data,
+									nodeType: node.data.nodeType || 'feature',
+									status: node.data.status || 'planned',
+									upvotes: node.data.upvotes || 0,
+									comments: node.data.comments || [],
+								},
+							})
+						);
+						setValue([...currentNodes, ...newNodes]);
 					},
 				};
 				return setter;
 			})(),
 			removeNode: {
 				name: 'removeNode',
-				description: 'Remove a node from the roadmap',
+				description: 'Remove nodes from the roadmap',
 				argsSchema: z.object({
-					id: z.string().describe('The ID of the node to remove'),
+					nodeIds: z
+						.array(z.string())
+						.describe('Array of node IDs to remove from the roadmap'),
 				}),
 				execute: async (currentNodes, setValue, args) => {
-					setValue(currentNodes.filter((node) => node.id !== args.id));
+					const filteredNodes = currentNodes.filter(
+						(node) => !args.nodeIds.includes(node.id)
+					);
+
+					setValue(filteredNodes);
 				},
 			},
 			changeNode: (() => {
 				const changeNodeArgsSchema = z.object({
-					newNode: z.object({
-						id: z.string().describe('The ID of the node to update'),
-						data: z.object({
-							title: z.string().describe('Updated feature title'),
-							description: z.string().describe('Updated feature description'),
-							status: z
-								.enum(['done', 'planned', 'backlog', 'in progress'])
-								.describe('Updated development status'),
-							nodeType: z
-								.literal('feature')
-								.default('feature')
-								.describe('Type of node'),
-							upvotes: z.number().default(0).describe('Number of upvotes'),
-							comments: z
-								.array(
-									z.object({
-										id: z.string(),
-										author: z.string(),
-										text: z.string(),
+					nodes: z
+						.array(
+							z.object({
+								id: z
+									.string()
+									.describe(
+										'The ID of the node to update (required for updates)'
+									),
+								position: z
+									.object({
+										x: z.number(),
+										y: z.number(),
 									})
-								)
-								.default([])
-								.describe('Array of comments'),
-						}),
-					}),
+									.optional(),
+								data: z.object({
+									title: z.string().describe('Updated feature title'),
+									description: z
+										.string()
+										.describe('Updated feature description'),
+									status: z
+										.enum(['done', 'planned', 'backlog', 'in progress'])
+										.describe('Updated development status'),
+									nodeType: z
+										.literal('feature')
+										.default('feature')
+										.describe('Type of node'),
+									upvotes: z.number().default(0).describe('Number of upvotes'),
+									comments: z
+										.array(
+											z.object({
+												id: z.string(),
+												author: z.string(),
+												text: z.string(),
+											})
+										)
+										.default([])
+										.describe('Array of comments'),
+								}),
+							})
+						)
+						.describe('Array of nodes with updated data'),
 				});
 
 				const setter: Setter<
@@ -243,21 +282,23 @@ function FlowCanvas() {
 					typeof changeNodeArgsSchema
 				> = {
 					name: 'changeNode',
-					description: 'Update an existing node in the roadmap',
+					description: 'Update existing nodes in the roadmap',
 					argsSchema: changeNodeArgsSchema,
 					execute: (currentNodes, setValue, args) => {
-						// args is typed as { newNode: { id: string, data: { ... } } }
+						// args is typed as { nodes: [{ id: string, position?: {x,y}, data: { ... } }] }
 						setValue(
-							currentNodes.map((node) =>
-								node.id === args.newNode.id
-									? {
-											...args.newNode,
-											type: 'featureNode',
-											position: node.position, // Keep existing position
-											data: { ...args.newNode.data },
-									  }
-									: node
-							)
+							currentNodes.map((node) => {
+								const updateNode = args.nodes.find((n) => n.id === node.id);
+								if (updateNode) {
+									return {
+										...updateNode,
+										type: 'featureNode',
+										position: updateNode.position || node.position, // Use new position if provided, otherwise keep existing
+										data: { ...updateNode.data },
+									};
+								}
+								return node;
+							})
 						);
 					},
 				};
@@ -724,10 +765,10 @@ export default function ProductMapPage() {
 					currentChatMode={chatMode}
 				/>
 				{chatMode === 'command' && <CommandBarChat open={true} />}
-				{chatMode === 'caption' && <ProductRoadmapChat stream={false} />}
+				{chatMode === 'caption' && <ProductRoadmapChat />}
 				{/* {chatMode === 'floating' && ( */}
 				<FloatingCedarChat
-					stream={false}
+					showThreadController={true}
 					side='right'
 					title='Product Roadmap Assistant'
 					collapsedLabel='Need help with your roadmap?'
