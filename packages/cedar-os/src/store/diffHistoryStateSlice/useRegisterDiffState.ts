@@ -81,8 +81,11 @@ export function addDiffToArrayObjs<T extends Record<string, unknown>>(
 	diffChecker?: DiffChecker
 ): T[] {
 	const oldMap = new Map(oldState.map((item) => [item[idField], item]));
+	const newMap = new Map(newState.map((item) => [item[idField], item]));
+	const result: T[] = [];
 
-	return newState.map((item) => {
+	// First, process all items in newState (added or changed)
+	newState.forEach((item) => {
 		const id = item[idField];
 		const oldItem = oldMap.get(id);
 
@@ -105,12 +108,23 @@ export function addDiffToArrayObjs<T extends Record<string, unknown>>(
 
 		// If no changes, return item as is
 		if (!diffType) {
-			return item;
+			result.push(item);
+		} else {
+			// Add diff field at the specified path
+			result.push(setValueAtPath(item, diffPath, diffType));
 		}
-
-		// Add diff field at the specified path
-		return setValueAtPath(item, diffPath, diffType);
 	});
+
+	// Then, add removed items from oldState with 'removed' diff marker
+	oldState.forEach((oldItem) => {
+		const id = oldItem[idField];
+		if (!newMap.has(id)) {
+			// Item was removed - add it with 'removed' diff marker
+			result.push(setValueAtPath(oldItem, diffPath, 'removed'));
+		}
+	});
+
+	return result;
 }
 
 /**
