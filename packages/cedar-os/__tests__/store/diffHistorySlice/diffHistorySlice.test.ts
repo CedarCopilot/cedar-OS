@@ -1048,6 +1048,336 @@ describe('DiffHistorySlice', () => {
 			expect(patchPaths).not.toContain('/settings/notifications');
 		});
 	});
+
+	describe('isDiffMode auto-correction for equivalent states', () => {
+		it('should set isDiffMode to false when oldState and newState are equivalent via setDiffState', () => {
+			interface TestData {
+				name: string;
+				value: number;
+			}
+
+			// Create a state where oldState and newState are equivalent but isDiffMode is incorrectly set to true
+			const testState: DiffHistoryState<TestData> = {
+				diffState: {
+					oldState: { name: 'test', value: 42 },
+					newState: { name: 'test', value: 42 }, // Same as oldState
+					computedState: { name: 'test', value: 42 },
+					isDiffMode: true, // This should be corrected to false
+					patches: [],
+				},
+				history: [],
+				redoStack: [],
+				diffMode: 'defaultAccept',
+			};
+
+			act(() => {
+				useCedarStore.getState().setDiffState('equivalentStatesKey', testState);
+			});
+
+			const result = useCedarStore
+				.getState()
+				.getDiffHistoryState<TestData>('equivalentStatesKey');
+
+			// isDiffMode should be automatically corrected to false
+			expect(result?.diffState.isDiffMode).toBe(false);
+			expect(result?.diffState.oldState).toEqual({ name: 'test', value: 42 });
+			expect(result?.diffState.newState).toEqual({ name: 'test', value: 42 });
+		});
+
+		it('should set isDiffMode to false when states become equivalent via newDiffState', () => {
+			interface TestData {
+				count: number;
+				status: string;
+			}
+
+			// Start with different states
+			const initialState: DiffHistoryState<TestData> = {
+				diffState: {
+					oldState: { count: 1, status: 'pending' },
+					newState: { count: 2, status: 'active' },
+					computedState: { count: 2, status: 'active' },
+					isDiffMode: true,
+					patches: [],
+				},
+				history: [],
+				redoStack: [],
+				diffMode: 'defaultAccept',
+			};
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.setDiffState('becomingEquivalentKey', initialState);
+			});
+
+			// Update newState to match oldState - should auto-correct isDiffMode
+			act(() => {
+				useCedarStore
+					.getState()
+					.newDiffState(
+						'becomingEquivalentKey',
+						{ count: 1, status: 'pending' },
+						true
+					);
+			});
+
+			const result = useCedarStore
+				.getState()
+				.getDiffHistoryState<TestData>('becomingEquivalentKey');
+
+			// isDiffMode should be automatically set to false since states are now equivalent
+			expect(result?.diffState.isDiffMode).toBe(false);
+			expect(result?.diffState.oldState).toEqual({
+				count: 1,
+				status: 'pending',
+			}); // Should match newState when equivalent
+			expect(result?.diffState.newState).toEqual({
+				count: 1,
+				status: 'pending',
+			}); // New state
+		});
+
+		it('should set isDiffMode to false when states become equivalent via applyPatchesToDiffState', () => {
+			interface TestData {
+				name: string;
+				items: string[];
+			}
+
+			// Start with different states
+			const initialState: DiffHistoryState<TestData> = {
+				diffState: {
+					oldState: { name: 'original', items: ['a', 'b'] },
+					newState: { name: 'modified', items: ['x', 'y', 'z'] },
+					computedState: { name: 'modified', items: ['x', 'y', 'z'] },
+					isDiffMode: true,
+					patches: [],
+				},
+				history: [],
+				redoStack: [],
+				diffMode: 'holdAccept',
+			};
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.setDiffState('patchEquivalentKey', initialState);
+			});
+
+			// Apply patches that make newState match oldState
+			const patches: Operation[] = [
+				{ op: 'replace', path: '/name', value: 'original' },
+				{ op: 'replace', path: '/items', value: ['a', 'b'] },
+			];
+
+			act(() => {
+				useCedarStore
+					.getState()
+					.applyPatchesToDiffState('patchEquivalentKey', patches, true);
+			});
+
+			const result = useCedarStore
+				.getState()
+				.getDiffHistoryState<TestData>('patchEquivalentKey');
+
+			// isDiffMode should be automatically set to false since states are now equivalent
+			expect(result?.diffState.isDiffMode).toBe(false);
+			expect(result?.diffState.oldState).toEqual({
+				name: 'original',
+				items: ['a', 'b'],
+			}); // Should match newState when equivalent
+			expect(result?.diffState.newState).toEqual({
+				name: 'original',
+				items: ['a', 'b'],
+			}); // After patches
+		});
+
+		it('should handle deep object equivalence correctly', () => {
+			interface ComplexData {
+				user: {
+					profile: {
+						name: string;
+						settings: {
+							theme: string;
+							notifications: boolean;
+						};
+					};
+				};
+				metadata: Record<string, unknown>;
+			}
+
+			const complexObject: ComplexData = {
+				user: {
+					profile: {
+						name: 'John',
+						settings: {
+							theme: 'dark',
+							notifications: true,
+						},
+					},
+				},
+				metadata: { version: 1, tags: ['a', 'b'] },
+			};
+
+			// Create state with identical deep objects but isDiffMode incorrectly set to true
+			const testState: DiffHistoryState<ComplexData> = {
+				diffState: {
+					oldState: complexObject,
+					newState: { ...complexObject }, // Deep copy to ensure different references but same content
+					computedState: { ...complexObject },
+					isDiffMode: true, // Should be corrected to false
+					patches: [],
+				},
+				history: [],
+				redoStack: [],
+				diffMode: 'defaultAccept',
+			};
+
+			act(() => {
+				useCedarStore.getState().setDiffState('deepEquivalenceKey', testState);
+			});
+
+			const result = useCedarStore
+				.getState()
+				.getDiffHistoryState<ComplexData>('deepEquivalenceKey');
+
+			// isDiffMode should be corrected to false despite different object references
+			expect(result?.diffState.isDiffMode).toBe(false);
+			expect(result?.diffState.oldState).toEqual(complexObject);
+			expect(result?.diffState.newState).toEqual(complexObject);
+		});
+
+		it('should maintain isDiffMode true when states are actually different', () => {
+			interface TestData {
+				value: string;
+				count: number;
+			}
+
+			const testState: DiffHistoryState<TestData> = {
+				diffState: {
+					oldState: { value: 'old', count: 1 },
+					newState: { value: 'new', count: 2 }, // Different from oldState
+					computedState: { value: 'new', count: 2 },
+					isDiffMode: true, // Should remain true
+					patches: [],
+				},
+				history: [],
+				redoStack: [],
+				diffMode: 'holdAccept',
+			};
+
+			act(() => {
+				useCedarStore.getState().setDiffState('differentStatesKey', testState);
+			});
+
+			const result = useCedarStore
+				.getState()
+				.getDiffHistoryState<TestData>('differentStatesKey');
+
+			// isDiffMode should remain true since states are different
+			expect(result?.diffState.isDiffMode).toBe(true);
+			expect(result?.diffState.oldState).toEqual({ value: 'old', count: 1 });
+			expect(result?.diffState.newState).toEqual({ value: 'new', count: 2 });
+		});
+
+		it('should handle null and undefined values correctly', () => {
+			interface TestData {
+				value: string | null;
+				optional?: number;
+			}
+
+			// Test with null values
+			const testState1: DiffHistoryState<TestData> = {
+				diffState: {
+					oldState: { value: null },
+					newState: { value: null }, // Same as oldState
+					computedState: { value: null },
+					isDiffMode: true, // Should be corrected
+					patches: [],
+				},
+				history: [],
+				redoStack: [],
+				diffMode: 'defaultAccept',
+			};
+
+			act(() => {
+				useCedarStore.getState().setDiffState('nullValuesKey', testState1);
+			});
+
+			const result1 = useCedarStore
+				.getState()
+				.getDiffHistoryState<TestData>('nullValuesKey');
+
+			expect(result1?.diffState.isDiffMode).toBe(false);
+
+			// Test with undefined values
+			const testState2: DiffHistoryState<TestData> = {
+				diffState: {
+					oldState: { value: 'test' }, // optional is undefined
+					newState: { value: 'test' }, // optional is undefined
+					computedState: { value: 'test' },
+					isDiffMode: true, // Should be corrected
+					patches: [],
+				},
+				history: [],
+				redoStack: [],
+				diffMode: 'defaultAccept',
+			};
+
+			act(() => {
+				useCedarStore.getState().setDiffState('undefinedValuesKey', testState2);
+			});
+
+			const result2 = useCedarStore
+				.getState()
+				.getDiffHistoryState<TestData>('undefinedValuesKey');
+
+			expect(result2?.diffState.isDiffMode).toBe(false);
+		});
+
+		it('should handle array equivalence correctly', () => {
+			interface ArrayData {
+				items: Array<{ id: number; name: string }>;
+				tags: string[];
+			}
+
+			const arrayData: ArrayData = {
+				items: [
+					{ id: 1, name: 'Item 1' },
+					{ id: 2, name: 'Item 2' },
+				],
+				tags: ['tag1', 'tag2', 'tag3'],
+			};
+
+			const testState: DiffHistoryState<ArrayData> = {
+				diffState: {
+					oldState: arrayData,
+					newState: {
+						items: [
+							{ id: 1, name: 'Item 1' },
+							{ id: 2, name: 'Item 2' },
+						],
+						tags: ['tag1', 'tag2', 'tag3'],
+					}, // Same content, different reference
+					computedState: { ...arrayData },
+					isDiffMode: true, // Should be corrected
+					patches: [],
+				},
+				history: [],
+				redoStack: [],
+				diffMode: 'defaultAccept',
+			};
+
+			act(() => {
+				useCedarStore.getState().setDiffState('arrayEquivalenceKey', testState);
+			});
+
+			const result = useCedarStore
+				.getState()
+				.getDiffHistoryState<ArrayData>('arrayEquivalenceKey');
+
+			expect(result?.diffState.isDiffMode).toBe(false);
+		});
+	});
 });
 
 describe('applyPatchesToDiffState', () => {

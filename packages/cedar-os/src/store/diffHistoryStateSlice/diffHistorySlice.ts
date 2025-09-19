@@ -207,6 +207,13 @@ function getItemIdentifier<T>(
 }
 
 /**
+ * Helper function to check if oldState and newState are equivalent
+ */
+function areStatesEquivalent<T>(oldState: T, newState: T): boolean {
+	return isEqual(oldState, newState);
+}
+
+/**
  * Helper function to handle single diff accept/reject operations
  */
 // Helper function to remove diff markers from an object at various paths
@@ -399,11 +406,18 @@ function handleObjectFieldDiff<T>(params: {
 		finalComputedState = updatedNewState;
 	}
 
+	// Check if oldState and newState are equivalent - if so, set isDiffMode to false regardless of other checks
+	const statesAreEquivalent = areStatesEquivalent(
+		updatedOldState,
+		updatedNewState
+	);
+	const finalIsDiffMode = statesAreEquivalent ? false : stillInDiffMode;
+
 	const updatedDiffState: DiffState<T> = {
 		oldState: updatedOldState,
 		newState: updatedNewState,
 		computedState: finalComputedState,
-		isDiffMode: stillInDiffMode,
+		isDiffMode: finalIsDiffMode,
 		patches: [],
 	};
 
@@ -680,11 +694,15 @@ function handleArrayDiff<T>(params: {
 			  })()
 			: false; // For accept/reject all, no more diffs
 
+	// Check if oldState and newState are equivalent - if so, set isDiffMode to false regardless of other checks
+	const statesAreEquivalent = areStatesEquivalent(finalOldState, finalNewState);
+	const finalIsDiffMode = statesAreEquivalent ? false : stillInDiffMode;
+
 	const updatedDiffState: DiffState<T> = {
 		oldState: finalOldState,
 		newState: finalNewState,
 		computedState: finalComputedState,
-		isDiffMode: stillInDiffMode,
+		isDiffMode: finalIsDiffMode,
 		patches: [],
 	};
 
@@ -773,23 +791,43 @@ export const createDiffHistorySlice: StateCreator<
 	},
 
 	setDiffState: <T>(key: string, diffHistoryState: DiffHistoryState<T>) => {
+		// Check if oldState and newState are equivalent - if so, ensure isDiffMode is false
+		const oldState = diffHistoryState.diffState?.oldState;
+		const diffNewState = diffHistoryState.diffState?.newState;
+		const statesAreEquivalent =
+			oldState && diffNewState
+				? areStatesEquivalent(oldState, diffNewState)
+				: false;
+
+		// Create a corrected diff history state if needed
+		const correctedDiffHistoryState =
+			statesAreEquivalent && diffHistoryState.diffState?.isDiffMode
+				? {
+						...diffHistoryState,
+						diffState: {
+							...diffHistoryState.diffState,
+							isDiffMode: false,
+						},
+				  }
+				: diffHistoryState;
+
 		set((state) => ({
 			diffHistoryStates: {
 				...state.diffHistoryStates,
-				[key]: diffHistoryState as DiffHistoryState<unknown>,
+				[key]: correctedDiffHistoryState as DiffHistoryState<unknown>,
 			},
 		}));
 
 		// Register or update the state in stateSlice with the clean state
-		const newState = diffHistoryState.diffState?.computedState
-			? diffHistoryState.diffState?.computedState
-			: diffHistoryState.computeState
-			? diffHistoryState.computeState(
-					diffHistoryState.diffState?.oldState,
-					diffHistoryState.diffState?.newState,
-					diffHistoryState.diffState?.patches || []
+		const newState = correctedDiffHistoryState.diffState?.computedState
+			? correctedDiffHistoryState.diffState?.computedState
+			: correctedDiffHistoryState.computeState
+			? correctedDiffHistoryState.computeState(
+					correctedDiffHistoryState.diffState?.oldState,
+					correctedDiffHistoryState.diffState?.newState,
+					correctedDiffHistoryState.diffState?.patches || []
 			  )
-			: diffHistoryState.diffState?.newState;
+			: correctedDiffHistoryState.diffState?.newState;
 		if (newState !== undefined) {
 			// Get the registered state to check if it exists
 			const registeredState = get().registeredStates?.[key];
@@ -869,11 +907,15 @@ export const createDiffHistorySlice: StateCreator<
 			? newState
 			: oldStateForDiff;
 
+		// Check if oldState and newState are equivalent - if so, set isDiffMode to false regardless of source
+		const statesAreEquivalent = areStatesEquivalent(oldStateForDiff, newState);
+		const finalIsDiffMode = statesAreEquivalent ? false : effectiveIsDiffChange;
+
 		const newDiffState: DiffState<T> = {
 			oldState: oldStateForDiff,
 			newState: newState,
 			computedState: computedStateValue,
-			isDiffMode: effectiveIsDiffChange,
+			isDiffMode: finalIsDiffMode,
 			patches,
 		};
 
@@ -1079,11 +1121,18 @@ export const createDiffHistorySlice: StateCreator<
 			? patchResult
 			: oldStateForDiff;
 
+		// Check if oldState and newState are equivalent - if so, set isDiffMode to false regardless of source
+		const statesAreEquivalent = areStatesEquivalent(
+			oldStateForDiff,
+			patchResult
+		);
+		const finalIsDiffMode = statesAreEquivalent ? false : isDiffChange;
+
 		const newDiffState: DiffState<T> = {
 			oldState: oldStateForDiff,
 			newState: patchResult,
 			computedState: computedStateValue,
-			isDiffMode: isDiffChange,
+			isDiffMode: finalIsDiffMode,
 			patches: diffPatches,
 		};
 

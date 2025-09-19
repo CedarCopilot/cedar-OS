@@ -1,5 +1,5 @@
 // Shared types for debugger components
-import type { registeredState } from 'cedar-os';
+import type { registeredState } from '@/store/stateSlice/stateSlice';
 
 export interface DebugLogEntry {
 	id: string;

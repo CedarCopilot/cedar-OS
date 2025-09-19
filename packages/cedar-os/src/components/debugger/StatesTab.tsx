@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
 	Hash,
 	Check,
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { isEqual } from 'lodash';
 import { diffLines, diffJson, diffWords, Change } from 'diff';
-import type { registeredState } from 'cedar-os';
+import type { registeredState } from '@/store/stateSlice/stateSlice';
 import type { StatesTabProps } from './types';
 
 export const StatesTab: React.FC<StatesTabProps> = ({

@@ -1,5 +1,6 @@
 // Components
 export { CedarCopilot } from '@/components/CedarCopilot';
+export { DebuggerPanel } from '@/components/debugger/DebuggerPanel';
 
 export { useCedarEditor } from '@/components/chatInput/useCedarEditor';
 
