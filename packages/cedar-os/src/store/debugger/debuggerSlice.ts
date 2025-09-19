@@ -72,6 +72,13 @@ export interface DebuggerSlice {
 	// Internal state for tracking active streams (not exposed)
 	activeStreams: Map<string, StreamTracker>;
 	activeRequests: Map<string, RequestTracker>;
+	// Collapsible sections state
+	collapsedSections: {
+		[stateKey: string]: {
+			registeredState?: boolean;
+			diffState?: boolean;
+		};
+	};
 
 	// Actions
 	logAgentRequest: (params: BaseParams, provider: string) => string; // returns request ID
@@ -92,6 +99,16 @@ export interface DebuggerSlice {
 	clearDebugLogs: () => void;
 	setDebugEnabled: (enabled: boolean) => void;
 	setMaxLogs: (max: number) => void;
+	toggleSectionCollapse: (
+		stateKey: string,
+		section: 'registeredState' | 'diffState'
+	) => void;
+	setSectionCollapse: (
+		stateKey: string,
+		section: 'registeredState' | 'diffState',
+		collapsed: boolean
+	) => void;
+	initializeSectionCollapse: (stateKey: string, hasDiffStates: boolean) => void;
 }
 
 export const createDebuggerSlice: StateCreator<
@@ -106,6 +123,7 @@ export const createDebuggerSlice: StateCreator<
 	isDebugEnabled: true,
 	activeStreams: new Map(),
 	activeRequests: new Map(),
+	collapsedSections: {},
 
 	// Actions
 	logAgentRequest: (params, provider) => {
@@ -461,4 +479,51 @@ export const createDebuggerSlice: StateCreator<
 	setDebugEnabled: (enabled) => set({ isDebugEnabled: enabled }),
 
 	setMaxLogs: (max) => set({ maxLogs: max }),
+
+	toggleSectionCollapse: (stateKey, section) => {
+		const state = get();
+		const currentCollapsed =
+			state.collapsedSections[stateKey]?.[section] || false;
+
+		set((state) => ({
+			collapsedSections: {
+				...state.collapsedSections,
+				[stateKey]: {
+					...state.collapsedSections[stateKey],
+					[section]: !currentCollapsed,
+				},
+			},
+		}));
+	},
+
+	setSectionCollapse: (stateKey, section, collapsed) => {
+		set((state) => ({
+			collapsedSections: {
+				...state.collapsedSections,
+				[stateKey]: {
+					...state.collapsedSections[stateKey],
+					[section]: collapsed,
+				},
+			},
+		}));
+	},
+
+	initializeSectionCollapse: (stateKey, hasDiffStates) => {
+		const state = get();
+
+		// Only initialize if not already set for this state
+		if (!state.collapsedSections[stateKey]) {
+			set((state) => ({
+				collapsedSections: {
+					...state.collapsedSections,
+					[stateKey]: {
+						// Collapse registered state by default if diff states are present
+						registeredState: hasDiffStates,
+						// Keep diff state expanded by default when present
+						diffState: false,
+					},
+				},
+			}));
+		}
+	},
 });

@@ -68,7 +68,7 @@ import {
 	Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { DebuggerPanel } from '@/debugger/DebuggerPanel';
+import { DebuggerPanel } from 'cedar-os';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)

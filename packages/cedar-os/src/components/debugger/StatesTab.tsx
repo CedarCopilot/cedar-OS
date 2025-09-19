@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
 	Hash,
@@ -16,6 +16,7 @@ import { isEqual } from 'lodash';
 import { diffLines, diffJson, diffWords, Change } from 'diff';
 import type { registeredState } from '@/store/stateSlice/stateSlice';
 import type { StatesTabProps } from './types';
+import { useCedarStore } from '@/store/CedarStore';
 
 export const StatesTab: React.FC<StatesTabProps> = ({
 	states,
@@ -24,6 +25,31 @@ export const StatesTab: React.FC<StatesTabProps> = ({
 	copiedId,
 }) => {
 	const [expandedStates, setExpandedStates] = useState<Set<string>>(new Set());
+	const store = useCedarStore();
+
+	// Initialize section collapse state for each state key
+	useEffect(() => {
+		Object.keys(states).forEach((key) => {
+			const hasDiffStates = diffStates[key] != null;
+			store.initializeSectionCollapse?.(key, hasDiffStates);
+		});
+	}, [states, diffStates, store]);
+
+	// Helper function to check if a section is collapsed
+	const isSectionCollapsed = (
+		stateKey: string,
+		section: 'registeredState' | 'diffState'
+	): boolean => {
+		return store.collapsedSections?.[stateKey]?.[section] ?? false;
+	};
+
+	// Helper function to toggle section collapse
+	const toggleSectionCollapse = (
+		stateKey: string,
+		section: 'registeredState' | 'diffState'
+	) => {
+		store.toggleSectionCollapse?.(stateKey, section);
+	};
 
 	const toggleExpanded = (stateKey: string) => {
 		setExpandedStates((prev) => {
@@ -424,30 +450,56 @@ export const StatesTab: React.FC<StatesTabProps> = ({
 										className='overflow-hidden'>
 										<div className='p-3 pt-0 rounded-b-lg space-y-3'>
 											{/* Registered State */}
-											<div>
-												<div className='flex items-center gap-2 mb-2'>
-													<span className='text-xs font-semibold text-gray-700 dark:text-gray-300'>
-														Registered State
-													</span>
-													<button
-														onClick={(e) => {
-															e.stopPropagation();
-															onCopy(
-																JSON.stringify(registeredState, null, 2),
-																`${key}-registered`
-															);
-														}}
-														className='p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors'>
-														{copiedId === `${key}-registered` ? (
-															<Check className='w-3 h-3 text-green-600' />
+											<div className='border rounded-lg bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'>
+												<div
+													className='flex items-center justify-between p-2 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-t-lg'
+													onClick={() =>
+														toggleSectionCollapse(key, 'registeredState')
+													}>
+													<div className='flex items-center gap-2'>
+														<span className='text-xs font-semibold text-gray-700 dark:text-gray-300'>
+															Registered State
+														</span>
+													</div>
+													<div className='flex items-center gap-1'>
+														<button
+															onClick={(e) => {
+																e.stopPropagation();
+																onCopy(
+																	JSON.stringify(registeredState, null, 2),
+																	`${key}-registered`
+																);
+															}}
+															className='p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors'>
+															{copiedId === `${key}-registered` ? (
+																<Check className='w-3 h-3 text-green-600' />
+															) : (
+																<Copy className='w-3 h-3' />
+															)}
+														</button>
+														{isSectionCollapsed(key, 'registeredState') ? (
+															<ChevronRight className='w-3 h-3' />
 														) : (
-															<Copy className='w-3 h-3' />
+															<ChevronDown className='w-3 h-3' />
 														)}
-													</button>
+													</div>
 												</div>
-												<pre className='text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto whitespace-pre font-mono'>
-													{JSON.stringify(registeredState, null, 2)}
-												</pre>
+												<AnimatePresence>
+													{!isSectionCollapsed(key, 'registeredState') && (
+														<motion.div
+															initial={{ height: 0, opacity: 0 }}
+															animate={{ height: 'auto', opacity: 1 }}
+															exit={{ height: 0, opacity: 0 }}
+															transition={{ duration: 0.2 }}
+															className='overflow-hidden'>
+															<div className='p-2 pt-0 border-t border-gray-200 dark:border-gray-700'>
+																<pre className='text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto whitespace-pre font-mono'>
+																	{JSON.stringify(registeredState, null, 2)}
+																</pre>
+															</div>
+														</motion.div>
+													)}
+												</AnimatePresence>
 											</div>
 
 											{/* Diff State Information */}
@@ -456,159 +508,192 @@ export const StatesTab: React.FC<StatesTabProps> = ({
 												if (!diffAnalysis) return null;
 
 												return (
-													<div className='space-y-3'>
-														{/* Diff State Summary */}
-														<div className='bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-200 dark:border-blue-800'>
-															<div className='flex items-center gap-2 mb-2'>
+													<div className='border rounded-lg bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'>
+														<div
+															className='flex items-center justify-between p-2 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-t-lg'
+															onClick={() =>
+																toggleSectionCollapse(key, 'diffState')
+															}>
+															<div className='flex items-center gap-2'>
 																<GitCompare className='w-3 h-3 text-blue-600' />
 																<span className='text-xs font-semibold text-blue-700 dark:text-blue-300'>
-																	Diff State
+																	Diff State Information
 																</span>
 															</div>
-															<div className='text-xs text-blue-600 dark:text-blue-400 space-y-1'>
-																<div>
-																	Diff Mode:{' '}
-																	<span className='font-mono'>
-																		{diffAnalysis.isDiffMode
-																			? 'Active'
-																			: 'Inactive'}
-																	</span>
-																</div>
-																<div>
-																	Has State Difference:{' '}
-																	<span className='font-mono'>
-																		{diffAnalysis.hasStateDifference
-																			? 'Yes'
-																			: 'No'}
-																	</span>
-																</div>
-																<div>
-																	Computed vs Registered Diff:{' '}
-																	<span className='font-mono'>
-																		{diffAnalysis.hasComputedDifference
-																			? 'Yes'
-																			: 'No'}
-																	</span>
-																</div>
-															</div>
-														</div>
-
-														{/* Old State vs New State Diff */}
-														{renderObjectDiff(
-															diffAnalysis.oldState,
-															diffAnalysis.newState,
-															'State Changes',
-															`${key}-diff`
-														)}
-
-														{/* Computed vs Clean State Precise Diff */}
-														{renderObjectDiff(
-															diffAnalysis.cleanState,
-															diffAnalysis.computedState,
-															'Computed vs Clean State',
-															`${key}-computed-clean-diff`
-														)}
-
-														{/* Individual State Views (Collapsible) */}
-														<details className='mt-4'>
-															<summary className='text-xs font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100'>
-																Show Individual State Views
-															</summary>
-															<div className='grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3'>
-																{/* Computed State */}
-																<div>
-																	<div className='flex items-center gap-2 mb-2'>
-																		<span className='text-xs font-semibold text-purple-700 dark:text-purple-300'>
-																			Computed State
-																		</span>
-																		<button
-																			onClick={(e) => {
-																				e.stopPropagation();
-																				onCopy(
-																					JSON.stringify(
-																						diffAnalysis.computedState,
-																						null,
-																						2
-																					),
-																					`${key}-computed`
-																				);
-																			}}
-																			className='p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors'>
-																			{copiedId === `${key}-computed` ? (
-																				<Check className='w-3 h-3 text-green-600' />
-																			) : (
-																				<Copy className='w-3 h-3' />
-																			)}
-																		</button>
-																	</div>
-																	<pre className='text-xs bg-purple-50 dark:bg-purple-900/20 p-2 rounded overflow-x-auto border border-purple-200 dark:border-purple-800 whitespace-pre font-mono'>
-																		{JSON.stringify(
-																			diffAnalysis.computedState,
-																			null,
-																			2
-																		)}
-																	</pre>
-																</div>
-
-																{/* Clean State */}
-																<div>
-																	<div className='flex items-center gap-2 mb-2'>
-																		<span className='text-xs font-semibold text-gray-700 dark:text-gray-300'>
-																			Clean State
-																		</span>
-																		<button
-																			onClick={(e) => {
-																				e.stopPropagation();
-																				onCopy(
-																					JSON.stringify(
-																						diffAnalysis.cleanState,
-																						null,
-																						2
-																					),
-																					`${key}-clean`
-																				);
-																			}}
-																			className='p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors'>
-																			{copiedId === `${key}-clean` ? (
-																				<Check className='w-3 h-3 text-green-600' />
-																			) : (
-																				<Copy className='w-3 h-3' />
-																			)}
-																		</button>
-																	</div>
-																	<pre className='text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto whitespace-pre font-mono'>
-																		{JSON.stringify(
-																			diffAnalysis.cleanState,
-																			null,
-																			2
-																		)}
-																	</pre>
-																</div>
-															</div>
-														</details>
-
-														{/* Computed vs Registered State Comparison */}
-														{diffAnalysis.hasComputedDifference && (
-															<div className='bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-800'>
-																<div className='flex items-center gap-2 mb-3'>
-																	<AlertTriangle className='w-4 h-4 text-yellow-600' />
-																	<span className='text-xs font-semibold text-yellow-700 dark:text-yellow-300'>
-																		State Synchronization Issue
-																	</span>
-																</div>
-																<div className='text-xs text-yellow-700 dark:text-yellow-300 mb-3'>
-																	The computed state differs from the registered
-																	state, indicating a potential synchronization
-																	issue.
-																</div>
-																{renderObjectDiff(
-																	registeredState.value,
-																	diffAnalysis.computedState,
-																	'Registered vs Computed State',
-																	`${key}-sync-diff`
+															<div className='flex items-center gap-1'>
+																{isSectionCollapsed(key, 'diffState') ? (
+																	<ChevronRight className='w-3 h-3' />
+																) : (
+																	<ChevronDown className='w-3 h-3' />
 																)}
 															</div>
-														)}
+														</div>
+														<AnimatePresence>
+															{!isSectionCollapsed(key, 'diffState') && (
+																<motion.div
+																	initial={{ height: 0, opacity: 0 }}
+																	animate={{ height: 'auto', opacity: 1 }}
+																	exit={{ height: 0, opacity: 0 }}
+																	transition={{ duration: 0.2 }}
+																	className='overflow-hidden'>
+																	<div className='p-3 pt-0 border-t border-gray-200 dark:border-gray-700 space-y-3'>
+																		{/* Diff State Summary */}
+																		<div className='bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-200 dark:border-blue-800'>
+																			<div className='flex items-center gap-2 mb-2'>
+																				<GitCompare className='w-3 h-3 text-blue-600' />
+																				<span className='text-xs font-semibold text-blue-700 dark:text-blue-300'>
+																					Diff State
+																				</span>
+																			</div>
+																			<div className='text-xs text-blue-600 dark:text-blue-400 space-y-1'>
+																				<div>
+																					Diff Mode:{' '}
+																					<span className='font-mono'>
+																						{diffAnalysis.isDiffMode
+																							? 'Active'
+																							: 'Inactive'}
+																					</span>
+																				</div>
+																				<div>
+																					Has State Difference:{' '}
+																					<span className='font-mono'>
+																						{diffAnalysis.hasStateDifference
+																							? 'Yes'
+																							: 'No'}
+																					</span>
+																				</div>
+																				<div>
+																					Computed vs Registered Diff:{' '}
+																					<span className='font-mono'>
+																						{diffAnalysis.hasComputedDifference
+																							? 'Yes'
+																							: 'No'}
+																					</span>
+																				</div>
+																			</div>
+																		</div>
+
+																		{/* Old State vs New State Diff */}
+																		{renderObjectDiff(
+																			diffAnalysis.oldState,
+																			diffAnalysis.newState,
+																			'State Changes',
+																			`${key}-diff`
+																		)}
+
+																		{/* Computed vs Clean State Precise Diff */}
+																		{renderObjectDiff(
+																			diffAnalysis.cleanState,
+																			diffAnalysis.computedState,
+																			'Computed vs Clean State',
+																			`${key}-computed-clean-diff`
+																		)}
+
+																		{/* Individual State Views (Collapsible) */}
+																		<details className='mt-4'>
+																			<summary className='text-xs font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100'>
+																				Show Individual State Views
+																			</summary>
+																			<div className='grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3'>
+																				{/* Computed State */}
+																				<div>
+																					<div className='flex items-center gap-2 mb-2'>
+																						<span className='text-xs font-semibold text-purple-700 dark:text-purple-300'>
+																							Computed State
+																						</span>
+																						<button
+																							onClick={(e) => {
+																								e.stopPropagation();
+																								onCopy(
+																									JSON.stringify(
+																										diffAnalysis.computedState,
+																										null,
+																										2
+																									),
+																									`${key}-computed`
+																								);
+																							}}
+																							className='p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors'>
+																							{copiedId ===
+																							`${key}-computed` ? (
+																								<Check className='w-3 h-3 text-green-600' />
+																							) : (
+																								<Copy className='w-3 h-3' />
+																							)}
+																						</button>
+																					</div>
+																					<pre className='text-xs bg-purple-50 dark:bg-purple-900/20 p-2 rounded overflow-x-auto border border-purple-200 dark:border-purple-800 whitespace-pre font-mono'>
+																						{JSON.stringify(
+																							diffAnalysis.computedState,
+																							null,
+																							2
+																						)}
+																					</pre>
+																				</div>
+
+																				{/* Clean State */}
+																				<div>
+																					<div className='flex items-center gap-2 mb-2'>
+																						<span className='text-xs font-semibold text-gray-700 dark:text-gray-300'>
+																							Clean State
+																						</span>
+																						<button
+																							onClick={(e) => {
+																								e.stopPropagation();
+																								onCopy(
+																									JSON.stringify(
+																										diffAnalysis.cleanState,
+																										null,
+																										2
+																									),
+																									`${key}-clean`
+																								);
+																							}}
+																							className='p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors'>
+																							{copiedId === `${key}-clean` ? (
+																								<Check className='w-3 h-3 text-green-600' />
+																							) : (
+																								<Copy className='w-3 h-3' />
+																							)}
+																						</button>
+																					</div>
+																					<pre className='text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto whitespace-pre font-mono'>
+																						{JSON.stringify(
+																							diffAnalysis.cleanState,
+																							null,
+																							2
+																						)}
+																					</pre>
+																				</div>
+																			</div>
+																		</details>
+
+																		{/* Computed vs Registered State Comparison */}
+																		{diffAnalysis.hasComputedDifference && (
+																			<div className='bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-800'>
+																				<div className='flex items-center gap-2 mb-3'>
+																					<AlertTriangle className='w-4 h-4 text-yellow-600' />
+																					<span className='text-xs font-semibold text-yellow-700 dark:text-yellow-300'>
+																						State Synchronization Issue
+																					</span>
+																				</div>
+																				<div className='text-xs text-yellow-700 dark:text-yellow-300 mb-3'>
+																					The computed state differs from the
+																					registered state, indicating a
+																					potential synchronization issue.
+																				</div>
+																				{renderObjectDiff(
+																					registeredState.value,
+																					diffAnalysis.computedState,
+																					'Registered vs Computed State',
+																					`${key}-sync-diff`
+																				)}
+																			</div>
+																		)}
+																	</div>
+																</motion.div>
+															)}
+														</AnimatePresence>
 													</div>
 												);
 											})()}
