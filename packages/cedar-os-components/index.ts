@@ -86,5 +86,3 @@ export type {
 
 // Threads
 export { ChatThreadController } from './threads/ChatThreadController';
-// Debugger
-export { DebuggerPanel } from './debugger/DebuggerPanel';
