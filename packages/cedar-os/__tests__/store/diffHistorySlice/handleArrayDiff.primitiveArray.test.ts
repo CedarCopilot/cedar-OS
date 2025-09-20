@@ -321,13 +321,13 @@ describe('handleArrayDiff - Primitive Array Cases', () => {
 				expect(success).toBe(true);
 			});
 
-			// Verify the diff was rejected (removes ALL occurrences of the target value)
+			// Verify the diff was rejected (removes only NEWLY ADDED occurrences of the target value)
 			const diffStateAfter = useCedarStore
 				.getState()
 				.getDiffHistoryState<BooleanArrayData>('booleanArrayRejectTest');
-			// The function uses filter() which removes ALL occurrences of the target value
-			// Original: [true, false, true], after rejecting 'true': [false]
-			expect(diffStateAfter?.diffState.newState.flags).toEqual([false]);
+			// The function only removes newly added items, not original items
+			// Original: [true, false], after agent added: [true, false, true], after rejecting new 'true': [true, false]
+			expect(diffStateAfter?.diffState.newState.flags).toEqual([true, false]);
 		});
 	});
 

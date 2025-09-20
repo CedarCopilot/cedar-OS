@@ -80,6 +80,26 @@ export function addDiffToArrayObjs<T extends Record<string, unknown>>(
 	diffPath: string = '',
 	diffChecker?: DiffChecker
 ): T[] {
+	// Check if we're dealing with primitive arrays (strings, numbers, booleans)
+	const isPrimitiveArray =
+		(oldState.length > 0 &&
+			(typeof oldState[0] === 'string' ||
+				typeof oldState[0] === 'number' ||
+				typeof oldState[0] === 'boolean')) ||
+		(newState.length > 0 &&
+			(typeof newState[0] === 'string' ||
+				typeof newState[0] === 'number' ||
+				typeof newState[0] === 'boolean'));
+
+	// For primitive arrays, return newState as-is (no diff markers needed)
+	// Primitive arrays are handled by the handlePrimitiveArrayDiff function
+	if (isPrimitiveArray) {
+		console.warn(
+			'addDiffToArrayObjs called with primitive array. Primitive arrays should use handlePrimitiveArrayDiff instead.'
+		);
+		return newState as T[];
+	}
+
 	const oldMap = new Map(oldState.map((item) => [item[idField], item]));
 	const newMap = new Map(newState.map((item) => [item[idField], item]));
 	const result: T[] = [];
@@ -125,6 +145,23 @@ export function addDiffToArrayObjs<T extends Record<string, unknown>>(
 	});
 
 	return result;
+}
+
+/**
+ * Utility function to handle diff computation for primitive arrays
+ * Unlike addDiffToArrayObjs, this doesn't add diff markers to individual items
+ * since primitive values can't have additional properties
+ * @param oldState - The previous state array of primitives
+ * @param newState - The new state array of primitives
+ */
+export function addDiffToPrimitiveArray<T extends string | number | boolean>(
+	oldState: T[],
+	newState: T[]
+): T[] {
+	// For primitive arrays, we can't add diff markers to individual items
+	// The diff handling is done at the array level by handlePrimitiveArrayDiff
+	// So we just return the newState as-is
+	return [...newState];
 }
 
 /**

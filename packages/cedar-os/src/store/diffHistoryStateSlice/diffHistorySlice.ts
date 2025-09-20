@@ -246,6 +246,7 @@ function handlePrimitiveArrayDiff<T>(params: {
 		get,
 		key,
 		jsonPath,
+		oldArray,
 		newArray,
 		action,
 		currentDiffHistoryState,
@@ -256,30 +257,62 @@ function handlePrimitiveArrayDiff<T>(params: {
 
 	const { diffState, history } = currentDiffHistoryState;
 
-	let resultArray: T[];
+	let resultNewArray: T[];
+	let resultOldArray: T[];
 
 	if (action === 'accept') {
-		// For accept, keep the new array as is (targetId is already in the array)
-		resultArray = [...newArray];
+		// For accept, keep the new array as is and add the accepted item to oldArray
+		resultNewArray = [...newArray];
+		// Add the accepted item to oldArray if it's not already there
+		if (!oldArray.includes(targetId as T)) {
+			resultOldArray = [...oldArray, targetId as T];
+		} else {
+			resultOldArray = [...oldArray];
+		}
 	} else if (action === 'reject') {
-		// For reject, remove the targetId from the new array
-		resultArray = newArray.filter((item) => item !== targetId);
+		// For reject, we need to remove only the NEWLY ADDED occurrences of targetId
+		// Strategy: Keep all items from oldArray, then add items from newArray that are NOT the targetId
+
+		// Count how many times targetId appears in oldArray vs newArray
+		const oldCount = oldArray.filter((item) => item === targetId).length;
+		const newCount = newArray.filter((item) => item === targetId).length;
+
+		if (newCount <= oldCount) {
+			// No new instances of targetId were added, so nothing to reject
+			resultNewArray = [...newArray];
+		} else {
+			// There are new instances of targetId - remove only the excess ones
+			const itemsToKeep = oldCount; // Keep the original count
+			let keptCount = 0;
+			resultNewArray = newArray.filter((item) => {
+				if (item === targetId) {
+					if (keptCount < itemsToKeep) {
+						keptCount++;
+						return true; // Keep this occurrence
+					} else {
+						return false; // Remove this occurrence (it's newly added)
+					}
+				}
+				return true; // Keep non-target items
+			});
+		}
+		resultOldArray = [...oldArray];
 	} else {
 		return false;
 	}
 
-	// Update the state with the modified array
+	// Update the state with the modified arrays
 	const newStateWithUpdatedArray = setValueAtPathForDiff(
 		diffState.newState,
 		jsonPath,
-		resultArray
+		resultNewArray
 	);
 
-	// For reject, also update oldState to reflect the removal
-	const finalOldState =
-		action === 'reject'
-			? setValueAtPathForDiff(diffState.oldState, jsonPath, resultArray)
-			: diffState.oldState;
+	const finalOldState = setValueAtPathForDiff(
+		diffState.oldState,
+		jsonPath,
+		resultOldArray
+	);
 
 	const finalNewState = newStateWithUpdatedArray;
 

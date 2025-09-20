@@ -36,6 +36,7 @@ export {
 	useCedarDiffState,
 	useRegisterDiffState,
 	addDiffToArrayObjs,
+	addDiffToPrimitiveArray,
 	addDiffToMapObj,
 	useDiffState,
 	useDiffStateOperations,
