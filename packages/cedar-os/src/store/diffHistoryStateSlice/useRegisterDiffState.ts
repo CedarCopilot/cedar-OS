@@ -128,24 +128,24 @@ export function addDiffToArrayObjs<T extends Record<string, unknown>>(
 }
 
 /**
- * Utility function to add diff markers to Map objects
- * Compares Maps and adds 'diff' field to values based on changes
- * @param oldState - The previous state Map
- * @param newState - The new state Map
+ * Utility function to add diff markers to Record objects
+ * Compares Records and adds 'diff' field to values based on changes
+ * @param oldState - The previous state Record
+ * @param newState - The new state Record
  * @param diffPath - JSON path where to add the diff field (default: '' for root level, '/data' for nested)
  * @param diffChecker - Optional configuration for selective diff checking
  */
-export function addDiffToMapObj<K, V extends Record<string, unknown>>(
-	oldState: Map<K, V>,
-	newState: Map<K, V>,
+export function addDiffToMapObj<V extends Record<string, unknown>>(
+	oldState: Record<string, V>,
+	newState: Record<string, V>,
 	diffPath: string = '',
 	diffChecker?: DiffChecker
-): Map<K, V> {
-	const resultMap = new Map<K, V>();
+): Record<string, V> {
+	const result: Record<string, V> = {};
 
 	// First, process all items in the new state (added or changed)
-	for (const [key, newItem] of newState.entries()) {
-		const oldItem = oldState.get(key);
+	for (const [key, newItem] of Object.entries(newState)) {
+		const oldItem = oldState[key];
 		let diffType: 'added' | 'changed' | null = null;
 
 		if (!oldItem) {
@@ -165,24 +165,24 @@ export function addDiffToMapObj<K, V extends Record<string, unknown>>(
 
 		// If no changes, add item as is
 		if (!diffType) {
-			resultMap.set(key, newItem);
+			result[key] = newItem;
 		} else {
 			// Add diff field at the specified path
 			const itemWithDiff = setValueAtPath(newItem, diffPath, diffType);
-			resultMap.set(key, itemWithDiff);
+			result[key] = itemWithDiff;
 		}
 	}
 
 	// Then, add removed items from oldState with 'removed' diff marker
-	for (const [key, oldItem] of oldState.entries()) {
-		if (!newState.has(key)) {
+	for (const [key, oldItem] of Object.entries(oldState)) {
+		if (!(key in newState)) {
 			// Item was removed - add it with 'removed' diff marker
 			const itemWithDiff = setValueAtPath(oldItem, diffPath, 'removed');
-			resultMap.set(key, itemWithDiff);
+			result[key] = itemWithDiff;
 		}
 	}
 
-	return resultMap;
+	return result;
 }
 
 /**

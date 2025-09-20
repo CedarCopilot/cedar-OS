@@ -2206,4 +2206,138 @@ describe('Integration: applyPatchesToDiffState with other methods', () => {
 		// History should contain both previous states
 		expect(result?.history).toHaveLength(2);
 	});
+
+	describe('Primitive Array Diff Operations', () => {
+		interface NodeData {
+			id: string;
+			data: {
+				attributeIds: string[];
+			};
+		}
+
+		it('should reject diff for primitive array elements', () => {
+			const initialNodes: NodeData[] = [
+				{
+					id: 'node1',
+					data: {
+						attributeIds: ['attr1', 'attr2'],
+					},
+				},
+			];
+
+			const updatedNodes: NodeData[] = [
+				{
+					id: 'node1',
+					data: {
+						attributeIds: ['attr1', 'attr2', 'attr3'], // Added attr3
+					},
+				},
+			];
+
+			// Register the diff state
+			act(() => {
+				useCedarStore.getState().registerDiffState({
+					key: 'testNodes',
+					value: initialNodes,
+					setValue: () => {},
+					description: 'Test nodes for primitive array diff',
+				});
+			});
+
+			// Update to the new state to create a diff and force diff mode
+			act(() => {
+				useCedarStore.getState().newDiffState('testNodes', updatedNodes, true); // Force isDiffChange=true
+			});
+
+			// Verify diff mode is active
+			const diffStateBefore = useCedarStore
+				.getState()
+				.getDiffHistoryState<NodeData[]>('testNodes');
+			expect(diffStateBefore?.diffState.isDiffMode).toBe(true);
+			expect(
+				diffStateBefore?.diffState.newState[0].data.attributeIds
+			).toContain('attr3');
+
+			// Reject the addition of 'attr3' from the primitive array
+			act(() => {
+				const success = useCedarStore.getState().rejectDiff(
+					'testNodes',
+					'/0/data/attributeIds', // Path to the attributeIds array
+					'value', // Ignored for primitive arrays
+					'attr3' // The primitive value to reject/remove
+				);
+				expect(success).toBe(true);
+			});
+
+			// Verify the diff was rejected (attr3 removed)
+			const diffStateAfter = useCedarStore
+				.getState()
+				.getDiffHistoryState<NodeData[]>('testNodes');
+			expect(diffStateAfter?.diffState.newState[0].data.attributeIds).toEqual([
+				'attr1',
+				'attr2',
+			]);
+			expect(
+				diffStateAfter?.diffState.newState[0].data.attributeIds
+			).not.toContain('attr3');
+		});
+
+		it('should handle rejecting non-existent primitive values gracefully', () => {
+			const initialNodes: NodeData[] = [
+				{
+					id: 'node1',
+					data: {
+						attributeIds: ['attr1', 'attr2'],
+					},
+				},
+			];
+
+			const updatedNodes: NodeData[] = [
+				{
+					id: 'node1',
+					data: {
+						attributeIds: ['attr1', 'attr2', 'attr3'], // Added attr3
+					},
+				},
+			];
+
+			// Register the diff state
+			act(() => {
+				useCedarStore.getState().registerDiffState({
+					key: 'testNodes2',
+					value: initialNodes,
+					setValue: () => {},
+					description: 'Test nodes for primitive array diff',
+				});
+			});
+
+			// Create a diff state first
+			act(() => {
+				useCedarStore.getState().newDiffState('testNodes2', updatedNodes, true);
+			});
+
+			// Try to reject a value that doesn't exist
+			act(() => {
+				const success = useCedarStore
+					.getState()
+					.rejectDiff(
+						'testNodes2',
+						'/0/data/attributeIds',
+						'value',
+						'nonExistentAttr'
+					);
+				expect(success).toBe(true); // Should still return true, just no changes made
+			});
+
+			// Verify the array still contains attr3 (unchanged since nonExistentAttr wasn't there)
+			const diffState = useCedarStore
+				.getState()
+				.getDiffHistoryState<NodeData[]>('testNodes2');
+			expect(diffState?.diffState.newState[0].data.attributeIds).toEqual([
+				'attr1',
+				'attr2',
+				'attr3',
+			]);
+		});
+	});
 });

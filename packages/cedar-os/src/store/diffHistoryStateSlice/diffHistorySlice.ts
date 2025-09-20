@@ -129,6 +129,26 @@ export interface DiffHistorySlice {
 		targetId?: unknown,
 		diffMarkerPaths?: string[]
 	) => boolean;
+	/**
+	 * Reject a specific diff change
+	 * @param key - The state key
+	 * @param jsonPath - JSON path to the array or field
+	 * @param identificationField - Field name or function to identify array items (ignored for primitive arrays)
+	 * @param targetId - The specific item/value to reject
+	 * @param diffMarkerPaths - Optional paths where diff markers are located
+	 *
+	 * For primitive arrays (strings, numbers, booleans):
+	 * - identificationField is ignored
+	 * - targetId should be the primitive value to remove
+	 * - The function will detect primitive arrays automatically
+	 *
+	 * @example
+	 * // For object arrays:
+	 * rejectDiff('nodes', '/0/data/items', 'id', 'item-123');
+	 *
+	 * // For primitive arrays:
+	 * rejectDiff('nodes', '/0/data/attributeIds', 'value', 'attribute-id-456');
+	 */
 	rejectDiff: <T>(
 		key: string,
 		jsonPath: string,
@@ -205,6 +225,99 @@ function getItemIdentifier<T>(
 		return identificationField(item);
 	}
 	return (item as Record<string, unknown>)[identificationField];
+}
+
+/**
+ * Handle primitive array diff operations (strings, numbers, booleans)
+ */
+function handlePrimitiveArrayDiff<T>(params: {
+	get: () => CedarStore;
+	key: string;
+	jsonPath: string;
+	oldArray: T[];
+	newArray: T[];
+	action: 'accept' | 'reject';
+	currentDiffHistoryState: DiffHistoryState<T>;
+	targetId: unknown;
+	diffMode: DiffMode;
+	computeState?: ComputeStateFunction<T>;
+}): boolean {
+	const {
+		get,
+		key,
+		jsonPath,
+		newArray,
+		action,
+		currentDiffHistoryState,
+		targetId,
+		diffMode,
+		computeState,
+	} = params;
+
+	const { diffState, history } = currentDiffHistoryState;
+
+	let resultArray: T[];
+
+	if (action === 'accept') {
+		// For accept, keep the new array as is (targetId is already in the array)
+		resultArray = [...newArray];
+	} else if (action === 'reject') {
+		// For reject, remove the targetId from the new array
+		resultArray = newArray.filter((item) => item !== targetId);
+	} else {
+		return false;
+	}
+
+	// Update the state with the modified array
+	const newStateWithUpdatedArray = setValueAtPathForDiff(
+		diffState.newState,
+		jsonPath,
+		resultArray
+	);
+
+	// For reject, also update oldState to reflect the removal
+	const finalOldState =
+		action === 'reject'
+			? setValueAtPathForDiff(diffState.oldState, jsonPath, resultArray)
+			: diffState.oldState;
+
+	const finalNewState = newStateWithUpdatedArray;
+
+	// Compute the final state
+	let finalComputedState: T;
+	let stillInDiffMode = false;
+
+	if (computeState) {
+		finalComputedState = computeState(finalOldState, finalNewState, []);
+		// Check if there are still differences
+		stillInDiffMode = !areStatesEquivalent(finalOldState, finalNewState);
+	} else {
+		finalComputedState = finalNewState;
+		stillInDiffMode = !areStatesEquivalent(finalOldState, finalNewState);
+	}
+
+	const updatedDiffState: DiffState<T> = {
+		oldState: finalOldState,
+		newState: finalNewState,
+		computedState: finalComputedState,
+		isDiffMode: stillInDiffMode,
+		patches: [],
+	};
+
+	const updatedHistory = [...history, diffState];
+
+	const updatedDiffHistoryState: DiffHistoryState<T> = {
+		diffState: updatedDiffState,
+		history: updatedHistory,
+		redoStack: [],
+		diffMode,
+		computeState,
+	};
+
+	// Update the store
+	get().setDiffState(key, updatedDiffHistoryState);
+
+	return true;
 }
 
 /**
@@ -465,6 +578,33 @@ function handleArrayDiff<T>(params: {
 	} = params;
 	const { diffState, history, diffMode, computeState } =
 		currentDiffHistoryState;
+
+	// Check if we're dealing with primitive arrays
+	const isPrimitiveArray =
+		(oldArray.length > 0 &&
+			(typeof oldArray[0] === 'string' ||
+				typeof oldArray[0] === 'number' ||
+				typeof oldArray[0] === 'boolean')) ||
+		(newArray.length > 0 &&
+			(typeof newArray[0] === 'string' ||
+				typeof newArray[0] === 'number' ||
+				typeof newArray[0] === 'boolean'));
+
+	// Handle primitive arrays differently
+	if (isPrimitiveArray && targetId !== undefined) {
+		return handlePrimitiveArrayDiff({
+			get,
+			key,
+			jsonPath,
+			oldArray,
+			newArray,
+			action,
+			currentDiffHistoryState,
+			targetId,
+			diffMode,
+			computeState,
+		});
+	}
 
 	// Create maps for easier lookup
 	const oldMap = new Map(

@@ -1,7 +1,7 @@
 import { useCedarStore } from '@/store/CedarStore';
 import { addDiffToArrayObjs } from '@/store/diffHistoryStateSlice/useRegisterDiffState';
 
-interface TestNode {
+interface TestNode extends Record<string, unknown> {
 	id: string;
 	data: {
 		title: string;

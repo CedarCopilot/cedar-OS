@@ -3,7 +3,7 @@ import {
 	getFrontendToolSchemas,
 	getStateSetterSchema,
 	getStateSetterSchemas,
-} from '../src/schemaExtractors';
+} from '../src/types/schemaExtractors';
 import type { CedarRequestBody } from '../src/types';
 
 describe('Schema Extractors', () => {
