@@ -141,14 +141,14 @@ describe('executeDiffSetter', () => {
 			diffMode: 'defaultAccept',
 		});
 
-		// Set state through setCedarState
+		// Set state through setCedarState (with default isDiffChange: false)
 		useCedarStore.getState().setCedarState(testKey, newValue);
 
-		// Check that setDiffState was called
+		// Check that newDiffState was called and state was updated
 		const diffState = useCedarStore.getState().getDiffHistoryState(testKey);
-		expect(diffState?.diffState.isDiffMode).toBe(true);
+		expect(diffState?.diffState.isDiffMode).toBe(false); // Should remain false since isDiffChange defaults to false
 		expect(diffState?.diffState.newState).toBe(newValue);
-		expect(diffState?.diffState.oldState).toBe(initialValue);
+		expect(diffState?.diffState.oldState).toBe(newValue); // oldState should be newValue when not in diff mode
 	});
 
 	it('should handle non-diff-tracked states normally', () => {
