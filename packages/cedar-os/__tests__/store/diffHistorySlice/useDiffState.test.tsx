@@ -23,7 +23,7 @@ describe('useDiffState', () => {
 
 		// Update state
 		act(() => {
-			result.current[1]('updated value');
+			result.current[1]('updated value' as (typeof result.current)[0]);
 		});
 
 		// Check updated state
@@ -114,7 +114,7 @@ describe('useDiffState', () => {
 
 		// Update state
 		act(() => {
-			result.current[1]('updated');
+			result.current[1]('updated' as (typeof result.current)[0]);
 		});
 
 		// With holdAccept mode, the computed state should still be 'initial'
@@ -171,7 +171,7 @@ describe('useDiffStateOperations', () => {
 
 		// Update state
 		act(() => {
-			stateResult.current[1]('updated');
+			stateResult.current[1]('updated' as (typeof stateResult.current)[0]);
 		});
 
 		expect(stateResult.current[0]).toBe('updated');

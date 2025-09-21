@@ -73,13 +73,33 @@ function filterPatchesByDiffChecker(
  * @param diffPath - JSON path where to add the diff field (default: '' for root level, '/data' for nested)
  * @param diffChecker - Optional configuration for selective diff checking
  */
-export function addDiffToArrayObjs<T extends Record<string, unknown>>(
+export function addDiffToArrayObjs<T extends Record<string, any>>(
 	oldState: T[],
 	newState: T[],
 	idField: string = 'id',
 	diffPath: string = '',
 	diffChecker?: DiffChecker
-): T[] {
+): any[] {
+	// Check if we're dealing with primitive arrays (strings, numbers, booleans)
+	const isPrimitiveArray =
+		(oldState.length > 0 &&
+			(typeof oldState[0] === 'string' ||
+				typeof oldState[0] === 'number' ||
+				typeof oldState[0] === 'boolean')) ||
+		(newState.length > 0 &&
+			(typeof newState[0] === 'string' ||
+				typeof newState[0] === 'number' ||
+				typeof newState[0] === 'boolean'));
+
+	// For primitive arrays, return newState as-is (no diff markers needed)
+	// Primitive arrays are handled by the handlePrimitiveArrayDiff function
+	if (isPrimitiveArray) {
+		console.warn(
+			'addDiffToArrayObjs called with primitive array. Primitive arrays should use handlePrimitiveArrayDiff instead.'
+		);
+		return newState as T[];
+	}
+
 	const oldMap = new Map(oldState.map((item) => [item[idField], item]));
 	const newMap = new Map(newState.map((item) => [item[idField], item]));
 	const result: T[] = [];
@@ -123,6 +143,81 @@ export function addDiffToArrayObjs<T extends Record<string, unknown>>(
 			result.push(setValueAtPath(oldItem, diffPath, 'removed'));
 		}
 	});
+
+	return result;
+}
+
+/**
+ * Utility function to handle diff computation for primitive arrays
+ * Unlike addDiffToArrayObjs, this doesn't add diff markers to individual items
+ * since primitive values can't have additional properties
+ * @param oldState - The previous state array of primitives
+ * @param newState - The new state array of primitives
+ */
+export function addDiffToPrimitiveArray<T extends string | number | boolean>(
+	oldState: T[],
+	newState: T[]
+): T[] {
+	// For primitive arrays, we can't add diff markers to individual items
+	// The diff handling is done at the array level by handlePrimitiveArrayDiff
+	// So we just return the newState as-is
+	return [...newState];
+}
+
+/**
+ * Utility function to add diff markers to Record objects
+ * Compares Records and adds 'diff' field to values based on changes
+ * @param oldState - The previous state Record
+ * @param newState - The new state Record
+ * @param diffPath - JSON path where to add the diff field (default: '' for root level, '/data' for nested)
+ * @param diffChecker - Optional configuration for selective diff checking
+ */
+export function addDiffToMapObj<V extends Record<string, unknown>>(
+	oldState: Record<string, V>,
+	newState: Record<string, V>,
+	diffPath: string = '',
+	diffChecker?: DiffChecker
+): Record<string, V> {
+	const result: Record<string, V> = {};
+
+	// First, process all items in the new state (added or changed)
+	for (const [key, newItem] of Object.entries(newState)) {
+		const oldItem = oldState[key];
+		let diffType: 'added' | 'changed' | null = null;
+
+		if (!oldItem) {
+			// Item was added
+			diffType = 'added';
+		} else {
+			// Check if item was changed
+			const patches = compare(oldItem, newItem);
+
+			// Apply diffChecker filtering if provided
+			const filteredPatches = filterPatchesByDiffChecker(patches, diffChecker);
+
+			if (filteredPatches.length > 0) {
+				diffType = 'changed';
+			}
+		}
+
+		// If no changes, add item as is
+		if (!diffType) {
+			result[key] = newItem;
+		} else {
+			// Add diff field at the specified path
+			const itemWithDiff = setValueAtPath(newItem, diffPath, diffType);
+			result[key] = itemWithDiff;
+		}
+	}
+
+	// Then, add removed items from oldState with 'removed' diff marker
+	for (const [key, oldItem] of Object.entries(oldState)) {
+		if (!(key in newState)) {
+			// Item was removed - add it with 'removed' diff marker
+			const itemWithDiff = setValueAtPath(oldItem, diffPath, 'removed');
+			result[key] = itemWithDiff;
+		}
+	}
 
 	return result;
 }

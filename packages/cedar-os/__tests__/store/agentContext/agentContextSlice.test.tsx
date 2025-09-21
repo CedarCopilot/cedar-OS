@@ -74,7 +74,7 @@ describe('AgentContextSlice', () => {
 
 			const context = useCedarStore.getState().additionalContext;
 			expect(context.testKey).toHaveLength(1);
-			expect(context.testKey[0]).toEqual(entry);
+			expect((context.testKey as ContextEntry[])[0]).toEqual(entry);
 		});
 
 		it('should store single context entry as single value', () => {
@@ -285,7 +285,9 @@ describe('AgentContextSlice', () => {
 
 			const context = useCedarStore.getState().additionalContext;
 			expect(context.testKey).toHaveLength(1);
-			expect(context.testKey[0].source).toBe('subscription');
+			expect((context.testKey as ContextEntry[])[0].source).toBe(
+				'subscription'
+			);
 		});
 
 		it('should preserve single value structure when clearing by source', () => {
@@ -346,7 +348,9 @@ describe('AgentContextSlice', () => {
 
 			const context = useCedarStore.getState().additionalContext;
 			expect(context.testKey).toHaveLength(1);
-			expect(context.testKey[0].source).toBe('subscription');
+			expect((context.testKey as ContextEntry[])[0].source).toBe(
+				'subscription'
+			);
 		});
 	});
 
@@ -647,18 +651,18 @@ describe('AgentContextSlice', () => {
 			expect(compiled.multipleItems).toHaveLength(2);
 
 			// Each item should have simplified structure with just data and source
-			expect(compiled.multipleItems[0]).toEqual({
+			expect(compiled.multipleItems![0]).toEqual({
 				data: { id: '1', name: 'Item 1', value: 100 },
 				source: 'function',
 			});
-			expect(compiled.multipleItems[1]).toEqual({
+			expect(compiled.multipleItems![1]).toEqual({
 				data: { id: '2', name: 'Item 2', value: 200 },
 				source: 'function',
 			});
 
 			// Should not have id or metadata fields
-			expect(compiled.multipleItems[0]).not.toHaveProperty('id');
-			expect(compiled.multipleItems[0]).not.toHaveProperty('metadata');
+			expect(compiled.multipleItems![0]).not.toHaveProperty('id');
+			expect(compiled.multipleItems![0]).not.toHaveProperty('metadata');
 		});
 
 		it('should extract single objects in compileAdditionalContext', () => {
@@ -768,11 +772,21 @@ describe('AgentContextSlice', () => {
 
 			const context = useCedarStore.getState().additionalContext;
 			expect(context.testItems).toHaveLength(2);
-			expect(context.testItems[0].data).toEqual(testData[0]);
-			expect(context.testItems[0].metadata?.label).toBe('Item 1');
-			expect(context.testItems[0].metadata?.color).toBe('#FF0000');
-			expect(context.testItems[1].data).toEqual(testData[1]);
-			expect(context.testItems[1].metadata?.label).toBe('Item 2');
+			expect((context.testItems as ContextEntry[])[0].data).toEqual(
+				testData[0]
+			);
+			expect((context.testItems as ContextEntry[])[0].metadata?.label).toBe(
+				'Item 1'
+			);
+			expect((context.testItems as ContextEntry[])[0].metadata?.color).toBe(
+				'#FF0000'
+			);
+			expect((context.testItems as ContextEntry[])[1].data).toEqual(
+				testData[1]
+			);
+			expect((context.testItems as ContextEntry[])[1].metadata?.label).toBe(
+				'Item 2'
+			);
 		});
 
 		it('should handle function labelField in putAdditionalContext', () => {
@@ -851,8 +865,12 @@ describe('AgentContextSlice', () => {
 
 			const context = useCedarStore.getState().additionalContext;
 			expect(context.functionSourceTest).toHaveLength(2);
-			expect(context.functionSourceTest[0].source).toBe('function');
-			expect(context.functionSourceTest[1].source).toBe('function');
+			expect((context.functionSourceTest as ContextEntry[])[0].source).toBe(
+				'function'
+			);
+			expect((context.functionSourceTest as ContextEntry[])[1].source).toBe(
+				'function'
+			);
 		});
 	});
 
@@ -945,7 +963,7 @@ describe('AgentContextSlice', () => {
 			expect(context.parameters).toHaveLength(2);
 
 			// Check first parameter
-			const firstParam = context.parameters[0];
+			const firstParam = (context.parameters as ContextEntry[])[0];
 			expect(firstParam.id).toBe('parameters-0');
 			expect(firstParam.source).toBe('subscription');
 			expect(firstParam.data).toEqual({ value: 0, name: 'temperature' });
@@ -954,7 +972,7 @@ describe('AgentContextSlice', () => {
 			expect(firstParam.metadata?.order).toBe(1);
 
 			// Check second parameter
-			const secondParam = context.parameters[1];
+			const secondParam = (context.parameters as ContextEntry[])[1];
 			expect(secondParam.id).toBe('parameters-1');
 			expect(secondParam.data).toEqual({ value: 0.9, name: 'opacity' });
 			expect(secondParam.metadata?.label).toBe('opacity');
@@ -1009,15 +1027,19 @@ describe('AgentContextSlice', () => {
 			});
 
 			// Check formatted labels
-			expect(context.parameters[0].metadata?.label).toBe('temperature (0)');
-			expect(context.parameters[1].metadata?.label).toBe('opacity (0.9)');
+			expect((context.parameters as ContextEntry[])[0].metadata?.label).toBe(
+				'temperature (0)'
+			);
+			expect((context.parameters as ContextEntry[])[1].metadata?.label).toBe(
+				'opacity (0.9)'
+			);
 
 			// Data should remain unchanged
-			expect(context.parameters[0].data).toEqual({
+			expect((context.parameters as ContextEntry[])[0].data).toEqual({
 				value: 0,
 				name: 'temperature',
 			});
-			expect(context.parameters[1].data).toEqual({
+			expect((context.parameters as ContextEntry[])[1].data).toEqual({
 				value: 0.9,
 				name: 'opacity',
 			});
@@ -1051,8 +1073,12 @@ describe('AgentContextSlice', () => {
 			);
 
 			const context = useCedarStore.getState().additionalContext;
-			expect(context.nestedItems[0].metadata?.label).toBe('First Item');
-			expect(context.nestedItems[1].metadata?.label).toBe('Second Item');
+			expect((context.nestedItems as ContextEntry[])[0].metadata?.label).toBe(
+				'First Item'
+			);
+			expect((context.nestedItems as ContextEntry[])[1].metadata?.label).toBe(
+				'Second Item'
+			);
 		});
 
 		it('should handle single value (non-array) in mapFn result', () => {
@@ -1118,10 +1144,16 @@ describe('AgentContextSlice', () => {
 			const context = useCedarStore.getState().additionalContext;
 
 			// Should prefer title > label > name > id
-			expect(context.items[0].metadata?.label).toBe('Item Title');
-			expect(context.items[1].metadata?.label).toBe('Only Title');
-			expect(context.items[2].metadata?.label).toBe('Only Label');
-			expect(context.items[3].metadata?.label).toBe('4');
+			expect((context.items as ContextEntry[])[0].metadata?.label).toBe(
+				'Item Title'
+			);
+			expect((context.items as ContextEntry[])[1].metadata?.label).toBe(
+				'Only Title'
+			);
+			expect((context.items as ContextEntry[])[2].metadata?.label).toBe(
+				'Only Label'
+			);
+			expect((context.items as ContextEntry[])[3].metadata?.label).toBe('4');
 		});
 
 		it('should preserve original data structure without modification', () => {
@@ -1496,19 +1528,22 @@ describe('AgentContextSlice', () => {
 
 			// The schema should have $ref structure
 			expect(tools.testTool.argsSchema.$ref).toBe('#/definitions/testTool');
-			expect(tools.testTool.argsSchema.definitions).toBeDefined();
-			expect(tools.testTool.argsSchema.definitions.testTool).toBeDefined();
-			expect(tools.testTool.argsSchema.definitions.testTool.type).toBe(
+			expect((tools.testTool.argsSchema as any).definitions).toBeDefined();
+			expect(
+				(tools.testTool.argsSchema as any).definitions.testTool
+			).toBeDefined();
+			expect((tools.testTool.argsSchema as any).definitions.testTool.type).toBe(
 				'object'
 			);
 			expect(
-				tools.testTool.argsSchema.definitions.testTool.properties
+				(tools.testTool.argsSchema as any).definitions.testTool.properties
 			).toBeDefined();
 			expect(
-				tools.testTool.argsSchema.definitions.testTool.properties.message
+				(tools.testTool.argsSchema as any).definitions.testTool.properties
+					.message
 			).toBeDefined();
 			expect(
-				tools.testTool.argsSchema.definitions.testTool.properties.count
+				(tools.testTool.argsSchema as any).definitions.testTool.properties.count
 			).toBeDefined();
 		});
 
@@ -1544,34 +1579,38 @@ describe('AgentContextSlice', () => {
 			const context = result.current.compileAdditionalContext();
 
 			expect(context.frontendTools).toBeDefined();
-			expect(Object.keys(context.frontendTools)).toHaveLength(2);
+			expect(Object.keys(context.frontendTools!)).toHaveLength(2);
 
 			// Check first tool
-			expect(context.frontendTools.tool1).toBeDefined();
-			expect(context.frontendTools.tool1.name).toBe('tool1');
-			expect(context.frontendTools.tool1.description).toBe('First tool');
-			expect(context.frontendTools.tool1.argsSchema.$ref).toBe(
+			expect(context.frontendTools!.tool1).toBeDefined();
+			expect((context.frontendTools as any)!.tool1.name).toBe('tool1');
+			expect((context.frontendTools as any)!.tool1.description).toBe(
+				'First tool'
+			);
+			expect((context.frontendTools as any)!.tool1.argsSchema.$ref).toBe(
 				'#/definitions/tool1'
 			);
 			expect(
-				context.frontendTools.tool1.argsSchema.definitions.tool1.properties
-					.input
+				((context.frontendTools as any)!.tool1.argsSchema as any).definitions
+					.tool1.properties.input
 			).toBeDefined();
 
 			// Check second tool
-			expect(context.frontendTools.tool2).toBeDefined();
-			expect(context.frontendTools.tool2.name).toBe('tool2');
-			expect(context.frontendTools.tool2.description).toBe('Second tool');
-			expect(context.frontendTools.tool2.argsSchema.$ref).toBe(
+			expect(context.frontendTools!.tool2).toBeDefined();
+			expect((context.frontendTools as any)!.tool2.name).toBe('tool2');
+			expect((context.frontendTools as any)!.tool2.description).toBe(
+				'Second tool'
+			);
+			expect((context.frontendTools as any)!.tool2.argsSchema.$ref).toBe(
 				'#/definitions/tool2'
 			);
 			expect(
-				context.frontendTools.tool2.argsSchema.definitions.tool2.properties
-					.value
+				((context.frontendTools as any)!.tool2.argsSchema as any).definitions
+					.tool2.properties.value
 			).toBeDefined();
 			expect(
-				context.frontendTools.tool2.argsSchema.definitions.tool2.properties
-					.enabled
+				((context.frontendTools as any)!.tool2.argsSchema as any).definitions
+					.tool2.properties.enabled
 			).toBeDefined();
 		});
 
@@ -1844,7 +1883,7 @@ describe('AgentContextSlice', () => {
 			act(() => {
 				result.current.registerState({
 					key: 'testState',
-					initialValue: { count: 0 },
+					value: { count: 0 },
 					schema: z.object({ count: z.number() }),
 					description: 'A test state',
 					stateSetters: {
@@ -1853,9 +1892,8 @@ describe('AgentContextSlice', () => {
 							description: 'Increment the count',
 							argsSchema: z.object({ amount: z.number().optional() }),
 							execute: (args, setValue) => {
-								setValue((prev) => ({
-									count: prev.count + (args.amount || 1),
-								}));
+								const newCount = (args as any)?.amount || 1;
+								setValue({ count: newCount });
 							},
 						},
 					},
@@ -1866,20 +1904,24 @@ describe('AgentContextSlice', () => {
 
 			// Check stateSetters
 			expect(compiled.stateSetters).toBeDefined();
-			expect(compiled.stateSetters.increment).toBeDefined();
-			expect(compiled.stateSetters.increment.name).toBe('increment');
-			expect(compiled.stateSetters.increment.stateKey).toBe('testState');
-			expect(compiled.stateSetters.increment.description).toBe(
+			expect((compiled.stateSetters as any).increment).toBeDefined();
+			expect((compiled.stateSetters as any).increment.name).toBe('increment');
+			expect((compiled.stateSetters as any).increment.stateKey).toBe(
+				'testState'
+			);
+			expect((compiled.stateSetters as any).increment.description).toBe(
 				'Increment the count'
 			);
-			expect(compiled.stateSetters.increment.argsSchema).toBeDefined();
+			expect((compiled.stateSetters as any).increment.argsSchema).toBeDefined();
 
 			// Check schemas
 			expect(compiled.schemas).toBeDefined();
-			expect(compiled.schemas.testState).toBeDefined();
-			expect(compiled.schemas.testState.stateKey).toBe('testState');
-			expect(compiled.schemas.testState.description).toBe('A test state');
-			expect(compiled.schemas.testState.schema).toBeDefined();
+			expect((compiled.schemas as any).testState).toBeDefined();
+			expect((compiled.schemas as any).testState.stateKey).toBe('testState');
+			expect((compiled.schemas as any).testState.description).toBe(
+				'A test state'
+			);
+			expect((compiled.schemas as any).testState.schema).toBeDefined();
 		});
 
 		it('should be used by compileAdditionalContext', () => {
@@ -1889,7 +1931,7 @@ describe('AgentContextSlice', () => {
 			act(() => {
 				result.current.registerState({
 					key: 'testState',
-					initialValue: { value: 'test' },
+					value: { value: 'test' },
 					schema: z.object({ value: z.string() }),
 					stateSetters: {
 						setValue: {
@@ -1897,7 +1939,7 @@ describe('AgentContextSlice', () => {
 							description: 'Set the value',
 							argsSchema: z.object({ newValue: z.string() }),
 							execute: (args, setValue) => {
-								setValue({ value: args.newValue });
+								setValue({ value: (args as any)?.newValue });
 							},
 						},
 					},
@@ -1908,12 +1950,14 @@ describe('AgentContextSlice', () => {
 
 			// Verify that the compiled state setters are included
 			expect(context.stateSetters).toBeDefined();
-			expect(context.stateSetters.setValue).toBeDefined();
-			expect(context.stateSetters.setValue.name).toBe('setValue');
-			expect(context.stateSetters.setValue.stateKey).toBe('testState');
+			expect(context.stateSetters!.setValue).toBeDefined();
+			expect((context.stateSetters as any)!.setValue.name).toBe('setValue');
+			expect((context.stateSetters as any)!.setValue.stateKey).toBe(
+				'testState'
+			);
 
 			expect(context.schemas).toBeDefined();
-			expect(context.schemas.testState).toBeDefined();
+			expect(context.schemas!.testState).toBeDefined();
 		});
 	});
 });

@@ -15,8 +15,7 @@ describe('useThreadController', () => {
 					id: 'main',
 					name: 'Main Thread',
 					messages: [],
-					createdAt: Date.now(),
-					updatedAt: Date.now(),
+					lastLoaded: new Date().toISOString(),
 				},
 			},
 		});

@@ -50,6 +50,7 @@ describe('useSubscribeToDiffValue', () => {
 				diffState: {
 					oldState: { title: 'Old Title', count: 5 },
 					newState: { title: 'New Title', count: 10 },
+					computedState: { title: 'New Title', count: 10 },
 					isDiffMode: true,
 					patches: [],
 				},
@@ -101,6 +102,14 @@ describe('useSubscribeToDiffValue', () => {
 							},
 						},
 					},
+					computedState: {
+						user: {
+							profile: {
+								name: 'John',
+								age: 25,
+							},
+						},
+					},
 					isDiffMode: false,
 					patches: [],
 				},
@@ -138,6 +147,13 @@ describe('useSubscribeToDiffValue', () => {
 						],
 					},
 					newState: {
+						items: [
+							{ id: 1, name: 'Updated Item 1' },
+							{ id: 2, name: 'Item 2' },
+							{ id: 3, name: 'Item 3' },
+						],
+					},
+					computedState: {
 						items: [
 							{ id: 1, name: 'Updated Item 1' },
 							{ id: 2, name: 'Item 2' },
@@ -184,6 +200,8 @@ describe('useSubscribeToDiffValue', () => {
 				diffState: {
 					oldState: { value: 'old' },
 					newState: { value: 'new' },
+
+					computedState: { value: 'new' },
 					isDiffMode: false,
 					patches: [],
 				},
@@ -224,6 +242,8 @@ describe('useSubscribeToDiffValue', () => {
 				diffState: {
 					oldState: { status: 'pending' },
 					newState: { status: 'completed' },
+
+					computedState: { status: 'completed' },
 					isDiffMode: true,
 					patches: [],
 				},
@@ -252,6 +272,8 @@ describe('useSubscribeToDiffValue', () => {
 				diffState: {
 					oldState: { status: 'pending' },
 					newState: { status: 'completed' },
+
+					computedState: { status: 'completed' },
 					isDiffMode: true,
 					patches: [],
 				},
@@ -282,6 +304,8 @@ describe('useSubscribeToDiffValue', () => {
 				diffState: {
 					oldState: { counter: 0 },
 					newState: { counter: 1 },
+
+					computedState: { counter: 1 },
 					isDiffMode: false,
 					patches: [],
 				},
@@ -342,6 +366,12 @@ describe('useSubscribeToDiffValues', () => {
 					priority: 1,
 				},
 				newState: {
+					title: 'New Title',
+					description: 'New Description',
+					status: 'completed',
+					priority: 3,
+				},
+				computedState: {
 					title: 'New Title',
 					description: 'New Description',
 					status: 'completed',
@@ -416,6 +446,16 @@ describe('useSubscribeToDiffValues', () => {
 						},
 					},
 					tags: ['tag1', 'tag2', 'tag3'],
+				},
+				computedState: {
+					id: 'abc123',
+					user: {
+						name: 'John',
+						settings: {
+							theme: 'light',
+						},
+					},
+					tags: ['tag1', 'tag2'],
 				},
 				isDiffMode: false,
 				patches: [],

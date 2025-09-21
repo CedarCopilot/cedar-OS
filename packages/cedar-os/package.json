@@ -1,11 +1,11 @@
 {
 	"name": "cedar-os",
-	"version": "0.1.19",
+	"version": "0.1.21",
 	"description": "",
 	"sideEffects": false,
 	"scripts": {
 		"test": "jest",
-		"test:watch": "jest --watch",
+		"test:watch": "jest --watgch",
 		"test:coverage": "jest --coverage",
 		"clean": "rm -rf dist && mkdir -p dist",
 		"build": "npm run clean && tsup ./src",

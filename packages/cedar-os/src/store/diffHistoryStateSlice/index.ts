@@ -24,6 +24,8 @@ export {
 export {
 	useRegisterDiffState,
 	addDiffToArrayObjs,
+	addDiffToPrimitiveArray,
+	addDiffToMapObj,
 	type RegisterDiffStateConfig,
 	type DiffStateReturn,
 } from './useRegisterDiffState';

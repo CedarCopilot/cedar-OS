@@ -1,5 +1,6 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
+import { z } from 'zod';
 import {
 	useRegisterDiffState,
 	addDiffToArrayObjs,
@@ -40,13 +41,12 @@ describe('useRegisterDiffState Integration', () => {
 				addNode: {
 					name: 'addNode',
 					description: 'Add a new node',
-					parameters: [
-						{
-							name: 'node',
-							type: 'TestNode',
-							description: 'Node to add',
-						},
-					],
+					argsSchema: z.object({
+						node: z.object({
+							id: z.string(),
+							data: z.any(),
+						}),
+					}),
 					execute: function (currentNodes, setValue, args) {
 						const newNode = args as TestNode;
 						// Use the setValue passed to the execute function
@@ -57,13 +57,12 @@ describe('useRegisterDiffState Integration', () => {
 				changeNode: {
 					name: 'changeNode',
 					description: 'Change an existing node',
-					parameters: [
-						{
-							name: 'updatedNode',
-							type: 'TestNode',
-							description: 'Updated node data',
-						},
-					],
+					argsSchema: z.object({
+						updatedNode: z.object({
+							id: z.string(),
+							data: z.any(),
+						}),
+					}),
 					execute: function (currentNodes, setValue, args) {
 						const updated = args as TestNode;
 						// Use the setValue passed to the execute function
