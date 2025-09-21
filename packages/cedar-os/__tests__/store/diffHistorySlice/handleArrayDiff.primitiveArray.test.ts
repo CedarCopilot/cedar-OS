@@ -474,7 +474,7 @@ describe('handleArrayDiff - Primitive Array Cases', () => {
 
 			// Reject number addition in nested array
 			act(() => {
-				const success = useCedarStore
+				useCedarStore
 					.getState()
 					.rejectDiff('nestedArrayTest', '/0/data/scores', 'value', 30);
 				// Note: This might return false if the path is not handled as a primitive array

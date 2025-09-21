@@ -73,7 +73,7 @@ function filterPatchesByDiffChecker(
  * @param diffPath - JSON path where to add the diff field (default: '' for root level, '/data' for nested)
  * @param diffChecker - Optional configuration for selective diff checking
  */
-export function addDiffToArrayObjs<T extends Record<string, unknown>>(
+export function addDiffToArrayObjs<T extends Record<string, any>>(
 	oldState: T[],
 	newState: T[],
 	idField: string = 'id',

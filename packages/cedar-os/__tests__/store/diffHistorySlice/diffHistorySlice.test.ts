@@ -34,6 +34,7 @@ describe('DiffHistorySlice', () => {
 					diffState: {
 						oldState: { count: 0 },
 						newState: { count: 1 },
+						computedState: { count: 1 },
 						isDiffMode: false,
 						patches: [],
 					},
@@ -59,6 +60,7 @@ describe('DiffHistorySlice', () => {
 					diffState: {
 						oldState: 'old',
 						newState: 'new',
+						computedState: 'new',
 						isDiffMode: true,
 						patches: [{ op: 'replace', path: '', value: 'new' }] as Operation[],
 					},
@@ -82,6 +84,8 @@ describe('DiffHistorySlice', () => {
 					diffState: {
 						oldState: 1,
 						newState: 2,
+
+						computedState: 2,
 						isDiffMode: false,
 						patches: [],
 					},
@@ -94,6 +98,8 @@ describe('DiffHistorySlice', () => {
 					diffState: {
 						oldState: 2,
 						newState: 3,
+
+						computedState: 3,
 						isDiffMode: true,
 						patches: [],
 					},
@@ -125,6 +131,8 @@ describe('DiffHistorySlice', () => {
 					diffState: {
 						oldState: { value: 'old' },
 						newState: { value: 'new' },
+
+						computedState: { value: 'new' },
 						isDiffMode: true,
 						patches: [],
 					},
@@ -148,6 +156,8 @@ describe('DiffHistorySlice', () => {
 					diffState: {
 						oldState: { value: 'old' },
 						newState: { value: 'new' },
+
+						computedState: { value: 'new' },
 						isDiffMode: true,
 						patches: [],
 					},
@@ -189,6 +199,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: { count: 0 },
 					newState: { count: 1 },
+
+					computedState: { count: 1 },
 					isDiffMode: false,
 					patches: [],
 				},
@@ -224,6 +236,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: { text: 'original' },
 					newState: { text: 'modified' },
+
+					computedState: { text: 'modified' },
 					isDiffMode: false,
 					patches: [],
 				},
@@ -258,6 +272,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: { text: 'original' },
 					newState: { text: 'modified' },
+
+					computedState: { text: 'modified' },
 					isDiffMode: true,
 					patches: [],
 				},
@@ -288,6 +304,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: 1,
 					newState: 2,
+
+					computedState: 2,
 					isDiffMode: false,
 					patches: [],
 				},
@@ -296,6 +314,8 @@ describe('DiffHistorySlice', () => {
 					{
 						oldState: 0,
 						newState: 1,
+
+						computedState: 1,
 						isDiffMode: false,
 						patches: [],
 					},
@@ -326,6 +346,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: 'old',
 					newState: 'new',
+
+					computedState: 'new',
 					isDiffMode: false,
 					patches: [],
 				},
@@ -347,6 +369,7 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: { value: 1, text: 'old' },
 					newState: { value: 2, text: 'new' },
+					computedState: { value: 2, text: 'new' },
 					isDiffMode: true,
 					patches: [
 						{ op: 'replace', path: '/value', value: 2 },
@@ -386,6 +409,7 @@ describe('DiffHistorySlice', () => {
 			expect(updatedState?.history[0]).toEqual({
 				oldState: { value: 1, text: 'old' },
 				newState: { value: 2, text: 'new' },
+				computedState: { value: 2, text: 'new' },
 				isDiffMode: true,
 				patches: [
 					{ op: 'replace', path: '/value', value: 2 },
@@ -398,6 +422,8 @@ describe('DiffHistorySlice', () => {
 			const redoState: DiffState<number> = {
 				oldState: 0,
 				newState: 1,
+
+				computedState: 1,
 				isDiffMode: false,
 				patches: [],
 			};
@@ -406,6 +432,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: 1,
 					newState: 2,
+
+					computedState: 2,
 					isDiffMode: true,
 					patches: [],
 				},
@@ -438,6 +466,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: 'old',
 					newState: 'new',
+
+					computedState: 'new',
 					isDiffMode: false,
 					patches: [],
 				},
@@ -459,6 +489,7 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: { value: 1, text: 'old' },
 					newState: { value: 2, text: 'new' },
+					computedState: { value: 2, text: 'new' },
 					isDiffMode: true,
 					patches: [
 						{ op: 'replace', path: '/value', value: 2 },
@@ -498,6 +529,7 @@ describe('DiffHistorySlice', () => {
 			expect(updatedState?.history[0]).toEqual({
 				oldState: { value: 1, text: 'old' },
 				newState: { value: 2, text: 'new' },
+				computedState: { value: 2, text: 'new' },
 				isDiffMode: true,
 				patches: [
 					{ op: 'replace', path: '/value', value: 2 },
@@ -510,6 +542,8 @@ describe('DiffHistorySlice', () => {
 			const redoState: DiffState<string> = {
 				oldState: 'a',
 				newState: 'b',
+
+				computedState: 'b',
 				isDiffMode: false,
 				patches: [],
 			};
@@ -518,6 +552,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: 'original',
 					newState: 'modified',
+
+					computedState: 'modified',
 					isDiffMode: true,
 					patches: [],
 				},
@@ -550,6 +586,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: 1,
 					newState: 2,
+
+					computedState: 2,
 					isDiffMode: false,
 					patches: [],
 				},
@@ -570,6 +608,8 @@ describe('DiffHistorySlice', () => {
 			const historicalState: DiffState<{ count: number }> = {
 				oldState: { count: 0 },
 				newState: { count: 1 },
+
+				computedState: { count: 1 },
 				isDiffMode: false,
 				patches: [],
 			};
@@ -577,6 +617,8 @@ describe('DiffHistorySlice', () => {
 			const currentState: DiffState<{ count: number }> = {
 				oldState: { count: 1 },
 				newState: { count: 2 },
+
+				computedState: { count: 2 },
 				isDiffMode: false,
 				patches: [],
 			};
@@ -613,6 +655,8 @@ describe('DiffHistorySlice', () => {
 			const state1: DiffState<number> = {
 				oldState: 0,
 				newState: 1,
+
+				computedState: 1,
 				isDiffMode: false,
 				patches: [],
 			};
@@ -620,6 +664,8 @@ describe('DiffHistorySlice', () => {
 			const state2: DiffState<number> = {
 				oldState: 1,
 				newState: 2,
+
+				computedState: 2,
 				isDiffMode: false,
 				patches: [],
 			};
@@ -627,6 +673,8 @@ describe('DiffHistorySlice', () => {
 			const state3: DiffState<number> = {
 				oldState: 2,
 				newState: 3,
+
+				computedState: 3,
 				isDiffMode: false,
 				patches: [],
 			};
@@ -673,6 +721,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: 1,
 					newState: 2,
+
+					computedState: 2,
 					isDiffMode: false,
 					patches: [],
 				},
@@ -694,6 +744,8 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: 1,
 					newState: 2,
+
+					computedState: 2,
 					isDiffMode: false,
 					patches: [],
 				},
@@ -714,6 +766,8 @@ describe('DiffHistorySlice', () => {
 			const currentState: DiffState<{ text: string }> = {
 				oldState: { text: 'current old' },
 				newState: { text: 'current new' },
+
+				computedState: { text: 'current new' },
 				isDiffMode: false,
 				patches: [],
 			};
@@ -721,6 +775,8 @@ describe('DiffHistorySlice', () => {
 			const redoState: DiffState<{ text: string }> = {
 				oldState: { text: 'redo old' },
 				newState: { text: 'redo new' },
+
+				computedState: { text: 'redo new' },
 				isDiffMode: true,
 				patches: [],
 			};
@@ -757,6 +813,8 @@ describe('DiffHistorySlice', () => {
 			const currentState: DiffState<number> = {
 				oldState: 1,
 				newState: 2,
+
+				computedState: 2,
 				isDiffMode: false,
 				patches: [],
 			};
@@ -764,6 +822,8 @@ describe('DiffHistorySlice', () => {
 			const redoState1: DiffState<number> = {
 				oldState: 2,
 				newState: 3,
+
+				computedState: 3,
 				isDiffMode: false,
 				patches: [],
 			};
@@ -771,6 +831,8 @@ describe('DiffHistorySlice', () => {
 			const redoState2: DiffState<number> = {
 				oldState: 3,
 				newState: 4,
+
+				computedState: 4,
 				isDiffMode: false,
 				patches: [],
 			};
@@ -817,6 +879,7 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: { name: 'Alice', age: 25 },
 					newState: { name: 'Alice', age: 25 },
+					computedState: { name: 'Alice', age: 25 },
 					isDiffMode: false,
 					patches: [],
 				},
@@ -861,6 +924,7 @@ describe('DiffHistorySlice', () => {
 			expect(state?.history[0]).toEqual({
 				oldState: { name: 'Alice', age: 25 },
 				newState: { name: 'Alice', age: 25 },
+				computedState: { name: 'Alice', age: 25 },
 				isDiffMode: false,
 				patches: [],
 			});
@@ -868,9 +932,9 @@ describe('DiffHistorySlice', () => {
 			expect(state?.history[1]).toEqual({
 				oldState: { name: 'Alice', age: 25 },
 				newState: { name: 'Bob', age: 30 },
+				computedState: { name: 'Bob', age: 30 },
 				isDiffMode: true,
 				patches: expect.any(Array),
-				computedState: { name: 'Bob', age: 30 },
 			});
 
 			// Step 3: Undo the accept
@@ -912,6 +976,7 @@ describe('DiffHistorySlice', () => {
 				diffState: {
 					oldState: { status: 'active', count: 10 },
 					newState: { status: 'pending', count: 15 },
+					computedState: { status: 'pending', count: 15 },
 					isDiffMode: true,
 					patches: [],
 				},
@@ -1002,6 +1067,10 @@ describe('DiffHistorySlice', () => {
 						settings: { theme: 'light', notifications: true },
 					},
 					newState: {
+						user: { name: 'John', email: 'john@example.com' },
+						settings: { theme: 'light', notifications: true },
+					},
+					computedState: {
 						user: { name: 'John', email: 'john@example.com' },
 						settings: { theme: 'light', notifications: true },
 					},
@@ -1410,6 +1479,7 @@ describe('applyPatchesToDiffState', () => {
 			diffState: {
 				oldState: { name: 'Alice', age: 25 },
 				newState: { name: 'Alice', age: 25 },
+				computedState: { name: 'Alice', age: 25 },
 				isDiffMode: false,
 				patches: [],
 			},
@@ -1476,6 +1546,13 @@ describe('applyPatchesToDiffState', () => {
 					tags: ['tag1', 'tag2'],
 				},
 				newState: {
+					nodes: [
+						{ id: '1', name: 'Node 1' },
+						{ id: '2', name: 'Node 2' },
+					],
+					tags: ['tag1', 'tag2'],
+				},
+				computedState: {
 					nodes: [
 						{ id: '1', name: 'Node 1' },
 						{ id: '2', name: 'Node 2' },
@@ -1587,6 +1664,18 @@ describe('applyPatchesToDiffState', () => {
 					},
 					data: { key1: 'value1' },
 				},
+				computedState: {
+					user: {
+						profile: {
+							name: 'John',
+							settings: {
+								theme: 'light',
+								notifications: { email: true, push: false },
+							},
+						},
+					},
+					data: { key1: 'value1' },
+				},
 				isDiffMode: false,
 				patches: [],
 			},
@@ -1657,6 +1746,8 @@ describe('applyPatchesToDiffState', () => {
 			diffState: {
 				oldState: { value: 1 },
 				newState: { value: 2 },
+
+				computedState: { value: 2 },
 				isDiffMode: false,
 				patches: [],
 			},
@@ -1692,6 +1783,8 @@ describe('applyPatchesToDiffState', () => {
 			diffState: {
 				oldState: { value: 10 },
 				newState: { value: 20 },
+
+				computedState: { value: 20 },
 				isDiffMode: true,
 				patches: [],
 			},
@@ -1735,6 +1828,7 @@ describe('applyPatchesToDiffState', () => {
 			diffState: {
 				oldState: { name: 'Original', count: 0, items: [] },
 				newState: { name: 'Modified', count: 5, items: ['a', 'b'] },
+				computedState: { name: 'Modified', count: 5, items: ['a', 'b'] },
 				isDiffMode: false,
 				patches: [],
 			},
@@ -1785,6 +1879,8 @@ describe('applyPatchesToDiffState', () => {
 		const redoState: DiffState<TestData> = {
 			oldState: { value: 'redo-old' },
 			newState: { value: 'redo-new' },
+
+			computedState: { value: 'redo-new' },
 			isDiffMode: false,
 			patches: [],
 		};
@@ -1793,6 +1889,8 @@ describe('applyPatchesToDiffState', () => {
 			diffState: {
 				oldState: { value: 'current-old' },
 				newState: { value: 'current-new' },
+
+				computedState: { value: 'current-new' },
 				isDiffMode: false,
 				patches: [],
 			},
@@ -1832,6 +1930,7 @@ describe('applyPatchesToDiffState', () => {
 		const originalDiffState: DiffState<TestData> = {
 			oldState: { id: 1, status: 'pending' },
 			newState: { id: 1, status: 'active' },
+			computedState: { id: 1, status: 'active' },
 			isDiffMode: true,
 			patches: [
 				{ op: 'replace', path: '/status', value: 'active' },
@@ -1884,6 +1983,8 @@ describe('applyPatchesToDiffState', () => {
 			diffState: {
 				oldState: { value: 'old' },
 				newState: { value: 'new' },
+
+				computedState: { value: 'new' },
 				isDiffMode: false,
 				patches: [],
 			},
@@ -1930,6 +2031,10 @@ describe('applyPatchesToDiffState', () => {
 					array: ['a', 'b', 'c'],
 				},
 				newState: {
+					source: { value: 'original' },
+					array: ['a', 'b', 'c'],
+				},
+				computedState: {
 					source: { value: 'original' },
 					array: ['a', 'b', 'c'],
 				},
@@ -1982,6 +2087,7 @@ describe('applyPatchesToDiffState', () => {
 			diffState: {
 				oldState: { value: 'test', count: 5 },
 				newState: { value: 'test', count: 5 },
+				computedState: { value: 'test', count: 5 },
 				isDiffMode: false,
 				patches: [],
 			},
@@ -2031,6 +2137,7 @@ describe('Integration: applyPatchesToDiffState with other methods', () => {
 			diffState: {
 				oldState: { name: 'Initial', items: [] },
 				newState: { name: 'Initial', items: [] },
+				computedState: { name: 'Initial', items: [] },
 				isDiffMode: false,
 				patches: [],
 			},
@@ -2085,6 +2192,8 @@ describe('Integration: applyPatchesToDiffState with other methods', () => {
 			diffState: {
 				oldState: { value: 1 },
 				newState: { value: 1 },
+
+				computedState: { value: 1 },
 				isDiffMode: false,
 				patches: [],
 			},
@@ -2159,6 +2268,7 @@ describe('Integration: applyPatchesToDiffState with other methods', () => {
 			diffState: {
 				oldState: { name: 'Start', count: 0 },
 				newState: { name: 'Start', count: 0 },
+				computedState: { name: 'Start', count: 0 },
 				isDiffMode: false,
 				patches: [],
 			},

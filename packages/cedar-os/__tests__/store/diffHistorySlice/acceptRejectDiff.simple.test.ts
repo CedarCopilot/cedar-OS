@@ -276,7 +276,7 @@ describe('acceptDiff and rejectDiff - Core Functionality', () => {
 		const updatedState = useCedarStore
 			.getState()
 			.getDiffHistoryState('customItems');
-		const computedItems = updatedState?.diffState.computedState as any[];
+		const computedItems = updatedState?.diffState.computedState;
 		expect(computedItems.find((i) => i.id === '3')?.diff).toBeUndefined();
 	});
 });

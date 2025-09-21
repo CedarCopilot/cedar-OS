@@ -5,7 +5,7 @@
 	"sideEffects": false,
 	"scripts": {
 		"test": "jest",
-		"test:watch": "jest --watch",
+		"test:watch": "jest --watgch",
 		"test:coverage": "jest --coverage",
 		"clean": "rm -rf dist && mkdir -p dist",
 		"build": "npm run clean && tsup ./src",

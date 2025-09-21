@@ -20,11 +20,11 @@ describe('Empty to Full Array Diff Operations', () => {
 		data: {
 			color: string;
 			label: string;
-			childIds: any[];
-			documents: any[];
-			attributes: any[];
+			childIds: unknown[];
+			documents: unknown[];
+			attributes: unknown[];
 			attributeIds: string[];
-			requirements: any[];
+			requirements: unknown[];
 		};
 		type: string;
 		width: number;

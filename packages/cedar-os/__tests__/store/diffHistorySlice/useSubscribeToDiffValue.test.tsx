@@ -184,6 +184,8 @@ describe('useSubscribeToDiffValue', () => {
 				diffState: {
 					oldState: { value: 'old' },
 					newState: { value: 'new' },
+					
+					computedState: { value: 'new' },
 					isDiffMode: false,
 					patches: [],
 				},
@@ -224,6 +226,8 @@ describe('useSubscribeToDiffValue', () => {
 				diffState: {
 					oldState: { status: 'pending' },
 					newState: { status: 'completed' },
+					
+					computedState: { status: 'completed' },
 					isDiffMode: true,
 					patches: [],
 				},
@@ -252,6 +256,8 @@ describe('useSubscribeToDiffValue', () => {
 				diffState: {
 					oldState: { status: 'pending' },
 					newState: { status: 'completed' },
+					
+					computedState: { status: 'completed' },
 					isDiffMode: true,
 					patches: [],
 				},
@@ -282,6 +288,8 @@ describe('useSubscribeToDiffValue', () => {
 				diffState: {
 					oldState: { counter: 0 },
 					newState: { counter: 1 },
+					
+					computedState: { counter: 1 },
 					isDiffMode: false,
 					patches: [],
 				},

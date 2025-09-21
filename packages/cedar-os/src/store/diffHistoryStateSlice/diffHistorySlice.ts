@@ -48,7 +48,7 @@ export type ComputeStateFunction<T = unknown> = (
 	patches: Operation[]
 ) => T;
 
-export interface DiffState<T = unknown> {
+export interface DiffState<T = any> {
 	oldState: T;
 	newState: T;
 	computedState: T; // The computed state based on computeState function or fallback to appropriate state
@@ -56,7 +56,7 @@ export interface DiffState<T = unknown> {
 	patches?: Operation[]; // JSON patches describing the changes from oldState to newState
 }
 
-export interface DiffHistoryState<T = unknown> {
+export interface DiffHistoryState<T = any> {
 	diffState: DiffState<T>;
 	history: DiffState<T>[];
 	redoStack: DiffState<T>[];
