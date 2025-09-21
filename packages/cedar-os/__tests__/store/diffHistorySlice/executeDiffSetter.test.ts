@@ -1,20 +1,16 @@
-import { create } from 'zustand';
-import { createDiffHistorySlice } from '../../../src/store/diffHistoryStateSlice/diffHistorySlice';
-import {
-	createStateSlice,
-	type BasicStateValue,
+import { useCedarStore } from '../../../src/store/CedarStore';
+import type {
+	BasicStateValue,
+	Setter,
 } from '../../../src/store/stateSlice/stateSlice';
-import type { CedarStore } from '../../../src/store/CedarOSTypes';
-import type { Setter } from '../../../src/store/stateSlice/stateSlice';
 
 describe('executeDiffSetter', () => {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let store: any;
-
 	beforeEach(() => {
-		store = create<Partial<CedarStore>>()((...a) => ({
-			...createStateSlice(...a),
-			...createDiffHistorySlice(...a),
+		// Reset the store before each test
+		useCedarStore.setState((state) => ({
+			...state,
+			registeredStates: {},
+			diffHistoryStates: {},
 		}));
 	});
 
@@ -38,7 +34,7 @@ describe('executeDiffSetter', () => {
 		};
 
 		// Register the state with custom setter
-		store.getState().registerState?.({
+		useCedarStore.getState().registerState({
 			key: testKey,
 			value: initialValue,
 			customSetters: {
@@ -47,10 +43,11 @@ describe('executeDiffSetter', () => {
 		});
 
 		// Initialize diff history state
-		store.getState().setDiffState?.(testKey, {
+		useCedarStore.getState().setDiffState(testKey, {
 			diffState: {
 				oldState: initialValue,
 				newState: initialValue,
+				computedState: initialValue,
 				isDiffMode: false,
 			},
 			history: [],
@@ -59,12 +56,12 @@ describe('executeDiffSetter', () => {
 		});
 
 		// Execute the diff setter with isDiff = true
-		store
+		useCedarStore
 			.getState()
-			.executeDiffSetter?.(testKey, 'increment', { isDiff: true });
+			.executeDiffSetter(testKey, 'increment', { isDiff: true });
 
 		// Check that the diff state was updated
-		const diffState = store.getState().getDiffHistoryState?.(testKey);
+		const diffState = useCedarStore.getState().getDiffHistoryState(testKey);
 		expect(diffState?.diffState.isDiffMode).toBe(true);
 		expect(diffState?.diffState.newState).toEqual({ count: 1, text: 'hello' });
 		expect(diffState?.diffState.oldState).toEqual(initialValue);
@@ -75,7 +72,7 @@ describe('executeDiffSetter', () => {
 		const initialValue = 'initial';
 
 		// Register a state
-		store.getState().registerState?.({
+		useCedarStore.getState().registerState({
 			key: testKey,
 			value: initialValue,
 			customSetters: {
@@ -94,10 +91,11 @@ describe('executeDiffSetter', () => {
 		});
 
 		// Initialize diff history state
-		store.getState().setDiffState?.(testKey, {
+		useCedarStore.getState().setDiffState(testKey, {
 			diffState: {
 				oldState: initialValue,
 				newState: initialValue,
+				computedState: initialValue,
 				isDiffMode: false,
 			},
 			history: [],
@@ -106,7 +104,7 @@ describe('executeDiffSetter', () => {
 		});
 
 		// Execute custom setter through executeCustomSetter
-		store.getState().executeCustomSetter?.({
+		useCedarStore.getState().executeCustomSetter({
 			key: testKey,
 			setterKey: 'append',
 			options: { isDiff: true },
@@ -114,7 +112,7 @@ describe('executeDiffSetter', () => {
 		});
 
 		// Check that executeDiffSetter was called
-		const diffState = store.getState().getDiffHistoryState?.(testKey);
+		const diffState = useCedarStore.getState().getDiffHistoryState(testKey);
 		expect(diffState?.diffState.isDiffMode).toBe(true);
 		expect(diffState?.diffState.newState).toBe('initial modified');
 	});
@@ -125,16 +123,17 @@ describe('executeDiffSetter', () => {
 		const newValue = 100;
 
 		// Register a state
-		store.getState().registerState?.({
+		useCedarStore.getState().registerState({
 			key: testKey,
 			value: initialValue,
 		});
 
 		// Initialize diff history state
-		store.getState().setDiffState?.(testKey, {
+		useCedarStore.getState().setDiffState(testKey, {
 			diffState: {
 				oldState: initialValue,
 				newState: initialValue,
+				computedState: initialValue,
 				isDiffMode: false,
 			},
 			history: [],
@@ -143,10 +142,10 @@ describe('executeDiffSetter', () => {
 		});
 
 		// Set state through setCedarState
-		store.getState().setCedarState?.(testKey, newValue, true);
+		useCedarStore.getState().setCedarState(testKey, newValue);
 
 		// Check that setDiffState was called
-		const diffState = store.getState().getDiffHistoryState?.(testKey);
+		const diffState = useCedarStore.getState().getDiffHistoryState(testKey);
 		expect(diffState?.diffState.isDiffMode).toBe(true);
 		expect(diffState?.diffState.newState).toBe(newValue);
 		expect(diffState?.diffState.oldState).toBe(initialValue);
@@ -158,20 +157,20 @@ describe('executeDiffSetter', () => {
 		const newValue = 'updated';
 
 		// Register a state without diff tracking
-		store.getState().registerState?.({
+		useCedarStore.getState().registerState({
 			key: testKey,
 			value: initialValue,
 		});
 
 		// Set state through setCedarState (no diff history)
-		store.getState().setCedarState?.(testKey, newValue);
+		useCedarStore.getState().setCedarState(testKey, newValue);
 
 		// Check that the state was updated normally
-		const state = store.getState().getCedarState?.(testKey);
+		const state = useCedarStore.getState().getCedarState(testKey);
 		expect(state).toBe(newValue);
 
 		// Verify no diff history was created
-		const diffState = store.getState().getDiffHistoryState?.(testKey);
+		const diffState = useCedarStore.getState().getDiffHistoryState(testKey);
 		expect(diffState).toBeUndefined();
 	});
 });

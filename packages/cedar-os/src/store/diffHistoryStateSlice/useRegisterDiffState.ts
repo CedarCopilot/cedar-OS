@@ -79,7 +79,7 @@ export function addDiffToArrayObjs<T extends Record<string, any>>(
 	idField: string = 'id',
 	diffPath: string = '',
 	diffChecker?: DiffChecker
-): T[] {
+): any[] {
 	// Check if we're dealing with primitive arrays (strings, numbers, booleans)
 	const isPrimitiveArray =
 		(oldState.length > 0 &&

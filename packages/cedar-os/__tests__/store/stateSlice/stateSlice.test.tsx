@@ -268,7 +268,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				metadata: z.record(z.string(), z.string()),
 			});
 
-			const setter: Setter<unknown, typeof nestedArgsSchema> = {
+			const setter: Setter<any, typeof nestedArgsSchema> = {
 				name: 'updateUser',
 				description: 'Update user with nested object args',
 				argsSchema: nestedArgsSchema,
@@ -355,7 +355,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			const mockSetter = jest.fn();
 			const tupleArgsSchema = z.tuple([z.string(), z.number(), z.boolean()]);
 
-			const setter: Setter<unknown, typeof tupleArgsSchema> = {
+			const setter: Setter<any, typeof tupleArgsSchema> = {
 				name: 'updateWithTuple',
 				description: 'Update with tuple args',
 				argsSchema: tupleArgsSchema,
@@ -563,7 +563,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 			const mockSetter = jest.fn();
 			const unionArgsSchema = z.union([z.string(), z.number(), z.boolean()]);
 
-			const setter: Setter<unknown, typeof unionArgsSchema> = {
+			const setter: Setter<any, typeof unionArgsSchema> = {
 				name: 'setValue',
 				description: 'Set value with union type',
 				argsSchema: unionArgsSchema,
@@ -658,7 +658,7 @@ describe('StateSlice – Custom Setter Arguments', () => {
 				optional: z.string().optional(),
 			});
 
-			const setter: Setter<unknown, typeof optionalArgsSchema> = {
+			const setter: Setter<any, typeof optionalArgsSchema> = {
 				name: 'updateData',
 				description: 'Update with optional fields',
 				argsSchema: optionalArgsSchema,
