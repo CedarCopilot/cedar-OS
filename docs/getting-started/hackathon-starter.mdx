@@ -1,0 +1,108 @@
+---
+title: 'Cedar-OS Hackathon Starter'
+description: 'Guide for getting your Cedar-OS hackathon project started'
+---
+
+Most chatbot UIs today feel flat and uninspiring. The future isn't just chat—it's agentic copilots that break out of the text box, give humans visibility and control, and quietly do as much work as possible in the background.
+
+Cedar-OS is an open source React framework that helps you build those interfaces.
+
+## What You're Building With
+
+**Cedar-OS** is a React framework specifically designed for building AI-native applications. It provides components, hooks, and patterns that make it easy to create interfaces where AI agents can interact naturally with your app's state and UI.
+
+- **[Cedar-OS Documentation](/introduction/overview)** - Complete framework overview and architecture
+
+**Mastra** is an AI framework that handles the backend complexity of building AI agents - from LLM orchestration to tool calling and memory management. The hackathon starter combines Cedar-OS (frontend) with Mastra (backend) for a complete AI application stack.
+
+- **[Mastra Integration Guide](/agent-backend-connection/mastra)** - How Cedar-OS works with Mastra
+- **[Mastra Documentation](https://mastra.ai/docs)** - Full Mastra framework docs
+
+## What We're Judging
+
+You don't need to hit every category. Pick the one that excites you most.
+
+**Creative Interface** – Interfaces that go beyond chat: sound, video, spatial, tactile, new UX patterns (see Spells in our docs as an example) etc.
+
+**Commercial Potential** – A product that could be venture scalable. Solving a real problem in a large market.
+
+**Technical Depth** – Complex, seamless, or cutting-edge integrations.
+
+# Getting Started
+
+<Steps>
+  <Step title="Create your project">
+    Use the Cedar CLI to create a new project with the hackathon starter template:
+
+    ```bash
+    npx cedar-os-cli plant-seed
+    ```
+
+    This command will:
+    - Create a new project with the Cedar + Mastra hackathon starter template (selected by default)
+    - Set up a complete monorepo with Next.js frontend and Mastra backend
+    - Include pre-configured Cedar components and basic AI features
+
+  </Step>
+
+  <Step title="Install dependencies and add API key">
+    Navigate to your project and install dependencies:
+
+    ```bash
+    cd your-project-name
+    npm install && cd src/backend && npm install && cd ../..
+    ```
+
+    Create a `.env` file in the project root:
+
+    ```bash
+    echo "OPENAI_API_KEY=your-api-key-here" > .env
+    ```
+
+  </Step>
+
+  <Step title="Start development">
+    Run the development server:
+
+    ```bash
+    npm run dev
+    ```
+
+    This starts both the Next.js frontend and Mastra backend. Cedar chat should work immediately!
+
+  </Step>
+</Steps>
+
+# Time to Explore :)
+
+Now that your project is running, explore these Cedar-OS features that will make your hackathon project stand out:
+
+## Agent State and Actions
+
+Let AI agents read and modify your React state in real-time.
+
+- **[Agentic State Access](/state-access/agentic-state-access)** - Make React state accessible to AI
+- **[Agentic Actions](/state-access/agentic-actions)** - Define how AI can modify your data
+- **[Agent Context](/agent-context/agent-context)** - Advanced context management for AI interactions
+
+## Spells
+
+Spells are Cedar-OS’s powerful system for creating contextual, gesture-based interactions that enhance your AI-native applications. They provide a unified way to bind keyboard shortcuts, mouse gestures, and selection events to custom UI behaviors and actions.
+
+- **[Spells Overview](/spells/spells)** - Complete guide to the spells system
+
+## Voice
+
+Add natural voice interactions to your app with built-in recording and AI response playback. Voice makes any interface feel futuristic and accessible.
+
+- **[Voice Integration](/voice/voice-integration)** - Complete voice setup and configuration guide
+
+---
+
+# Need Help?
+
+If you have any questions about Cedar OS or Mastra, join our Discord community and post in the hackathon channel:
+
+**[Join Discord](https://discord.gg/kJjNyNrp)** → Post in **#hackGT**
+
+We'll be actively monitoring the channel and we'd love to see what you're building!
