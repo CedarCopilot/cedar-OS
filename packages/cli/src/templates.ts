@@ -81,9 +81,9 @@ export const TEMPLATES: Record<string, Template> = {
 		getNextSteps: getMastraProjectNextSteps,
 	},
 	mastra: {
-		name: 'Cedar + Mastra reference repo',
-		description: 'Reference repo with all Cedar features',
-		url: 'https://github.com/CedarCopilot/cedar-mastra-starter',
+		name: 'Cedar + Mastra hackathon starter',
+		description: 'Quick-start repo with basic Cedar and Mastra features',
+		url: 'https://github.com/CedarCopilot/cedar-hackathon-starter',
 		includesCedar: true,
 		getNextSteps: getMastraReferenceNextSteps,
 	},

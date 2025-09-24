@@ -1,6 +1,6 @@
 {
 	"name": "@cedar-os/backend",
-	"version": "0.0.11",
+	"version": "0.0.12",
 	"description": "Backend helper functions for Cedar OS",
 	"keywords": [
 		"cedar-os",
