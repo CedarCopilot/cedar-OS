@@ -188,7 +188,7 @@ export async function plantSeedCommand(opts: PlantSeedOptions) {
 			const templateChoice = await select({
 				message: 'Choose a project template:',
 				options: templateOptions,
-				initialValue: 'mastra-blank', // Default to Mastra (recommended)
+				initialValue: 'mastra', // Default to Mastra hackathon starter (recommended)
 			});
 
 			if (isCancel(templateChoice)) {
@@ -201,7 +201,7 @@ export async function plantSeedCommand(opts: PlantSeedOptions) {
 				selectedTemplate = TEMPLATES[templateChoice];
 			}
 		} else {
-			// When using --yes flag, default to Mastra template (recommended)
+			// When using --yes flag, default to Mastra hackathon starter (recommended)
 			selectedTemplate = TEMPLATES['mastra'];
 		}
 

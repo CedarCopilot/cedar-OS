@@ -11,10 +11,14 @@
 	color: #6b7280; /* text-gray-500 */
 }
 
-/* Ensure proper line height for multi-line support */
+/* Ensure proper line height for multi-line support and word wrapping */
 .ProseMirror {
 	min-height: 1.5em;
 	line-height: 1.5;
+	word-wrap: break-word;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+	white-space: pre-wrap;
 }
 
 /* Style for hard breaks */

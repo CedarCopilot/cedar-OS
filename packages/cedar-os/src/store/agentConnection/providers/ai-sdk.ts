@@ -5,7 +5,6 @@ import type {
 	LLMResponse,
 	StreamHandler,
 	StreamResponse,
-	StreamEvent,
 	VoiceParams,
 	VoiceLLMResponse,
 } from '@/store/agentConnection/AgentConnectionTypes';
@@ -44,7 +43,6 @@ export interface AISDKProviderImplementation {
 		config: AISDKConfig
 	) => Promise<VoiceLLMResponse>;
 	handleResponse: (response: Response) => Promise<LLMResponse>;
-	handleStreamResponse: (chunk: string) => StreamEvent;
 }
 
 // Direct mapping of provider names to their implementations
@@ -121,7 +119,7 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 
 		const result = await generateText({
 			model: modelInstance,
-			prompt,
+			messages: [{ role: 'user', content: prompt || '' }],
 			system: systemPrompt,
 			temperature,
 			maxRetries: 3,
@@ -200,7 +198,7 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 		// Use generateObject with the Zod schema (no runtime validation needed, it's statically typed)
 		const result = await generateObject({
 			model: modelInstance,
-			prompt,
+			messages: [{ role: 'user', content: prompt || '' }],
 			system: systemPrompt,
 			temperature,
 			schema, // Already typed as z.ZodType<unknown>
@@ -283,7 +281,7 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 
 				const result = await streamText({
 					model: modelInstance,
-					prompt,
+					messages: [{ role: 'user', content: prompt || '' }],
 					system: systemPrompt,
 					temperature,
 					maxRetries: 3,
@@ -371,12 +369,14 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 
 		// Generate response
 		const systemPrompt = context
-			? `Context: ${context}\n\nRespond naturally to the user's voice input.`
+			? `Context: ${JSON.stringify(
+					context
+			  )}\n\nRespond naturally to the user's voice input.`
 			: "Respond naturally to the user's voice input.";
 
 		const result = await generateText({
 			model: modelInstance,
-			prompt: transcript.text,
+			messages: [{ role: 'user', content: transcript.text }],
 			system: systemPrompt,
 			temperature: 0.7,
 			maxRetries: 3,
@@ -454,11 +454,5 @@ export const aiSDKProvider: AISDKProviderImplementation = {
 			usage: data.usage,
 			metadata: data.metadata,
 		};
-	},
-
-	// This can be safely removed
-	handleStreamResponse: (chunk) => {
-		// AI SDK handles streaming internally
-		return { type: 'chunk', content: chunk };
 	},
 };

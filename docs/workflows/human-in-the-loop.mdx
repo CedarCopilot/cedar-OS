@@ -1,0 +1,638 @@
+---
+title: 'Human-in-the-Loop'
+description: 'Suspend and resume workflows to collect user input and approvals during agent execution'
+---
+
+Human-in-the-loop workflows allow your agents to pause execution and request user input, approval, or manual intervention before continuing. This enables powerful patterns like approval workflows, user confirmations, data collection, and manual oversight of sensitive operations.
+
+Cedar's human-in-the-loop system doesn't use anything new – it just pieces together existing Cedar concepts (workflows like this can be created from scratch!)
+
+<Info>
+	This feature is currently only supported with Mastra backends. If interested
+	in support for other providers, please reach out or join our Discord. For
+	example backend code in Mastra, reach out as well!
+</Info>
+## How it works
+
+This system uses Cedar's existing architecture patterns:
+
+1. **State Management**: Stores workflow data in Cedar state ([learn more about this concept](/state-access/agentic-state-access))
+2. **Response Processors**: Handles the suspend/resume logic ([learn more about this concept](/agent-backend-connection/custom-response-processing))
+3. **Message Renderers**: Creates the interactive UI ([learn more about this concept](/chat/custom-message-rendering))
+4. **Input subscriptions (optionally)**: Sends workflow states to the backend with future messages ([learn more about this concept](/agent-context/subscribing-state)).
+
+Human-in-the-loop workflows work by:
+
+1. **Backend suspends workflow** - Your agent reaches a point requiring user input and returns a `humanInTheLoop` response
+2. **Cedar processes suspension** - The response processor stores workflow data and creates an interactive message
+3. **User interacts** - The UI displays workflow information with customizable UI that allows the user to provide the necessary data/input
+4. **Workflow resumes** - User input is sent to the backend to continue the suspended workflow
+
+## Backend Response Handling
+
+### Response Type
+
+Your backend should return responses with `type: "humanInTheLoop"` when a workflow needs to be suspended:
+
+```typescript
+type HumanInTheLoopResponse<SuspendPayload = Record<string, unknown>> = {
+	type: 'humanInTheLoop';
+	status: 'suspended';
+	runId: string; // Unique workflow execution ID
+	stepPath: [string[], ...string[][]]; // Workflow step identifier (matches Mastra stepPath type to support nested workflows)
+	suspendPayload?: SuspendPayload; // The data that the workflow suspended with
+	message?: string; // Human-readable suspension reason
+	timeoutMs?: number; // Optional auto-cancellation timeout
+	metadata?: Record<string, unknown>; // Additional context data
+};
+```
+
+### Example Backend Response
+
+```json
+{
+	"type": "humanInTheLoop",
+	"status": "suspended",
+	"runId": "7272b2d0-193c-4d17-b980-b8c754cc7870",
+	"stepPath": "userApproval",
+	"suspendPayload": {
+		"pendingResponse": "Please approve this sensitive financial transaction of $10,000",
+		"requiresApproval": true,
+		"transactionDetails": {
+			"amount": 10000,
+			"recipient": "vendor@example.com",
+			"type": "payment"
+		}
+	},
+	"message": "Workflow suspended - approval required",
+	"timeoutMs": 300000
+}
+```
+
+### Built-in Response Processor
+
+Cedar automatically processes `humanInTheLoop` responses with the built-in processor:
+
+```typescript
+// Pseudocode of the built-in processor:
+1. Extract runId, stepPath, suspendPayload from response
+2. Store workflow data in 'humanInTheLoop' state key
+3. Create resume/cancel callback functions
+4. Add the message to the `messages` store field
+5. Set up optional timeout for auto-cancellation
+6. Add a new message when user resumes/cancels with the updated state
+```
+
+If you want to override the logic of how human in the loop messages are handled, create a new response processor that handles this type of object response from the backend.
+You can work off of our implementation in `packages/cedar-os/src/store/agentConnection/responseProcessors/humanInTheLoopResponseProcessor.ts`
+
+## Storing workflow suspension data on the frontend
+
+The preconfigured response processor stores all workflow suspension data in a single state key called `'humanInTheLoop'`. Each workflow is stored by its `runId` with complete lifecycle information:
+
+```typescript
+// HumanInTheLoopState type definition
+interface HumanInTheLoopState<
+	SuspendPayload = Record<string, unknown>,
+	ResumeData = Record<string, unknown>
+> {
+	[runId: string]: {
+		runId: string;
+		stepPath: [string[], ...string[][]];
+		suspendPayload: SuspendPayload;
+		suspendedAt: string;
+		state: 'suspended' | 'resumed' | 'cancelled' | 'timeout';
+		resumeData?: ResumeData;
+		resumedAt?: string;
+		cancelledAt?: string;
+		threadId?: string;
+		messageId: string;
+	};
+}
+
+// Example state structure - accessible via getCedarState('humanInTheLoop')
+{
+  "humanInTheLoop": {
+    "workflow-run-123": {
+      runId: "workflow-run-123",
+      stepPath: ["userApproval"],
+      suspendPayload: { pendingResponse: "Approve this request", requiresApproval: true },
+      suspendedAt: "2024-01-15T10:30:00Z",
+      state: "suspended",
+      threadId: "thread-456",
+      messageId: "msg-789"
+    }
+  }
+}
+```
+
+### Custom State Setters
+
+The response processor also registers custom setters on the `humanInTheLoop` state that handle workflow operations:
+
+- **`resume`**: Resumes a suspended workflow by sending the resume request to the backend and updating the workflow state
+- **`cancel`**: Cancels a suspended workflow and updates the state to cancelled
+
+These setters are used internally when building the `resumeCallback` and `cancelCallback` functions that get passed to message renderers. You can also access them directly if you want to resume a workflow from somewhere else in the UI:
+
+```typescript
+import { useCedarStore } from 'cedar-os';
+
+// Access the store
+const store = useCedarStore();
+
+// Resume a workflow
+await store.executeCustomSetter({
+	key: 'humanInTheLoop',
+	setterKey: 'resume',
+	args: [runId, { approved: true, feedback: 'Looks good!' }],
+});
+
+// Cancel a workflow
+await store.executeCustomSetter({
+	key: 'humanInTheLoop',
+	setterKey: 'cancel',
+	args: [runId],
+});
+```
+
+## Message Rendering and User Input
+
+### Message Type
+
+When a workflow is suspended, the built in response processor creates messages using the `HumanInTheLoopMessage` type:
+
+```typescript
+// HumanInTheLoopMessage type definition
+type HumanInTheLoopMessage<
+	SuspendPayload = Record<string, unknown>,
+	ResumeData = Record<string, unknown>
+> = CustomMessage<
+	'humanInTheLoop',
+	{
+		state: 'suspended' | 'resumed' | 'cancelled' | 'timeout';
+		runId: string;
+		stepPath: [string[], ...string[][]];
+		suspendPayload?: SuspendPayload;
+		resumeData?: ResumeData;
+		message?: string;
+		resumeCallback?: (data: ResumeData) => Promise<void>;
+		cancelCallback?: () => Promise<void>;
+		resumedAt?: string;
+		cancelledAt?: string;
+		metadata?: Record<string, unknown>;
+	}
+>;
+```
+
+This message is added to the chat the same way any other message is, so when rendering it, you can create custom UI for how to gather user input and when to call the callbacks given (see below for an example).
+We do register a custom message renderer for this, but you will likely need to override it since the data you'll gather from the user is application specific. You can work off of the existing message renderer available here: `packages/cedar-os/src/store/messages/renderers/HumanInTheLoopRenderer.tsx`
+
+## Backend Integration
+
+### Required Routes
+
+Your backend must implement a resume endpoint to handle workflow continuation:
+
+#### Resume Endpoint (POST /chat/resume)
+
+**Default endpoint**: `/chat/resume` or `/chat/resume/stream` (configurable via `resumePath` in provider config)
+
+**Request format**:
+
+```json
+// MastraParams structure for resume requests
+{
+  // All existing MastraParams
+	stream: boolean;
+	route: string; // e.g., "/chat/resume"
+	runId: string;
+	stepPath: [string[], ...string[][]];
+	resumeData: Record<string, unknown>;
+}
+
+// Example request body
+{
+	"stream": true,
+	"route": "/chat/resume",
+	"runId": "7272b2d0-193c-4d17-b980-b8c754cc7870",
+	"stepPath": ["userApproval"],
+	"resumeData": {
+		"approved": true,
+		"feedback": "Transaction approved by user"
+	}
+}
+```
+
+**Response**: Continue with normal chat response format
+
+#### Provider Configuration
+
+Configure the resume endpoint in your Cedar provider config:
+
+```tsx
+<CedarCopilot
+	providerConfig={{
+		provider: 'mastra',
+		baseURL: 'http://localhost:3001',
+		chatPath: '/chat',
+		resumePath: '/chat/resume', // Configure resume endpoint
+		apiKey: process.env.MASTRA_API_KEY,
+	}}>
+	{/* your app */}
+</CedarCopilot>
+```
+
+### Nested Workflows
+
+Support complex workflows with hierarchical step paths:
+
+```json
+// Simple step path
+{
+  "stepPath": "userApproval",
+  "resumeData": { "approved": true }
+}
+
+// Nested workflow step path
+{
+  "stepPath": ["parentWorkflow", "childWorkflow", "userApproval"],
+  "resumeData": { "approved": true }
+}
+```
+
+## Advanced Usage
+
+### State Subscriptions
+
+Extract workflow states directly from Cedar state to display in the frontend:
+
+```typescript
+import { useCedarStore } from 'cedar-os';
+
+// Access all workflow state
+const WorkflowManager = () => {
+	const humanInTheLoopState = useCedarStore((state) =>
+		state.getCedarState('humanInTheLoop')
+	);
+
+	const suspendedWorkflows = humanInTheLoopState
+		? Object.values(humanInTheLoopState).filter((w) => w.state === 'suspended')
+		: [];
+
+	return (
+		<div>
+			<h3>Pending Approvals ({suspendedWorkflows.length})</h3>
+			{suspendedWorkflows.map((workflow) => (
+				<WorkflowCard key={workflow.runId} workflow={workflow} />
+			))}
+		</div>
+	);
+};
+```
+
+### Cross-Message Workflow Data
+
+If you want the user to be able to resume a workflow by just typing a response, you should subscribe the stored `humanInTheLoop` state to the additionalContext. This means that at the next call to the backend, we will send that data and you can process it as you wish to implement custom resume logic.
+
+```typescript
+// In your component
+const { subscribeState } = useCedarInputContext();
+
+// Subscribe workflow state to agent context
+useSubscribeStateToAgentContext('humanInTheLoop', (humanInTheLoopState) => ({
+	allSuspendedWorkflows: Object.values(humanInTheLoopState),
+}));
+
+// Now the agent can see and reference suspended workflows
+// in future messages
+```
+
+## Complete Example: Approval Workflow
+
+Here's a comprehensive example showing an approval workflow implementation:
+
+### 1. Provider Configuration
+
+```tsx
+// app/layout.tsx
+import { CedarCopilot } from 'cedar-os';
+
+export default function Layout({ children }) {
+	return (
+		<CedarCopilot
+			providerConfig={{
+				provider: 'mastra',
+				baseURL: 'http://localhost:3001',
+				chatPath: '/chat',
+				resumePath: '/chat/resume',
+				apiKey: process.env.MASTRA_API_KEY,
+			}}>
+			{children}
+		</CedarCopilot>
+	);
+}
+```
+
+### 2. Custom Typed Renderer
+
+```tsx
+// components/ApprovalWorkflow.tsx
+import React, { useState } from 'react';
+import { MessageRenderer, HumanInTheLoopMessage } from 'cedar-os';
+
+// Define exact types matching your backend
+type ApprovalSuspendPayload = {
+	pendingResponse: string;
+	requiresApproval: boolean;
+	transactionDetails: {
+		amount: number;
+		recipient: string;
+		type: string;
+	};
+};
+
+type ApprovalResumeData = {
+	approved: boolean;
+	feedback?: string;
+};
+
+// Approval form component
+const ApprovalForm = ({ request, onSubmit, onCancel }) => {
+	const [feedback, setFeedback] = useState('');
+	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	const handleApprove = async () => {
+		setIsSubmitting(true);
+		try {
+			await onSubmit(true, feedback);
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
+	const handleReject = async () => {
+		setIsSubmitting(true);
+		try {
+			await onSubmit(false, feedback || 'Request rejected');
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
+	return (
+		<div className='approval-form border rounded-lg p-4 bg-yellow-50'>
+			<div className='mb-4'>
+				<h3 className='font-semibold text-lg'>Approval Required</h3>
+				<p className='text-gray-700 mt-2'>{request.pendingResponse}</p>
+
+				{request.transactionDetails && (
+					<div className='mt-3 p-3 bg-white rounded border'>
+						<h4 className='font-medium'>Transaction Details</h4>
+						<p>Amount: ${request.transactionDetails.amount.toLocaleString()}</p>
+						<p>Recipient: {request.transactionDetails.recipient}</p>
+						<p>Type: {request.transactionDetails.type}</p>
+					</div>
+				)}
+			</div>
+
+			<div className='mb-4'>
+				<label className='block text-sm font-medium text-gray-700 mb-2'>
+					Feedback (optional):
+				</label>
+				<textarea
+					value={feedback}
+					onChange={(e) => setFeedback(e.target.value)}
+					className='w-full p-2 border rounded'
+					rows={3}
+					placeholder='Add comments about your decision...'
+				/>
+			</div>
+
+			<div className='flex gap-2'>
+				<button
+					onClick={handleApprove}
+					disabled={isSubmitting}
+					className='px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50'>
+					{isSubmitting ? 'Processing...' : 'Approve'}
+				</button>
+				<button
+					onClick={handleReject}
+					disabled={isSubmitting}
+					className='px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50'>
+					{isSubmitting ? 'Processing...' : 'Reject'}
+				</button>
+				<button
+					onClick={onCancel}
+					disabled={isSubmitting}
+					className='px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 disabled:opacity-50'>
+					Cancel
+				</button>
+			</div>
+		</div>
+	);
+};
+
+// Result display component
+const ApprovalResult = ({ result }) => {
+	if (!result) return null;
+
+	return (
+		<div
+			className={`border rounded-lg p-4 ${
+				result.approved
+					? 'bg-green-50 border-green-200'
+					: 'bg-red-50 border-red-200'
+			}`}>
+			<div className='flex items-center gap-2'>
+				<span className='text-lg'>{result.approved ? '✅' : '❌'}</span>
+				<span className='font-semibold'>
+					Request {result.approved ? 'Approved' : 'Rejected'}
+				</span>
+			</div>
+			{result.feedback && (
+				<p className='mt-2 text-gray-700'>
+					<strong>Feedback:</strong> {result.feedback}
+				</p>
+			)}
+		</div>
+	);
+};
+
+// Create typed message renderer
+export const ApprovalMessageRenderer: MessageRenderer = {
+	type: 'humanInTheLoop',
+	namespace: 'approval-workflow',
+	render: (message) => {
+		const typedMessage = message as HumanInTheLoopMessage<
+			ApprovalSuspendPayload,
+			ApprovalResumeData
+		>;
+
+		switch (typedMessage.state) {
+			case 'suspended':
+				return (
+					<ApprovalForm
+						request={typedMessage.suspendPayload}
+						onSubmit={(approved, feedback) =>
+							typedMessage.resumeCallback?.({ approved, feedback })
+						}
+						onCancel={() => typedMessage.cancelCallback?.()}
+					/>
+				);
+
+			case 'resumed':
+				return <ApprovalResult result={typedMessage.resumeData} />;
+
+			case 'cancelled':
+				return (
+					<div className='border rounded-lg p-4 bg-gray-50'>
+						<span className='text-lg'>⏹️</span>
+						<span className='ml-2 font-semibold'>
+							Approval workflow cancelled
+						</span>
+					</div>
+				);
+
+			case 'timeout':
+				return (
+					<div className='border rounded-lg p-4 bg-orange-50'>
+						<span className='text-lg'>⏱️</span>
+						<span className='ml-2 font-semibold'>
+							Approval request timed out
+						</span>
+					</div>
+				);
+
+			default:
+				return <div>Unknown workflow state: {typedMessage.state}</div>;
+		}
+	},
+	validateMessage: (
+		msg
+	): msg is HumanInTheLoopMessage<ApprovalSuspendPayload, ApprovalResumeData> =>
+		msg.type === 'humanInTheLoop',
+};
+```
+
+### 3. Register Custom Renderer
+
+```tsx
+// app/layout.tsx (updated)
+import { ApprovalMessageRenderer } from '@/components/ApprovalWorkflow';
+
+export default function Layout({ children }) {
+	return (
+		<CedarCopilot
+			providerConfig={
+				{
+					/* ... */
+				}
+			}
+			messageRenderers={[ApprovalMessageRenderer]}>
+			{children}
+		</CedarCopilot>
+	);
+}
+```
+
+### 4. Backend Implementation
+
+Your backend should return suspension responses like:
+
+```json
+{
+	"type": "humanInTheLoop",
+	"status": "suspended",
+	"runId": "approval-workflow-123",
+	"stepPath": "userApproval",
+	"suspendPayload": {
+		"pendingResponse": "Please approve this $10,000 payment to vendor@example.com",
+		"requiresApproval": true,
+		"transactionDetails": {
+			"amount": 10000,
+			"recipient": "vendor@example.com",
+			"type": "payment"
+		}
+	},
+	"message": "Financial transaction requires approval",
+	"timeoutMs": 300000
+}
+```
+
+### 5. Complete User Flow
+
+1. **User**: "Please process the payment to vendor@example.com for $10,000"
+2. **Backend**: Returns suspension response above
+3. **Cedar**: Processes response, stores state, creates interactive message
+4. **UI**: Shows approval form with transaction details
+5. **User**: Reviews details, adds feedback, clicks "Approve"
+6. **Cedar**: Calls resume endpoint with approval data
+7. **Backend**: Continues workflow, processes payment, returns completion
+8. **UI**: Shows success message with approval details
+
+### 6. Dashboard to show all in-process workflows (Optional)
+
+```tsx
+// components/WorkflowDashboard.tsx
+import React from 'react';
+import { useCedarStore } from 'cedar-os';
+
+export const WorkflowDashboard = () => {
+	const humanInTheLoopState = useCedarStore((state) =>
+		state.getCedarState('humanInTheLoop')
+	);
+
+	const workflows = humanInTheLoopState
+		? Object.values(humanInTheLoopState)
+		: [];
+
+	const suspendedWorkflows = workflows.filter((w) => w.state === 'suspended');
+	const completedWorkflows = workflows.filter((w) => w.state === 'resumed');
+
+	return (
+		<div className='p-4'>
+			<h2 className='text-xl font-bold mb-4'>Workflow Dashboard</h2>
+
+			<div className='grid grid-cols-2 gap-4'>
+				<div className='border rounded-lg p-4'>
+					<h3 className='font-semibold mb-2'>
+						Pending Approvals ({suspendedWorkflows.length})
+					</h3>
+					{suspendedWorkflows.map((workflow) => (
+						<div
+							key={workflow.runId}
+							className='border rounded p-2 mb-2 bg-yellow-50'>
+							<p className='text-sm font-medium'>Run ID: {workflow.runId}</p>
+							<p className='text-sm text-gray-600'>
+								Suspended: {new Date(workflow.suspendedAt).toLocaleString()}
+							</p>
+						</div>
+					))}
+				</div>
+
+				<div className='border rounded-lg p-4'>
+					<h3 className='font-semibold mb-2'>
+						Completed ({completedWorkflows.length})
+					</h3>
+					{completedWorkflows.map((workflow) => (
+						<div
+							key={workflow.runId}
+							className='border rounded p-2 mb-2 bg-green-50'>
+							<p className='text-sm font-medium'>Run ID: {workflow.runId}</p>
+							<p className='text-sm text-gray-600'>
+								Completed:{' '}
+								{workflow.resumedAt
+									? new Date(workflow.resumedAt).toLocaleString()
+									: 'N/A'}
+							</p>
+						</div>
+					))}
+				</div>
+			</div>
+		</div>
+	);
+};
+```
+
+This complete example demonstrates how Cedar's human-in-the-loop system provides type-safe, customizable workflow management with minimal boilerplate while maintaining full integration with Cedar's existing architecture.

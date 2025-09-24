@@ -28,7 +28,8 @@
 				"chat-bubbles",
 				"collapsed-chat-button",
 				"container-3d",
-				"floating-container"
+				"floating-container",
+				"chat-thread-controller"
 			],
 			"files": ["FloatingCedarChat.tsx"],
 			"meta": {
@@ -81,7 +82,8 @@
 				"cedar-os",
 				"context-badge-row",
 				"container-3d-button",
-				"voice-indicator"
+				"voice-indicator",
+				"human-in-the-loop-indicator"
 			],
 			"files": ["ChatInput.tsx", "ChatInput.css", "index.ts"],
 			"meta": {
@@ -572,6 +574,99 @@
 				"importName": "VoiceIndicator",
 				"displayName": "Voice Indicator",
 				"description": "Visual indicator for voice states (listening, speaking, errors)"
+			}
+		},
+		{
+			"name": "command-bar",
+			"type": "CommandBar",
+			"dependencies": ["react", "motion", "@tiptap/react"],
+			"registryDependencies": [
+				"cedar-os",
+				"context-badge-row",
+				"keyboard-shortcut",
+				"command"
+			],
+			"files": ["CommandBar.tsx", "getShortcutDisplay.ts", "index.ts"],
+			"meta": {
+				"importName": "CommandBar",
+				"displayName": "Command Bar",
+				"description": "Searchable command palette with keyboard navigation and spell integration"
+			}
+		},
+		{
+			"name": "human-in-the-loop-indicator",
+			"type": "chatInput",
+			"dependencies": ["react", "motion", "lucide-react"],
+			"registryDependencies": ["cedar-os"],
+			"files": ["HumanInTheLoopIndicator.tsx"],
+			"meta": {
+				"importName": "HumanInTheLoopIndicator",
+				"displayName": "Human-in-the-Loop Indicator",
+				"description": "Visual indicator for human-in-the-loop workflow states (suspended, resumed, cancelled, timeout)"
+			}
+		},
+		{
+			"name": "chat-thread-controller",
+			"type": "threads",
+			"dependencies": ["react", "lucide-react"],
+			"registryDependencies": ["cedar-os", "dropdown-menu", "button"],
+			"files": ["ChatThreadController.tsx"],
+			"meta": {
+				"importName": "ChatThreadController",
+				"displayName": "Chat Thread Controller",
+				"description": "Thread management component with create, switch, edit, and delete functionality"
+			}
+		},
+		{
+			"name": "tabs",
+			"type": "ui",
+			"dependencies": ["react", "@radix-ui/react-tabs"],
+			"registryDependencies": ["cedar-os"],
+			"files": ["tabs.tsx"],
+			"meta": {
+				"importName": "Tabs",
+				"displayName": "Tabs",
+				"description": "Tabs component for organizing content into separate views"
+			}
+		},
+		{
+			"name": "dropdown-menu",
+			"type": "ui",
+			"dependencies": [
+				"react",
+				"@radix-ui/react-dropdown-menu",
+				"lucide-react"
+			],
+			"registryDependencies": ["cedar-os"],
+			"files": ["dropdown-menu.tsx"],
+			"meta": {
+				"importName": "DropdownMenu",
+				"displayName": "Dropdown Menu",
+				"description": "Dropdown menu component built on Radix UI with customizable styling"
+			}
+		},
+		{
+			"name": "command",
+			"type": "ui",
+			"dependencies": ["react", "cmdk", "lucide-react"],
+			"registryDependencies": ["cedar-os", "dialog"],
+			"files": ["command.tsx"],
+			"meta": {
+				"importName": "Command",
+				"displayName": "Command",
+				"description": "Command palette component with search functionality and dialog support"
+			}
+		},
+		{
+			"name": "dialog",
+			"type": "ui",
+			"dependencies": ["react", "@radix-ui/react-dialog", "lucide-react"],
+			"registryDependencies": ["cedar-os"],
+			"files": ["dialog.tsx"],
+			"meta": {
+				"importName": "Dialog",
+				"displayName": "Dialog",
+				"description": "Modal dialog component built on Radix UI with customizable overlay and content"
 			}
 		}
 	]

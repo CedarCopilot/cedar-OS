@@ -70,7 +70,7 @@ export const createWebSocketVoiceSlice: StateCreator<
 					JSON.stringify({
 						type: 'config',
 						settings: get().voiceSettings,
-						context: get().stringifyAdditionalContext(),
+						context: get().compileAdditionalContext(),
 					})
 				);
 			};
@@ -193,15 +193,11 @@ export const createWebSocketVoiceSlice: StateCreator<
 				set({ isSpeaking: false });
 				break;
 
-			case 'action':
+			case 'setState':
 				// Handle structured actions
 				if (message.stateKey && message.setterKey) {
-					const { executeCustomSetter } = get();
-					executeCustomSetter(
-						message.stateKey,
-						message.setterKey,
-						...message.args
-					);
+					const { executeStateSetter } = get();
+					executeStateSetter(message.stateKey, message.setterKey, message.args);
 				}
 				break;
 

@@ -1,0 +1,68 @@
+{
+	"name": "@cedar-os/backend",
+	"version": "0.0.12",
+	"description": "Backend helper functions for Cedar OS",
+	"keywords": [
+		"cedar-os",
+		"ai",
+		"agent",
+		"mastra",
+		"backend",
+		"tools"
+	],
+	"homepage": "https://github.com/CedarCopilot/cedar-OS#readme",
+	"bugs": {
+		"url": "https://github.com/CedarCopilot/cedar-OS/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/CedarCopilot/cedar-OS.git"
+	},
+	"license": "MIT",
+	"author": "cedar-os",
+	"type": "commonjs",
+	"exports": {
+		".": {
+			"require": "./dist/index.js",
+			"import": "./dist/index.mjs",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"package.json"
+	],
+	"scripts": {
+		"test": "jest",
+		"clean": "rm -rf dist && mkdir -p dist",
+		"build": "npm run clean && tsup ./src",
+		"p": "pnpm install && NODE_OPTIONS='--max-old-space-size=8192' pnpm run build && npm publish",
+		"dev": "npm run clean && tsup --watch",
+		"watch": "tsup ./src --watch",
+		"typecheck": "tsc --noEmit",
+		"dev:yalc": "nodemon --watch 'src/**/*' -e ts,tsx --exec 'NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build && yalc publish --push'"
+	},
+	"devDependencies": {
+		"@mastra/core": "^0.16.0",
+		"@types/jest": "^29.5.0",
+		"@types/node": "^20.17.19",
+		"jest": "^29.5.0",
+		"nodemon": "^3.1.9",
+		"pnpm": "^10.5.2",
+		"ts-jest": "^29.1.0",
+		"tsup": "^8.3.6",
+		"typescript": "^5.7.3",
+		"zod": "^3.22.0"
+	},
+	"peerDependencies": {
+		"@mastra/core": ">=0.10.2-0",
+		"zod": ">=3.22.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"sideEffects": false,
+	"module": "./dist/index.mjs"
+}

@@ -1,9 +1,5 @@
-import type { StateCreator } from 'zustand';
-import type { CedarStore } from '@/store/CedarOSTypes';
-import { getProviderImplementation } from '@/store/agentConnection/providers/index';
 import type {
 	AISDKParams,
-	AISDKStructuredParams,
 	AnthropicParams,
 	BaseParams,
 	CustomParams,
@@ -11,37 +7,47 @@ import type {
 	MastraParams,
 	OpenAIParams,
 	ProviderConfig,
+	ResponseProcessor,
+	ResponseProcessorRegistry,
 	StreamHandler,
 	StreamResponse,
 	StructuredParams,
-	VoiceParams,
-	VoiceLLMResponse,
-	ResponseProcessor,
-	ResponseProcessorRegistry,
 	StructuredResponseType,
+	VoiceLLMResponse,
+	VoiceParams,
 } from '@/store/agentConnection/AgentConnectionTypes';
-import { useCedarStore } from '@/store/CedarStore';
+import { getProviderImplementation } from '@/store/agentConnection/providers/index';
+import type { CedarStore } from '@/store/CedarOSTypes';
 import { getCedarState } from '@/store/CedarStore';
-import { sanitizeJson } from '@/utils/sanitizeJson';
+import { z } from 'zod';
+import type { StateCreator } from 'zustand';
 import {
 	defaultResponseProcessors,
 	initializeResponseProcessorRegistry,
 } from './responseProcessors/initializeResponseProcessorRegistry';
 
-// Parameters for sending a message
-export interface SendMessageParams {
-	model?: string;
-	systemPrompt?: string;
-	route?: string;
-	temperature?: number;
-	// Optional conversation/thread ID
-	conversationId?: string;
-	threadId?: string;
-	userId?: string;
-	// Enable streaming responses
-	stream?: boolean;
-	[key: string]: any;
-}
+// Base send message params that all providers can accept
+export type SendMessageParams<
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>, // backend context data schemas
+	E = object // extra custom fields type - users can specify their own typed custom fields
+> = BaseParams<T, E> & {
+	model?: string; // Optional for providers that need it
+	route?: string; // Optional for Mastra
+	resourceId?: string; // Optional for Mastra/Custom
+	userId?: string; // Optional for Custom
+	threadId?: string; // Optional for Mastra/Custom
+};
+
+// Union type for all possible provider params for internal use
+export type AnyProviderParams<
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E = object
+> =
+	| OpenAIParams
+	| AnthropicParams
+	| MastraParams<T, E>
+	| AISDKParams
+	| CustomParams<T, E>;
 
 // Helper type to get params based on provider config
 type GetParamsForConfig<T> = T extends { provider: 'openai' }
@@ -63,30 +69,28 @@ export interface AgentConnectionSlice {
 	providerConfig: ProviderConfig | null;
 	currentAbortController: AbortController | null;
 	responseProcessors: ResponseProcessorRegistry;
+	currentRequestId: string | null; // Track current request/stream ID
 
 	// Core methods - properly typed based on current provider config
-	callLLM: <T extends ProviderConfig = ProviderConfig>(
-		params: T extends ProviderConfig
-			? GetParamsForConfig<T>
-			: ProviderConfig extends infer U
-			? GetParamsForConfig<U>
-			: never
+	callLLM: <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E>
 	) => Promise<LLMResponse>;
 
-	callLLMStructured: <T extends ProviderConfig = ProviderConfig>(
-		params: T extends ProviderConfig
-			? GetParamsForConfig<T> & StructuredParams
-			: ProviderConfig extends infer U
-			? GetParamsForConfig<U> & StructuredParams
-			: never
+	callLLMStructured: <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E> & StructuredParams<T, E>
 	) => Promise<LLMResponse>;
 
-	streamLLM: <T extends ProviderConfig = ProviderConfig>(
-		params: T extends ProviderConfig
-			? GetParamsForConfig<T>
-			: ProviderConfig extends infer U
-			? GetParamsForConfig<U>
-			: never,
+	streamLLM: <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E>,
 		handler: StreamHandler
 	) => StreamResponse;
 
@@ -94,7 +98,12 @@ export interface AgentConnectionSlice {
 	voiceLLM: (params: VoiceParams) => Promise<VoiceLLMResponse>;
 
 	// High-level methods that use callLLM/streamLLM
-	sendMessage: (params?: SendMessageParams) => Promise<void>;
+	sendMessage: <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params?: SendMessageParams<T, E>
+	) => Promise<void>;
 	handleLLMResponse: (
 		items: (string | StructuredResponseType)[]
 	) => Promise<void>;
@@ -138,55 +147,6 @@ export type TypedAgentConnectionSlice<T extends ProviderConfig> = Omit<
 	voiceLLM: (params: VoiceParams) => Promise<VoiceLLMResponse>;
 };
 
-export const improvePrompt = async (
-	prompt: string,
-	handler?: StreamHandler
-): Promise<string> => {
-	const systemPrompt = `You are an AI assistant that helps improve prompts for clarity and specificity. 
-Given a user's prompt, analyze it and enhance it to be more specific, detailed, and effective.
-Focus on adding context, clarifying ambiguities, and structuring the prompt for better results.
-Return only the improved prompt without explanations or meta-commentary.`;
-
-	const store = useCedarStore.getState();
-
-	if (handler) {
-		// Use streaming if handler is provided
-		store.streamLLM(
-			{
-				prompt,
-				systemPrompt,
-			},
-			handler
-		);
-
-		// Wait for completion and return the final content
-		let improvedPrompt = '';
-		const originalHandler = handler;
-
-		await new Promise<void>((resolve) => {
-			handler = (event) => {
-				if (event.type === 'chunk') {
-					improvedPrompt += event.content;
-				} else if (event.type === 'done') {
-					resolve();
-				}
-				originalHandler(event);
-			};
-		});
-
-		return improvedPrompt;
-	} else {
-		// Use non-streaming version
-		const response = await store.callLLM({
-			prompt,
-			systemPrompt,
-			temperature: 0.7,
-			maxTokens: 1000,
-		});
-
-		return response.content;
-	}
-};
 export const createAgentConnectionSlice: StateCreator<
 	CedarStore,
 	[],
@@ -199,18 +159,17 @@ export const createAgentConnectionSlice: StateCreator<
 	providerConfig: null,
 	currentAbortController: null,
 	notificationInterval: undefined,
+	currentRequestId: null,
 	responseProcessors: initializeResponseProcessorRegistry(
 		defaultResponseProcessors as ResponseProcessor<StructuredResponseType>[]
 	),
 
 	// Core methods with runtime type checking
-	callLLM: async (
-		params:
-			| OpenAIParams
-			| AnthropicParams
-			| MastraParams
-			| AISDKParams
-			| CustomParams
+	callLLM: async <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E>
 	) => {
 		const config = get().providerConfig;
 		if (!config) {
@@ -240,7 +199,13 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 
 		// Log the request
-		const requestId = get().logAgentRequest(params, config.provider);
+		const requestId = get().logAgentRequest(
+			params as BaseParams,
+			config.provider
+		);
+
+		// Set current request ID
+		set({ currentRequestId: requestId });
 
 		try {
 			const provider = getProviderImplementation(config);
@@ -254,21 +219,26 @@ export const createAgentConnectionSlice: StateCreator<
 			// Log the successful response
 			get().logAgentResponse(requestId, response);
 
+			// Clear current request ID
+			set({ currentRequestId: null });
+
 			return response;
 		} catch (error) {
 			// Log the error
 			get().logAgentError(requestId, error as Error);
+
+			// Clear current request ID
+			set({ currentRequestId: null });
+
 			throw error;
 		}
 	},
 
-	callLLMStructured: async (
-		params:
-			| (OpenAIParams & StructuredParams)
-			| (AnthropicParams & StructuredParams)
-			| (MastraParams & StructuredParams)
-			| (AISDKParams & AISDKStructuredParams)
-			| (CustomParams & StructuredParams)
+	callLLMStructured: async <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E> & StructuredParams<T, E>
 	) => {
 		const config = get().providerConfig;
 		if (!config) {
@@ -308,7 +278,13 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 
 		// Log the request
-		const requestId = get().logAgentRequest(params, config.provider);
+		const requestId = get().logAgentRequest(
+			params as BaseParams,
+			config.provider
+		);
+
+		// Set current request ID
+		set({ currentRequestId: requestId });
 
 		try {
 			const provider = getProviderImplementation(config);
@@ -321,21 +297,26 @@ export const createAgentConnectionSlice: StateCreator<
 			// Log the successful response
 			get().logAgentResponse(requestId, response);
 
+			// Clear current request ID
+			set({ currentRequestId: null });
+
 			return response;
 		} catch (error) {
 			// Log the error
 			get().logAgentError(requestId, error as Error);
+
+			// Clear current request ID
+			set({ currentRequestId: null });
+
 			throw error;
 		}
 	},
 
-	streamLLM: (
-		params:
-			| OpenAIParams
-			| AnthropicParams
-			| MastraParams
-			| AISDKParams
-			| CustomParams,
+	streamLLM: <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params: AnyProviderParams<T, E>,
 		handler: StreamHandler
 	) => {
 		const config = get().providerConfig;
@@ -366,7 +347,13 @@ export const createAgentConnectionSlice: StateCreator<
 		}
 
 		// Log the stream start
-		const streamId = get().logStreamStart(params, config.provider);
+		const streamId = get().logStreamStart(
+			params as BaseParams,
+			config.provider
+		);
+
+		// Set current request ID to the stream ID
+		set({ currentRequestId: streamId });
 
 		const provider = getProviderImplementation(config);
 		const abortController = new AbortController();
@@ -379,8 +366,12 @@ export const createAgentConnectionSlice: StateCreator<
 				get().logStreamChunk(streamId, event.content);
 			} else if (event.type === 'done') {
 				get().logStreamEnd(streamId, event.completedItems);
+				// Clear current request ID when stream ends
+				set({ currentRequestId: null });
 			} else if (event.type === 'error') {
 				get().logAgentError(streamId, event.error);
+				// Clear current request ID on error
+				set({ currentRequestId: null });
 			} else if (event.type === 'object') {
 				get().logStreamObject(streamId, event.object);
 			}
@@ -421,7 +412,7 @@ export const createAgentConnectionSlice: StateCreator<
 		let voiceParams: VoiceParams = params;
 		if (config.provider === 'mastra') {
 			const resourceId = getCedarState('userId') as string | undefined;
-			const threadId = getCedarState('threadId') as string | undefined;
+			const threadId = get().mainThreadId;
 			voiceParams = {
 				...params,
 				resourceId,
@@ -446,11 +437,19 @@ export const createAgentConnectionSlice: StateCreator<
 	// Handle LLM response
 	handleLLMResponse: async (itemsToProcess) => {
 		const state = get();
+		const requestId = state.currentRequestId;
 
 		for (const item of itemsToProcess) {
 			if (typeof item === 'string') {
 				// Handle text content - append to latest message
 				state.appendToLatestMessage(item, !state.isStreaming);
+
+				// Log that this was handled as text
+				state.logResponseProcessorExecution(
+					{ type: 'text', content: item },
+					{ type: 'text', namespace: 'builtin', execute: () => {} },
+					requestId || undefined
+				);
 			} else if (item && typeof item === 'object') {
 				const structuredResponse = item;
 
@@ -465,6 +464,13 @@ export const createAgentConnectionSlice: StateCreator<
 						role: 'bot',
 						...structuredResponse,
 					});
+
+					// Log that this was unhandled
+					state.logResponseProcessorExecution(
+						structuredResponse,
+						{ type: 'unhandled', namespace: 'fallback', execute: () => {} },
+						requestId || undefined
+					);
 				}
 			}
 		}
@@ -491,36 +497,94 @@ export const createAgentConnectionSlice: StateCreator<
 
 	processStructuredResponse: async (obj) => {
 		const state = get();
+		const requestId = state.currentRequestId;
 
 		if (!obj.type || typeof obj.type !== 'string') {
+			// Log untyped response
+			state.logResponseProcessorExecution(
+				obj,
+				{ type: 'untyped', namespace: 'fallback', execute: () => {} },
+				requestId || undefined
+			);
 			return false;
 		}
 
 		const processor = state.getResponseProcessors(obj.type);
 
 		if (!processor) {
+			// Log unknown type
+			state.logResponseProcessorExecution(
+				obj,
+				{ type: obj.type, namespace: 'unknown', execute: () => {} },
+				requestId || undefined
+			);
 			return false;
 		}
 
 		// Validate if needed
 		if (processor.validate && !processor.validate(obj)) {
+			// Log validation failure
+			state.logResponseProcessorExecution(
+				obj,
+				{
+					type: processor.type,
+					namespace: 'validation-failed',
+					execute: () => {},
+				},
+				requestId || undefined
+			);
 			return false;
 		}
 
 		try {
 			await processor.execute(obj as StructuredResponseType, state);
+
+			// Log which processor handled this response
+			state.logResponseProcessorExecution(
+				obj,
+				processor,
+				requestId || undefined
+			);
+
 			return true;
 		} catch (error) {
 			console.error(
 				`Error executing response processor for type ${obj.type}:`,
 				error
 			);
+			// Log execution error
+			state.logResponseProcessorExecution(
+				obj,
+				{
+					type: processor.type,
+					namespace: 'execution-error',
+					execute: () => {},
+				},
+				requestId || undefined
+			);
 			return false;
 		}
 	},
 
-	sendMessage: async (params?: SendMessageParams) => {
-		const { model, systemPrompt, route, temperature, stream } = params || {};
+	sendMessage: async <
+		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+		E = object
+	>(
+		params?: SendMessageParams<T, E>
+	) => {
+		// Extract ALL fields, not just selected ones
+		const {
+			model,
+			systemPrompt,
+			temperature,
+			maxTokens,
+			route,
+			stream,
+			threadId,
+			userId,
+			additionalContext,
+			...customFields
+		} = params || {};
 		const state = get();
 
 		// Set processing state
@@ -534,12 +598,14 @@ export const createAgentConnectionSlice: StateCreator<
 			// Step 2: Unify it into a single string to send to the LLM
 			const unifiedMessage = fullContext;
 
-			// Step 3: Add the stringified chatInputContent as a message from the user
-			state.addMessage({
-				role: 'user' as const,
-				type: 'text' as const,
-				content: editorContent,
-			});
+			if (editorContent) {
+				// Step 3: Add the stringified chatInputContent as a message from the user
+				state.addMessage({
+					role: 'user' as const,
+					type: 'text' as const,
+					content: editorContent,
+				});
+			}
 
 			// Clear the chat specific contextEntries (mentions)
 			state.clearMentions();
@@ -550,46 +616,114 @@ export const createAgentConnectionSlice: StateCreator<
 				throw new Error('No provider configured');
 			}
 
-			let llmParams: BaseParams = {
-				prompt: unifiedMessage,
+			let llmParams = {
+				prompt: unifiedMessage, // Generated by Cedar
 				systemPrompt,
 				temperature,
-			};
+				maxTokens,
+				...customFields,
+			} as AnyProviderParams<T, E>;
 
-			const threadId =
-				params?.threadId || (getCedarState('threadId') as string | null);
-			const userId = params?.userId || getCedarState('userId');
+			// Use extracted values with fallback to mainThreadId from messagesSlice
+			const resolvedThreadId = threadId || state.mainThreadId;
+			const resolvedUserId = userId || getCedarState('userId');
 
 			// Add provider-specific params
 			switch (config.provider) {
 				case 'openai':
 				case 'anthropic':
-					llmParams = { ...llmParams, model: model || 'gpt-4o-mini' };
+					// For providers without server-side thread management,
+					// build a proper messages array with conversation history
+					const threadMessages = state.getThreadMessages(resolvedThreadId);
+					const messagesArray: Array<{
+						role: 'system' | 'user' | 'assistant';
+						content: string;
+					}> = [];
+
+					// Add system prompt if provided
+					if (systemPrompt) {
+						messagesArray.push({ role: 'system', content: systemPrompt });
+					}
+
+					// Add conversation history (excluding the current message we just added)
+					if (threadMessages.length > 1) {
+						const previousMessages = threadMessages.slice(0, -1);
+						previousMessages.forEach((msg) => {
+							if (msg.type === 'text' && msg.content) {
+								messagesArray.push({
+									role: msg.role === 'user' ? 'user' : 'assistant',
+									content: msg.content,
+								});
+							}
+						});
+					}
+
+					// Add the current message
+					messagesArray.push({ role: 'user', content: unifiedMessage });
+
+					llmParams = {
+						...llmParams,
+						model: model || 'gpt-4o-mini',
+						messages: messagesArray,
+						// Still include prompt for backward compatibility
+						prompt: unifiedMessage,
+					} as OpenAIParams;
 					break;
 				case 'mastra':
 					const chatPath = config.chatPath || '/chat';
 
 					llmParams = {
 						...llmParams,
-						// we're overriding the prompt since we pass in additionalContext as a raw object.
 						prompt: editorContent,
-						additionalContext: state.stringifyAdditionalContext(),
+						additionalContext:
+							additionalContext || state.compileAdditionalContext(),
 						route: route || `${chatPath}`,
-						resourceId: userId,
-						threadId,
-					};
+						resourceId: resolvedUserId,
+						threadId: resolvedThreadId,
+						...customFields,
+					} as MastraParams<T, E>;
 					break;
 				case 'ai-sdk':
-					llmParams = { ...llmParams, model: model || 'openai/gpt-4o-mini' };
+					// For AI SDK, also include thread messages as context
+					const aiSDKThreadMessages = state.getThreadMessages(resolvedThreadId);
+					let aiSDKContextPrompt = unifiedMessage;
+
+					// Add previous messages as context if there are any
+					if (aiSDKThreadMessages.length > 1) {
+						const previousMessages = aiSDKThreadMessages.slice(0, -1); // Exclude the current message
+						const contextMessages = previousMessages
+							.map((msg) => {
+								if (msg.type === 'text') {
+									return `${msg.role === 'user' ? 'User' : 'Assistant'}: ${
+										msg.content
+									}`;
+								}
+								return null;
+							})
+							.filter(Boolean)
+							.join('\n');
+
+						if (contextMessages) {
+							aiSDKContextPrompt = `Previous conversation:\n${contextMessages}\n\nCurrent message:\n${unifiedMessage}`;
+						}
+					}
+
+					llmParams = {
+						...llmParams,
+						prompt: aiSDKContextPrompt,
+						model: model || 'openai/gpt-4o-mini',
+					} as AISDKParams;
 					break;
 				case 'custom':
 					llmParams = {
 						...llmParams,
 						prompt: editorContent,
-						additionalContext: sanitizeJson(state.additionalContext),
-						userId,
-						threadId,
-					};
+						additionalContext:
+							additionalContext || state.compileAdditionalContext(),
+						userId: resolvedUserId,
+						threadId: resolvedThreadId,
+						...customFields,
+					} as AnyProviderParams<T, E>;
 					break;
 			}
 
@@ -703,7 +837,7 @@ export const createAgentConnectionSlice: StateCreator<
 		if (!provider || provider.provider !== 'mastra') return;
 
 		const baseURL = provider.baseURL;
-		const threadId = getCedarState('threadId') as string | undefined;
+		const threadId = get().mainThreadId;
 		if (!threadId) return;
 
 		const endpoint = `${baseURL}/chat/notifications`;

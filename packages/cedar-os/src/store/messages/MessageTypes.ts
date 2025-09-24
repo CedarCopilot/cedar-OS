@@ -155,3 +155,16 @@ export type MessageRendererRegistry = Record<
 	string,
 	MessageRenderer | undefined
 >;
+
+// Thread-specific types
+export interface MessageThread {
+	id: string;
+	name?: string; // Optional display name for the thread
+	lastLoaded: string; // ISO timestamp
+	messages: Message[];
+}
+
+export type MessageThreadMap = Record<string, MessageThread>;
+
+// Default thread ID constant
+export const DEFAULT_THREAD_ID = 'default-thread';

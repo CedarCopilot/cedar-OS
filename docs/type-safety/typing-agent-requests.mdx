@@ -1,0 +1,408 @@
+---
+title: 'Typing Agent Requests'
+description: 'Learn how to implement end-to-end type safety for agent requests in Cedar-OS'
+---
+
+Cedar-OS provides comprehensive end-to-end type safety for agent requests. There are **three main areas** where you can implement type safety:
+
+1. **The type of additionalContext** - Define TypeScript types for context data (user profiles, projects, etc.)
+2. **The type of additional params** - Define custom fields for your specific backend needs
+3. **Frontend tool and state setter schemas** - Define Zod schemas for tool arguments and state setter parameters
+
+For all customization points, Cedar exposes:
+
+- **TypeScript types** for compile-time checking
+- **Zod schemas** for runtime validation and schema factories
+
+## Additional Params Typing using `E`
+
+The **E** generic parameter allows you to define custom fields that get passed directly to your backend.
+
+### Configurable Providers (Support Custom Fields)
+
+Configurable providers like Mastra and Custom backends allow you to define additional parameters:
+
+**TypeScript Types:**
+
+```typescript
+// MastraParams - supports custom fields via E generic
+type MastraParams<
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E = object // <-- Your custom fields type goes here
+> = BaseParams<T, E> & {
+	route: string;
+	resourceId?: string;
+	threadId?: string;
+};
+
+// CustomParams - supports custom fields via E generic
+type CustomParams<
+	T extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E = object
+> = BaseParams<T, E> & {
+	userId?: string;
+	threadId?: string;
+};
+```
+
+**Corresponding Zod Schemas:**
+
+```typescript
+import { MastraParamsSchema, CustomParamsSchema } from 'cedar-os';
+
+// Schema factory functions that accept your custom fields schema
+const MastraParamsSchema = <
+	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E extends z.ZodTypeAny = z.ZodType<object>
+>(
+	dataSchemas?: TData,
+	extraFieldsSchema?: E
+) => {
+	// Returns Zod schema for MastraParams<TData, E>
+};
+
+const CustomParamsSchema = <
+	TData extends Record<string, z.ZodTypeAny> = Record<string, never>,
+	E extends z.ZodTypeAny = z.ZodType<object>
+>(
+	dataSchemas?: TData,
+	extraFieldsSchema?: E
+) => {
+	// Returns Zod schema for CustomParams<TData, E>
+};
+```
+
+**Usage Example:**
+
+```typescript
+// Define your custom fields type
+type MyCustomFields = {
+	userId: string;
+	sessionId: string;
+	priority: 'low' | 'medium' | 'high';
+};
+
+// Frontend: Full type safety with custom fields
+await sendMessage<UserContextSchemas, MyCustomFields>({
+	route: '/chat',
+	userId: 'user123', // ✅ Fully typed
+	sessionId: 'session456', // ✅ Fully typed
+	priority: 'high', // ✅ Fully typed
+	temperature: 0.7,
+	additionalContext: {
+		/* ... */
+	},
+});
+
+// Backend: Runtime validation with Zod
+const customFieldsSchema = z.object({
+	userId: z.string(),
+	sessionId: z.string(),
+	priority: z.enum(['low', 'medium', 'high']),
+});
+
+const requestSchema = MastraParamsSchema(
+	UserContextSchemas,
+	customFieldsSchema
+);
+```
+
+### Standardized Providers (Fixed APIs)
+
+Standardized providers have fixed APIs and don't support custom fields:
+
+**TypeScript Types:**
+
+```typescript
+// Fixed APIs - no custom fields allowed
+interface OpenAIParams extends BaseParams {
+	model: string;
+	max_tokens?: number;
+	temperature?: number;
+}
+
+interface AnthropicParams extends BaseParams {
+	model: string;
+	max_tokens?: number;
+	temperature?: number;
+}
+
+interface AISDKParams extends BaseParams {
+	model: string; // Format: "provider/model"
+}
+```
+
+**Corresponding Zod Schemas:**
+
+```typescript
+import {
+	OpenAIParamsSchema,
+	AnthropicParamsSchema,
+	AISDKParamsSchema,
+} from 'cedar-os';
+
+// Fixed schemas - no generics needed
+export const OpenAIParamsSchema = BaseParamsSchema().and(
+	z.object({ model: z.string() })
+);
+
+export const AnthropicParamsSchema = BaseParamsSchema().and(
+	z.object({ model: z.string() })
+);
+
+export const AISDKParamsSchema = BaseParamsSchema().and(
+	z.object({ model: z.string() })
+);
+```
+
+## Additional Context Typing using `T`
+
+The **T** generic parameter allows you to define TypeScript types for your React state data that gets sent back in the `additionalContext` field.
+
+### What your backend receives in `additionalContext`
+
+Your backend receives the transformed context with Cedar system fields added and UI metadata stripped. Each context item becomes a simple object with `data` and `source` fields:
+
+**TypeScript Types:**
+
+```typescript
+// What your backend receives for each context item (now generic)
+interface BackendContextEntry<TData = unknown> {
+	data: TData; // Your actual data with proper type inference
+	source: 'mention' | 'subscription' | 'manual' | 'function';
+}
+
+// The full additionalContext structure on your backend (improved with Zod inference)
+type AdditionalContextParam<TSchemas extends Record<string, z.ZodTypeAny>> = {
+	// Cedar system fields (automatically added)
+	frontendTools?: Record<string, unknown>;
+	stateSetters?: Record<string, unknown>;
+	schemas?: Record<string, unknown>;
+} & {
+	// Properly typed context fields with conditional types for arrays
+	[K in keyof TSchemas]: TSchemas[K] extends z.ZodOptional<z.ZodArray<infer U>>
+		? BackendContextEntry<z.infer<U>>[] | undefined
+		: TSchemas[K] extends z.ZodArray<infer U>
+		? BackendContextEntry<z.infer<U>>[]
+		: BackendContextEntry<z.infer<TSchemas[K]>>;
+};
+```
+
+**Corresponding Zod Schema:**
+
+```typescript
+import { AdditionalContextParamSchema } from 'cedar-os';
+
+// Simple usage - pass your context schemas to get validation
+const contextSchema = AdditionalContextParamSchema(UserContextSchemas);
+```
+
+## Typing sendMessage
+
+The `sendMessage` function (used by Cedar's chat interface) and `callLLM` function both accept the same typed parameters. You can pass your `MyMastraRequest` type object to either:
+
+```typescript
+// sendMessage - used by chat interface
+await sendMessage<UserContextData, CustomFields>({
+	route: '/chat',
+	userId: 'user123',
+	priority: 'high',
+	additionalContext: {
+		/* your typed context */
+	},
+});
+
+// callLLM - direct usage
+await callLLM<UserContextData, CustomFields>({
+	route: '/chat',
+	userId: 'user123',
+	priority: 'high',
+	additionalContext: {
+		/* your typed context */
+	},
+});
+```
+
+Both functions use the same two-generic typing system and pass your typed request to the backend for validation.
+
+## Frontend Tool and State Setter Schema Typing
+
+Cedar has comprehensive Zod schema support for frontend tools and state setters, providing runtime validation and automatic schema generation for agents. You can pick any schema off of the `additionalContext` object and pass it as a JSON schema to an agent's output schema.
+
+### Frontend Tool Schema Typing
+
+```typescript
+import { useRegisterFrontendTool } from 'cedar-os';
+import { z } from 'zod';
+
+// Define comprehensive argument schemas
+const sendNotificationSchema = z.object({
+	title: z.string().min(1, 'Title is required'),
+	message: z.string().min(1, 'Message is required'),
+	type: z.enum(['success', 'error', 'warning', 'info']).default('info'),
+	duration: z.number().positive().optional().default(3000),
+	actions: z
+		.array(
+			z.object({
+				label: z.string(),
+				action: z.string(),
+			})
+		)
+		.optional(),
+});
+
+function NotificationComponent() {
+	useRegisterFrontendTool({
+		name: 'sendNotification',
+		description: 'Display a notification to the user',
+		argsSchema: sendNotificationSchema,
+		execute: async (args) => {
+			// args is fully typed based on the schema
+			const { title, message, type, duration, actions } = args;
+
+			return await showNotification({
+				title,
+				message,
+				type,
+				duration,
+				actions,
+			});
+		},
+	});
+}
+
+// Type inference from schema
+type NotificationArgs = z.infer<typeof sendNotificationSchema>;
+// { title: string; message: string; type: 'success' | 'error' | 'warning' | 'info'; duration?: number; actions?: Array<{label: string; action: string}> }
+```
+
+### State Setter Schema Typing
+
+```typescript
+import { useRegisterState } from 'cedar-os';
+import { z } from 'zod';
+
+// Define argument schemas for state setters
+const addTodoSchema = z.object({
+	text: z.string().min(1, 'Todo text cannot be empty'),
+	priority: z.enum(['low', 'medium', 'high']).default('medium'),
+	dueDate: z.string().datetime().optional(),
+	tags: z.array(z.string()).default([]),
+});
+
+const updateTodoSchema = z.object({
+	id: z.number().positive(),
+	updates: z.object({
+		text: z.string().min(1).optional(),
+		completed: z.boolean().optional(),
+		priority: z.enum(['low', 'medium', 'high']).optional(),
+		dueDate: z.string().datetime().nullable().optional(),
+		tags: z.array(z.string()).optional(),
+	}),
+});
+
+function TodoComponent() {
+	const [todos, setTodos] = useState([]);
+
+	useRegisterState({
+		key: 'todos',
+		value: todos,
+		setValue: setTodos,
+		description: 'List of user todos with priorities and due dates',
+		stateSetters: {
+			addTodo: {
+				name: 'addTodo',
+				description: 'Add a new todo item',
+				argsSchema: addTodoSchema,
+				execute: (currentTodos, args) => {
+					// args is fully typed: { text: string; priority: 'low' | 'medium' | 'high'; dueDate?: string; tags: string[] }
+					const newTodo = {
+						id: Date.now(),
+						...args,
+						completed: false,
+						createdAt: new Date().toISOString(),
+					};
+					setTodos([...currentTodos, newTodo]);
+				},
+			},
+		},
+	});
+}
+
+// Type inference from schemas
+type AddTodoArgs = z.infer<typeof addTodoSchema>;
+type UpdateTodoArgs = z.infer<typeof updateTodoSchema>;
+```
+
+### Schema Benefits
+
+Using Zod schemas for frontend tools and state setters provides:
+
+1. **Runtime Validation**: Arguments are validated before execution
+2. **Type Safety**: Full TypeScript support with inferred types
+3. **Agent Context**: Schemas are automatically converted to JSON Schema and sent to agents
+4. **Error Handling**: Clear validation error messages
+5. **Documentation**: Schema descriptions help agents understand parameters
+
+## End-to-End Example
+
+Here's a simplified example showing the complete type safety pattern:
+
+```typescript
+// 1. Define Zod schemas for additionalContext data and additional params
+const UserContextSchemas = {
+	userProfile: z.object({
+		id: z.string(),
+		email: z.string().email(),
+		preferences: z.object({
+			theme: z.enum(['light', 'dark']),
+			notifications: z.boolean(),
+		}),
+	}),
+	activeProjects: z.array(
+		z.object({
+			id: z.string(),
+			name: z.string(),
+			deadline: z.string().datetime(),
+		})
+	),
+};
+
+const CustomFieldsSchema = z.object({
+	userId: z.string(),
+	sessionId: z.string(),
+	priority: z.enum(['low', 'medium', 'high']),
+});
+
+// 2. Create TypeScript types that infer from the Zod schemas
+type CustomFields = z.infer<typeof CustomFieldsSchema>;
+
+// 3. Declare TypeScript type for the entire backend object
+type MyMastraRequest = MastraParams<typeof UserContextSchemas, CustomFields>;
+// ✅ Use this type for compile-time checking, IDE autocomplete, and frontend type safety
+
+// 4. Declare Zod schema for runtime validation and parse incoming requests
+const MyMastraRequestSchema = MastraParamsSchema(
+	UserContextSchemas,
+	CustomFieldsSchema
+);
+
+// Example: Parse and access fields with full type safety
+export async function POST(req: Request) {
+	const body = await req.json();
+	const validatedRequest = MyMastraRequestSchema.parse(body);
+
+	// ✅ Fully typed access to all fields
+	const userProfile = validatedRequest.additionalContext?.userProfile;
+	const userEmail = userProfile?.data.email; // string (from BackendContextEntry<UserProfile>)
+	const priority = validatedRequest.priority; // 'low' | 'medium' | 'high'
+}
+```
+
+## Next Steps
+
+Now that you understand request typing, learn about:
+
+- [Typing Agent Responses](/type-safety/typing-agent-responses) - Type safety for agent responses and structured outputs
+- [Agent Backend Connection](/agent-backend-connection/agent-backend-connection) - Setting up your backend integration
+- [Agent Input Context](/agent-context/agent-context) - Managing context data in your Cedar application

@@ -180,34 +180,83 @@ Cedar automatically handles these message types with default behavior. Each type
 - **Renderer**: Built-in text message renderer with role-based styling
 - **Warning**: Overriding this type will disable default text message rendering
 
-### `"action"` Type
+### `"setState"` Type
 
 - **Behavior**: Executes state actions and displays completion status
-- **Properties**: `stateKey: string`, `setterKey: string`, `args?: unknown[]`
-- **Default Renderer**: `ActionRenderer` shows action completion with shimmer effects
+- **Properties**: `stateKey: string`, `setterKey: string`, `args?: unknown`
+- **Default Renderer**: `SetStateRenderer` shows setState completion with shimmer effects
 
-**Action Factory Functions**: Cedar provides special factory functions for action messages:
+**SetState Factory Functions**: Cedar provides special factory functions for setState messages:
 
 ```tsx
-import { createActionMessageRenderer, ActionMessageFor } from 'cedar-os';
+import { createSetStateMessageRenderer, SetStateMessageFor } from 'cedar-os';
 
-// Specific action message type using helper
-type UpdateCounterAction = ActionMessageFor<
+// Specific setState message type using helper
+type UpdateCounterSetState = SetStateMessageFor<
 	'counter', // StateKey
 	'increment', // SetterKey
-	[number] // Args
+	{ amount: number } // Args
 >;
 
-// Create custom action renderer with filtering
-const CounterActionRenderer = createActionMessageRenderer<UpdateCounterAction>({
-	namespace: 'counter',
-	setterKey: 'increment', // Only handle increment actions
-	render: (message) => (
-		<div className='action-message'>
-			✅ Incremented counter by {message.args?.[0] || 1}
-		</div>
-	),
-});
+// Create custom setState renderer with filtering
+const CounterSetStateRenderer =
+	createSetStateMessageRenderer<UpdateCounterSetState>({
+		namespace: 'counter',
+		setterKey: 'increment', // Only handle increment actions
+		render: (message) => (
+			<div className='setState-message'>
+				✅ Incremented counter by {message.args?.amount || 1}
+			</div>
+		),
+	});
+```
+
+### `"frontendTool"` Type
+
+- **Behavior**: Displays frontend tool execution results with status indicators
+- **Properties**: `toolName: string`, `args?: unknown`, `result?: unknown`, `error?: string`, `status: 'success' | 'error'`
+- **Default Renderer**: `FrontendToolRenderer` shows tool execution status with result display
+
+```tsx
+import {
+	createFrontendToolMessageRenderer,
+	FrontendToolMessageFor,
+} from 'cedar-os';
+
+// Specific frontend tool message type
+type SendEmailToolMessage = FrontendToolMessageFor<
+	'sendEmail',
+	{ to: string; subject: string; body: string },
+	{ messageId: string; success: boolean }
+>;
+
+// Create custom frontend tool renderer
+const SendEmailToolRenderer =
+	createFrontendToolMessageRenderer<SendEmailToolMessage>({
+		namespace: 'email',
+		toolName: 'sendEmail',
+		render: (message) => {
+			if (message.status === 'success') {
+				return (
+					<div className='tool-success'>
+						📧 Email sent successfully to {message.args?.to}
+						{message.result?.messageId && (
+							<span className='text-gray-500'>
+								{' '}
+								(ID: {message.result.messageId})
+							</span>
+						)}
+					</div>
+				);
+			} else {
+				return (
+					<div className='tool-error'>
+						❌ Failed to send email: {message.error}
+					</div>
+				);
+			}
+		},
+	});
 ```
 
 ### `"progress_update"` Type

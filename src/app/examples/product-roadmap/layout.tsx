@@ -3,13 +3,13 @@
 import { FeatureNodeData } from '@/app/examples/product-roadmap/components/FeatureNode';
 import {
 	CedarCopilot,
-	createActionMessageRenderer,
+	createSetStateMessageRenderer,
 	createMessageRenderer,
 	createResponseProcessor,
 	useCedarStore,
 } from 'cedar-os';
 import type {
-	ActionMessageFor,
+	SetStateMessageFor,
 	CustomMessage,
 	CustomStructuredResponseType,
 	MessageStorageConfig,
@@ -37,10 +37,10 @@ export default function ProductRoadmapLayout({
 	// Mastra starts a server on port 4111 by default with API endpoints
 	const llmProvider: ProviderConfig = {
 		provider: 'mastra',
-		apiKey: 'not-needed-for-local', // API key is not needed for local Mastra agent
 		baseURL: 'http://localhost:4111',
-		chatPath: '/chat/execute-function',
-		voiceRoute: '/chat/voice-execute',
+		chatPath: '/chat',
+		voiceRoute: '/chat',
+		resumePath: '/chat/resume',
 	};
 
 	// const llmProvider: ProviderConfig = {
@@ -88,22 +88,25 @@ export default function ProductRoadmapLayout({
 		},
 	});
 
-	type AddNodeActionMessage = ActionMessageFor<
+	type AddNodeSetStateMessage = SetStateMessageFor<
 		'nodes',
 		'addNode',
-		[{ data: Partial<FeatureNodeData> }]
+		{ nodes: [{ data: Partial<FeatureNodeData> }] }
 	>;
 
-	const customActionMessageRenderer = createActionMessageRenderer({
+	const customSetStateMessageRenderer = createSetStateMessageRenderer({
 		render: (message) => {
 			switch (message.setterKey) {
 				case 'addNode':
-					const typedMessage = message as AddNodeActionMessage;
+					const typedMessage = message as AddNodeSetStateMessage;
 
 					return (
 						<div>
 							Add node action:{' '}
-							{JSON.stringify(typedMessage.args[0].data.description)}
+							{JSON.stringify(
+								typedMessage.args.nodes?.[0]?.data?.description ||
+									'No description'
+							)}
 						</div>
 					);
 				default:
@@ -253,10 +256,11 @@ export default function ProductRoadmapLayout({
 	return (
 		<CedarCopilot
 			llmProvider={llmProvider}
+			userId={'isabelle'}
 			voiceSettings={voiceSettings}
 			messageStorage={localStorageConfig}
 			responseProcessors={[responseProcessor]}
-			messageRenderers={[AlertMessageRenderer, customActionMessageRenderer]}>
+			messageRenderers={[AlertMessageRenderer, customSetStateMessageRenderer]}>
 			{children}
 			{/* TooltipMenuSpell for any text selection */}
 			<TooltipMenuSpell

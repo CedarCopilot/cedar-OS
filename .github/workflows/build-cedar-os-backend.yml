@@ -1,0 +1,56 @@
+name: Cedar OS Backend Build
+
+on:
+  pull_request:
+    paths:
+      - 'packages/cedar-os-backend/**'
+      - '.github/workflows/build-cedar-os-backend.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install root dependencies (npm)
+        run: npm install --no-audit --prefer-offline
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Clear pnpm cache
+        run: pnpm store prune || echo "No pnpm store to prune"
+
+      - name: Clean previous build artifacts
+        working-directory: packages/cedar-os-backend
+        run: |
+          rm -rf dist
+          rm -rf node_modules/.cache
+          rm -rf .turbo
+
+      - name: Install cedar-os-backend dependencies (pnpm)
+        working-directory: packages/cedar-os-backend
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Verify source files
+        working-directory: packages/cedar-os-backend
+        run: |
+          echo "Current source files:"
+          find src -type f -name "*.ts" -o -name "*.tsx" | sort
+          echo "Content of index.ts:"
+          cat src/index.ts
+
+      - name: Build cedar-os-backend package (pnpm)
+        working-directory: packages/cedar-os-backend
+        run: pnpm run build

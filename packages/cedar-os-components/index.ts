@@ -57,6 +57,7 @@ export { PhantomText } from './text/PhantomText';
 export { KeyboardShortcut } from './ui/KeyboardShortcut';
 // export { default as Slider3D } from './ui/Slider3D'; // Temporarily disabled due to motion type conflicts
 export { Button } from './ui/button';
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 
 // Spells
 export { default as QuestioningSpell } from './spells/QuestioningSpell';
@@ -74,3 +75,14 @@ export type {
 	RangeSliderSpellProps,
 } from './spells/RangeSliderSpell';
 export { default as TooltipMenuSpell } from './spells/TooltipMenuSpell';
+
+// CommandBar
+export { CommandBar } from './CommandBar';
+export type {
+	CommandBarItem,
+	CommandBarGroup,
+	CommandBarContents,
+} from './CommandBar';
+
+// Threads
+export { ChatThreadController } from './threads/ChatThreadController';

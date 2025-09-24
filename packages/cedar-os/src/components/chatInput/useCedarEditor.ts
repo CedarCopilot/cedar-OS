@@ -2,7 +2,7 @@ import { useCedarStore, useChatInput } from '@/store/CedarStore';
 import type { CedarStore } from '@/store/CedarOSTypes';
 import Document from '@tiptap/extension-document';
 import Placeholder from '@tiptap/extension-placeholder';
-import { useEditor } from '@tiptap/react';
+import { useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import { ReactNodeViewRenderer } from '@tiptap/react';
@@ -16,11 +16,13 @@ import { SendMessageParams } from '@/store/agentConnection/agentConnectionSlice'
 
 interface UseCedarEditorOptions {
 	placeholder?: string;
-	onSubmit?: (text: string) => void;
+	onSubmit?: (text: string, editor?: Editor, clearEditor?: () => void) => void;
 	onFocus?: () => void;
 	onBlur?: () => void;
 	stream?: boolean;
 	sendMessageParams?: Partial<SendMessageParams>;
+	/** Optional callback that can override Enter key behavior. Return true to prevent default editor Enter handling. */
+	onEnterOverride?: (event: KeyboardEvent) => boolean;
 }
 
 export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
@@ -31,6 +33,7 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 		onBlur,
 		stream = true,
 		sendMessageParams,
+		onEnterOverride,
 	} = options;
 
 	const sendMessage = useCedarStore((state: CedarStore) => state.sendMessage);
@@ -187,22 +190,26 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 		},
 		editorProps: {
 			handleKeyDown: (view, event) => {
-				if (event.key === 'Enter' && event.shiftKey) {
-					return false;
-				}
-
 				if (event.key === 'Enter' && !event.shiftKey) {
 					const { state } = view;
+
 					const hasActiveSuggestion = state.plugins.some((plugin) => {
 						const pluginState = plugin.getState?.(state);
 						return pluginState?.active || pluginState?.open;
 					});
 
-					if (!hasActiveSuggestion) {
+					if (hasActiveSuggestion) {
 						event.preventDefault();
-						handleSubmit();
+						event.stopPropagation();
+						return false;
+					}
+
+					if (onEnterOverride && onEnterOverride(event)) {
 						return true;
 					}
+
+					handleSubmit();
+					return true;
 				}
 
 				return false;
@@ -245,19 +252,27 @@ export const useCedarEditor = (options: UseCedarEditorOptions = {}) => {
 
 		if (textContent.trim()) {
 			if (onSubmit) {
-				onSubmit(textContent);
+				onSubmit(textContent, editor, () => {
+					editor.commands.clearContent();
+					setIsEditorEmpty(true);
+					setOverrideInputContent('');
+
+					setChatInputContent({
+						type: 'doc',
+						content: [{ type: 'paragraph', content: [] }],
+					});
+				});
 			} else {
 				sendMessage({ stream, ...sendMessageParams });
+				editor.commands.clearContent();
+				setIsEditorEmpty(true);
+				setOverrideInputContent('');
+
+				setChatInputContent({
+					type: 'doc',
+					content: [{ type: 'paragraph', content: [] }],
+				});
 			}
-
-			editor.commands.clearContent();
-			setIsEditorEmpty(true);
-			setOverrideInputContent('');
-
-			setChatInputContent({
-				type: 'doc',
-				content: [{ type: 'paragraph', content: [] }],
-			});
 
 			editor.commands.focus();
 			onFocus?.();

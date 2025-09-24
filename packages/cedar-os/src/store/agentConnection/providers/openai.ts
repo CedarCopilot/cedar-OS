@@ -13,12 +13,20 @@ export const openAIProvider: ProviderImplementation<
 	OpenAIConfig
 > = {
 	callLLM: async (params, config) => {
-		const { prompt, model, systemPrompt, temperature, maxTokens, ...rest } =
-			params;
+		const {
+			prompt,
+			model,
+			systemPrompt,
+			temperature,
+			maxTokens,
+			messages: providedMessages,
+			...rest
+		} = params;
 
-		const messages = [
+		// Use provided messages array or construct from prompt
+		const messages = providedMessages || [
 			...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-			{ role: 'user', content: prompt },
+			{ role: 'user', content: prompt || '' },
 		];
 
 		const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -44,12 +52,20 @@ export const openAIProvider: ProviderImplementation<
 
 		const completion = (async () => {
 			try {
-				const { prompt, model, systemPrompt, temperature, maxTokens, ...rest } =
-					params;
+				const {
+					prompt,
+					model,
+					systemPrompt,
+					temperature,
+					maxTokens,
+					messages: providedMessages,
+					...rest
+				} = params;
 
-				const messages = [
+				// Use provided messages array or construct from prompt
+				const messages = providedMessages || [
 					...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-					{ role: 'user', content: prompt },
+					{ role: 'user', content: prompt || '' },
 				];
 
 				const response = await fetch(
@@ -111,17 +127,6 @@ export const openAIProvider: ProviderImplementation<
 				id: data.id,
 			},
 		};
-	},
-
-	// This can be safely removed
-	handleStreamResponse: (chunk) => {
-		try {
-			const data = JSON.parse(chunk);
-			const content = data.choices?.[0]?.delta?.content || '';
-			return { type: 'chunk', content };
-		} catch (error) {
-			return { type: 'error', error: error as Error };
-		}
 	},
 
 	callLLMStructured: async (params, config) => {
@@ -201,7 +206,7 @@ export const openAIProvider: ProviderImplementation<
 		formData.append('audio', audioData, 'recording.webm');
 		formData.append('settings', JSON.stringify(voiceSettings));
 		if (context) {
-			formData.append('context', context);
+			formData.append('context', JSON.stringify(context));
 		}
 
 		const response = await fetch(fullUrl, {

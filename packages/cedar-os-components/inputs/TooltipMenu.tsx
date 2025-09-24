@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { cn, useStyling, useCedarStore } from 'cedar-os';
+import { cn, useCedarStore } from 'cedar-os';
 import type { CedarStore } from 'cedar-os';
 
 export interface TooltipMenuItem {
@@ -30,11 +30,6 @@ export const TooltipMenu: React.FC<TooltipMenuProps> = ({
 	onItemClick,
 }) => {
 	const ref = useRef<HTMLDivElement>(null);
-	const { styling } = useStyling();
-	const textColor = styling.darkMode ? '#FFFFFF' : '#000000';
-	const backgroundColor = styling.darkMode ? '#1F2937' : '#FFFFFF';
-	const hoverColor = styling.darkMode ? '#374151' : '#F3F4F6';
-	const borderColor = styling.darkMode ? '#374151' : '#E5E7EB';
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -75,13 +70,13 @@ export const TooltipMenu: React.FC<TooltipMenuProps> = ({
 				left: position.x,
 				top: position.y,
 				zIndex: 10000,
-				backgroundColor,
-				color: textColor,
-				borderColor,
 			}}
 			className={cn(
 				'flex gap-1 shadow-lg rounded-lg p-1 border backdrop-blur-sm',
-				'animate-in fade-in-0 zoom-in-95 duration-100'
+				'animate-in fade-in-0 zoom-in-95 duration-100',
+				'bg-white dark:bg-gray-800',
+				'text-black dark:text-white',
+				'border-gray-300 dark:border-gray-600'
 			)}>
 			{items.map((item, index) => (
 				<button
@@ -89,14 +84,9 @@ export const TooltipMenu: React.FC<TooltipMenuProps> = ({
 					onClick={() => handleItemClick(item)}
 					className={cn(
 						'p-2 rounded-md transition-colors duration-100',
-						'hover:scale-105 active:scale-95 transform'
+						'hover:scale-105 active:scale-95 transform',
+						'hover:bg-gray-100 dark:hover:bg-gray-700'
 					)}
-					onMouseEnter={(e) => {
-						e.currentTarget.style.backgroundColor = hoverColor;
-					}}
-					onMouseLeave={(e) => {
-						e.currentTarget.style.backgroundColor = 'transparent';
-					}}
 					title={item.title}>
 					{typeof item.icon === 'string' ? (
 						<span className='text-lg leading-none'>{item.icon}</span>

@@ -25,6 +25,7 @@ import {
 	FeatureNodeData,
 } from '@/app/examples/product-roadmap/components/FeatureNode';
 import { FloatingMenu } from '@/app/examples/product-roadmap/components/FloatingMenu';
+import { ProductRoadmapChat } from '@/app/examples/product-roadmap/components/ProductRoadmapChat';
 import {
 	getEdges,
 	saveEdges,
@@ -34,17 +35,28 @@ import {
 	getNodes,
 	saveNodes,
 } from '@/app/examples/product-roadmap/supabase/nodes';
-import { CedarCaptionChat } from '@/chatComponents/CedarCaptionChat';
 import { FloatingCedarChat } from '@/chatComponents/FloatingCedarChat';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
+import { TooltipMenu } from '@/inputs/TooltipMenu';
+import RadialMenuSpell from '@/spells/RadialMenuSpell';
+import { CommandBarChat } from '@/app/examples/product-roadmap/components/CommandBarChat';
 import {
 	ActivationMode,
+	addDiffToArrayObjs,
 	Hotkey,
+	useDiffStateHelpers,
+	useRegisterDiffState,
+	useCedarState,
+	HumanInTheLoopState,
 	useRegisterState,
 	useStateBasedMentionProvider,
-	useSubscribeStateToInputContext,
+	useSubscribeStateToAgentContext,
+	useRegisterFrontendTool,
 	type CedarStore,
+	type Setter,
 } from 'cedar-os';
+import { isSupabaseAvailable } from '@/app/examples/product-roadmap/supabase/client';
+import { z } from 'zod';
 import {
 	ArrowRight,
 	Box,
@@ -56,8 +68,7 @@ import {
 	Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { TooltipMenu } from '@/inputs/TooltipMenu';
-import RadialMenuSpell from '@/spells/RadialMenuSpell';
+import { DebuggerPanel } from 'cedar-os';
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)
@@ -81,220 +92,228 @@ function FlowCanvas() {
 	const initialMount = React.useRef(true);
 	const saveTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	// Register states using the hook version that handles useEffect internally
-	useRegisterState({
+	// Get diff state operations and computed nodes
+	const {
+		computedValue: computedNodes,
+		undo,
+		redo,
+	} = useDiffStateHelpers<Node<FeatureNodeData>[]>('nodes');
+
+	// Add keyboard listeners for undo/redo
+	React.useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			// Undo: Ctrl+Z (or Cmd+Z on Mac)
+			if (
+				(event.ctrlKey || event.metaKey) &&
+				event.key === 'z' &&
+				!event.shiftKey
+			) {
+				event.preventDefault();
+				if (undo()) {
+					console.log('Undo performed on nodes');
+				}
+			}
+			// Redo: Ctrl+Y or Ctrl+Shift+Z (or Cmd+Y or Cmd+Shift+Z on Mac)
+			else if (
+				((event.ctrlKey || event.metaKey) && event.key === 'y') ||
+				((event.ctrlKey || event.metaKey) &&
+					event.shiftKey &&
+					event.key === 'z')
+			) {
+				event.preventDefault();
+				if (redo()) {
+					console.log('Redo performed on nodes');
+				}
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, [undo, redo]);
+
+	// Register states using the diff-aware hook
+	useRegisterDiffState({
 		value: nodes,
 		setValue: setNodes,
 		key: 'nodes',
 		description: 'Product roadmap nodes',
-		customSetters: {
-			addNode: {
-				name: 'addNode',
-				description: 'Add a new node to the roadmap',
-				parameters: [
-					{
-						name: 'node',
-						type: 'Node<FeatureNodeData>',
-						description: 'The node to add',
+		computeState: (oldState, newState) =>
+			addDiffToArrayObjs(oldState, newState, 'id', '/data', {
+				type: 'listen',
+				fields: ['/data', '/position'],
+			}),
+		stateSetters: {
+			addNode: (() => {
+				const addNodeArgsSchema = z.object({
+					nodes: z
+						.array(
+							z.object({
+								id: z.string().optional(),
+								position: z
+									.object({
+										x: z.number(),
+										y: z.number(),
+									})
+									.optional(),
+								data: z.object({
+									title: z.string().describe('Feature title'),
+									description: z
+										.string()
+										.describe('Detailed feature description'),
+									status: z
+										.enum(['done', 'planned', 'backlog', 'in progress'])
+										.describe('Current development status'),
+									nodeType: z
+										.literal('feature')
+										.default('feature')
+										.describe('Type of node'),
+									upvotes: z.number().default(0).describe('Number of upvotes'),
+									comments: z
+										.array(
+											z.object({
+												id: z.string(),
+												author: z.string(),
+												text: z.string(),
+											})
+										)
+										.default([])
+										.describe('Array of comments'),
+								}),
+							})
+						)
+						.describe('Array of nodes to add to the roadmap'),
+				});
+
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof addNodeArgsSchema
+				> = {
+					name: 'addNode',
+					description: 'Add new nodes to the roadmap',
+					argsSchema: addNodeArgsSchema,
+					execute: (currentNodes, setValue, args) => {
+						// args is fully typed as { nodes: [{ id?: string, position?: {x,y}, data: { ... } }] }
+						const newNodes: Node<FeatureNodeData>[] = args.nodes.map(
+							(node) => ({
+								...node,
+								type: 'featureNode',
+								position: node.position || {
+									x: Math.random() * 400,
+									y: Math.random() * 400,
+								},
+								id: node.id || uuidv4(),
+								data: {
+									...node.data,
+									nodeType: node.data.nodeType || 'feature',
+									status: node.data.status || 'planned',
+									upvotes: node.data.upvotes || 0,
+									comments: node.data.comments || [],
+								},
+							})
+						);
+						setValue([...currentNodes, ...newNodes]);
 					},
-				],
-				execute: (currentNodes, node) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const nodeData = node as Node<FeatureNodeData>;
-					const newNode: Node<FeatureNodeData> = {
-						...nodeData,
-						type: 'featureNode',
-						position: { x: Math.random() * 400, y: Math.random() * 400 },
-						id: nodeData.id || uuidv4(),
-						data: {
-							...nodeData.data,
-							nodeType: nodeData.data.nodeType || 'feature',
-							status: nodeData.data.status || 'planned',
-							upvotes: nodeData.data.upvotes || 0,
-							comments: nodeData.data.comments || [],
-							diff: 'added' as const,
-						},
-					};
-					setNodes([...nodes, newNode]);
-				},
-			},
+				};
+				return setter;
+			})(),
 			removeNode: {
 				name: 'removeNode',
-				description: 'Remove a node from the roadmap',
-				parameters: [
-					{
-						name: 'id',
-						type: 'string',
-						description: 'The ID of the node to remove',
-					},
-				],
-				execute: async (currentNodes, id) => {
-					const nodeId = id as string;
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					// Instead of removing, mark as removed with diff
-					setNodes(
-						nodes.map((node) =>
-							node.id === nodeId
-								? { ...node, data: { ...node.data, diff: 'removed' as const } }
-								: node
+				description: 'Remove nodes from the roadmap',
+				argsSchema: z.object({
+					nodeIds: z
+						.array(z.string())
+						.describe('Array of node IDs to remove from the roadmap'),
+				}),
+				execute: async (currentNodes, setValue, args) => {
+					const filteredNodes = currentNodes.filter(
+						(node) => !args.nodeIds.includes(node.id)
+					);
+
+					setValue(filteredNodes);
+				},
+			},
+			changeNode: (() => {
+				const changeNodeArgsSchema = z.object({
+					nodes: z
+						.array(
+							z.object({
+								id: z
+									.string()
+									.describe(
+										'The ID of the node to update (required for updates)'
+									),
+								position: z
+									.object({
+										x: z.number(),
+										y: z.number(),
+									})
+									.optional(),
+								data: z.object({
+									title: z.string().describe('Updated feature title'),
+									description: z
+										.string()
+										.describe('Updated feature description'),
+									status: z
+										.enum(['done', 'planned', 'backlog', 'in progress'])
+										.describe('Updated development status'),
+									nodeType: z
+										.literal('feature')
+										.default('feature')
+										.describe('Type of node'),
+									upvotes: z.number().default(0).describe('Number of upvotes'),
+									comments: z
+										.array(
+											z.object({
+												id: z.string(),
+												author: z.string(),
+												text: z.string(),
+											})
+										)
+										.default([])
+										.describe('Array of comments'),
+								}),
+							})
 						)
-					);
-				},
-			},
-			changeNode: {
-				name: 'changeNode',
-				description: 'Update an existing node in the roadmap',
-				parameters: [
-					{
-						name: 'newNode',
-						type: 'Node<FeatureNodeData>',
-						description: 'The updated node data',
+						.describe('Array of nodes with updated data'),
+				});
+
+				const setter: Setter<
+					Node<FeatureNodeData>[],
+					typeof changeNodeArgsSchema
+				> = {
+					name: 'changeNode',
+					description: 'Update existing nodes in the roadmap',
+					argsSchema: changeNodeArgsSchema,
+					execute: (currentNodes, setValue, args) => {
+						// args is typed as { nodes: [{ id: string, position?: {x,y}, data: { ... } }] }
+						setValue(
+							currentNodes.map((node) => {
+								const updateNode = args.nodes.find((n) => n.id === node.id);
+								if (updateNode) {
+									return {
+										...updateNode,
+										type: 'featureNode',
+										position: updateNode.position || node.position, // Use new position if provided, otherwise keep existing
+										data: { ...updateNode.data },
+									};
+								}
+								return node;
+							})
+						);
 					},
-				],
-				execute: (currentNodes, newNode) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const updatedNode = newNode as Node<FeatureNodeData>;
-					setNodes(
-						nodes.map((node) =>
-							node.id === updatedNode.id
-								? {
-										...updatedNode,
-										data: { ...updatedNode.data, diff: 'changed' as const },
-								  }
-								: node
-						)
-					);
-				},
-			},
-			acceptDiff: {
-				name: 'acceptDiff',
-				description: 'Accept a diff for a node',
-				parameters: [
-					{
-						name: 'nodeId',
-						type: 'string',
-						description: 'The ID of the node to accept the diff for',
-					},
-				],
-				execute: async (currentNodes, nodeId) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const nodeIdStr = nodeId as string;
-					const node = nodes.find((n) => n.id === nodeIdStr);
-
-					if (!node || !node.data.diff) return;
-
-					if (node.data.diff === 'removed') {
-						// Actually remove the node
-						await deleteNode(nodeIdStr);
-						setNodes(nodes.filter((n) => n.id !== nodeIdStr));
-						// Also remove any edges connected to this node
-						setEdges((edges) =>
-							edges.filter(
-								(edge) => edge.source !== nodeIdStr && edge.target !== nodeIdStr
-							)
-						);
-					} else {
-						// Remove diff property for added/changed nodes
-						setNodes(
-							nodes.map((n) =>
-								n.id === nodeIdStr
-									? { ...n, data: { ...n.data, diff: undefined } }
-									: n
-							)
-						);
-					}
-				},
-			},
-			rejectDiff: {
-				name: 'rejectDiff',
-				description: 'Reject a diff for a node',
-				parameters: [
-					{
-						name: 'nodeId',
-						type: 'string',
-						description: 'The ID of the node to reject the diff for',
-					},
-				],
-				execute: (currentNodes, nodeId) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const node = nodes.find((n) => n.id === nodeId);
-
-					if (!node || !node.data.diff) return;
-
-					if (node.data.diff === 'added') {
-						// Remove newly added nodes
-						setNodes(nodes.filter((n) => n.id !== nodeId));
-					} else {
-						// Just remove diff property for removed/changed nodes
-						setNodes(
-							nodes.map((n) =>
-								n.id === nodeId
-									? { ...n, data: { ...n.data, diff: undefined } }
-									: n
-							)
-						);
-					}
-				},
-			},
-			acceptAllDiffs: {
-				name: 'acceptAllDiffs',
-				description: 'Accept all pending diffs',
-				parameters: [],
-				execute: async (currentNodes) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-					const nodesWithDiffs = nodes.filter((n) => n.data.diff);
-
-					// Process removals first
-					const removedNodeIds = nodesWithDiffs
-						.filter((n) => n.data.diff === 'removed')
-						.map((n) => n.id);
-
-					for (const nodeId of removedNodeIds) {
-						await deleteNode(nodeId);
-					}
-
-					// Update nodes
-					const remainingNodes = nodes.filter(
-						(n) => !removedNodeIds.includes(n.id)
-					);
-					setNodes(
-						remainingNodes.map((n) => ({
-							...n,
-							data: { ...n.data, diff: undefined },
-						}))
-					);
-
-					// Remove edges for deleted nodes
-					if (removedNodeIds.length > 0) {
-						setEdges((edges) =>
-							edges.filter(
-								(edge) =>
-									!removedNodeIds.includes(edge.source) &&
-									!removedNodeIds.includes(edge.target)
-							)
-						);
-					}
-				},
-			},
-			rejectAllDiffs: {
-				name: 'rejectAllDiffs',
-				description: 'Reject all pending diffs',
-				parameters: [],
-				execute: (currentNodes) => {
-					const nodes = currentNodes as Node<FeatureNodeData>[];
-
-					// Remove added nodes and clear diffs from others
-					const filteredNodes = nodes.filter((n) => n.data.diff !== 'added');
-					setNodes(
-						filteredNodes.map((n) => ({
-							...n,
-							data: { ...n.data, diff: undefined },
-						}))
-					);
-				},
-			},
+				};
+				return setter;
+			})(),
 		},
 	});
+
+	useSubscribeStateToAgentContext(
+		'nodes',
+		(nodes) => ({
+			nodes,
+		}),
+		{ showInChat: false }
+	);
 
 	useRegisterState({
 		key: 'edges',
@@ -303,11 +322,32 @@ function FlowCanvas() {
 		description: 'Product roadmap edges',
 	});
 
+	// Example 1: Simple notification tool
+	useRegisterFrontendTool({
+		name: 'showNotification',
+		description: 'Show a notification to the user',
+		argsSchema: z.object({
+			message: z.string().describe('The notification message'),
+			type: z
+				.enum(['success', 'error', 'info', 'warning'])
+				.describe('Notification type'),
+			duration: z.number().optional().describe('Duration in ms (optional)'),
+		}),
+		// ✅ SIMPLE: Just receive typed args directly
+		execute: async (args) => {
+			// args is fully typed as { message: string; type: 'success' | 'error' | 'info' | 'warning'; duration?: number }
+			console.log(`Showing ${args.type} notification: ${args.message}`);
+
+			// In a real app, you'd use a toast library
+			alert(`${args.type.toUpperCase()}: ${args.message}`);
+		},
+	});
+
 	// Register mention provider for nodes
-	useStateBasedMentionProvider({
+	useStateBasedMentionProvider<Node<FeatureNodeData>>({
 		stateKey: 'nodes',
 		trigger: '@',
-		labelField: (node: Node<FeatureNodeData>) => node.data.title,
+		labelField: (node) => node.data.title,
 		searchFields: ['data.description'],
 		description: 'Product roadmap features',
 		icon: <Box />,
@@ -316,10 +356,10 @@ function FlowCanvas() {
 	});
 
 	// Register mention provider for edges
-	useStateBasedMentionProvider({
+	useStateBasedMentionProvider<Edge>({
 		stateKey: 'edges',
 		trigger: '@',
-		labelField: (edge: Edge) => {
+		labelField: (edge) => {
 			const sourceNode = nodes.find((n) => n.id === edge.source);
 			const targetNode = nodes.find((n) => n.id === edge.target);
 			const sourceTitle = sourceNode?.data.title || edge.source;
@@ -332,11 +372,11 @@ function FlowCanvas() {
 		order: 20, // Edges appear last
 	});
 
-	// Fetch initial data
+	// Fetch initial data (only on mount)
 	React.useEffect(() => {
 		getNodes().then(setNodes);
 		getEdges().then(setEdges);
-	}, [setNodes, setEdges]);
+	}, []); // Empty dependency array - only run on mount
 
 	// Custom handler for node changes that intercepts deletions
 	const handleNodesChange = React.useCallback(
@@ -399,14 +439,6 @@ function FlowCanvas() {
 			);
 		},
 		[setEdges]
-	);
-
-	// Prevent node drag/pan selection interfering (optional)
-	const onNodeClick = React.useCallback(
-		(_event: React.MouseEvent, node: Node) => {
-			console.log('📌 Node clicked', node);
-		},
-		[]
 	);
 
 	// Edge context menu state
@@ -492,13 +524,12 @@ function FlowCanvas() {
 	return (
 		<div className='h-full w-full relative'>
 			<ReactFlow
-				nodes={nodes}
+				nodes={computedNodes}
 				edges={edges}
 				nodeTypes={nodeTypes}
 				onNodesChange={handleNodesChange}
 				onEdgesChange={onEdgesChange}
 				onConnect={onConnect}
-				onNodeClick={onNodeClick}
 				onEdgeClick={onEdgeClick}
 				onEdgeDoubleClick={onEdgeDoubleClick}
 				connectionLineType={ConnectionLineType.SmoothStep}
@@ -554,26 +585,49 @@ function FlowCanvas() {
 // -----------------------------------------------------------------------------
 
 function SelectedNodesPanel() {
-	const [selected, setSelected] = React.useState<Node<FeatureNodeData>[]>([]);
-
-	useRegisterState<Node<FeatureNodeData>[]>({
+	const [selected, setSelected] = useCedarState<Node<FeatureNodeData>[]>({
 		key: 'selectedNodes',
-		value: selected,
-		setValue: setSelected,
+		initialValue: [],
 		description: 'Selected nodes',
 	});
 
-	// First subscription - for numSelectedNodes (order: 1)
-	useSubscribeStateToInputContext<Node<FeatureNodeData>[]>(
+	// Enhanced subscription with dynamic icons and filtering - no manual memoization needed!
+	useSubscribeStateToAgentContext<Node<FeatureNodeData>[]>(
 		'selectedNodes',
-		(nodes) => ({
-			selectedNodes: nodes,
+		(selectedNodes: Node<FeatureNodeData>[]) => ({
+			selectedNodes,
 		}),
 		{
-			icon: <Box />,
+			// Dynamic icons based on node status
+			icon: (item) => {
+				const status = item?.data?.status;
+				switch (status) {
+					case 'done':
+						return '✅';
+					case 'in progress':
+						return '🔄';
+					case 'planned':
+						return '📋';
+					case 'backlog':
+						return '📝';
+					default:
+						return <Box />;
+				}
+			},
 			color: '#8B5CF6', // Purple color for selected nodes
-			labelField: (item) => item?.data?.title,
-			order: 2, // This will appear first
+			labelField: (item: Node<FeatureNodeData>) => item?.data?.title,
+			// Only show nodes that are not in backlog status in chat context
+			showInChat: (entry) => {
+				const node = entry.data as Node<FeatureNodeData>;
+				return node?.data?.status !== 'backlog';
+			},
+			order: 2,
+			// Collapse into a single badge when more than 5 nodes are selected
+			collapse: {
+				threshold: 5,
+				label: '{count} Selected Nodes',
+				icon: <Box />,
+			},
 		}
 	);
 
@@ -582,9 +636,24 @@ function SelectedNodesPanel() {
 			setSelected(nodes),
 	});
 
+	useSubscribeStateToAgentContext<HumanInTheLoopState>(
+		'humanInTheLoop',
+		(state) => ({
+			humanInTheLoop: state,
+		}),
+		{
+			showInChat: false,
+		}
+	);
+
 	return (
 		<div className='absolute right-4 top-4 rounded-lg p-3 shadow-md backdrop-blur'>
-			<h4 className='mb-2 text-sm font-semibold'>Selected Nodes</h4>
+			<div className='flex items-center justify-between mb-2'>
+				<h4 className='text-sm font-semibold'>Selected Nodes</h4>
+				<div className='text-xs text-gray-500 dark:text-gray-400 px-2 py-1 rounded bg-gray-100 dark:bg-gray-800'>
+					{isSupabaseAvailable ? '🗄️ Supabase' : '💾 localStorage'}
+				</div>
+			</div>
 			{selected.length ? (
 				<ul className='space-y-1 text-xs'>
 					{selected.map((n) => (
@@ -604,27 +673,29 @@ function SelectedNodesPanel() {
 
 export default function ProductMapPage() {
 	const [chatMode, setChatMode] = React.useState<
-		'floating' | 'sidepanel' | 'caption'
-	>('caption');
+		'floating' | 'sidepanel' | 'caption' | 'command'
+	>('command');
 
 	const renderContent = () => (
 		<ReactFlowProvider>
 			<div className='relative h-screen w-full'>
+				<DebuggerPanel />
 				<FlowCanvas />
 				<SelectedNodesPanel />
 				<FloatingMenu
 					onChatModeChange={setChatMode}
 					currentChatMode={chatMode}
 				/>
-				{chatMode === 'caption' && <CedarCaptionChat stream={false} />}
-				{chatMode === 'floating' && (
-					<FloatingCedarChat
-						stream={false}
-						side='right'
-						title='Product Roadmap Assistant'
-						collapsedLabel='Need help with your roadmap?'
-					/>
-				)}
+				{chatMode === 'command' && <CommandBarChat open={true} />}
+				{chatMode === 'caption' && <ProductRoadmapChat />}
+				{/* {chatMode === 'floating' && ( */}
+				<FloatingCedarChat
+					showThreadController={true}
+					side='right'
+					title='Product Roadmap Assistant'
+					collapsedLabel='Need help with your roadmap?'
+				/>
+				{/* )} */}
 
 				{/* Radial Menu Spell */}
 				<RadialMenuSpell
@@ -718,7 +789,7 @@ export default function ProductMapPage() {
 				title='Product Roadmap Assistant'
 				collapsedLabel='Need help with your roadmap?'
 				showCollapsedButton={true}
-				stream={false}>
+				stream={true}>
 				{renderContent()}
 			</SidePanelCedarChat>
 		);

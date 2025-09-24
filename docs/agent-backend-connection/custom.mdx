@@ -14,7 +14,7 @@ The Cedar-OS agent connection system is built around a **provider pattern** that
 - **Non-streaming LLM calls** (`callLLM`)
 - **Structured output calls** (`callLLMStructured`)
 - **Streaming responses** (`streamLLM`)
-- **Response parsing** (`handleResponse`, `handleStreamResponse`)
+- **Response parsing** (`handleResponse`)
 
 The system automatically handles:
 
@@ -40,7 +40,6 @@ interface ProviderImplementation<TParams, TConfig> {
 		handler: StreamHandler
 	) => StreamResponse;
 	handleResponse: (response: Response) => Promise<LLMResponse>;
-	handleStreamResponse: (chunk: string) => StreamEvent;
 }
 ```
 
@@ -54,10 +53,11 @@ interface ProviderImplementation<TParams, TConfig> {
 
 ```typescript
 interface CustomParams extends BaseParams {
-	prompt: string; // The user's input prompt
+	prompt?: string; // The user's input prompt
 	systemPrompt?: string; // Optional system prompt
 	temperature?: number; // Sampling temperature (0-1)
 	maxTokens?: number; // Maximum tokens to generate
+	stream?: boolean; // Streaming support
 	[key: string]: unknown; // Any additional custom parameters
 }
 
@@ -317,27 +317,6 @@ handleResponse: async (response) => {
 };
 ```
 
-### 5. `handleStreamResponse` - Parse Stream Chunks
-
-**Purpose:** Convert individual stream chunks to `StreamEvent` objects.
-
-**Input:** Raw string chunk from the stream
-**Output:** `StreamEvent` object
-
-**Example Implementation:**
-
-```typescript
-handleStreamResponse: (chunk) => {
-	try {
-		const data = JSON.parse(chunk);
-		const content = data.choices?.[0]?.delta?.content || '';
-		return { type: 'chunk', content };
-	} catch (error) {
-		return { type: 'error', error: error as Error };
-	}
-};
-```
-
 ## Complete Custom Provider Example
 
 Here's a complete example of a custom provider implementation:
@@ -404,16 +383,6 @@ export const myCustomProvider: ProviderImplementation<
 			usage: data.usage,
 			metadata: { model: data.model, id: data.id },
 		};
-	},
-
-	handleStreamResponse: (chunk) => {
-		try {
-			const data = JSON.parse(chunk);
-			const content = data.delta?.content || '';
-			return { type: 'chunk', content };
-		} catch (error) {
-			return { type: 'error', error: error as Error };
-		}
 	},
 };
 ```
@@ -511,25 +480,27 @@ await handleEventStream(response, {
 });
 ```
 
-### Type Safety
+## Type Safety
 
-Use TypeScript interfaces for better type safety:
+Custom backends support full end-to-end type safety using `CustomParams<T, E>`:
 
 ```typescript
-interface MyProviderParams extends CustomParams {
-	model: string;
-	customSetting?: boolean;
-}
-
-interface MyProviderConfig {
-	provider: 'custom';
-	config: {
-		apiKey: string;
-		baseURL: string;
-		defaultModel: string;
-	};
-}
+// Use CustomParams for type-safe requests
+type CustomParams<
+	T extends Record<string, unknown> = Record<string, never>,
+	E = object
+> = BaseParams<T, E> & {
+	userId?: string;
+	threadId?: string;
+};
 ```
+
+The `CustomParams` type allows you to:
+
+- **T**: Define types for your `additionalContext` data
+- **E**: Define types for custom fields specific to your backend
+
+For complete type safety implementation, validation with Zod schemas, and detailed examples, see [Typing Agent Requests](/type-safety/typing-agent-requests).
 
 ## Best Practices
 

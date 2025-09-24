@@ -1,19 +1,41 @@
 'use client';
 
+import JsonPatchPlayground from '@/cedar-playground/JsonPatchPlayground';
 import { SidePanelCedarChat } from '@/chatComponents/SidePanelCedarChat';
-import { useState } from 'react';
-import { type CedarStore, ActivationMode } from 'cedar-os';
 import SliderSpell from '@/spells/SliderSpell';
+import {
+	type CedarStore,
+	ActivationMode,
+	useThreadController,
+	useCedarStore,
+} from 'cedar-os';
+import { useState } from 'react';
 import {
 	AgentBackendConnectionSection,
 	ChatSection,
+	SubscribedStatesSection,
 	TextLengthSection,
+	FrontendToolsSection,
+	ThreadTestingSection,
 } from './sections';
 
 export default function CedarPlaygroundPage() {
 	const [activeChatTab, setActiveChatTab] = useState('caption');
 	const [lastSliderValue, setLastSliderValue] = useState<number | null>(null);
 	const [sliderTriggerCount, setSliderTriggerCount] = useState(0);
+
+	// Thread controller hooks
+	const {
+		currentThreadId,
+		threadIds,
+		createThread,
+		deleteThread,
+		switchThread,
+	} = useThreadController();
+
+	// Get thread details for display
+	const threadMap = useCedarStore((state) => state.threadMap);
+	const updateThreadName = useCedarStore((state) => state.updateThreadName);
 
 	const handleSliderComplete = (value: number, store: CedarStore) => {
 		console.log('Slider completed with value:', value);
@@ -89,10 +111,28 @@ export default function CedarPlaygroundPage() {
 
 			<ChatSection activeTab={activeChatTab} onTabChange={setActiveChatTab} />
 
+			{/* Thread Testing Section */}
+			<ThreadTestingSection
+				currentThreadId={currentThreadId}
+				threadIds={threadIds}
+				threadMap={threadMap}
+				createThread={createThread}
+				deleteThread={deleteThread}
+				switchThread={switchThread}
+				updateThreadName={updateThreadName}
+			/>
+
 			<TextLengthSection />
+
+			<SubscribedStatesSection />
+
+			<FrontendToolsSection />
 
 			{/* 
 			<StateAccessSection /> */}
+
+			{/* JSON Patch Playground */}
+			<JsonPatchPlayground />
 
 			{/* <SpellsSection /> */}
 

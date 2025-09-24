@@ -29,6 +29,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DiffContainer } from '@//diffs';
+import { useCedarStore } from 'cedar-os';
 
 // -----------------------------------------------------------------------------
 // Types
@@ -123,7 +124,7 @@ function FeatureNodeComponent({
 	const [titleValue, setTitleValue] = useState(title);
 	const [editingDescription, setEditingDescription] = useState(false);
 	const [descriptionValue, setDescriptionValue] = useState(description);
-	const { setNodes, getZoom, getNodes } = useReactFlow();
+	const { setNodes, getZoom } = useReactFlow();
 
 	// Resizing state
 	const [isResizing, setIsResizing] = useState(false);
@@ -374,41 +375,22 @@ function FeatureNodeComponent({
 		'agent helper',
 	];
 
-	// Handle diff actions
+	// Handle diff actions using the new diffHistorySlice methods
 	const handleAcceptDiff = async () => {
-		const nodes = getNodes();
-		const node = nodes.find((n) => n.id === id);
-		if (!node || !node.data.diff) return;
+		const acceptDiff = useCedarStore.getState().acceptDiff;
+		// Pass the specific node ID to only accept this node's diff
+		const success = acceptDiff('nodes', '', 'id', id);
 
-		if (node.data.diff === 'removed') {
-			// Actually remove the node
+		// If this was a 'removed' diff that was accepted, we need to actually delete from database
+		if (success && diff === 'removed') {
 			await deleteNode(id);
-			setNodes((currentNodes) => currentNodes.filter((n) => n.id !== id));
-		} else {
-			// Remove diff property for added/changed nodes
-			setNodes((nds) =>
-				nds.map((n) =>
-					n.id === id ? { ...n, data: { ...n.data, diff: undefined } } : n
-				)
-			);
 		}
 	};
 
 	const handleRejectDiff = () => {
-		setNodes((nds) => {
-			const node = nds.find((n) => n.id === id);
-			if (!node || !node.data.diff) return nds;
-
-			if (node.data.diff === 'added') {
-				// Remove newly added nodes
-				return nds.filter((n) => n.id !== id);
-			} else {
-				// Just remove diff property for removed/changed nodes
-				return nds.map((n) =>
-					n.id === id ? { ...n, data: { ...n.data, diff: undefined } } : n
-				);
-			}
-		});
+		const rejectDiff = useCedarStore.getState().rejectDiff;
+		// Pass the specific node ID to only reject this node's diff
+		rejectDiff('nodes', '', 'id', id);
 	};
 
 	// When selected, add an outer ring highlight without affecting inner layout
@@ -573,7 +555,7 @@ function FeatureNodeComponent({
 							style={{ minHeight: '60px' }}
 						/>
 					) : (
-						<p
+						<div
 							className='mb-3 text-xs text-gray-600 dark:text-gray-300 flex-1 overflow-y-auto whitespace-pre-wrap'
 							onDoubleClick={() => setEditingDescription(true)}
 							tabIndex={0}
@@ -584,7 +566,7 @@ function FeatureNodeComponent({
 							<ReactMarkdown remarkPlugins={[remarkGfm]}>
 								{description}
 							</ReactMarkdown>
-						</p>
+						</div>
 					)}
 					<div className='flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 flex-none'>
 						<div className='flex items-center gap-2'>

@@ -155,7 +155,7 @@ export const mastraProvider: ProviderImplementation<
 		formData.append('audio', audioData, 'recording.webm');
 		formData.append('settings', JSON.stringify(voiceSettings));
 		if (context) {
-			formData.append('context', context);
+			formData.append('context', JSON.stringify(context));
 		}
 
 		for (const [key, value] of Object.entries(rest)) {
@@ -228,11 +228,6 @@ export const mastraProvider: ProviderImplementation<
 			},
 			object: data.object, // Include the structured output if present
 		};
-	},
-
-	// This can be safely removed
-	handleStreamResponse: (chunk) => {
-		return { type: 'chunk', content: chunk };
 	},
 };
 

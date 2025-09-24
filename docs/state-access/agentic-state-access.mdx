@@ -6,7 +6,7 @@ Cedar allows your agent to understand what is happening in your application, and
 
 In other words, it allows your agent to read and write to the local react state.
 
-To understand how we internally execute and render actions on your state (and how to override default behavior and rendering for state changes), read [Action Response Processing](/agent-backend-connection/custom-response-processing#action-type) and [Action Message Rendering](/chat/custom-message-rendering#action-type).
+To understand how we internally execute and render actions on your state (and how to override default behavior and rendering for state changes), read [SetState Response Processing](/agent-backend-connection/custom-response-processing#setstate-type) and [SetState Message Rendering](/chat/custom-message-rendering#setstate-type).
 
 ## useRegisterState Hook
 
@@ -29,14 +29,14 @@ useRegisterState({
 	description: 'A list of todo items that users can check off',
 	value: todos,
 	setValue: setTodos,
-	customSetters: {
+	stateSetters: {
 		addTodo: {
 			name: 'addTodo',
 			description: 'Add a new todo item',
-			execute: (currentTodos, text: string) => {
+			execute: (currentTodos, args: { text: string }) => {
 				const newTodo = {
 					id: Date.now(),
-					text,
+					text: args.text,
 					completed: false,
 				};
 				setTodos([...currentTodos, newTodo]);
@@ -45,10 +45,10 @@ useRegisterState({
 		toggleTodo: {
 			name: 'toggleTodo',
 			description: 'Toggle completion status of a todo',
-			execute: (currentTodos, id: number) => {
+			execute: (currentTodos, args: { id: number }) => {
 				setTodos(
 					currentTodos.map((todo) =>
-						todo.id === id ? { ...todo, completed: !todo.completed } : todo
+						todo.id === args.id ? { ...todo, completed: !todo.completed } : todo
 					)
 				);
 			},
@@ -56,8 +56,8 @@ useRegisterState({
 		removeTodo: {
 			name: 'removeTodo',
 			description: 'Remove a todo item',
-			execute: (currentTodos, id: number) => {
-				setTodos(currentTodos.filter((todo) => todo.id !== id));
+			execute: (currentTodos, args: { id: number }) => {
+				setTodos(currentTodos.filter((todo) => todo.id !== args.id));
 			},
 		},
 	},
@@ -69,16 +69,22 @@ interface RegisterStateOptions<T> {
 	key: string;
 	description?: string;
 	value: T;
-	setValue?: (state: T, ...args: any[]) => void;
+	setValue?: (state: T) => void;
+	stateSetters?: Record<string, Setter<T>>;
+	argsSchema?: ZodSchema<T>; // Automatically included in agent input context as JSON Schema
+	// Deprecated - use stateSetters instead
 	customSetters?: Record<string, Setter<T>>;
-	schema?: ZodSchema<T>; // Automatically included in agent input context as JSON Schema
+	// Deprecated - use argsSchema instead
+	schema?: ZodSchema<T>;
 }
 
-interface Setter<T, Args extends unknown[] = unknown[]> {
+interface Setter<T, Args = unknown> {
 	name: string;
 	description: string;
-	parameters?: SetterParameter[];
-	execute: (state: T, ...args: Args) => void;
+	argsSchema?: ZodSchema<Args>;
+	execute: (state: T, args: Args) => void;
+	// Deprecated - use argsSchema instead
+	schema?: ZodSchema;
 }
 
 interface Todo {
@@ -111,10 +117,10 @@ function TodoComponent() {
 			addTodo: {
 				name: 'addTodo',
 				description: 'Add a new todo item',
-				execute: (currentTodos, text: string) => {
+				execute: (currentTodos, args: { text: string }) => {
 					const newTodo = {
 						id: Date.now(),
-						text,
+						text: args.text,
 						completed: false,
 					};
 					setTodos([...currentTodos, newTodo]);
@@ -123,10 +129,12 @@ function TodoComponent() {
 			toggleTodo: {
 				name: 'toggleTodo',
 				description: 'Toggle completion status of a todo',
-				execute: (currentTodos, id: number) => {
+				execute: (currentTodos, args: { id: number }) => {
 					setTodos(
 						currentTodos.map((todo) =>
-							todo.id === id ? { ...todo, completed: !todo.completed } : todo
+							todo.id === args.id
+								? { ...todo, completed: !todo.completed }
+								: todo
 						)
 					);
 				},
@@ -134,8 +142,8 @@ function TodoComponent() {
 			removeTodo: {
 				name: 'removeTodo',
 				description: 'Remove a todo item',
-				execute: (currentTodos, id: number) => {
-					setTodos(currentTodos.filter((todo) => todo.id !== id));
+				execute: (currentTodos, args: { id: number }) => {
+					setTodos(currentTodos.filter((todo) => todo.id !== args.id));
 				},
 			},
 		}
@@ -188,6 +196,15 @@ function useCedarState<T>(
 	key: string,
 	initialValue: T,
 	description?: string,
+	stateSetters?: Record<string, Setter<T>>,
+	argsSchema?: ZodSchema<T>
+): [T, (newValue: T) => void];
+
+// Legacy signature (still supported)
+function useCedarState<T>(
+	key: string,
+	initialValue: T,
+	description?: string,
 	customSetters?: Record<string, Setter<T>>,
 	schema?: ZodSchema<T>
 ): [T, (newValue: T) => void];
@@ -197,9 +214,9 @@ function useCedarState<T>(
 
 ## Accessing Cedar State Functions
 
-### executeCustomSetter
+### executeStateSetter
 
-Execute custom setter functions programmatically using the Cedar store:
+Execute state setter functions programmatically using the Cedar store:
 
 <CodeGroup>
 
@@ -207,20 +224,18 @@ Execute custom setter functions programmatically using the Cedar store:
 import { useCedarStore } from 'cedar-os';
 
 function TodoActions() {
-	const executeCustomSetter = useCedarStore(
-		(state) => state.executeCustomSetter
-	);
+	const executeStateSetter = useCedarStore((state) => state.executeStateSetter);
 
 	const handleAddTodo = async () => {
-		executeCustomSetter('todos', 'addTodo', 'Learn about Cedar State');
+		executeStateSetter('todos', 'addTodo', { text: 'Learn about Cedar State' });
 	};
 
 	const handleToggleTodo = async () => {
-		executeCustomSetter('todos', 'toggleTodo', 1);
+		executeStateSetter('todos', 'toggleTodo', { id: 1 });
 	};
 
 	const handleRemoveTodo = async () => {
-		executeCustomSetter('todos', 'removeTodo', 1);
+		executeStateSetter('todos', 'removeTodo', { id: 1 });
 	};
 
 	return (
@@ -235,19 +250,86 @@ function TodoActions() {
 
 ```tsx Type
 // Access through useCedarStore
-const executeCustomSetter = useCedarStore((state) => state.executeCustomSetter);
+const executeStateSetter = useCedarStore((state) => state.executeStateSetter);
 
 // Function signature
-executeCustomSetter: (
+executeStateSetter: (
 	key: string,
 	setterKey: string,
-	...args: unknown[]
+	args: unknown
 ) => void;
 ```
 
 </CodeGroup>
 
-> **Agent Actions**: Custom setters can be automatically invoked by your agent through structured responses. Learn more about [Action Response Processing](/agent-backend-connection/custom-response-processing#action-type) and [Action Message Rendering](/chat/custom-message-rendering#action-type) to see how agents can execute these setters and display the results.
+<Warning>
+	**Breaking Change in v0.1.11**: Parameter handling has changed. State setters
+	now receive arguments as a single object parameter instead of multiple spread
+	parameters. Update your setter functions accordingly.
+</Warning>
+
+> **Agent Actions**: State setters can be automatically invoked by your agent through structured responses. Learn more about [SetState Response Processing](/agent-backend-connection/custom-response-processing#setstate-type) and [SetState Message Rendering](/chat/custom-message-rendering#setstate-type) to see how agents can execute these setters and display the results.
+
+> **Automatic Cleanup**: States are automatically unregistered when components unmount, ensuring clean state management without manual cleanup.
+
+## Schema Validation with Zod
+
+Cedar OS has runtime validation of setter arguments using Zod schemas:
+
+<CodeGroup>
+
+```tsx Example
+import { z } from 'zod';
+import { useRegisterState } from 'cedar-os';
+
+// Define schemas for your setter arguments
+const addTodoSchema = z.object({
+	text: z.string().min(1, 'Todo text cannot be empty'),
+});
+
+const toggleTodoSchema = z.object({
+	id: z.number().positive('ID must be positive'),
+});
+
+const [todos, setTodos] = useState([]);
+
+useRegisterState({
+	key: 'todos',
+	value: todos,
+	setValue: setTodos,
+	stateSetters: {
+		addTodo: {
+			name: 'addTodo',
+			description: 'Add a new todo item',
+			argsSchema: addTodoSchema,
+			execute: (currentTodos, args) => {
+				// args is now type-safe and validated
+				const newTodo = {
+					id: Date.now(),
+					text: args.text, // TypeScript knows this is a string
+					completed: false,
+				};
+				setTodos([...currentTodos, newTodo]);
+			},
+		},
+		toggleTodo: {
+			name: 'toggleTodo',
+			description: 'Toggle completion status of a todo',
+			argsSchema: toggleTodoSchema,
+			execute: (currentTodos, args) => {
+				// args.id is validated as a positive number
+				setTodos(
+					currentTodos.map((todo) =>
+						todo.id === args.id ? { ...todo, completed: !todo.completed } : todo
+					)
+				);
+			},
+		},
+	},
+});
+```
+
+</CodeGroup>
 
 ## getCedarState
 
@@ -327,7 +409,7 @@ function setCedarState<T>(key: string, value: T): void;
 
 Now that your application states are registered in Cedar, learn how to expose just the right pieces of them to your agent:
 
-- **Agent Input Context** – orchestrate what context is sent alongside every user message, including state subscriptions and manual entries. See [Agent Input Context](/agent-input-context/agent-input-context).
-- **Mentions** – let users reference individual state items with simple `@` mentions. See [Mentions](/agent-input-context/mentions).
+- **Agent Input Context** – orchestrate what context is sent alongside every user message, including state subscriptions and manual entries. See [Agent Input Context](/agent-context/agent-context).
+- **Mentions** – let users reference individual state items with simple `@` mentions. See [Mentions](/agent-context/mentions).
 
 These docs walk you through granting the agent scoped, real-time access to your frontend data.
