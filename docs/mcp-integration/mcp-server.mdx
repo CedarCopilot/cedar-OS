@@ -3,14 +3,14 @@ title: 'Cedar-OS MCP Server'
 description: 'Vibe coding with Cedar-OS'
 ---
 
-The Cedar Model Context Protocol (MCP) server enables seamless integration between Cedar-OS and AI development environments like Cursor, providing intelligent assistance for building AI-native frontends.
+The Cedar Model Context Protocol (MCP) server enables seamless integration between Cedar-OS and AI development environments like Cursor, Claude Code, and Windsurf, providing intelligent assistance for building AI-native frontends.
 
 ## Quick Start
 
-### 1. Install in Cursor
+### 1. Install in Your IDE
 
-Navigate to Cursor Settings -> Tools & Integrations -> New MCP Server
-Or, open your Cursor settings file (`~/.cursor/settings.json`) and add:
+**For Cursor:**
+Open your Cursor settings file (`~/.cursor/settings.json`) and add:
 
 ```json
 {
@@ -23,13 +23,34 @@ Or, open your Cursor settings file (`~/.cursor/settings.json`) and add:
 }
 ```
 
-### 2. Restart Cursor
+**For Claude Code:**
+Add the following into your terminal:
 
-Close and reopen Cursor to activate the MCP server.
+```
+claude mcp add --transport http cedar https://mcpwithcedar-production.up.railway.app/jsonrpc
+```
+
+**For Windsurf:**
+Configure the MCP server in your Windsurf settings:
+
+```json
+{
+	"mcpServers": {
+		"cedar-mcp": {
+			"url": "https://mcpwithcedar-production.up.railway.app/sse",
+			"description": "Cedar-OS Expert MCP Server"
+		}
+	}
+}
+```
+
+### 2. Restart Your IDE
+
+Close and reopen your IDE (Cursor, Claude Code, or Windsurf) to activate the MCP server.
 
 ### 3. Verify Installation
 
-In any file, type a comment and use Cursor's AI assistant:
+In any file, type a comment and use your IDE's AI assistant:
 
 ```javascript
 // Help me create a Cedar chat component
@@ -146,9 +167,9 @@ The MCP server understands:
 
 ### MCP Server Not Responding
 
-- Verify configuration in Cursor settings
+- Verify configuration in your IDE settings
 - Check Node.js is accessible
-- Restart Cursor after changes
+- Restart your IDE after changes
 
 ### Incorrect Suggestions
 
@@ -158,13 +179,13 @@ The MCP server understands:
 
 ### Performance Issues
 
-- Clear Cursor cache
+- Clear your IDE cache
 - Check internet connection
 - Update MCP server version
 
 ## Prerequisites
 
-- Cursor IDE (latest version)
+- Compatible IDE: Cursor, Claude Code, or Windsurf (latest version)
 - Node.js 18+ installed
 - Basic TypeScript/React knowledge
 - Cedar-OS project or willingness to create one
