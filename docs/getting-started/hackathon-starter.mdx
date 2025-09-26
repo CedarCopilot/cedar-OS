@@ -5,7 +5,31 @@ description: 'Guide for getting your Cedar-OS hackathon project started'
 
 Most chatbot UIs today feel flat and uninspiring. The future isn't just chat—it's agentic copilots that break out of the text box, give humans visibility and control, and quietly do as much work as possible in the background.
 
-Cedar-OS is an open source React framework that helps you build those interfaces.
+Cedar-OS is an open source React framework that helps you build those interfaces, used by many YC companies in production.
+
+## What are AI-native applications?
+
+AI-native applications are software applications that have AI workflows and agentic interfaces embedded deeply in the application itself. The agent should be able to interact with the source application in the same way the user does, and more. AI interfaces currently have several problems that AI-native software applications solve.
+
+1. AI doesn't have the context needed to do useful work.
+
+Applications hold that context. Think about an open email, or an excel sheet, or a blueprint schematic of an engineer. The content of what the user is looking at provides a lot of context.
+
+Applications also hold an implicit context: if a user has an excel sheet, you can infer a lot about their current goal, and make agents that are proactive and meet users where they're at. Can you make software that's proactive?
+
+2. We can't trust agents to execute sensitive/important tasks autonomously.
+
+Imagine if an agent could merge PR's directly to prod, or use your credit card for purchases. Even if they can be trusted 99% of the time, the 1% error would be unacceptable.
+
+But if humans have to review everything, they need to be able to effectively see what they agent is doing, what they changed, and most importantly remain in control. GUI's are already set up for this, with auth, permissions, and functionality embedded into application logic.
+
+Think of how cursor doesn't just change files, but shows you where and how it changes it and allows the user to granularly accept each diff.
+
+3. Human-AI interfaces are too hard to use.
+
+Most users don't even know what AI is, much less how to best prompt them. Writing out prompts can often be as tedious as just doing the task yorurself.
+
+It's also hard to know what the agent is capable of, especially with tool calling. AI-native software should allow users can run complex agentic actions through simple commands?
 
 ## What You're Building With
 
