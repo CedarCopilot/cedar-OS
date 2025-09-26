@@ -29,6 +29,7 @@
 						"group": "Getting Started",
 						"pages": [
 							"getting-started/getting-started",
+							"getting-started/hackathon-starter",
 							"getting-started/cli",
 							"getting-started/organizing-a-cedar-project",
 							"mcp-integration/mcp-server",
