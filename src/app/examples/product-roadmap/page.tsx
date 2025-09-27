@@ -68,7 +68,82 @@ import {
 	Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { DebuggerPanel } from 'cedar-os';
+import { DebuggerPanel, CedarCopilot } from 'cedar-os';
+import type { ProviderConfig } from 'cedar-os';
+
+// -----------------------------------------------------------------------------
+// Custom Provider Configuration with Dummy Behavior
+// -----------------------------------------------------------------------------
+
+// Import useCedarStore for demo functionality
+import { useCedarStore } from 'cedar-os';
+
+// Create a custom provider configuration that uses Cedar's existing architecture
+// The 'custom' provider in Cedar defaults to the OpenAI provider implementation,
+// but we can create a simple demo by using a custom config
+const customProviderConfig: ProviderConfig = {
+	provider: 'custom',
+	config: {
+		apiKey: 'dummy-api-key-12345',
+		baseURL: 'https://dummy-api.example.com/v1',
+		model: 'dummy-gpt-4-turbo',
+		isDummy: true, // Custom flag to identify our dummy provider
+		description:
+			'This is a demo custom provider for the product roadmap example',
+	},
+};
+
+// Demo Component to show custom provider is working
+function CustomProviderDemo() {
+	const { callLLM } = useCedarStore();
+	const [isLoading, setIsLoading] = React.useState(false);
+	const [response, setResponse] = React.useState<string | null>(null);
+
+	const testCustomProvider = async () => {
+		setIsLoading(true);
+		setResponse(null);
+
+		try {
+			console.log('🧪 Testing custom provider...');
+			const result = await callLLM({
+				prompt:
+					'Hello from the custom provider! Please respond with a greeting.',
+				temperature: 0.7,
+			});
+
+			setResponse(result.content);
+			console.log('✅ Custom provider response:', result);
+		} catch (error) {
+			console.error('❌ Custom provider error:', error);
+			setResponse(`Error: ${error}`);
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	return (
+		<div className='absolute top-4 left-4 z-20 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border'>
+			<div className='flex items-center gap-2 mb-2'>
+				<div className='w-2 h-2 bg-green-500 rounded-full animate-pulse'></div>
+				<span className='text-xs font-semibold'>Custom Provider Demo</span>
+			</div>
+			<p className='text-xs text-gray-600 dark:text-gray-400 mb-2'>
+				Provider: {customProviderConfig.provider}
+			</p>
+			<button
+				onClick={testCustomProvider}
+				disabled={isLoading}
+				className='px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50'>
+				{isLoading ? '🔄 Testing...' : '🧪 Test Provider'}
+			</button>
+			{response && (
+				<div className='mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs max-w-xs'>
+					<strong>Response:</strong> {response}
+				</div>
+			)}
+		</div>
+	);
+}
 
 // -----------------------------------------------------------------------------
 // NodeTypes map (defined once to avoid React Flow error 002)
@@ -680,6 +755,7 @@ export default function ProductMapPage() {
 		<ReactFlowProvider>
 			<div className='relative h-screen w-full'>
 				<DebuggerPanel />
+				<CustomProviderDemo />
 				<FlowCanvas />
 				<SelectedNodesPanel />
 				<FloatingMenu
@@ -782,18 +858,23 @@ export default function ProductMapPage() {
 		</ReactFlowProvider>
 	);
 
-	if (chatMode === 'sidepanel') {
-		return (
-			<SidePanelCedarChat
-				side='right'
-				title='Product Roadmap Assistant'
-				collapsedLabel='Need help with your roadmap?'
-				showCollapsedButton={true}
-				stream={true}>
-				{renderContent()}
-			</SidePanelCedarChat>
-		);
-	}
+	// Wrap everything with CedarCopilot and pass the custom provider
+	const wrappedContent = (
+		<CedarCopilot llmProvider={customProviderConfig}>
+			{chatMode === 'sidepanel' ? (
+				<SidePanelCedarChat
+					side='right'
+					title='Product Roadmap Assistant'
+					collapsedLabel='Need help with your roadmap?'
+					showCollapsedButton={true}
+					stream={true}>
+					{renderContent()}
+				</SidePanelCedarChat>
+			) : (
+				renderContent()
+			)}
+		</CedarCopilot>
+	);
 
-	return renderContent();
+	return wrappedContent;
 }
