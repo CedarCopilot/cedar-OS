@@ -155,6 +155,29 @@ export type AISDKProviderConfig = {
 	};
 };
 
+// Custom provider configuration interface
+export interface CustomProviderConfig {
+	callLLM?: (
+		params: CustomParams,
+		config: { provider: 'custom'; config: CustomProviderConfig }
+	) => Promise<LLMResponse>;
+	callLLMStructured?: (
+		params: CustomParams & StructuredParams,
+		config: { provider: 'custom'; config: CustomProviderConfig }
+	) => Promise<LLMResponse>;
+	streamLLM?: (
+		params: CustomParams,
+		config: { provider: 'custom'; config: CustomProviderConfig },
+		handler: StreamHandler
+	) => StreamResponse;
+	voiceLLM?: (
+		params: VoiceParams,
+		config: { provider: 'custom'; config: CustomProviderConfig }
+	) => Promise<VoiceLLMResponse>;
+	handleResponse?: (response: Response) => Promise<LLMResponse>;
+	[key: string]: unknown; // Allow additional custom properties
+}
+
 // Provider configurations
 export type ProviderConfig =
 	| { provider: 'openai'; apiKey: string }
@@ -168,7 +191,7 @@ export type ProviderConfig =
 			resumePath?: string; // Human-in-the-loop workflow resume endpoint
 	  }
 	| { provider: 'ai-sdk'; providers: AISDKProviderConfig }
-	| { provider: 'custom'; config: Record<string, unknown> };
+	| { provider: 'custom'; config: CustomProviderConfig };
 
 // Type inference helpers
 export type InferProviderType<T extends ProviderConfig> = T['provider'];

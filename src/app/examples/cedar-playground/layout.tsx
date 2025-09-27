@@ -51,8 +51,50 @@ export default function CedarPlaygroundLayout({
 		},
 	};
 
+	const customProvider: ProviderConfig = {
+		provider: 'custom',
+		config: {
+			callLLM: async (params, config) => {
+				debugger;
+				return {
+					content: 'Hello, world!',
+				};
+			},
+			callLLMStructured: async (params, config) => {
+				debugger;
+				return {
+					content: 'Hello, world!',
+				};
+			},
+			streamLLM: (params, config, handler) => {
+				// Simulate streaming by calling handler immediately
+				setTimeout(() => {
+					handler({ type: 'chunk', content: 'Hello, ' });
+					setTimeout(() => {
+						handler({ type: 'chunk', content: 'world!' });
+						setTimeout(() => {
+							handler({ type: 'done', completedItems: ['Hello, world!'] });
+						}, 100);
+					}, 100);
+				}, 100);
+
+				return {
+					abort: () => {
+						console.log('Stream aborted');
+					},
+					completion: Promise.resolve(),
+				};
+			},
+			handleResponse: async (response) => {
+				return {
+					content: 'Hello, world!',
+				};
+			},
+		},
+	};
+
 	return (
-		<CedarCopilot llmProvider={llmProvider}>
+		<CedarCopilot llmProvider={customProvider}>
 			<LayoutContent>{children}</LayoutContent>
 		</CedarCopilot>
 	);
