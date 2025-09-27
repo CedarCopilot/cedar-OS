@@ -55,7 +55,15 @@ export type StreamEvent =
 	| { type: 'error'; error: Error }
 	| { type: 'metadata'; data: unknown };
 
+export type VoiceStreamEvent =
+	| StreamEvent
+	| { type: 'transcription'; transcription: string }
+	| { type: 'audio'; audioData: string; audioFormat?: string; content: string };
+
 export type StreamHandler = (event: StreamEvent) => void | Promise<void>;
+export type VoiceStreamHandler = (
+	event: VoiceStreamEvent
+) => void | Promise<void>;
 
 export interface StreamResponse {
 	abort: () => void;
@@ -223,6 +231,11 @@ export interface ProviderImplementation<
 		handler: StreamHandler
 	) => StreamResponse;
 	voiceLLM: (params: VoiceParams, config: TConfig) => Promise<VoiceLLMResponse>;
+	voiceStreamLLM?: (
+		params: VoiceParams,
+		config: TConfig,
+		handler: VoiceStreamHandler
+	) => StreamResponse;
 	handleResponse: (response: Response) => Promise<LLMResponse>;
 }
 

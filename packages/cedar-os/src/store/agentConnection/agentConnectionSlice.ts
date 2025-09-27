@@ -15,6 +15,7 @@ import type {
 	StructuredResponseType,
 	VoiceLLMResponse,
 	VoiceParams,
+	VoiceStreamHandler,
 } from '@/store/agentConnection/AgentConnectionTypes';
 import { getProviderImplementation } from '@/store/agentConnection/providers/index';
 import type { CedarStore } from '@/store/CedarOSTypes';
@@ -97,6 +98,12 @@ export interface AgentConnectionSlice {
 	// Voice LLM method
 	voiceLLM: (params: VoiceParams) => Promise<VoiceLLMResponse>;
 
+	// Voice streaming LLM method
+	voiceStreamLLM: (
+		params: VoiceParams,
+		handler: VoiceStreamHandler
+	) => StreamResponse;
+
 	// High-level methods that use callLLM/streamLLM
 	sendMessage: <
 		T extends Record<string, z.ZodTypeAny> = Record<string, never>,
@@ -134,7 +141,7 @@ export interface AgentConnectionSlice {
 // Create a typed version of the slice that knows about the provider
 export type TypedAgentConnectionSlice<T extends ProviderConfig> = Omit<
 	AgentConnectionSlice,
-	'callLLM' | 'streamLLM' | 'callLLMStructured' | 'voiceLLM'
+	'callLLM' | 'streamLLM' | 'callLLMStructured' | 'voiceLLM' | 'voiceStreamLLM'
 > & {
 	callLLM: (params: GetParamsForConfig<T>) => Promise<LLMResponse>;
 	callLLMStructured: (
@@ -145,6 +152,10 @@ export type TypedAgentConnectionSlice<T extends ProviderConfig> = Omit<
 		handler: StreamHandler
 	) => StreamResponse;
 	voiceLLM: (params: VoiceParams) => Promise<VoiceLLMResponse>;
+	voiceStreamLLM: (
+		params: VoiceParams,
+		handler: VoiceStreamHandler
+	) => StreamResponse;
 };
 
 export const createAgentConnectionSlice: StateCreator<
@@ -432,6 +443,95 @@ export const createAgentConnectionSlice: StateCreator<
 		} catch (error) {
 			throw error;
 		}
+	},
+
+	// Voice streaming LLM method
+	voiceStreamLLM: (params: VoiceParams, handler: VoiceStreamHandler) => {
+		const config = get().providerConfig;
+		if (!config) {
+			throw new Error('No LLM provider configured');
+		}
+
+		const provider = getProviderImplementation(config);
+		if (!provider.voiceStreamLLM) {
+			throw new Error(
+				`Provider ${config.provider} does not support voice streaming`
+			);
+		}
+
+		// Augment params for Mastra provider to include resourceId & threadId
+		let voiceParams: VoiceParams = params;
+		if (config.provider === 'mastra') {
+			const resourceId = getCedarState('userId') as string | undefined;
+			const threadId = get().mainThreadId;
+			voiceParams = {
+				...params,
+				resourceId,
+				threadId,
+			} as typeof voiceParams;
+		}
+
+		// Log the stream start
+		const streamId = get().logStreamStart(
+			voiceParams as BaseParams,
+			config.provider
+		);
+
+		// Set current request ID to the stream ID
+		set({ currentRequestId: streamId });
+
+		const abortController = new AbortController();
+		set({ currentAbortController: abortController, isStreaming: true });
+
+		// Wrap the handler to log stream events
+		const wrappedHandler: VoiceStreamHandler = (event) => {
+			if (event.type === 'chunk') {
+				get().logStreamChunk(streamId, event.content);
+			} else if (event.type === 'done') {
+				get().logStreamEnd(streamId, event.completedItems);
+				// Clear current request ID when stream ends
+				set({ currentRequestId: null });
+			} else if (event.type === 'error') {
+				get().logAgentError(streamId, event.error);
+				// Clear current request ID on error
+				set({ currentRequestId: null });
+			} else if (event.type === 'object') {
+				get().logStreamObject(streamId, event.object);
+			} else if (event.type === 'transcription') {
+				// Log transcription events
+				get().logStreamChunk(
+					streamId,
+					`[Transcription] ${event.transcription}`
+				);
+			} else if (event.type === 'audio') {
+				// Log audio events
+				get().logStreamChunk(
+					streamId,
+					`[Audio] ${event.audioFormat || 'unknown format'}`
+				);
+			}
+			handler(event);
+		};
+
+		// Call the provider's voiceStreamLLM method
+		const originalResponse = provider.voiceStreamLLM(
+			voiceParams as unknown as never,
+			config as never,
+			wrappedHandler
+		);
+
+		// Wrap the completion to update state when done
+		const wrappedCompletion = originalResponse.completion.finally(() => {
+			set({ isStreaming: false, currentAbortController: null });
+		});
+
+		return {
+			abort: () => {
+				originalResponse.abort();
+				abortController.abort();
+			},
+			completion: wrappedCompletion,
+		};
 	},
 
 	// Handle LLM response

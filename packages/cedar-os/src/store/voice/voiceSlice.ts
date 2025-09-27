@@ -26,6 +26,7 @@ export interface VoiceState {
 		useBrowserTTS?: boolean;
 		autoAddToMessages?: boolean;
 		endpoint?: string; // Voice endpoint URL
+		stream?: boolean; // Whether to use streaming voice processing
 	};
 }
 
@@ -41,6 +42,7 @@ export interface VoiceActions {
 
 	// Audio streaming
 	streamAudioToEndpoint: (audioData: Blob) => Promise<void>;
+	streamAudioToEndpointStream: (audioData: Blob) => Promise<void>;
 	handleLLMVoice: (response: VoiceLLMResponse) => Promise<void>;
 	playAudioResponse: (audioUrl: string | ArrayBuffer) => Promise<void>;
 
@@ -71,6 +73,7 @@ const initialVoiceState: VoiceState = {
 		volume: 1.0,
 		useBrowserTTS: false,
 		autoAddToMessages: true, // Default to true for automatic message integration
+		stream: false, // Default to non-streaming
 	},
 };
 
@@ -152,7 +155,14 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 
 			mediaRecorder.onstop = async () => {
 				const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-				await get().streamAudioToEndpoint(audioBlob);
+				const { voiceSettings } = get();
+
+				// Choose between streaming and non-streaming based on settings
+				if (voiceSettings.stream) {
+					await get().streamAudioToEndpointStream(audioBlob);
+				} else {
+					await get().streamAudioToEndpoint(audioBlob);
+				}
 			};
 
 			mediaRecorder.start();
@@ -230,6 +240,126 @@ export const createVoiceSlice: StateCreator<CedarStore, [], [], VoiceSlice> = (
 			set({
 				voiceError:
 					error instanceof Error ? error.message : 'Failed to process voice',
+			});
+			// Set processing state to false on error
+			get().setIsProcessing(false);
+		}
+	},
+
+	streamAudioToEndpointStream: async (audioData: Blob) => {
+		const { voiceSettings } = get();
+
+		try {
+			set({ isSpeaking: false });
+
+			// Set processing state to true when starting voice processing
+			get().setIsProcessing(true);
+
+			// Check if we have a provider configured
+			const providerConfig = get().providerConfig;
+			if (!providerConfig) {
+				throw new Error('No provider configured for voice');
+			}
+
+			// For Mastra/custom providers with explicit endpoints, check if endpoint is configured
+			if (
+				(providerConfig.provider === 'mastra' ||
+					providerConfig.provider === 'custom') &&
+				!voiceSettings.endpoint
+			) {
+				throw new Error('Voice endpoint not configured');
+			}
+
+			// Get the stringified additional context from the store
+			const contextString = get().compileAdditionalContext();
+
+			// Use the agent connection's voiceStreamLLM method
+			const streamResponse = get().voiceStreamLLM(
+				{
+					audioData,
+					voiceSettings,
+					context: contextString,
+					prompt: '',
+				},
+				async (event) => {
+					// Handle streaming voice events
+					switch (event.type) {
+						case 'transcription':
+							// Handle transcription events
+							if (voiceSettings.autoAddToMessages && event.transcription) {
+								const { addMessage } = get();
+								addMessage({
+									type: 'text',
+									role: 'user',
+									content: event.transcription,
+									metadata: {
+										source: 'voice',
+										timestamp: new Date().toISOString(),
+									},
+								});
+							}
+							break;
+						case 'audio':
+							// Handle audio streaming
+							if (event.audioData && event.audioFormat) {
+								const binaryString = atob(event.audioData);
+								const bytes = new Uint8Array(binaryString.length);
+								for (let i = 0; i < binaryString.length; i++) {
+									bytes[i] = binaryString.charCodeAt(i);
+								}
+								const audioBuffer = bytes.buffer;
+								await get().playAudioResponse(audioBuffer);
+							}
+
+							// Also add the text content to the chat
+							if (event.content) {
+								get().addMessage({
+									type: 'text',
+									role: 'bot',
+									content: event.content,
+									metadata: {
+										source: 'voice',
+										timestamp: new Date().toISOString(),
+									},
+								});
+							}
+							break;
+						case 'chunk':
+							// Handle text content chunks
+							await get().handleLLMResponse([event.content]);
+							break;
+						case 'object':
+							// Handle structured objects
+							await get().handleLLMResponse(
+								Array.isArray(event.object) ? event.object : [event.object]
+							);
+							break;
+						case 'done':
+							// Stream completed
+							get().setIsProcessing(false);
+							break;
+						case 'error':
+							console.error('Voice stream error:', event.error);
+							set({
+								voiceError:
+									event.error instanceof Error
+										? event.error.message
+										: 'Voice stream error',
+							});
+							get().setIsProcessing(false);
+							break;
+					}
+				}
+			);
+
+			// Wait for stream to complete
+			await streamResponse.completion;
+		} catch (error) {
+			set({
+				voiceError:
+					error instanceof Error
+						? error.message
+						: 'Failed to process voice stream',
 			});
 			// Set processing state to false on error
 			get().setIsProcessing(false);
