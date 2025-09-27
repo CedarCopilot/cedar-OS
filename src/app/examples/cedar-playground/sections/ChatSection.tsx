@@ -746,6 +746,7 @@ export function ChatSection({
 			{/* Floating Chat */}
 			{activeTab === 'floating' && (
 				<FloatingCedarChat
+					stream={false}
 					side={floatingProps.side}
 					title={floatingProps.title}
 					collapsedLabel={floatingProps.collapsedLabel}
