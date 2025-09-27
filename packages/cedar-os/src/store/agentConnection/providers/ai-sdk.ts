@@ -7,6 +7,7 @@ import type {
 	StreamResponse,
 	VoiceParams,
 	VoiceLLMResponse,
+	VoiceStreamHandler,
 } from '@/store/agentConnection/AgentConnectionTypes';
 import type { StructuredResponseType } from '@/store/agentConnection/AgentConnectionTypes';
 import {
@@ -42,6 +43,11 @@ export interface AISDKProviderImplementation {
 		params: VoiceParams,
 		config: AISDKConfig
 	) => Promise<VoiceLLMResponse>;
+	voiceStreamLLM?: (
+		params: VoiceParams,
+		config: AISDKConfig,
+		handler: VoiceStreamHandler
+	) => StreamResponse;
 	handleResponse: (response: Response) => Promise<LLMResponse>;
 }
 
