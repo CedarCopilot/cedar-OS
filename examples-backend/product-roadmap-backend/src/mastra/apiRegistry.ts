@@ -7,6 +7,7 @@ import {
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { createSSEStream, streamJSONEvent } from '../utils/streamUtils';
+import { handleVoiceStream } from './voiceStreamHandler';
 
 export const ChatThreadSchema = z.object({
 	id: z.string(),
@@ -277,5 +278,13 @@ export const apiRoutes = [
 				return c.json({ error: 'Thread not found' }, 404);
 			}
 		},
+	}),
+
+	// -------------------- Voice API --------------------
+
+	// Voice transcription to workflow (streaming)
+	registerApiRoute('/voice/stream', {
+		method: 'POST',
+		handler: handleVoiceStream,
 	}),
 ];

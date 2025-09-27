@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { productRoadmapAgent } from '../agents/productRoadmapAgent';
 import { handleTextStreamV2, streamJSONEvent } from '../../utils/streamUtils';
 import { RuntimeContext } from '@mastra/core/runtime-context';
+import { handleVoiceOutput } from '../voiceUtils';
 
 // ---------------------------------------------
 // Mastra nested streaming – emit placeholder events
@@ -162,6 +163,8 @@ export const ChatInputSchema = z.object({
 	resourceId: z.string().optional(),
 	threadId: z.string().optional(),
 	streamController: z.any().optional(),
+	// Voice support
+	isVoice: z.boolean().optional(),
 	// For structured output
 	output: z.any().optional(),
 });
@@ -212,6 +215,7 @@ const buildAgentContext = createStep({
 			resourceId,
 			threadId,
 			additionalContext,
+			isVoice,
 		} = inputData;
 
 		const message = prompt;
@@ -225,6 +229,7 @@ const buildAgentContext = createStep({
 			streamController,
 			resourceId,
 			threadId,
+			isVoice,
 		};
 
 		return result;
@@ -260,6 +265,7 @@ const callAgent = createStep({
 			resourceId,
 			threadId,
 			additionalContext,
+			isVoice,
 		} = inputData;
 
 		const runtimeContext = new RuntimeContext();
@@ -280,14 +286,33 @@ const callAgent = createStep({
 		);
 
 		let finalText = '';
+		let pendingText = '';
 
 		for await (const chunk of streamResult.fullStream) {
 			if (chunk.type === 'text-delta') {
 				finalText += chunk.payload.text;
-				await handleTextStreamV2(chunk.payload.text, streamController);
+
+				if (isVoice && streamController) {
+					// Accumulate text for voice synthesis
+					pendingText += chunk.payload.text;
+				} else {
+					// Regular text streaming
+					await handleTextStreamV2(chunk.payload.text, streamController);
+				}
 			} else if (chunk.type === 'tool-result' || chunk.type === 'tool-call') {
+				// Handle any pending text before tool events for voice
+				if (isVoice && streamController && pendingText) {
+					await handleVoiceOutput(streamController, pendingText);
+					pendingText = '';
+				}
+
 				streamJSONEvent(streamController, chunk.type, chunk);
 			}
+		}
+
+		// Handle any remaining pending text for voice
+		if (isVoice && streamController && pendingText) {
+			await handleVoiceOutput(streamController, pendingText);
 		}
 
 		return { content: finalText };

@@ -39,7 +39,7 @@ export default function ProductRoadmapLayout({
 		provider: 'mastra',
 		baseURL: 'http://localhost:4111',
 		chatPath: '/chat',
-		voiceRoute: '/chat',
+		voiceRoute: '/voice',
 		resumePath: '/chat/resume',
 	};
 
@@ -53,7 +53,8 @@ export default function ProductRoadmapLayout({
 	// };
 
 	const voiceSettings = {
-		useBrowserTTS: true,
+		useBrowserTTS: false,
+		stream: true,
 	};
 
 	const localStorageConfig: MessageStorageConfig = {
