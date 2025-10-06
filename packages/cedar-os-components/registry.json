@@ -139,7 +139,7 @@
 		{
 			"name": "chat-renderer",
 			"type": "chatMessages",
-			"dependencies": ["react", "react-markdown", "motion-plus-react"],
+			"dependencies": ["react", "motion-plus-react"],
 			"registryDependencies": [
 				"cedar-os",
 				"dialogue-options",
@@ -491,13 +491,13 @@
 		{
 			"name": "markdown-renderer",
 			"type": "chatMessages",
-			"dependencies": ["react", "react-markdown", "remark-gfm", "lucide-react"],
+			"dependencies": ["react", "streamdown"],
 			"registryDependencies": ["cedar-os"],
 			"files": ["MarkdownRenderer.tsx"],
 			"meta": {
 				"importName": "MarkdownRenderer",
 				"displayName": "Markdown Renderer",
-				"description": "Chat markdown rendering component"
+				"description": "Streamdown-powered markdown renderer for AI chat interfaces"
 			}
 		},
 		{
